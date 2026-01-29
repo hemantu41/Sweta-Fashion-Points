@@ -1,5 +1,6 @@
 'use client';
 
+import { CldImage } from 'next-cloudinary';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Product } from '@/data/products';
 
@@ -17,19 +18,32 @@ export default function ProductCard({ product }: ProductCardProps) {
     window.open(`https://wa.me/919608063673?text=${message}`, '_blank');
   };
 
+  // Check if image is a Cloudinary public ID (doesn't start with / or http)
+  const isCloudinaryImage = product.image && !product.image.startsWith('/') && !product.image.startsWith('http');
+
   return (
     <div className="bg-white rounded-xl overflow-hidden card-hover group border border-[#E8E2D9]">
       {/* Image Container */}
       <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-[#FAF7F2] to-[#F5F0E8]">
-        {/* Placeholder Image */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-6xl opacity-60">
-            {product.category === 'mens' && '👔'}
-            {product.category === 'womens' && '👗'}
-            {product.category === 'sarees' && '🥻'}
-            {product.category === 'kids' && '👶'}
-          </span>
-        </div>
+        {/* Product Image */}
+        {isCloudinaryImage ? (
+          <CldImage
+            src={product.image}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-6xl opacity-60">
+              {product.category === 'mens' && '👔'}
+              {product.category === 'womens' && '👗'}
+              {product.category === 'sarees' && '🥻'}
+              {product.category === 'kids' && '👶'}
+            </span>
+          </div>
+        )}
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
