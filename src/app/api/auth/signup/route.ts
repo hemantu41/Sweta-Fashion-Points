@@ -5,10 +5,10 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, mobile, password } = body;
+    const { name, email, mobile, location, password } = body;
 
     // Validation
-    if (!name || !email || !mobile || !password) {
+    if (!name || !email || !mobile || !location || !password) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
@@ -40,11 +40,12 @@ export async function POST(request: NextRequest) {
           name: name.trim(),
           email: email.toLowerCase().trim(),
           mobile: mobile.trim(),
+          location: location.trim(),
           password: hashedPassword,
           is_verified: true, // Auto verify for now
         },
       ])
-      .select('id, name, email, mobile')
+      .select('id, name, email, mobile, location')
       .single();
 
     if (error) {

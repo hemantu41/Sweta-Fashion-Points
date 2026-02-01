@@ -11,6 +11,7 @@ export default function SignupPage() {
     name: '',
     email: '',
     mobile: '',
+    location: '',
     password: '',
     confirmPassword: '',
   });
@@ -64,6 +65,7 @@ export default function SignupPage() {
           name: formData.name,
           email: formData.email,
           mobile: formData.mobile,
+          location: formData.location,
           password: formData.password,
         }),
       });
@@ -153,6 +155,20 @@ export default function SignupPage() {
                   placeholder="10 digit number"
                 />
               </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              <input
+                type="text"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
+                placeholder="Enter your city/town"
+              />
             </div>
 
             {/* Password */}
