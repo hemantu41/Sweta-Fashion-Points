@@ -1,13 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { t } = useLanguage();
+  const { user, logout, isAuthenticated } = useAuth();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const navLinks = [
     { href: '/', label: t('nav.home') },
@@ -18,6 +33,35 @@ export default function Navbar() {
     { href: '/new-arrivals', label: t('nav.newArrivals') },
     { href: '/contact', label: t('nav.visitStore') },
   ];
+
+  const userMenuItems = [
+    { href: '/profile', label: 'Profile Details', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    )},
+    { href: '/orders', label: 'Order Details', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+    )},
+    { href: '/payment-methods', label: 'Payment Method', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    )},
+    { href: '/addresses', label: 'Address', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    )},
+  ];
+
+  const handleLogout = () => {
+    logout();
+    setIsUserMenuOpen(false);
+  };
 
   return (
     <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-[#E8E2D9]">
@@ -47,7 +91,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Right side - Language & Contact */}
+          {/* Right side - Language, WhatsApp & User Menu */}
           <div className="hidden lg:flex items-center space-x-4">
             <LanguageSwitcher />
             <a
@@ -61,11 +105,80 @@ export default function Navbar() {
               </svg>
               <span>WhatsApp</span>
             </a>
+
+            {/* User Menu - Desktop */}
+            {isAuthenticated && (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center space-x-2 bg-[#F5F0E8] hover:bg-[#E8E2D9] px-4 py-2.5 rounded-full transition-all duration-300"
+                >
+                  <div className="w-8 h-8 bg-[#722F37] rounded-full flex items-center justify-center text-white font-medium text-sm">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <svg className={`w-4 h-4 text-[#6B6B6B] transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-[#E8E2D9] py-2 z-50">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-[#E8E2D9]">
+                      <p className="font-medium text-[#2D2D2D]">{user?.name}</p>
+                      <p className="text-sm text-[#6B6B6B]">{user?.email}</p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-2">
+                      {userMenuItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center space-x-3 px-4 py-2.5 text-[#2D2D2D] hover:bg-[#F5F0E8] transition-colors"
+                        >
+                          <span className="text-[#6B6B6B]">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </Link>
+                      ))}
+                    </div>
+
+                    {/* Logout */}
+                    <div className="border-t border-[#E8E2D9] pt-2">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center space-x-3 px-4 py-2.5 text-red-600 hover:bg-red-50 w-full transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Mobile menu button */}
           <div className="lg:hidden flex items-center space-x-3">
             <LanguageSwitcher />
+
+            {/* User Menu Button - Mobile */}
+            {isAuthenticated && (
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="p-2 rounded-lg text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8] transition-colors"
+              >
+                <div className="w-8 h-8 bg-[#722F37] rounded-full flex items-center justify-center text-white font-medium text-sm">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              </button>
+            )}
+
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-lg text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8] transition-colors"
@@ -80,6 +193,43 @@ export default function Navbar() {
             </button>
           </div>
         </div>
+
+        {/* Mobile User Menu */}
+        {isUserMenuOpen && isAuthenticated && (
+          <div className="lg:hidden py-4 border-t border-[#E8E2D9]">
+            {/* User Info */}
+            <div className="px-4 py-3 bg-[#F5F0E8] rounded-lg mb-3">
+              <p className="font-medium text-[#2D2D2D]">{user?.name}</p>
+              <p className="text-sm text-[#6B6B6B]">{user?.email}</p>
+            </div>
+
+            {/* Menu Items */}
+            <div className="space-y-1">
+              {userMenuItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsUserMenuOpen(false)}
+                  className="flex items-center space-x-3 px-4 py-3 text-[#2D2D2D] hover:bg-[#F5F0E8] rounded-lg transition-colors"
+                >
+                  <span className="text-[#6B6B6B]">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 w-full rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
