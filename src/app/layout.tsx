@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Lato } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { Navbar, Footer, WhatsAppButton } from "@/components";
+import { Navbar, Footer, WhatsAppButton, LeadCapturePopup } from "@/components";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -114,6 +114,7 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <WhatsAppButton />
+            <LeadCapturePopup />
           </div>
         </LanguageProvider>
       </body>

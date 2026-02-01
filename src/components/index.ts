@@ -8,3 +8,4 @@ export { default as ProductCard } from './ProductCard';
 export { default as WhyChooseUs } from './WhyChooseUs';
 export { default as LocationSection } from './LocationSection';
 export { default as CloudinaryImage } from './CloudinaryImage';
+export { default as LeadCapturePopup } from './LeadCapturePopup';
