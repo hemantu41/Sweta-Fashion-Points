@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Playfair_Display, Lato } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { Navbar, Footer, WhatsAppButton, LeadCapturePopup } from "@/components";
+import { AuthProvider } from "@/context/AuthContext";
+import { AuthGuard, MainLayout } from "@/components";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -108,15 +109,13 @@ export default function RootLayout({
         />
       </head>
       <body className={`${playfair.variable} ${lato.variable} antialiased`}>
-        <LanguageProvider>
-          <div className="min-h-screen flex flex-col">
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <WhatsAppButton />
-            <LeadCapturePopup />
-          </div>
-        </LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <AuthGuard>
+              <MainLayout>{children}</MainLayout>
+            </AuthGuard>
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );
