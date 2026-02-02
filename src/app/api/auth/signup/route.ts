@@ -56,6 +56,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Also create record in spf_users table for extended profile
+    if (data?.id) {
+      await supabase
+        .from('spf_users')
+        .insert([
+          {
+            user_id: data.id,
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            mobile: mobile.trim(),
+            location: location.trim(),
+            citizenship: 'Indian', // Default citizenship
+          },
+        ]);
+    }
+
     return NextResponse.json(
       { message: 'Account created successfully', user: data },
       { status: 201 }
