@@ -8,12 +8,12 @@ interface Address {
   id: string;
   name: string;
   phone: string;
-  addressLine1: string;
-  addressLine2?: string;
+  address_line1: string;
+  address_line2?: string;
   city: string;
   state: string;
   pincode: string;
-  isDefault: boolean;
+  is_default: boolean;
 }
 
 export default function AddressesPage() {
@@ -31,12 +31,16 @@ export default function AddressesPage() {
     pincode: '',
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
+      return;
     }
-    if (user) {
+    if (user?.id) {
+      fetchAddresses();
       setFormData(prev => ({
         ...prev,
         name: user.name || '',
@@ -44,6 +48,21 @@ export default function AddressesPage() {
       }));
     }
   }, [user, isAuthenticated, isLoading, router]);
+
+  const fetchAddresses = async () => {
+    try {
+      const response = await fetch(`/api/user/addresses?userId=${user?.id}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setAddresses(data.addresses || []);
+      }
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -53,41 +72,91 @@ export default function AddressesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setMessage({ type: '', text: '' });
 
-    // Simulate saving address
-    setTimeout(() => {
-      const newAddress: Address = {
-        id: Date.now().toString(),
-        ...formData,
-        isDefault: addresses.length === 0,
-      };
-      setAddresses([...addresses, newAddress]);
-      setShowForm(false);
-      setFormData({
-        name: user?.name || '',
-        phone: user?.mobile || '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: 'Bihar',
-        pincode: '',
+    try {
+      const response = await fetch('/api/user/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          ...formData,
+          isDefault: addresses.length === 0,
+        }),
       });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Address saved successfully!' });
+        setShowForm(false);
+        setFormData({
+          name: user?.name || '',
+          phone: user?.mobile || '',
+          addressLine1: '',
+          addressLine2: '',
+          city: '',
+          state: 'Bihar',
+          pincode: '',
+        });
+        fetchAddresses(); // Refresh the list
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to save address' });
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setAddresses(addresses.filter(addr => addr.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/user/addresses?userId=${user?.id}&addressId=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setAddresses(addresses.filter(addr => addr.id !== id));
+        setMessage({ type: 'success', text: 'Address deleted successfully!' });
+      } else {
+        setMessage({ type: 'error', text: 'Failed to delete address' });
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    }
   };
 
-  const handleSetDefault = (id: string) => {
-    setAddresses(addresses.map(addr => ({
-      ...addr,
-      isDefault: addr.id === id,
-    })));
+  const handleSetDefault = async (id: string) => {
+    try {
+      const response = await fetch('/api/user/addresses', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          addressId: id,
+          isDefault: true,
+        }),
+      });
+
+      if (response.ok) {
+        setAddresses(addresses.map(addr => ({
+          ...addr,
+          is_default: addr.id === id,
+        })));
+        setMessage({ type: 'success', text: 'Default address updated!' });
+      } else {
+        setMessage({ type: 'error', text: 'Failed to update default address' });
+      }
+    } catch (error) {
+      console.error('Error setting default:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    }
   };
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
@@ -118,6 +187,13 @@ export default function AddressesPage() {
             </button>
           )}
         </div>
+
+        {/* Message */}
+        {message.text && (
+          <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+            {message.text}
+          </div>
+        )}
 
         {/* Add Address Form */}
         {showForm && (
@@ -198,6 +274,8 @@ export default function AddressesPage() {
                     <option value="Jharkhand">Jharkhand</option>
                     <option value="Uttar Pradesh">Uttar Pradesh</option>
                     <option value="West Bengal">West Bengal</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Maharashtra">Maharashtra</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
@@ -210,6 +288,7 @@ export default function AddressesPage() {
                     onChange={handleChange}
                     required
                     maxLength={6}
+                    pattern="[0-9]{6}"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                   />
                 </div>
@@ -244,7 +323,7 @@ export default function AddressesPage() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-medium text-[#2D2D2D]">{address.name}</h3>
-                      {address.isDefault && (
+                      {address.is_default && (
                         <span className="px-2 py-0.5 bg-green-100 text-green-600 text-xs font-medium rounded-full">
                           Default
                         </span>
@@ -252,15 +331,15 @@ export default function AddressesPage() {
                     </div>
                     <p className="text-[#6B6B6B] text-sm">{address.phone}</p>
                     <p className="text-[#6B6B6B] text-sm mt-2">
-                      {address.addressLine1}
-                      {address.addressLine2 && `, ${address.addressLine2}`}
+                      {address.address_line1}
+                      {address.address_line2 && `, ${address.address_line2}`}
                     </p>
                     <p className="text-[#6B6B6B] text-sm">
                       {address.city}, {address.state} - {address.pincode}
                     </p>
                   </div>
                   <div className="flex flex-col space-y-2">
-                    {!address.isDefault && (
+                    {!address.is_default && (
                       <button
                         onClick={() => handleSetDefault(address.id)}
                         className="text-sm text-[#722F37] hover:underline"
