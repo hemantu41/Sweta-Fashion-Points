@@ -60,26 +60,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build update object with only non-empty values
+    const updateData: Record<string, unknown> = {};
+    if (name) updateData.name = name;
+    if (mobile) updateData.mobile = mobile;
+    if (location !== undefined) updateData.location = location;
+    if (gender !== undefined) updateData.gender = gender || null;
+    if (date_of_birth !== undefined) updateData.date_of_birth = date_of_birth || null;
+    if (citizenship) updateData.citizenship = citizenship;
+
     // Update profile in spf_users table
     const { data, error } = await supabase
       .from('spf_users')
-      .update({
-        name,
-        mobile,
-        location,
-        gender,
-        date_of_birth: date_of_birth || null,
-        citizenship: citizenship || 'Indian',
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', userId)
       .select()
       .single();
 
     if (error) {
       console.error('Profile save error:', error);
+      console.error('Error details:', JSON.stringify(error));
       return NextResponse.json(
-        { error: 'Failed to save profile' },
+        { error: `Failed to save profile: ${error.message}` },
         { status: 500 }
       );
     }
