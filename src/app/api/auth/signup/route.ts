@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
+    // Check if user already exists in spf_users
     const { data: existingUser } = await supabase
-      .from('users')
+      .from('spf_users')
       .select('id')
-      .or(`email.eq.${email},mobile.eq.${mobile}`)
+      .or(`email.eq.${email.toLowerCase()},mobile.eq.${mobile}`)
       .single();
 
     if (existingUser) {
@@ -32,9 +32,9 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
+    // Insert user into spf_users table
     const { data, error } = await supabase
-      .from('users')
+      .from('spf_users')
       .insert([
         {
           name: name.trim(),
@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
           mobile: mobile.trim(),
           location: location.trim(),
           password: hashedPassword,
-          is_verified: true, // Auto verify for now
+          citizenship: 'Indian',
+          is_verified: true,
         },
       ])
       .select('id, name, email, mobile, location')
@@ -54,22 +55,6 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create account. Please try again.' },
         { status: 500 }
       );
-    }
-
-    // Also create record in spf_users table for extended profile
-    if (data?.id) {
-      await supabase
-        .from('spf_users')
-        .insert([
-          {
-            user_id: data.id,
-            name: name.trim(),
-            email: email.toLowerCase().trim(),
-            mobile: mobile.trim(),
-            location: location.trim(),
-            citizenship: 'Indian', // Default citizenship
-          },
-        ]);
     }
 
     return NextResponse.json(

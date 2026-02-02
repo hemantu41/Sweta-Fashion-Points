@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email or mobile
+    // Find user by email or mobile in spf_users table
     const { data: user, error } = await supabase
-      .from('users')
-      .select('id, name, email, mobile, password')
+      .from('spf_users')
+      .select('id, name, email, mobile, location, password')
       .or(`email.eq.${identifier.toLowerCase()},mobile.eq.${identifier}`)
       .single();
 
