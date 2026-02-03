@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Fetch profile from spf_users table
     const { data: profile, error } = await supabase
       .from('spf_users')
-      .select('id, name, email, mobile, location, gender, date_of_birth, citizenship')
+      .select('id, name, email, mobile, location, gender, date_of_birth, citizenship, profile_photo')
       .eq('id', userId)
       .single();
 
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       gender,
       date_of_birth,
       citizenship,
+      profile_photo,
     } = body;
 
     if (!userId) {
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
     if (gender !== undefined) updateData.gender = gender || null;
     if (date_of_birth !== undefined) updateData.date_of_birth = date_of_birth || null;
     if (citizenship) updateData.citizenship = citizenship;
+    if (profile_photo !== undefined) updateData.profile_photo = profile_photo;
 
     // Update profile in spf_users table
     const { data, error } = await supabase

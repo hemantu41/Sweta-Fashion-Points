@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -16,9 +18,11 @@ export default function ProfilePage() {
     gender: '',
     date_of_birth: '',
     citizenship: 'Indian',
+    profile_photo: '',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
@@ -46,9 +50,9 @@ export default function ProfilePage() {
           gender: data.profile.gender || '',
           date_of_birth: data.profile.date_of_birth || '',
           citizenship: data.profile.citizenship || 'Indian',
+          profile_photo: data.profile.profile_photo || '',
         });
       } else {
-        // Use data from auth context if profile doesn't exist
         setFormData({
           name: user?.name || '',
           email: user?.email || '',
@@ -57,6 +61,7 @@ export default function ProfilePage() {
           gender: '',
           date_of_birth: '',
           citizenship: 'Indian',
+          profile_photo: '',
         });
       }
     } catch (error) {
@@ -69,6 +74,66 @@ export default function ProfilePage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Please select an image file' });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Image size should be less than 5MB' });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('upload_preset', 'spf_profile_photos');
+      formDataUpload.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '');
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: 'POST',
+          body: formDataUpload,
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.secure_url) {
+        setFormData({ ...formData, profile_photo: data.secure_url });
+
+        // Auto-save photo to database
+        await fetch('/api/user/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user?.id,
+            profile_photo: data.secure_url,
+          }),
+        });
+
+        setMessage({ type: 'success', text: 'Photo uploaded successfully!' });
+      } else {
+        setMessage({ type: 'error', text: 'Failed to upload photo. Please try again.' });
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      setMessage({ type: 'error', text: 'Failed to upload photo. Please try again.' });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   const handleSave = async () => {
@@ -122,14 +187,56 @@ export default function ProfilePage() {
 
         {/* Profile Card */}
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-          {/* Avatar */}
+          {/* Avatar with Photo Upload */}
           <div className="flex items-center mb-8">
-            <div className="w-20 h-20 bg-[#722F37] rounded-full flex items-center justify-center text-white text-3xl font-bold">
-              {formData.name?.charAt(0).toUpperCase() || 'U'}
+            <div className="relative">
+              {formData.profile_photo ? (
+                <div className="w-24 h-24 rounded-full overflow-hidden relative">
+                  <Image
+                    src={formData.profile_photo}
+                    alt="Profile Photo"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-24 h-24 bg-[#722F37] rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                  {formData.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
+
+              {/* Camera Icon Overlay */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingPhoto}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-[#722F37] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-[#5a252c] transition-colors disabled:opacity-50"
+              >
+                {isUploadingPhoto ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                )}
+              </button>
+
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
             </div>
+
             <div className="ml-4">
               <h2 className="text-xl font-semibold text-[#2D2D2D]">{formData.name}</h2>
               <p className="text-[#6B6B6B]">{formData.email}</p>
+              <p className="text-xs text-[#722F37] mt-1 cursor-pointer hover:underline" onClick={() => fileInputRef.current?.click()}>
+                {formData.profile_photo ? 'Change photo' : 'Add photo'}
+              </p>
             </div>
           </div>
 
@@ -288,7 +395,7 @@ export default function ProfilePage() {
                 <button
                   onClick={() => {
                     setIsEditing(false);
-                    fetchProfile(); // Reset to saved data
+                    fetchProfile();
                   }}
                   className="px-6 py-3 border border-gray-300 rounded-lg text-[#6B6B6B] hover:bg-gray-50 transition-colors"
                 >
