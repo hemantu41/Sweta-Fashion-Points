@@ -74,20 +74,25 @@ export async function POST(request: NextRequest) {
       .from('spf_users')
       .update(updateData)
       .eq('id', userId)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('Profile save error:', error);
-      console.error('Error details:', JSON.stringify(error));
       return NextResponse.json(
         { error: `Failed to save profile: ${error.message}` },
         { status: 500 }
       );
     }
 
+    if (!data || data.length === 0) {
+      return NextResponse.json(
+        { error: 'User not found. Please log out and log back in.' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
-      { message: 'Profile saved successfully', profile: data },
+      { message: 'Profile saved successfully', profile: data[0] },
       { status: 200 }
     );
   } catch (error) {
