@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   keywords: "clothing store Amas, fashion store Gaya, saree shop Bihar, men's fashion, women's fashion, kids clothing, ethnic wear, wedding sarees, party wear, Sweta Fashion Points",
   openGraph: {
     title: "Sweta Fashion Points | Premium Clothing Store in Amas, Gaya",
-    description: "Trendy fashion for the whole family. Premium quality at affordable prices. Visit our store or order on WhatsApp.",
+    description: "Trendy fashion for the whole family. Premium quality at affordable prices. Shop online or visit our store.",
     url: "https://fashionpoints.co.in",
     siteName: "Sweta Fashion Points",
     locale: "en_IN",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Sweta Fashion Points | Clothing Store in Gaya, Bihar",
-    description: "Trendy fashion for Men, Women, Kids & exclusive Sarees. Visit us in Amas, Gaya or order on WhatsApp.",
+    description: "Trendy fashion for Men, Women, Kids & exclusive Sarees. Shop online or visit us in Amas, Gaya.",
   },
   robots: {
     index: true,

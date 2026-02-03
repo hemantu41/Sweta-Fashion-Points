@@ -62,13 +62,13 @@ const translations: Record<Language, Record<string, string>> = {
     'contact.hours': 'Business Hours',
     'contact.hoursValue': 'Every day 9:00 AM - 5:30 PM IST',
     'contact.serving': 'Serving customers within 100 km of Amas, Gaya',
-    'contact.whatsapp': 'Order on WhatsApp',
+    'contact.visitStore': 'Visit Store',
     'contact.call': 'Call Now',
     'contact.directions': 'Get Directions',
 
     // Products
     'product.availableInStore': 'Available in Store',
-    'product.orderWhatsapp': 'Order on WhatsApp',
+    'product.addToCart': 'Add to Cart',
     'product.newArrival': 'New Arrival',
     'product.bestSeller': 'Best Seller',
     'product.viewAll': 'View All',
@@ -147,13 +147,13 @@ const translations: Record<Language, Record<string, string>> = {
     'contact.hours': 'व्यापार के घंटे',
     'contact.hoursValue': 'हर दिन सुबह 9:00 - शाम 5:30 IST',
     'contact.serving': 'अमस, गया से 100 किमी के भीतर ग्राहकों की सेवा',
-    'contact.whatsapp': 'WhatsApp पर ऑर्डर करें',
+    'contact.visitStore': 'स्टोर पर आएं',
     'contact.call': 'अभी कॉल करें',
     'contact.directions': 'दिशा-निर्देश प्राप्त करें',
 
     // Products
     'product.availableInStore': 'स्टोर में उपलब्ध',
-    'product.orderWhatsapp': 'WhatsApp पर ऑर्डर करें',
+    'product.addToCart': 'कार्ट में डालें',
     'product.newArrival': 'नया आगमन',
     'product.bestSeller': 'बेस्ट सेलर',
     'product.viewAll': 'सभी देखें',

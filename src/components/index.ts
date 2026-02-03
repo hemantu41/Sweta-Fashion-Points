@@ -1,6 +1,5 @@
 export { default as Navbar } from './Navbar';
 export { default as Footer } from './Footer';
-export { default as WhatsAppButton } from './WhatsAppButton';
 export { default as LanguageSwitcher } from './LanguageSwitcher';
 export { default as HeroSection } from './HeroSection';
 export { default as CategoryCard } from './CategoryCard';
