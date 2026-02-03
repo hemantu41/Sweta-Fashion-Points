@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { CldImage } from 'next-cloudinary';
 import { useLanguage } from '@/context/LanguageContext';
+import { useCart } from '@/context/CartContext';
 import type { Product } from '@/data/products';
 
 interface ProductCardProps {
@@ -10,10 +12,13 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { language, t } = useLanguage();
+  const { addToCart } = useCart();
+  const [added, setAdded] = useState(false);
 
   const handleAddToCart = () => {
-    // TODO: Implement cart functionality
-    console.log('Add to cart:', product.name);
+    addToCart(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
   };
 
   // Check if image is a Cloudinary public ID (doesn't start with / or http)
@@ -61,12 +66,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-6">
           <button
             onClick={handleAddToCart}
-            className="bg-[#722F37] text-white px-5 py-2.5 rounded-full text-sm font-medium flex items-center space-x-2 hover:bg-[#5a252c] transition-colors transform translate-y-4 group-hover:translate-y-0 duration-300"
+            className={`text-white px-5 py-2.5 rounded-full text-sm font-medium flex items-center space-x-2 transition-colors transform translate-y-4 group-hover:translate-y-0 duration-300 ${added ? 'bg-green-600' : 'bg-[#722F37] hover:bg-[#5a252c]'}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <span>{t('product.addToCart')}</span>
+            <span>{added ? (language === 'hi' ? 'जोड़ा गया!' : 'Added!') : t('product.addToCart')}</span>
           </button>
         </div>
       </div>
@@ -85,9 +90,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           </span>
           <button
             onClick={handleAddToCart}
-            className="text-xs text-white bg-[#722F37] hover:bg-[#5a252c] px-3 py-1.5 rounded-full transition-colors"
+            className={`text-xs text-white px-3 py-1.5 rounded-full transition-colors ${added ? 'bg-green-600' : 'bg-[#722F37] hover:bg-[#5a252c]'}`}
           >
-            {t('product.addToCart')}
+            {added ? (language === 'hi' ? 'जोड़ा गया!' : 'Added!') : t('product.addToCart')}
           </button>
         </div>
       </div>

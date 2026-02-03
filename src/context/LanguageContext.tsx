@@ -97,6 +97,22 @@ const translations: Record<Language, Record<string, string>> = {
     'common.exploreCollection': 'Explore Collection',
     'common.seeMore': 'See More',
     'common.shopCollection': 'Shop Collection',
+
+    // Cart
+    'cart.title': 'Your Cart',
+    'cart.empty': 'Your cart is empty',
+    'cart.emptyDesc': 'Add items to start shopping',
+    'cart.continueShopping': 'Continue Shopping',
+    'cart.orderSummary': 'Order Summary',
+    'cart.subtotal': 'Subtotal',
+    'cart.delivery': 'Delivery',
+    'cart.freePickup': 'Free',
+    'cart.total': 'Total',
+    'cart.storePickup': 'Items available for store pickup in Amas, Gaya. Call to place your order.',
+    'cart.callToOrder': 'Call to Order',
+    'cart.visitStore': 'Or visit our store',
+    'cart.clearCart': 'Clear cart',
+    'cart.items': 'items',
   },
   hi: {
     // Navigation
@@ -182,6 +198,22 @@ const translations: Record<Language, Record<string, string>> = {
     'common.exploreCollection': 'कलेक्शन देखें',
     'common.seeMore': 'और देखें',
     'common.shopCollection': 'शॉप कलेक्शन',
+
+    // Cart
+    'cart.title': 'आपका कार्ट',
+    'cart.empty': 'आपका कार्ट खाली है',
+    'cart.emptyDesc': 'शॉपिंग शुरू करने के लिए आइटम जोड़ें',
+    'cart.continueShopping': 'शॉपिंग जारी रखें',
+    'cart.orderSummary': 'ऑर्डर सारांश',
+    'cart.subtotal': 'उपसमेकित',
+    'cart.delivery': 'डेलिवरी',
+    'cart.freePickup': 'मुफ़्त',
+    'cart.total': 'कुल',
+    'cart.storePickup': 'आइटम अमस, गया के हमारे स्टोर में पिकअप के लिए उपलब्ध। ऑर्डर दने के लिए कॉल करें।',
+    'cart.callToOrder': 'ऑर्डर के लिए कॉल करें',
+    'cart.visitStore': 'या स्टोर पर आएं',
+    'cart.clearCart': 'कार्ट साफ़ करें',
+    'cart.items': 'आइटम',
   }
 };
 

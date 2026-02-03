@@ -3,6 +3,7 @@ import { Playfair_Display, Lato } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { CartProvider } from "@/context/CartContext";
 import { AuthGuard, MainLayout } from "@/components";
 
 const playfair = Playfair_Display({
@@ -111,9 +112,11 @@ export default function RootLayout({
       <body className={`${playfair.variable} ${lato.variable} antialiased`}>
         <AuthProvider>
           <LanguageProvider>
-            <AuthGuard>
-              <MainLayout>{children}</MainLayout>
-            </AuthGuard>
+            <CartProvider>
+              <AuthGuard>
+                <MainLayout>{children}</MainLayout>
+              </AuthGuard>
+            </CartProvider>
           </LanguageProvider>
         </AuthProvider>
       </body>
