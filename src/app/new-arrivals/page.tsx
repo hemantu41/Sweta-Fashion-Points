@@ -17,7 +17,7 @@ export default function NewArrivalsPage() {
             <span className="text-6xl">✨</span>
             <div>
               <h1 className="text-4xl md:text-5xl font-bold mb-2">
-                {t('nav.newArrivals')}
+                {language === 'hi' ? 'नए आगमन' : 'New Arrivals'}
               </h1>
               <p className="text-lg opacity-90">
                 {language === 'hi'

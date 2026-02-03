@@ -64,22 +64,6 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--primary-dark);
 }
 
-/* WhatsApp button animation */
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 6px 30px rgba(37, 211, 102, 0.4);
-  }
-}
-
-.whatsapp-pulse {
-  animation: pulse 2s infinite;
-}
-
 /* Premium Hero text gradient */
 .hero-gradient {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, var(--accent) 100%);

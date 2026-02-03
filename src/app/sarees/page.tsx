@@ -58,7 +58,7 @@ export default function SareesPage() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            {t('saree.byOccasion')}
+            {language === 'hi' ? 'अवसर के अनुसार' : 'By Occasion'}
           </button>
           <button
             onClick={() => {
@@ -71,7 +71,7 @@ export default function SareesPage() {
                 : 'bg-white text-gray-700 hover:bg-gray-100'
             }`}
           >
-            {t('saree.byPrice')}
+            {language === 'hi' ? 'कीमत के अनुसार' : 'By Price Range'}
           </button>
         </div>
 
