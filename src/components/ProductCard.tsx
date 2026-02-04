@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
 import { CldImage } from 'next-cloudinary';
 import { useLanguage } from '@/context/LanguageContext';
-import { useCart } from '@/context/CartContext';
 import type { Product } from '@/data/products';
 
 interface ProductCardProps {
@@ -12,20 +11,14 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { language, t } = useLanguage();
-  const { addToCart } = useCart();
-  const [added, setAdded] = useState(false);
 
-  const handleAddToCart = () => {
-    addToCart(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  };
-
-  // Check if image is a Cloudinary public ID (doesn't start with / or http)
   const isCloudinaryImage = product.image && !product.image.startsWith('/') && !product.image.startsWith('http');
+  const discountPercent = product.originalPrice
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0;
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden card-hover group border border-[#E8E2D9]">
+    <Link href={`/product/${product.id}`} className="bg-white rounded-xl overflow-hidden card-hover group border border-[#E8E2D9] block">
       {/* Image Container */}
       <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-[#FAF7F2] to-[#F5F0E8]">
         {/* Product Image */}
@@ -48,7 +41,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        {/* Badges */}
+        {/* Badges - Top Left */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
           {product.isNewArrival && (
             <span className="bg-[#722F37] text-white text-xs font-medium px-3 py-1 rounded-full tracking-wide">
@@ -62,17 +55,21 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* Discount Badge - Top Right */}
+        {discountPercent > 0 && (
+          <span className="absolute top-3 right-3 bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+            {discountPercent}% off
+          </span>
+        )}
+
+        {/* Hover Overlay - View Details */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-6">
-          <button
-            onClick={handleAddToCart}
-            className={`text-white px-5 py-2.5 rounded-full text-sm font-medium flex items-center space-x-2 transition-colors transform translate-y-4 group-hover:translate-y-0 duration-300 ${added ? 'bg-green-600' : 'bg-[#722F37] hover:bg-[#5a252c]'}`}
-          >
+          <span className="bg-white text-[#722F37] px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 shadow-md transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+            {t('product.viewDetails')}
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            <span>{added ? (language === 'hi' ? 'जोड़ा गया!' : 'Added!') : t('product.addToCart')}</span>
-          </button>
+          </span>
         </div>
       </div>
 
@@ -88,14 +85,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           <span className="text-lg font-bold text-[#722F37]">
             ₹{product.price.toLocaleString('en-IN')}
           </span>
-          <button
-            onClick={handleAddToCart}
-            className={`text-xs text-white px-3 py-1.5 rounded-full transition-colors ${added ? 'bg-green-600' : 'bg-[#722F37] hover:bg-[#5a252c]'}`}
-          >
-            {added ? (language === 'hi' ? 'जोड़ा गया!' : 'Added!') : t('product.addToCart')}
-          </button>
+          {product.originalPrice && (
+            <span className="text-sm text-[#6B6B6B] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+          )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

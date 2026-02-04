@@ -7,42 +7,47 @@ import { products as allProducts } from '@/data/products';
 export interface CartItem {
   product: Product;
   quantity: number;
+  size?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (product: Product, size?: string) => void;
+  removeFromCart: (productId: string, size?: string) => void;
+  updateQuantity: (productId: string, quantity: number, size?: string) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
 }
 
 type CartAction =
-  | { type: 'ADD'; product: Product }
-  | { type: 'REMOVE'; productId: string }
-  | { type: 'SET_QTY'; productId: string; quantity: number }
+  | { type: 'ADD'; product: Product; size?: string }
+  | { type: 'REMOVE'; productId: string; size?: string }
+  | { type: 'SET_QTY'; productId: string; quantity: number; size?: string }
   | { type: 'CLEAR' }
   | { type: 'INIT'; items: CartItem[] };
+
+function matchItem(i: CartItem, productId: string, size?: string) {
+  return i.product.id === productId && i.size === size;
+}
 
 function reducer(state: CartItem[], action: CartAction): CartItem[] {
   switch (action.type) {
     case 'ADD': {
-      const existing = state.find(i => i.product.id === action.product.id);
+      const existing = state.find(i => matchItem(i, action.product.id, action.size));
       if (existing) {
         return state.map(i =>
-          i.product.id === action.product.id ? { ...i, quantity: i.quantity + 1 } : i
+          matchItem(i, action.product.id, action.size) ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      return [...state, { product: action.product, quantity: 1 }];
+      return [...state, { product: action.product, quantity: 1, size: action.size }];
     }
     case 'REMOVE':
-      return state.filter(i => i.product.id !== action.productId);
+      return state.filter(i => !matchItem(i, action.productId, action.size));
     case 'SET_QTY':
-      if (action.quantity <= 0) return state.filter(i => i.product.id !== action.productId);
+      if (action.quantity <= 0) return state.filter(i => !matchItem(i, action.productId, action.size));
       return state.map(i =>
-        i.product.id === action.productId ? { ...i, quantity: action.quantity } : i
+        matchItem(i, action.productId, action.size) ? { ...i, quantity: action.quantity } : i
       );
     case 'CLEAR':
       return [];
@@ -62,11 +67,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('sweta_cart');
     if (stored) {
       try {
-        const parsed = JSON.parse(stored) as { id: string; qty: number }[];
+        const parsed = JSON.parse(stored) as { id: string; qty: number; size?: string }[];
         const restored = parsed
-          .map(({ id, qty }) => {
+          .map(({ id, qty, size }) => {
             const product = allProducts.find(p => p.id === id);
-            return product ? { product, quantity: qty } : null;
+            return product ? { product, quantity: qty, ...(size !== undefined ? { size } : {}) } : null;
           })
           .filter((item): item is CartItem => item !== null);
         if (restored.length > 0) dispatch({ type: 'INIT', items: restored });
@@ -79,7 +84,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(
       'sweta_cart',
-      JSON.stringify(items.map(i => ({ id: i.product.id, qty: i.quantity })))
+      JSON.stringify(items.map(i => ({ id: i.product.id, qty: i.quantity, size: i.size })))
     );
   }, [items]);
 
@@ -89,9 +94,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return (
     <CartContext.Provider value={{
       items,
-      addToCart: (product) => dispatch({ type: 'ADD', product }),
-      removeFromCart: (productId) => dispatch({ type: 'REMOVE', productId }),
-      updateQuantity: (productId, quantity) => dispatch({ type: 'SET_QTY', productId, quantity }),
+      addToCart: (product, size) => dispatch({ type: 'ADD', product, size }),
+      removeFromCart: (productId, size) => dispatch({ type: 'REMOVE', productId, size }),
+      updateQuantity: (productId, quantity, size) => dispatch({ type: 'SET_QTY', productId, quantity, size }),
       clearCart: () => dispatch({ type: 'CLEAR' }),
       totalItems,
       totalPrice,

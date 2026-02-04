@@ -63,7 +63,7 @@ export default function CartPage() {
             {items.map((item) => {
               const isCloudinary = item.product.image && !item.product.image.startsWith('/') && !item.product.image.startsWith('http');
               return (
-                <div key={item.product.id} className="bg-white rounded-xl border border-[#E8E2D9] p-4 flex gap-4">
+                <div key={`${item.product.id}-${item.size || ''}`} className="bg-white rounded-xl border border-[#E8E2D9] p-4 flex gap-4">
                   {/* Thumbnail */}
                   <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-[#F5F0E8]">
                     {isCloudinary ? (
@@ -92,12 +92,17 @@ export default function CartPage() {
                             {language === 'hi' ? item.product.fabricHi : item.product.fabric}
                           </p>
                         )}
+                        {item.size && (
+                          <p className="text-sm text-[#6B6B6B]">
+                            {language === 'hi' ? 'साइज़: ' : 'Size: '}{item.size}
+                          </p>
+                        )}
                         <p className="text-sm font-medium text-[#722F37] mt-0.5">
                           ₹{item.product.price.toLocaleString('en-IN')}
                         </p>
                       </div>
                       <button
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(item.product.id, item.size)}
                         className="text-[#6B6B6B] hover:text-red-600 transition-colors flex-shrink-0 p-0.5"
                         aria-label="Remove item"
                       >
@@ -111,7 +116,7 @@ export default function CartPage() {
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center border border-[#E8E2D9] rounded-lg overflow-hidden">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.size)}
                           className="w-8 h-8 flex items-center justify-center text-[#6B6B6B] hover:bg-[#F5F0E8] transition-colors"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,7 +127,7 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.size)}
                           className="w-8 h-8 flex items-center justify-center text-[#6B6B6B] hover:bg-[#F5F0E8] transition-colors"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
