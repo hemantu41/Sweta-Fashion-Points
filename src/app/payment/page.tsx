@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import QRCode from 'react-qr-code';
 
@@ -36,6 +37,7 @@ function PaymentContent() {
   const method = searchParams.get('method') as 'upi' | 'card';
   const router = useRouter();
   const { clearCart } = useCart();
+  const { user } = useAuth();
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [stage, setStage] = useState<'form' | 'processing' | 'success'>('form');
@@ -127,9 +129,24 @@ function PaymentContent() {
     return Object.keys(errs).length === 0;
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (method === 'upi' && !validateUpi()) return;
     if (method === 'card' && !validateCard()) return;
+
+    // Save UPI ID to DB for Mobile No and UPI ID tabs
+    if (method === 'upi' && upiType !== 'qr' && user?.id) {
+      const upiValue = upiType === 'mobile' ? mobileNumber : upiId;
+      try {
+        await fetch('/api/user/upi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, upiId: upiValue }),
+        });
+      } catch (err) {
+        console.error('Failed to save UPI ID:', err);
+      }
+    }
+
     setStage('processing');
     setTimeout(() => {
       setOrderNumber(generateOrderNumber());
