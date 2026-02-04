@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
+import QRCode from 'react-qr-code';
 
 interface OrderData {
   items: {
@@ -41,8 +42,15 @@ function PaymentContent() {
   const [orderNumber, setOrderNumber] = useState('');
 
   // UPI state
+  const [upiType, setUpiType] = useState<'mobile' | 'upiId' | 'qr'>('upiId');
   const [upiId, setUpiId] = useState('');
   const [upiError, setUpiError] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobileError, setMobileError] = useState('');
+  const [txnRef] = useState(() => {
+    const now = new Date();
+    return `SFP${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${Math.floor(Math.random() * 900000 + 100000)}`;
+  });
 
   // Card state
   const [cardNumber, setCardNumber] = useState('');
@@ -81,12 +89,24 @@ function PaymentContent() {
   };
 
   const validateUpi = () => {
-    if (!upiId.trim()) { setUpiError('Please enter your UPI ID'); return false; }
-    if (!upiId.includes('@') || upiId.startsWith('@') || upiId.endsWith('@')) {
-      setUpiError('Please enter a valid UPI ID (e.g. name@gpay)');
-      return false;
+    if (upiType === 'mobile') {
+      if (mobileNumber.length !== 10) {
+        setMobileError('Please enter a valid 10-digit mobile number');
+        return false;
+      }
+      setMobileError('');
+      return true;
     }
-    setUpiError('');
+    if (upiType === 'upiId') {
+      if (!upiId.trim()) { setUpiError('Please enter your UPI ID'); return false; }
+      if (!upiId.includes('@') || upiId.startsWith('@') || upiId.endsWith('@')) {
+        setUpiError('Please enter a valid UPI ID (e.g. name@gpay)');
+        return false;
+      }
+      setUpiError('');
+      return true;
+    }
+    // QR — no input validation needed
     return true;
   };
 
@@ -235,31 +255,131 @@ function PaymentContent() {
         {/* UPI Form */}
         {method === 'upi' && (
           <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
-            <h2 className="font-semibold text-[#2D2D2D] mb-1">Enter UPI ID</h2>
-            <p className="text-sm text-[#6B6B6B] mb-4">Open your UPI app and scan, or enter your UPI ID below</p>
-            <div>
-              <input
-                type="text"
-                value={upiId}
-                onChange={(e) => { setUpiId(e.target.value); setUpiError(''); }}
-                placeholder="example@gpay"
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent ${upiError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
-              />
-              {upiError && <p className="text-red-500 text-xs mt-1.5">{upiError}</p>}
+            {/* 3-Option Tab Selector */}
+            <div className="flex bg-[#F5F0E8] rounded-lg p-1 mb-5">
+              <button
+                onClick={() => setUpiType('mobile')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-md text-sm font-medium transition-all ${
+                  upiType === 'mobile' ? 'bg-white text-[#722F37] shadow-sm' : 'text-[#6B6B6B] hover:text-[#722F37]'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Mobile No
+              </button>
+              <button
+                onClick={() => setUpiType('upiId')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-md text-sm font-medium transition-all ${
+                  upiType === 'upiId' ? 'bg-white text-[#722F37] shadow-sm' : 'text-[#6B6B6B] hover:text-[#722F37]'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h12m-6-8v8" />
+                </svg>
+                UPI ID
+              </button>
+              <button
+                onClick={() => setUpiType('qr')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-md text-sm font-medium transition-all ${
+                  upiType === 'qr' ? 'bg-white text-[#722F37] shadow-sm' : 'text-[#6B6B6B] hover:text-[#722F37]'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM17 14v3m3-3v3m-3 3v3m3-3v3m-3-9h6v3m-6 3h3m3 0h3" />
+                </svg>
+                Scan QR
+              </button>
             </div>
-            <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-              {[
-                { name: 'Google Pay', letter: 'G', color: '#00C853' },
-                { name: 'PhonePe', letter: 'P', color: '#5F259F' },
-                { name: 'Paytm', letter: 'P', color: '#00BAF2' },
-                { name: 'BHIM', letter: 'B', color: '#FF9900' },
-              ].map(app => (
-                <div key={app.name} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#F5F0E8] rounded-lg">
-                  <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: app.color }}>{app.letter}</div>
-                  <span className="text-xs text-[#2D2D2D]">{app.name}</span>
+
+            {/* Mobile Number Tab */}
+            {upiType === 'mobile' && (
+              <div>
+                <p className="text-sm text-[#6B6B6B] mb-3">Enter your registered mobile number to receive the payment request</p>
+                <div className={`flex items-center border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#722F37] focus-within:border-transparent ${mobileError ? 'border-red-400' : 'border-gray-300'}`}>
+                  <span className="px-3 py-3 bg-[#F5F0E8] text-[#6B6B6B] text-sm border-r border-gray-200 whitespace-nowrap">+91</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={mobileNumber}
+                    onChange={(e) => { setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10)); setMobileError(''); }}
+                    placeholder="9876543210"
+                    className={`flex-1 px-4 py-3 text-sm outline-none ${mobileError ? 'bg-red-50' : ''}`}
+                  />
                 </div>
-              ))}
-            </div>
+                {mobileError && <p className="text-red-500 text-xs mt-1.5">{mobileError}</p>}
+                <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+                  {[
+                    { name: 'Google Pay', letter: 'G', color: '#00C853' },
+                    { name: 'PhonePe', letter: 'P', color: '#5F259F' },
+                    { name: 'Paytm', letter: 'P', color: '#00BAF2' },
+                    { name: 'BHIM', letter: 'B', color: '#FF9900' },
+                  ].map(app => (
+                    <div key={app.name} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#F5F0E8] rounded-lg">
+                      <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: app.color }}>{app.letter}</div>
+                      <span className="text-xs text-[#2D2D2D]">{app.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* UPI ID Tab */}
+            {upiType === 'upiId' && (
+              <div>
+                <p className="text-sm text-[#6B6B6B] mb-3">Enter your UPI ID from any app</p>
+                <input
+                  type="text"
+                  value={upiId}
+                  onChange={(e) => { setUpiId(e.target.value); setUpiError(''); }}
+                  placeholder="example@gpay"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent ${upiError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+                />
+                {upiError && <p className="text-red-500 text-xs mt-1.5">{upiError}</p>}
+                <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+                  {[
+                    { name: 'Google Pay', letter: 'G', color: '#00C853' },
+                    { name: 'PhonePe', letter: 'P', color: '#5F259F' },
+                    { name: 'Paytm', letter: 'P', color: '#00BAF2' },
+                    { name: 'BHIM', letter: 'B', color: '#FF9900' },
+                  ].map(app => (
+                    <div key={app.name} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#F5F0E8] rounded-lg">
+                      <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: app.color }}>{app.letter}</div>
+                      <span className="text-xs text-[#2D2D2D]">{app.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Scan QR Tab */}
+            {upiType === 'qr' && (
+              <div className="text-center">
+                <p className="text-sm text-[#6B6B6B] mb-4">Scan this QR code with any UPI app to complete payment</p>
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white rounded-xl border border-[#E8E2D9] inline-block">
+                    <QRCode
+                      value={`upi://pay?pa=swetafashionpoints@upi&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+Payment&tr=${txnRef}`}
+                      size={192}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-[#6B6B6B] mt-3">QR code is valid for a limited time</p>
+                <div className="mt-4 pt-3 border-t border-gray-100 flex justify-center flex-wrap gap-2">
+                  {[
+                    { name: 'Google Pay', letter: 'G', color: '#00C853' },
+                    { name: 'PhonePe', letter: 'P', color: '#5F259F' },
+                    { name: 'Paytm', letter: 'P', color: '#00BAF2' },
+                    { name: 'BHIM', letter: 'B', color: '#FF9900' },
+                  ].map(app => (
+                    <div key={app.name} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#F5F0E8] rounded-lg">
+                      <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: app.color }}>{app.letter}</div>
+                      <span className="text-xs text-[#2D2D2D]">{app.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -349,7 +469,9 @@ function PaymentContent() {
           onClick={handlePay}
           className="mt-6 w-full py-4 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300"
         >
-          Pay ₹{order.totalPrice.toLocaleString('en-IN')}
+          {method === 'upi' && upiType === 'qr'
+            ? 'I have completed the payment'
+            : `Pay ₹${order.totalPrice.toLocaleString('en-IN')}`}
         </button>
 
         {/* Security note */}
