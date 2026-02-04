@@ -126,6 +126,9 @@ const translations: Record<Language, Record<string, string>> = {
     'cart.visitStore': 'Or visit our store',
     'cart.clearCart': 'Clear cart',
     'cart.items': 'items',
+
+    // Checkout
+    'checkout.buyNow': 'Buy Now',
   },
   hi: {
     // Navigation
@@ -240,6 +243,9 @@ const translations: Record<Language, Record<string, string>> = {
     'cart.visitStore': 'या स्टोर पर आएं',
     'cart.clearCart': 'कार्ट साफ़ करें',
     'cart.items': 'आइटम',
+
+    // Checkout
+    'checkout.buyNow': 'अभी खरीदें',
   }
 };
 
