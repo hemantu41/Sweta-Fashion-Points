@@ -6,6 +6,7 @@ export interface ProductColor {
 
 export interface Product {
   id: string;
+  productId?: string;
   name: string;
   nameHi: string;
   category: 'mens' | 'womens' | 'sarees' | 'kids';
@@ -13,7 +14,8 @@ export interface Product {
   price: number;
   originalPrice?: number;
   priceRange: 'budget' | 'mid' | 'premium';
-  image: string;
+  image?: string; // Legacy field for compatibility
+  mainImage?: string | null; // New field from database
   images: string[];
   colors?: ProductColor[];
   sizes?: string[];
@@ -23,6 +25,8 @@ export interface Product {
   descriptionHi: string;
   fabric?: string;
   fabricHi?: string;
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 export interface Category {
