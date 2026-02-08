@@ -31,7 +31,7 @@ export default function AdminProductsPage() {
   const fetchProducts = async () => {
     try {
       const url = '/api/products?isActive=all';
-      const response = await fetch(url);
+      const response = await fetch(url, { cache: 'no-store' });
       const data = await response.json();
       setProducts(data.products || []);
     } catch (error) {

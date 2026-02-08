@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import MultiImageUpload from '@/components/MultiImageUpload';
 
-export default function AddProductPage() {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState('');
+  const [productId, setProductId] = useState('');
 
   const [formData, setFormData] = useState({
     productId: '',
@@ -28,6 +30,7 @@ export default function AddProductPage() {
     stockQuantity: '100',
     isNewArrival: false,
     isBestSeller: false,
+    isActive: true,
   });
 
   const subCategories = {
@@ -37,19 +40,64 @@ export default function AddProductPage() {
     kids: ['0-3', '4-7', '8-12'],
   };
 
+  // Fetch product data
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        const resolvedParams = await params;
+        const id = resolvedParams.id;
+        setProductId(id);
+
+        const response = await fetch(`/api/products/${id}`, { cache: 'no-store' });
+        const data = await response.json();
+
+        if (response.ok && data.product) {
+          const product = data.product;
+          setFormData({
+            productId: product.productId || '',
+            name: product.name || '',
+            nameHi: product.nameHi || '',
+            category: product.category || 'mens',
+            subCategory: product.subCategory || '',
+            price: product.price?.toString() || '',
+            originalPrice: product.originalPrice?.toString() || '',
+            priceRange: product.priceRange || 'mid',
+            description: product.description || '',
+            descriptionHi: product.descriptionHi || '',
+            fabric: product.fabric || '',
+            fabricHi: product.fabricHi || '',
+            images: product.images || (product.mainImage ? [product.mainImage] : []),
+            stockQuantity: product.stockQuantity?.toString() || '100',
+            isNewArrival: product.isNewArrival || false,
+            isBestSeller: product.isBestSeller || false,
+            isActive: product.isActive !== false,
+          });
+        } else {
+          setMessage('Product not found');
+        }
+      } catch (error) {
+        setMessage('Error loading product');
+        console.error('Fetch error:', error);
+      } finally {
+        setFetching(false);
+      }
+    }
+
+    fetchProduct();
+  }, [params]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
     try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user?.id,
           product: {
-            productId: formData.productId,
             name: formData.name,
             nameHi: formData.nameHi,
             category: formData.category,
@@ -63,11 +111,10 @@ export default function AddProductPage() {
             fabricHi: formData.fabricHi,
             mainImage: formData.images[0] || '',
             images: formData.images,
-            colors: [],
-            sizes: [],
             stockQuantity: parseInt(formData.stockQuantity),
             isNewArrival: formData.isNewArrival,
             isBestSeller: formData.isBestSeller,
+            isActive: formData.isActive,
           },
         }),
       });
@@ -75,26 +122,34 @@ export default function AddProductPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('Product created successfully!');
+        setMessage('Product updated successfully!');
         setTimeout(() => router.push('/admin/products'), 1500);
       } else {
-        setMessage(data.error || 'Failed to create product');
+        setMessage(data.error || 'Failed to update product');
       }
     } catch (error) {
-      setMessage('Error creating product');
+      setMessage('Error updating product');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+        <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair)' }}>
-            Add New Product
+            Edit Product
           </h1>
-          <p className="text-[#6B6B6B] mt-1">Create a new product in your inventory</p>
+          <p className="text-[#6B6B6B] mt-1">Update product details in your inventory</p>
         </div>
 
         {message && (
@@ -112,16 +167,15 @@ export default function AddProductPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Product ID <span className="text-red-500">*</span>
+                  Product ID
                 </label>
                 <input
                   type="text"
-                  required
+                  disabled
                   value={formData.productId}
-                  onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  placeholder="e.g., mens-jeans-6"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                 />
+                <p className="text-xs text-[#6B6B6B] mt-1">Product ID cannot be changed</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
@@ -288,6 +342,15 @@ export default function AddProductPage() {
                 />
                 <span className="text-sm font-medium text-[#2D2D2D]">Best Seller</span>
               </label>
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="w-5 h-5 text-[#722F37] border-gray-300 rounded focus:ring-[#722F37]"
+                />
+                <span className="text-sm font-medium text-[#2D2D2D]">Active (visible on website)</span>
+              </label>
             </div>
           </div>
 
@@ -298,7 +361,7 @@ export default function AddProductPage() {
               disabled={loading}
               className="px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create Product'}
+              {loading ? 'Updating...' : 'Update Product'}
             </button>
             <button
               type="button"

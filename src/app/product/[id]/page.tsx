@@ -7,7 +7,6 @@ import { useParams } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { products } from '@/data/products';
 
 const sizeChartData: Record<string, { headers: { en: string[]; hi: string[] }; rows: string[][] }> = {
   mens_top: {
@@ -95,8 +94,8 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const { user, isAuthenticated } = useAuth();
 
-  const product = products.find(p => p.id === id);
-
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -106,6 +105,24 @@ export default function ProductDetailPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
+
+  // Fetch product data
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        const response = await fetch(`/api/products/${id}`, { cache: 'no-store' });
+        const data = await response.json();
+        if (response.ok && data.product) {
+          setProduct(data.product);
+        }
+      } catch (error) {
+        console.error('Failed to fetch product:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProduct();
+  }, [id]);
 
   // Reset image index when product changes
   useEffect(() => {
@@ -166,6 +183,28 @@ export default function ProductDetailPage() {
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
+        <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-[#722F37] mb-2">Product Not Found</h1>
+          <p className="text-[#6B6B6B] mb-4">The product you're looking for doesn't exist.</p>
+          <Link href="/" className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all inline-block">
+            Return to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] py-6 px-4">

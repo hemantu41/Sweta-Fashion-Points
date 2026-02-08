@@ -19,8 +19,8 @@ export default function Home() {
   const fetchProducts = async () => {
     try {
       const [newArrivalsRes, bestSellersRes] = await Promise.all([
-        fetch('/api/products?isNewArrival=true'),
-        fetch('/api/products?isBestSeller=true'),
+        fetch('/api/products?isNewArrival=true', { cache: 'no-store' }),
+        fetch('/api/products?isBestSeller=true', { cache: 'no-store' }),
       ]);
 
       const newArrivalsData = await newArrivalsRes.json();

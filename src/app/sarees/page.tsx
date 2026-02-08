@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProductCard } from '@/components';
-import { getProductsByCategory, sareesSubCategories } from '@/data/products';
+import { sareesSubCategories } from '@/data/products';
 import { useLanguage } from '@/context/LanguageContext';
 
 type FilterType = 'occasion' | 'price';
@@ -11,7 +11,24 @@ export default function SareesPage() {
   const { language } = useLanguage();
   const [filterType, setFilterType] = useState<FilterType>('occasion');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const allProducts = getProductsByCategory('sarees');
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products?category=sarees', { cache: 'no-store' });
+      const data = await response.json();
+      setAllProducts(data.products || []);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProducts = activeCategory
     ? allProducts.filter((p) => p.subCategory === activeCategory)
@@ -149,7 +166,11 @@ export default function SareesPage() {
         )}
 
         {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-16">
+            <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />

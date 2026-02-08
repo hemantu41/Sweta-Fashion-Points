@@ -1,14 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProductCard } from '@/components';
-import { getProductsByCategory, womensSubCategories } from '@/data/products';
+import { womensSubCategories } from '@/data/products';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function WomensPage() {
   const { language } = useLanguage();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const allProducts = getProductsByCategory('womens');
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products?category=womens', { cache: 'no-store' });
+      const data = await response.json();
+      setAllProducts(data.products || []);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProducts = activeCategory
     ? allProducts.filter((p) => p.subCategory === activeCategory)
@@ -64,7 +81,11 @@ export default function WomensPage() {
         </div>
 
         {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-16">
+            <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
