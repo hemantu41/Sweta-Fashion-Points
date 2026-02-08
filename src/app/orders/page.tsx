@@ -65,17 +65,21 @@ export default function OrdersPage() {
       const data = await response.json();
 
       console.log('[Orders Page] Response:', data);
+      console.log('[Orders Page] data.success:', data.success);
       console.log('[Orders Page] Orders count:', data.orders?.length || 0);
       console.log('[Orders Page] First order:', data.orders?.[0]);
       console.log('[Orders Page] First order items:', data.orders?.[0]?.items);
 
-      if (data.success) {
-        console.log('[Orders Page] Setting orders state with:', data.orders);
+      // Set orders if we have data, regardless of success flag
+      if (data.orders && Array.isArray(data.orders)) {
+        console.log('[Orders Page] Setting orders state with:', data.orders.length, 'orders');
         setOrders(data.orders);
-        console.log('[Orders Page] Orders state should now have:', data.orders.length, 'orders');
+      } else if (data.success) {
+        console.log('[Orders Page] Success but no orders array');
+        setOrders([]);
       } else {
         console.error('[Orders Page] Error:', data.error);
-        setError('Failed to load orders');
+        setError(data.error || 'Failed to load orders');
       }
     } catch (err) {
       console.error('[Orders Page] Fetch error:', err);
