@@ -40,7 +40,7 @@ function PaymentContent() {
   const { user } = useAuth();
 
   const [order, setOrder] = useState<OrderData | null>(null);
-  const [stage, setStage] = useState<'form' | 'processing' | 'checking-status' | 'success' | 'failed' | 'pending'>('form');
+  const [stage, setStage] = useState<'form' | 'processing' | 'checking-status' | 'success' | 'failed' | 'pending' | 'expired'>('form');
   const [orderNumber, setOrderNumber] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'failed' | 'pending'>('success');
 
@@ -48,6 +48,10 @@ function PaymentContent() {
   const [razorpayOrderId, setRazorpayOrderId] = useState('');
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Timer state for QR expiry (3 minutes = 180 seconds)
+  const [timeRemaining, setTimeRemaining] = useState(180);
+  const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
 
   // UPI state
   const [upiType, setUpiType] = useState<'mobile' | 'upiId' | 'qr'>('upiId');
@@ -91,6 +95,36 @@ function PaymentContent() {
       }
     };
   }, [pollingInterval]);
+
+  // Auto-start payment checking and countdown timer when QR code is generated
+  useEffect(() => {
+    if (razorpayOrderId && method === 'upi' && upiType === 'qr' && !qrCodeGenerated) {
+      setQrCodeGenerated(true);
+      // Start payment status polling immediately
+      startPaymentStatusPolling();
+    }
+  }, [razorpayOrderId, method, upiType, qrCodeGenerated]);
+
+  // Countdown timer for QR code expiry (3 minutes)
+  useEffect(() => {
+    if (!qrCodeGenerated || stage !== 'form') return;
+
+    const timerInterval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerInterval);
+          setStage('expired');
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, [qrCodeGenerated, stage, pollingInterval]);
 
   const createRazorpayOrder = async () => {
     setCreatingOrder(true);
@@ -166,8 +200,14 @@ function PaymentContent() {
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
-    const rand = Math.floor(Math.random() * 900000 + 100000);
+    const rand = Math.floor(Math.random() + 900000 + 100000);
     return `SFP-${y}${m}${d}-${rand}`;
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const formatCardNumber = (val: string) => {
@@ -221,6 +261,11 @@ function PaymentContent() {
   };
 
   const handlePay = async () => {
+    // QR payments are automatic - no button needed
+    if (method === 'upi' && upiType === 'qr') {
+      return; // QR code auto-checks payment status
+    }
+
     if (method === 'upi' && !validateUpi()) return;
     if (method === 'card' && !validateCard()) return;
 
@@ -243,13 +288,6 @@ function PaymentContent() {
       }
     }
 
-    // For QR code payments, start automatic status checking
-    if (method === 'upi' && upiType === 'qr') {
-      setStage('checking-status');
-      startPaymentStatusPolling();
-      return;
-    }
-
     // For other payment methods, show processing
     setStage('processing');
 
@@ -259,6 +297,15 @@ function PaymentContent() {
       setStage('checking-status');
       startPaymentStatusPolling();
     }, 2000);
+  };
+
+  const handleRetry = () => {
+    // Reset states for new QR code
+    setTimeRemaining(180);
+    setQrCodeGenerated(false);
+    setStage('form');
+    // Create new Razorpay order
+    createRazorpayOrder();
   };
 
   const completePayment = async (status: 'success' | 'failed' | 'pending') => {
@@ -493,6 +540,58 @@ function PaymentContent() {
     );
   }
 
+  // ── Expired ──
+  if (stage === 'expired') {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] py-12 px-4">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-12 h-12 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+            QR Code Expired
+          </h1>
+          <p className="text-[#6B6B6B] mb-6">The payment QR code has expired after 3 minutes</p>
+
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 text-left">
+            <h3 className="font-semibold text-orange-900 mb-2">What happened?</h3>
+            <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
+              <li>QR codes expire after 3 minutes for security</li>
+              <li>No payment was detected during this time</li>
+              <li>If you already paid, don't worry - check your UPI app</li>
+              <li>Click below to generate a new QR code</li>
+            </ul>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleRetry}
+              className="flex-1 py-3.5 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-medium rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300"
+            >
+              Generate New QR Code
+            </button>
+            <Link
+              href="/"
+              className="flex-1 py-3.5 border-2 border-[#722F37] text-[#722F37] font-medium rounded-full hover:bg-[#722F37] hover:text-white transition-all duration-300 text-center"
+            >
+              Go Home
+            </Link>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm text-[#6B6B6B] mb-2">Need help?</p>
+            <a href="tel:+919608063673" className="text-[#722F37] font-medium hover:underline">
+              Call us at +91 96080 63673
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── Pending ──
   if (stage === 'pending') {
     return (
@@ -688,14 +787,40 @@ function PaymentContent() {
               <div className="text-center">
                 <p className="text-sm text-[#6B6B6B] mb-4">Scan this QR code with any UPI app to complete payment</p>
                 {razorpayOrderId ? (
-                  <div className="flex justify-center">
-                    <div className="p-4 bg-white rounded-xl border border-[#E8E2D9] inline-block">
-                      <QRCode
-                        value={`upi://pay?pa=8294153256@ybl&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+${orderNumber}&tr=${razorpayOrderId}`}
-                        size={192}
-                      />
+                  <>
+                    <div className="flex justify-center">
+                      <div className="p-4 bg-white rounded-xl border-2 border-[#E8E2D9] inline-block relative">
+                        <QRCode
+                          value={`upi://pay?pa=8294153256@ybl&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+${orderNumber}&tr=${razorpayOrderId}`}
+                          size={192}
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    {/* Timer and Status */}
+                    <div className="mt-4 space-y-3">
+                      {/* Countdown Timer */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 inline-block">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="text-xs text-blue-600 font-medium">QR Code Expires In</p>
+                            <p className="text-lg font-bold text-blue-700">{formatTime(timeRemaining)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Auto-checking status */}
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+                          <p className="text-sm text-green-700 font-medium">Automatically checking payment status...</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="flex justify-center items-center h-60">
                     <div className="text-center">
@@ -704,7 +829,7 @@ function PaymentContent() {
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-[#6B6B6B] mt-3">Payment will be auto-detected after scanning</p>
+                <p className="text-xs text-[#6B6B6B] mt-4">Payment will be detected automatically within seconds</p>
                 <div className="mt-4 pt-3 border-t border-gray-100 flex justify-center flex-wrap gap-2">
                   {[
                     { name: 'Google Pay', letter: 'G', color: '#00C853' },
@@ -804,22 +929,22 @@ function PaymentContent() {
           </div>
         )}
 
-        {/* Pay Button */}
-        <button
-          onClick={handlePay}
-          disabled={!razorpayOrderId || creatingOrder}
-          className="mt-6 w-full py-4 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {creatingOrder ? (
-            'Preparing payment...'
-          ) : !razorpayOrderId ? (
-            'Please wait...'
-          ) : method === 'upi' && upiType === 'qr' ? (
-            'I have scanned and paid'
-          ) : (
-            `Pay ₹${order.totalPrice.toLocaleString('en-IN')}`
-          )}
-        </button>
+        {/* Pay Button - Hidden for QR payments (automatic) */}
+        {!(method === 'upi' && upiType === 'qr') && (
+          <button
+            onClick={handlePay}
+            disabled={!razorpayOrderId || creatingOrder}
+            className="mt-6 w-full py-4 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {creatingOrder ? (
+              'Preparing payment...'
+            ) : !razorpayOrderId ? (
+              'Please wait...'
+            ) : (
+              `Pay ₹${order.totalPrice.toLocaleString('en-IN')}`
+            )}
+          </button>
+        )}
 
         {/* Security note */}
         <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#6B6B6B]">
