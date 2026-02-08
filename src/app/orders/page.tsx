@@ -64,13 +64,19 @@ export default function OrdersPage() {
       const response = await fetch(`/api/orders?userId=${user?.id}`);
       const data = await response.json();
 
+      console.log('[Orders Page] Response:', data);
+      console.log('[Orders Page] Orders count:', data.orders?.length || 0);
+      console.log('[Orders Page] First order:', data.orders?.[0]);
+      console.log('[Orders Page] First order items:', data.orders?.[0]?.items);
+
       if (data.success) {
         setOrders(data.orders);
       } else {
+        console.error('[Orders Page] Error:', data.error);
         setError('Failed to load orders');
       }
     } catch (err) {
-      console.error('Error fetching orders:', err);
+      console.error('[Orders Page] Fetch error:', err);
       setError('Failed to load orders');
     } finally {
       setLoading(false);

@@ -27,6 +27,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('[Orders API] Found orders:', orders?.length || 0);
+    console.log('[Orders API] Sample order:', orders?.[0]);
+
     return NextResponse.json({
       success: true,
       orders: orders || [],
