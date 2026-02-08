@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const isBestSeller = searchParams.get('isBestSeller');
     const priceRange = searchParams.get('priceRange');
     const isActive = searchParams.get('isActive');
+    const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
 
     // Build query
     let query = supabase.from('spf_productdetails').select('*');
@@ -43,6 +44,9 @@ export async function GET(request: NextRequest) {
     }
     if (isActive !== 'all') {
       query = query.eq('is_active', true);
+    }
+    if (sellerId) {
+      query = query.eq('seller_id', sellerId);
     }
 
     const { data: products, error } = await query.order('created_at', { ascending: false });
@@ -78,6 +82,7 @@ export async function GET(request: NextRequest) {
       isNewArrival: p.is_new_arrival,
       isBestSeller: p.is_best_seller,
       isActive: p.is_active,
+      sellerId: p.seller_id,
     })) || [];
 
     console.log(`[Products API] Returning ${transformedProducts.length} products for category: ${category}`);
@@ -128,6 +133,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get seller_id if user is a seller
+    let sellerId = null;
+    if (product.sellerId) {
+      sellerId = product.sellerId;
+    } else {
+      // Check if user is a seller and get their seller_id
+      const { data: sellerData } = await supabase
+        .from('spf_sellers')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'approved')
+        .single();
+
+      if (sellerData) {
+        sellerId = sellerData.id;
+      }
+    }
+
     // Insert product
     const { data: newProduct, error } = await supabase
       .from('spf_productdetails')
@@ -152,6 +175,7 @@ export async function POST(request: NextRequest) {
         is_new_arrival: product.isNewArrival || false,
         is_best_seller: product.isBestSeller || false,
         is_active: product.isActive !== false,
+        seller_id: sellerId,
         created_by: userId,
         updated_by: userId,
       })

@@ -55,6 +55,7 @@ export async function GET(
       isNewArrival: product.is_new_arrival,
       isBestSeller: product.is_best_seller,
       isActive: product.is_active,
+      sellerId: product.seller_id,
       createdAt: product.created_at,
       updatedAt: product.updated_at,
     };
@@ -71,7 +72,36 @@ export async function GET(
   }
 }
 
-// PUT /api/products/[id] - Update product (Admin only)
+// Helper to check if user can edit product
+async function canEditProduct(userId: string, productId: string): Promise<boolean> {
+  // Check if user is admin
+  if (await isAdmin(userId)) {
+    return true;
+  }
+
+  // Check if user is the seller who owns this product
+  const { data: product } = await supabase
+    .from('spf_productdetails')
+    .select('seller_id')
+    .eq('product_id', productId)
+    .single();
+
+  if (!product?.seller_id) {
+    // Product has no seller (legacy product) - only admin can edit
+    return false;
+  }
+
+  // Check if user owns this seller account
+  const { data: seller } = await supabase
+    .from('spf_sellers')
+    .select('user_id, status')
+    .eq('id', product.seller_id)
+    .single();
+
+  return seller?.user_id === userId && seller?.status === 'approved';
+}
+
+// PUT /api/products/[id] - Update product (Admin or product owner)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -81,8 +111,8 @@ export async function PUT(
     const body = await request.json();
     const { userId, product } = body;
 
-    // Check admin authorization
-    if (!userId || !(await isAdmin(userId))) {
+    // Check authorization
+    if (!userId || !(await canEditProduct(userId, productId))) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -140,7 +170,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/products/[id] - Soft delete product (Admin only)
+// DELETE /api/products/[id] - Soft delete product (Admin or product owner)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -150,8 +180,8 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    // Check admin authorization
-    if (!userId || !(await isAdmin(userId))) {
+    // Check authorization
+    if (!userId || !(await canEditProduct(userId, productId))) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
