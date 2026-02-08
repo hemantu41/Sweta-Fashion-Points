@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { ProductColor } from '@/data/products';
 
 const sizeChartData: Record<string, { headers: { en: string[]; hi: string[] }; rows: string[][] }> = {
   mens_top: {
@@ -255,7 +256,7 @@ export default function ProductDetailPage() {
             {/* Thumbnails */}
             {allImages.length > 1 && (
               <div className="flex gap-2 mt-3">
-                {allImages.map((img, idx) => (
+                {allImages.map((img: string, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
@@ -315,7 +316,7 @@ export default function ProductDetailPage() {
                   </span>
                 </p>
                 <div className="flex gap-2">
-                  {product.colors.map((color, idx) => (
+                  {product.colors.map((color: ProductColor, idx: number) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedColor(idx)}
@@ -346,7 +347,7 @@ export default function ProductDetailPage() {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {product.sizes?.map((size) => (
+                  {product.sizes?.map((size: string) => (
                     <button
                       key={size}
                       onClick={() => { setSelectedSize(size); setSizeError(false); }}
@@ -384,7 +385,7 @@ export default function ProductDetailPage() {
                     </p>
                     {showAddressDropdown && (
                       <div className="mt-2 border border-[#E8E2D9] rounded-lg bg-white overflow-hidden">
-                        {addresses.map((addr) => (
+                        {addresses.map((addr: Address) => (
                           <button
                             key={addr.id}
                             onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
@@ -485,15 +486,15 @@ export default function ProductDetailPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#F5F0E8]">
-                  {chartData.headers[language].map((h, i) => (
+                  {chartData.headers[language].map((h: string, i: number) => (
                     <th key={i} className="text-left px-3 py-2.5 font-semibold text-[#2D2D2D]">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {chartData.rows.map((row, i) => (
+                {chartData.rows.map((row: string[], i: number) => (
                   <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
-                    {row.map((cell, j) => (
+                    {row.map((cell: string, j: number) => (
                       <td key={j} className="px-3 py-2 text-[#2D2D2D]">{cell}</td>
                     ))}
                   </tr>
