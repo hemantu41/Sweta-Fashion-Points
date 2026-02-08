@@ -40,9 +40,14 @@ function PaymentContent() {
   const { user } = useAuth();
 
   const [order, setOrder] = useState<OrderData | null>(null);
-  const [stage, setStage] = useState<'form' | 'processing' | 'confirm-status' | 'success' | 'failed' | 'pending'>('form');
+  const [stage, setStage] = useState<'form' | 'processing' | 'checking-status' | 'success' | 'failed' | 'pending'>('form');
   const [orderNumber, setOrderNumber] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'failed' | 'pending'>('success');
+
+  // Razorpay state
+  const [razorpayOrderId, setRazorpayOrderId] = useState('');
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   // UPI state
   const [upiType, setUpiType] = useState<'mobile' | 'upiId' | 'qr'>('upiId');
@@ -70,6 +75,91 @@ function PaymentContent() {
       router.push('/');
     }
   }, [router]);
+
+  // Create Razorpay order when order data is loaded
+  useEffect(() => {
+    if (order && user?.id && !razorpayOrderId && !creatingOrder) {
+      createRazorpayOrder();
+    }
+  }, [order, user, razorpayOrderId, creatingOrder]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
+
+  const createRazorpayOrder = async () => {
+    setCreatingOrder(true);
+    try {
+      const response = await fetch('/api/payment/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          amount: order?.totalPrice,
+          items: order?.items,
+          address: order?.address,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create payment order');
+      }
+
+      console.log('[Payment] Razorpay order created:', data.orderId);
+      setRazorpayOrderId(data.orderId);
+      setOrderNumber(data.orderNumber);
+    } catch (error: any) {
+      console.error('[Payment] Error creating order:', error);
+      alert('Failed to initialize payment. Please try again.');
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
+  const startPaymentStatusPolling = () => {
+    console.log('[Payment] Starting status polling for:', razorpayOrderId);
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/payment/status/${razorpayOrderId}`);
+        const data = await response.json();
+
+        console.log('[Payment] Status check:', data.status);
+
+        if (data.status === 'success') {
+          clearInterval(interval);
+          setPaymentStatus('success');
+          sessionStorage.removeItem('sweta_order');
+          clearCart();
+          setStage('success');
+        } else if (data.status === 'failed') {
+          clearInterval(interval);
+          setPaymentStatus('failed');
+          setStage('failed');
+        }
+        // If pending, continue polling
+      } catch (error) {
+        console.error('[Payment] Status check error:', error);
+      }
+    }, 5000); // Check every 5 seconds
+
+    setPollingInterval(interval);
+
+    // Stop polling after 10 minutes (timeout)
+    setTimeout(() => {
+      clearInterval(interval);
+      if (stage === 'checking-status') {
+        setStage('pending');
+      }
+    }, 600000); // 10 minutes
+  };
 
   const generateOrderNumber = () => {
     const now = new Date();
@@ -134,6 +224,11 @@ function PaymentContent() {
     if (method === 'upi' && !validateUpi()) return;
     if (method === 'card' && !validateCard()) return;
 
+    if (!razorpayOrderId) {
+      alert('Payment not ready. Please wait...');
+      return;
+    }
+
     // Save UPI ID to DB for Mobile No and UPI ID tabs
     if (method === 'upi' && upiType !== 'qr' && user?.id) {
       const upiValue = upiType === 'mobile' ? mobileNumber : upiId;
@@ -148,18 +243,22 @@ function PaymentContent() {
       }
     }
 
-    // For QR code payments, ask user to confirm payment status
+    // For QR code payments, start automatic status checking
     if (method === 'upi' && upiType === 'qr') {
-      setStage('confirm-status');
+      setStage('checking-status');
+      startPaymentStatusPolling();
       return;
     }
 
+    // For other payment methods, show processing
     setStage('processing');
 
-    // Simulate payment processing (will be replaced with real gateway later)
-    setTimeout(async () => {
-      await completePayment('success');
-    }, 3000);
+    // For UPI ID/Mobile, this would integrate with Razorpay UPI flow
+    // For now, start polling after a short delay
+    setTimeout(() => {
+      setStage('checking-status');
+      startPaymentStatusPolling();
+    }, 2000);
   };
 
   const completePayment = async (status: 'success' | 'failed' | 'pending') => {
@@ -226,57 +325,49 @@ function PaymentContent() {
     );
   }
 
-  // ── Confirm Payment Status (for QR payments) ──
-  if (stage === 'confirm-status') {
+  // ── Checking Payment Status (automatic detection) ──
+  if (stage === 'checking-status') {
     return (
       <div className="min-h-screen bg-[#FAF7F2] py-12 px-4">
         <div className="max-w-lg mx-auto text-center">
           <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
 
           <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-            Payment Status Confirmation
+            Checking Payment Status
           </h1>
-          <p className="text-[#6B6B6B] mb-8">Please confirm the status of your UPI payment</p>
+          <p className="text-[#6B6B6B] mb-6">Please wait while we verify your payment...</p>
 
-          <div className="space-y-4">
-            <button
-              onClick={() => completePayment('success')}
-              className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-green-600/25 transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Payment Successful
-            </button>
-
-            <button
-              onClick={() => completePayment('pending')}
-              className="w-full py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-yellow-500/25 transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Payment Pending
-            </button>
-
-            <button
-              onClick={() => completePayment('failed')}
-              className="w-full py-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-red-600/25 transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Payment Failed
-            </button>
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900 mb-1">What's happening?</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Your payment is being verified automatically</li>
+                  <li>• This usually takes 5-30 seconds</li>
+                  <li>• Please don't close this window</li>
+                  <li>• You'll be notified once payment is confirmed</li>
+                </ul>
+              </div>
+            </div>
           </div>
 
-          <p className="text-xs text-[#6B6B6B] mt-6">
-            Check your UPI app for the transaction status before confirming
-          </p>
+          {orderNumber && (
+            <div className="bg-white rounded-xl border border-[#E8E2D9] p-4 mb-6">
+              <p className="text-sm text-[#6B6B6B] mb-1">Order Number</p>
+              <p className="font-bold text-[#722F37] text-lg tracking-wide">{orderNumber}</p>
+            </div>
+          )}
+
+          <div className="flex justify-center gap-2 mt-6">
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
         </div>
       </div>
     );
@@ -596,15 +687,24 @@ function PaymentContent() {
             {upiType === 'qr' && (
               <div className="text-center">
                 <p className="text-sm text-[#6B6B6B] mb-4">Scan this QR code with any UPI app to complete payment</p>
-                <div className="flex justify-center">
-                  <div className="p-4 bg-white rounded-xl border border-[#E8E2D9] inline-block">
-                    <QRCode
-                      value={`upi://pay?pa=8294153256@ybl&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+Payment&tr=${txnRef}`}
-                      size={192}
-                    />
+                {razorpayOrderId ? (
+                  <div className="flex justify-center">
+                    <div className="p-4 bg-white rounded-xl border border-[#E8E2D9] inline-block">
+                      <QRCode
+                        value={`upi://pay?pa=8294153256@ybl&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+${orderNumber}&tr=${razorpayOrderId}`}
+                        size={192}
+                      />
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-[#6B6B6B] mt-3">QR code is valid for a limited time</p>
+                ) : (
+                  <div className="flex justify-center items-center h-60">
+                    <div className="text-center">
+                      <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                      <p className="text-sm text-[#6B6B6B]">Generating QR code...</p>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-[#6B6B6B] mt-3">Payment will be auto-detected after scanning</p>
                 <div className="mt-4 pt-3 border-t border-gray-100 flex justify-center flex-wrap gap-2">
                   {[
                     { name: 'Google Pay', letter: 'G', color: '#00C853' },
@@ -707,11 +807,18 @@ function PaymentContent() {
         {/* Pay Button */}
         <button
           onClick={handlePay}
-          className="mt-6 w-full py-4 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300"
+          disabled={!razorpayOrderId || creatingOrder}
+          className="mt-6 w-full py-4 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {method === 'upi' && upiType === 'qr'
-            ? 'I have completed the payment'
-            : `Pay ₹${order.totalPrice.toLocaleString('en-IN')}`}
+          {creatingOrder ? (
+            'Preparing payment...'
+          ) : !razorpayOrderId ? (
+            'Please wait...'
+          ) : method === 'upi' && upiType === 'qr' ? (
+            'I have scanned and paid'
+          ) : (
+            `Pay ₹${order.totalPrice.toLocaleString('en-IN')}`
+          )}
         </button>
 
         {/* Security note */}
