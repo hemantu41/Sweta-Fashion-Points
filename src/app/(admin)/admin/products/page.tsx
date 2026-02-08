@@ -7,14 +7,15 @@ import Image from 'next/image';
 
 interface Product {
   id: string;
-  productId: string;
+  productId?: string;
   name: string;
   category: string;
   price: number;
   originalPrice?: number;
-  mainImage: string | null;
-  stockQuantity: number;
-  isActive: boolean;
+  mainImage?: string | null;
+  image?: string; // Legacy field from static products
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 export default function AdminProductsPage() {
@@ -62,8 +63,9 @@ export default function AdminProductsPage() {
   };
 
   const filteredProducts = products.filter(p => {
+    const productIdValue = p.productId || p.id || '';
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                         p.productId.toLowerCase().includes(search.toLowerCase());
+                         productIdValue.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = !categoryFilter || p.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -161,9 +163,9 @@ export default function AdminProductsPage() {
                 {filteredProducts.map((product, index) => (
                   <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
                     <td className="px-6 py-4">
-                      {product.mainImage ? (
+                      {(product.mainImage || product.image) ? (
                         <Image
-                          src={`https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_50,h_50/${product.mainImage!}`}
+                          src={`https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_50,h_50/${product.mainImage || product.image}`}
                           alt={product.name}
                           width={50}
                           height={50}
@@ -173,7 +175,7 @@ export default function AdminProductsPage() {
                         <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-[#6B6B6B]">{product.productId}</td>
+                    <td className="px-6 py-4 text-sm text-[#6B6B6B]">{product.productId || product.id}</td>
                     <td className="px-6 py-4 text-sm font-medium text-[#2D2D2D]">{product.name}</td>
                     <td className="px-6 py-4 text-sm text-[#6B6B6B] capitalize">{product.category}</td>
                     <td className="px-6 py-4 text-sm text-[#2D2D2D]">
@@ -188,7 +190,7 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span className={product.stockQuantity === 0 ? 'text-red-600 font-semibold' : 'text-[#2D2D2D]'}>
-                        {product.stockQuantity}
+                        {product.stockQuantity || 0}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -203,13 +205,13 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         <Link
-                          href={`/admin/products/edit/${product.productId}`}
+                          href={`/admin/products/edit/${product.productId || product.id}`}
                           className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
                         >
                           Edit
                         </Link>
                         <button
-                          onClick={() => handleDelete(product.productId)}
+                          onClick={() => handleDelete(product.productId || product.id)}
                           className="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
                         >
                           Delete
