@@ -378,8 +378,8 @@ export const products: Product[] = [
     price: 699,
     originalPrice: 999,
     priceRange: 'budget',
-    image: '',
-    images: [],
+    image: 'bulbul-ahmed-SiQTqnp-qd8-unsplash_g8merb', // TEMPORARY: Using saree image as placeholder
+    images: ['bulbul-ahmed-SiQTqnp-qd8-unsplash_g8merb'],
     colors: [
       { name: 'Blue', nameHi: 'नीला', hex: '#3B82F6' },
       { name: 'Pink', nameHi: 'गुलाबी', hex: '#EC4899' },
@@ -402,8 +402,8 @@ export const products: Product[] = [
     price: 599,
     originalPrice: 899,
     priceRange: 'budget',
-    image: '',
-    images: [],
+    image: '2.3_u1iyzf', // TEMPORARY: Using t-shirt image as placeholder
+    images: ['2.3_u1iyzf'],
     colors: [
       { name: 'Navy', nameHi: 'नेवी', hex: '#1E3A8A' },
       { name: 'Grey', nameHi: 'ग्रे', hex: '#6B7280' },
