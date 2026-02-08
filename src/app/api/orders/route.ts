@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('[Orders API] Fetching orders for user:', userId);
+
     // Fetch orders for the user
     const { data: orders, error } = await supabase
       .from('spf_payment_orders')
@@ -27,8 +29,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('[Orders API] Found orders:', orders?.length || 0);
-    console.log('[Orders API] Sample order:', orders?.[0]);
+    console.log('[Orders API] Found orders for user:', orders?.length || 0);
+
+    // Debug: Also fetch ALL orders to see if they exist
+    const { data: allOrders } = await supabase
+      .from('spf_payment_orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    console.log('[Orders API] Total orders in database:', allOrders?.length || 0);
+    console.log('[Orders API] Sample order:', orders?.[0] || allOrders?.[0]);
 
     return NextResponse.json({
       success: true,
