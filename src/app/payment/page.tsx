@@ -40,8 +40,9 @@ function PaymentContent() {
   const { user } = useAuth();
 
   const [order, setOrder] = useState<OrderData | null>(null);
-  const [stage, setStage] = useState<'form' | 'processing' | 'success'>('form');
+  const [stage, setStage] = useState<'form' | 'processing' | 'confirm-status' | 'success' | 'failed' | 'pending'>('form');
   const [orderNumber, setOrderNumber] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<'success' | 'failed' | 'pending'>('success');
 
   // UPI state
   const [upiType, setUpiType] = useState<'mobile' | 'upiId' | 'qr'>('upiId');
@@ -147,39 +148,53 @@ function PaymentContent() {
       }
     }
 
+    // For QR code payments, ask user to confirm payment status
+    if (method === 'upi' && upiType === 'qr') {
+      setStage('confirm-status');
+      return;
+    }
+
     setStage('processing');
 
     // Simulate payment processing (will be replaced with real gateway later)
     setTimeout(async () => {
-      const orderNum = generateOrderNumber();
-      setOrderNumber(orderNum);
+      await completePayment('success');
+    }, 3000);
+  };
 
-      // Send payment notifications
-      if (user?.id && order) {
-        try {
-          await fetch('/api/notifications/payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user.id,
-              orderNumber: orderNum,
-              amount: order.totalPrice,
-              status: 'success', // Currently always success
-              paymentMethod: method,
-              items: order.items,
-            }),
-          });
-          console.log('Payment notifications sent successfully');
-        } catch (err) {
-          console.error('Failed to send payment notifications:', err);
-          // Don't block payment flow on notification failure
-        }
+  const completePayment = async (status: 'success' | 'failed' | 'pending') => {
+    const orderNum = generateOrderNumber();
+    setOrderNumber(orderNum);
+    setPaymentStatus(status);
+
+    // Send payment notifications
+    if (user?.id && order) {
+      try {
+        await fetch('/api/notifications/payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            orderNumber: orderNum,
+            amount: order.totalPrice,
+            status: status,
+            paymentMethod: method,
+            items: order.items,
+          }),
+        });
+        console.log('Payment notifications sent successfully');
+      } catch (err) {
+        console.error('Failed to send payment notifications:', err);
+        // Don't block payment flow on notification failure
       }
+    }
 
+    if (status === 'success') {
       sessionStorage.removeItem('sweta_order');
       clearCart();
-      setStage('success');
-    }, 3000);
+    }
+
+    setStage(status);
   };
 
   // ── Loading (no order yet) ──
@@ -206,6 +221,62 @@ function PaymentContent() {
             <div className="w-2 h-2 bg-[#722F37] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
             <div className="w-2 h-2 bg-[#722F37] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Confirm Payment Status (for QR payments) ──
+  if (stage === 'confirm-status') {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] py-12 px-4">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+            Payment Status Confirmation
+          </h1>
+          <p className="text-[#6B6B6B] mb-8">Please confirm the status of your UPI payment</p>
+
+          <div className="space-y-4">
+            <button
+              onClick={() => completePayment('success')}
+              className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-green-600/25 transition-all duration-300 flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              Payment Successful
+            </button>
+
+            <button
+              onClick={() => completePayment('pending')}
+              className="w-full py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-yellow-500/25 transition-all duration-300 flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Payment Pending
+            </button>
+
+            <button
+              onClick={() => completePayment('failed')}
+              className="w-full py-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-red-600/25 transition-all duration-300 flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Payment Failed
+            </button>
+          </div>
+
+          <p className="text-xs text-[#6B6B6B] mt-6">
+            Check your UPI app for the transaction status before confirming
+          </p>
         </div>
       </div>
     );
@@ -268,6 +339,132 @@ function PaymentContent() {
           >
             Continue Shopping
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Failed ──
+  if (stage === 'failed') {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] py-12 px-4">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+
+          <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+            Payment Failed
+          </h1>
+          <p className="text-[#6B6B6B] mb-6">Your payment could not be processed</p>
+
+          <div className="bg-white rounded-xl border border-[#E8E2D9] p-4 mb-6">
+            <p className="text-sm text-[#6B6B6B] mb-1">Order Number</p>
+            <p className="font-bold text-[#722F37] text-lg tracking-wide">{orderNumber}</p>
+            <p className="text-xs text-red-600 mt-2">Payment Status: Failed</p>
+          </div>
+
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-left">
+            <h3 className="font-semibold text-red-900 mb-2">What to do next?</h3>
+            <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
+              <li>Check if amount was deducted from your account</li>
+              <li>If deducted, wait 24-48 hours for auto-refund</li>
+              <li>Try again with a different payment method</li>
+              <li>Contact support if issue persists</li>
+            </ul>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 py-3.5 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-medium rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300"
+            >
+              Try Again
+            </button>
+            <Link
+              href="/"
+              className="flex-1 py-3.5 border-2 border-[#722F37] text-[#722F37] font-medium rounded-full hover:bg-[#722F37] hover:text-white transition-all duration-300 text-center"
+            >
+              Go Home
+            </Link>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm text-[#6B6B6B] mb-2">Need help?</p>
+            <a href="tel:+919608063673" className="text-[#722F37] font-medium hover:underline">
+              Call us at +91 96080 63673
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pending ──
+  if (stage === 'pending') {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] py-12 px-4">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-12 h-12 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+            Payment Pending
+          </h1>
+          <p className="text-[#6B6B6B] mb-6">Your payment is being processed</p>
+
+          <div className="bg-white rounded-xl border border-[#E8E2D9] p-4 mb-6">
+            <p className="text-sm text-[#6B6B6B] mb-1">Order Number</p>
+            <p className="font-bold text-[#722F37] text-lg tracking-wide">{orderNumber}</p>
+            <p className="text-xs text-yellow-600 mt-2">Payment Status: Pending</p>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 text-left">
+            <h3 className="font-semibold text-yellow-900 mb-2">What's happening?</h3>
+            <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+              <li>Your payment is being verified by the bank</li>
+              <li>This usually takes 5-10 minutes</li>
+              <li>You will receive confirmation via SMS/WhatsApp</li>
+              <li>Check your email for order updates</li>
+            </ul>
+          </div>
+
+          <div className="bg-white rounded-xl border border-[#E8E2D9] p-5 text-left mb-6">
+            <h3 className="font-semibold text-[#2D2D2D] mb-3">Order Details</h3>
+            <div className="space-y-2">
+              {order?.items.map((item, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-[#6B6B6B]">
+                    {item.name}{item.size ? ` (${item.size})` : ''} × {item.quantity}
+                  </span>
+                  <span className="font-medium text-[#2D2D2D]">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-[#E8E2D9] mt-3 pt-3 flex justify-between">
+              <span className="font-bold text-[#2D2D2D]">Total</span>
+              <span className="font-bold text-[#722F37]">₹{order?.totalPrice.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+
+          <Link
+            href="/"
+            className="inline-flex items-center px-8 py-3.5 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-medium rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300"
+          >
+            Go to Home
+          </Link>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm text-[#6B6B6B] mb-2">Questions about your order?</p>
+            <a href="tel:+919608063673" className="text-[#722F37] font-medium hover:underline">
+              Call us at +91 96080 63673
+            </a>
+          </div>
         </div>
       </div>
     );
