@@ -163,6 +163,31 @@ function PaymentContent() {
         theme: {
           color: '#722F37',
         },
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+        },
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: 'Pay using UPI',
+                instruments: [
+                  {
+                    method: 'upi',
+                    flows: ['qr', 'intent', 'collect'],
+                  },
+                ],
+              },
+            },
+            sequence: ['block.upi', 'block.card', 'block.netbanking', 'block.wallet'],
+            preferences: {
+              show_default_blocks: true,
+            },
+          },
+        },
         handler: function (response: any) {
           console.log('[Razorpay] Payment successful:', response);
           handlePaymentSuccess(response);
