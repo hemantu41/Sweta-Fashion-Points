@@ -19,47 +19,22 @@ export async function GET(
   try {
     const { id: productId } = await params;
 
-    const { data: product, error } = await supabase
-      .from('spf_productdetails')
-      .select('*')
-      .eq('product_id', productId)
-      .single();
+    // TEMPORARY FIX: Use static products file instead of database
+    const { products: staticProducts } = await import('@/data/products');
 
-    if (error || !product) {
+    // Find product by id or productId
+    const product = staticProducts.find(p => p.id === productId || p.productId === productId);
+
+    if (!product) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
       );
     }
 
-    // Transform to camelCase
-    const transformedProduct = {
-      id: product.id,
-      productId: product.product_id,
-      name: product.name,
-      nameHi: product.name_hi,
-      category: product.category,
-      subCategory: product.sub_category,
-      price: product.price,
-      originalPrice: product.original_price,
-      priceRange: product.price_range,
-      description: product.description,
-      descriptionHi: product.description_hi,
-      fabric: product.fabric,
-      fabricHi: product.fabric_hi,
-      mainImage: product.main_image,
-      images: product.images || [],
-      colors: product.colors || [],
-      sizes: product.sizes || [],
-      stockQuantity: product.stock_quantity,
-      isNewArrival: product.is_new_arrival,
-      isBestSeller: product.is_best_seller,
-      isActive: product.is_active,
-      createdAt: product.created_at,
-      updatedAt: product.updated_at,
-    };
+    console.log(`[Product API] Found product: ${product.name}`);
 
-    return NextResponse.json({ product: transformedProduct });
+    return NextResponse.json({ product });
   } catch (error) {
     console.error('Product fetch error:', error);
     return NextResponse.json(

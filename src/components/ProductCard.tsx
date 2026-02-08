@@ -12,7 +12,9 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { language, t } = useLanguage();
 
-  const isCloudinaryImage = product.mainImage && !product.mainImage.startsWith('/') && !product.mainImage.startsWith('http');
+  // Use mainImage if available, otherwise fall back to legacy image field
+  const imageSource = product.mainImage || product.image;
+  const isCloudinaryImage = imageSource && !imageSource.startsWith('/') && !imageSource.startsWith('http');
   const discountPercent = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
@@ -24,7 +26,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Product Image */}
         {isCloudinaryImage ? (
           <CldImage
-            src={product.mainImage!}
+            src={imageSource!}
             alt={product.name}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
