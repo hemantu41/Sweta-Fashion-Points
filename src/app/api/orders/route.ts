@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
 
     console.log('[Orders API] Fetching orders for user:', userId);
 
-    // Fetch orders for the user
+    // TEMPORARY: Fetch ALL orders (no user filter) for testing
     const { data: orders, error } = await supabase
       .from('spf_payment_orders')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      // .eq('user_id', userId)  // TEMPORARILY DISABLED
+      .order('created_at', { ascending: false});
 
     if (error) {
       console.error('[Orders API] Database error:', error);
