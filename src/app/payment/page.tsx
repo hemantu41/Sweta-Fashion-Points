@@ -148,8 +148,34 @@ function PaymentContent() {
     }
 
     setStage('processing');
-    setTimeout(() => {
-      setOrderNumber(generateOrderNumber());
+
+    // Simulate payment processing (will be replaced with real gateway later)
+    setTimeout(async () => {
+      const orderNum = generateOrderNumber();
+      setOrderNumber(orderNum);
+
+      // Send payment notifications
+      if (user?.id && order) {
+        try {
+          await fetch('/api/notifications/payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              orderNumber: orderNum,
+              amount: order.totalPrice,
+              status: 'success', // Currently always success
+              paymentMethod: method,
+              items: order.items,
+            }),
+          });
+          console.log('Payment notifications sent successfully');
+        } catch (err) {
+          console.error('Failed to send payment notifications:', err);
+          // Don't block payment flow on notification failure
+        }
+      }
+
       sessionStorage.removeItem('sweta_order');
       clearCart();
       setStage('success');
@@ -376,7 +402,7 @@ function PaymentContent() {
                 <div className="flex justify-center">
                   <div className="p-4 bg-white rounded-xl border border-[#E8E2D9] inline-block">
                     <QRCode
-                      value={`upi://pay?pa=swetafashionpoints@upi&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+Payment&tr=${txnRef}`}
+                      value={`upi://pay?pa=8294153256@ybl&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+Payment&tr=${txnRef}`}
                       size={192}
                     />
                   </div>
