@@ -70,7 +70,9 @@ export default function OrdersPage() {
       console.log('[Orders Page] First order items:', data.orders?.[0]?.items);
 
       if (data.success) {
+        console.log('[Orders Page] Setting orders state with:', data.orders);
         setOrders(data.orders);
+        console.log('[Orders Page] Orders state should now have:', data.orders.length, 'orders');
       } else {
         console.error('[Orders Page] Error:', data.error);
         setError('Failed to load orders');
@@ -144,6 +146,15 @@ export default function OrdersPage() {
             Order History
           </h1>
           <p className="text-[#6B6B6B] mt-2">Track and manage your orders</p>
+        </div>
+
+        {/* Debug Info */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+          <p className="text-yellow-900 font-bold mb-2">DEBUG INFO:</p>
+          <p className="text-sm text-yellow-800">Orders state length: {orders.length}</p>
+          <p className="text-sm text-yellow-800">Loading: {loading.toString()}</p>
+          <p className="text-sm text-yellow-800">Error: {error || 'None'}</p>
+          <p className="text-sm text-yellow-800 mt-2">Check console for detailed logs</p>
         </div>
 
         {/* Error Message */}
