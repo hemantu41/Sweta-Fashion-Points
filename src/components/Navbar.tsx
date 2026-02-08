@@ -150,29 +150,10 @@ export default function Navbar() {
                         </Link>
                       ))}
 
-                      {/* Seller Links */}
-                      <div className="border-t border-[#E8E2D9] pt-2 mt-2">
-                        <Link
-                          href="/seller/dashboard"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center space-x-3 px-4 py-2.5 text-[#2D2D2D] hover:bg-[#F5F0E8] transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                          <span>Seller Dashboard</span>
-                        </Link>
-                        <Link
-                          href="/seller/register"
-                          onClick={() => setIsUserMenuOpen(false)}
-                          className="flex items-center space-x-3 px-4 py-2.5 text-[#C9A962] hover:bg-[#FFF9E6] transition-colors"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          <span>Become a Seller</span>
-                        </Link>
-                      </div>
+                      {/* TODO: Add Seller Dashboard link here for approved sellers only */}
+                      {/* Check if user has approved seller account and show:
+                          <Link href="/seller/dashboard">Seller Dashboard</Link>
+                      */}
 
                       {/* Admin Portal Links - Only for admins */}
                       {isAdmin && (
@@ -288,29 +269,7 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {/* Seller Links */}
-              <div className="pt-2 mt-2 border-t border-[#E8E2D9]">
-                <Link
-                  href="/seller/dashboard"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center space-x-3 px-4 py-3 text-[#2D2D2D] hover:bg-[#F5F0E8] rounded-lg transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span>Seller Dashboard</span>
-                </Link>
-                <Link
-                  href="/seller/register"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center space-x-3 px-4 py-3 text-[#C9A962] hover:bg-[#FFF9E6] rounded-lg transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  <span>Become a Seller</span>
-                </Link>
-              </div>
+              {/* TODO: Add Seller Dashboard link here for approved sellers only */}
 
               {/* Admin Portal Links - Only for admins */}
               {isAdmin && (
