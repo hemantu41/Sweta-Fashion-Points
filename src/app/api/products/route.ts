@@ -22,60 +22,31 @@ export async function GET(request: NextRequest) {
     const priceRange = searchParams.get('priceRange');
     const isActive = searchParams.get('isActive');
 
-    let query = supabase.from('spf_productdetails').select('*');
+    // TEMPORARY FIX: Use static products file instead of database
+    const { products: staticProducts } = await import('@/data/products');
+
+    let filteredProducts = staticProducts;
 
     // Apply filters
-    if (category) query = query.eq('category', category);
-    if (subCategory) query = query.eq('sub_category', subCategory);
-    if (isNewArrival === 'true') query = query.eq('is_new_arrival', true);
-    if (isBestSeller === 'true') query = query.eq('is_best_seller', true);
-    if (priceRange) query = query.eq('price_range', priceRange);
-
-    // Default to active products unless explicitly requesting inactive
-    if (isActive !== 'false') {
-      query = query.eq('is_active', true);
+    if (category) {
+      filteredProducts = filteredProducts.filter(p => p.category === category);
+    }
+    if (subCategory) {
+      filteredProducts = filteredProducts.filter(p => p.subCategory === subCategory);
+    }
+    if (isNewArrival === 'true') {
+      filteredProducts = filteredProducts.filter(p => p.isNewArrival);
+    }
+    if (isBestSeller === 'true') {
+      filteredProducts = filteredProducts.filter(p => p.isBestSeller);
+    }
+    if (priceRange) {
+      filteredProducts = filteredProducts.filter(p => p.priceRange === priceRange);
     }
 
-    query = query.order('created_at', { ascending: false });
+    console.log(`[Products API] Returning ${filteredProducts.length} products for category: ${category}`);
 
-    const { data: products, error } = await query;
-
-    if (error) {
-      console.error('Products fetch error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch products' },
-        { status: 500 }
-      );
-    }
-
-    // Transform snake_case to camelCase for frontend
-    const transformedProducts = products.map(p => ({
-      id: p.id,
-      productId: p.product_id,
-      name: p.name,
-      nameHi: p.name_hi,
-      category: p.category,
-      subCategory: p.sub_category,
-      price: p.price,
-      originalPrice: p.original_price,
-      priceRange: p.price_range,
-      description: p.description,
-      descriptionHi: p.description_hi,
-      fabric: p.fabric,
-      fabricHi: p.fabric_hi,
-      mainImage: p.main_image,
-      images: p.images || [],
-      colors: p.colors || [],
-      sizes: p.sizes || [],
-      stockQuantity: p.stock_quantity,
-      isNewArrival: p.is_new_arrival,
-      isBestSeller: p.is_best_seller,
-      isActive: p.is_active,
-      createdAt: p.created_at,
-      updatedAt: p.updated_at,
-    }));
-
-    return NextResponse.json({ products: transformedProducts });
+    return NextResponse.json({ products: filteredProducts });
   } catch (error) {
     console.error('Products API error:', error);
     return NextResponse.json(
