@@ -12,7 +12,7 @@ interface Product {
   category: string;
   price: number;
   originalPrice?: number;
-  mainImage: string;
+  mainImage: string | null;
   stockQuantity: number;
   isActive: boolean;
 }
