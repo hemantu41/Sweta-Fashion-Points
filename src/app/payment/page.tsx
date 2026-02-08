@@ -163,31 +163,6 @@ function PaymentContent() {
         theme: {
           color: '#722F37',
         },
-        method: {
-          upi: true,
-          card: true,
-          netbanking: true,
-          wallet: true,
-        },
-        config: {
-          display: {
-            blocks: {
-              upi: {
-                name: 'Pay using UPI',
-                instruments: [
-                  {
-                    method: 'upi',
-                    flows: ['qr', 'intent', 'collect'],
-                  },
-                ],
-              },
-            },
-            sequence: ['block.upi', 'block.card', 'block.netbanking', 'block.wallet'],
-            preferences: {
-              show_default_blocks: true,
-            },
-          },
-        },
         handler: function (response: any) {
           console.log('[Razorpay] Payment successful:', response);
           handlePaymentSuccess(response);
@@ -199,6 +174,9 @@ function PaymentContent() {
           },
         },
       };
+
+      console.log('[Razorpay] Opening checkout with options:', options);
+      console.log('[Razorpay] Key ID:', process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
 
       const rzp = new (window as any).Razorpay(options);
 
