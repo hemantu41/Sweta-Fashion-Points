@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Find user by email or mobile in spf_users table
     const { data: user, error } = await supabase
       .from('spf_users')
-      .select('id, name, email, mobile, location, password, is_admin')
+      .select('id, name, email, mobile, location, password, is_admin, user_type')
       .or(`email.eq.${identifier.toLowerCase()},mobile.eq.${identifier}`)
       .single();
 
@@ -39,11 +39,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user is a seller and get seller details
+    let sellerInfo = {
+      isSeller: false,
+      sellerId: undefined as string | undefined,
+      sellerStatus: undefined as 'pending' | 'approved' | 'rejected' | 'suspended' | undefined,
+    };
+
+    const { data: seller } = await supabase
+      .from('spf_sellers')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .single();
+
+    if (seller) {
+      sellerInfo = {
+        isSeller: true,
+        sellerId: seller.id,
+        sellerStatus: seller.status as 'pending' | 'approved' | 'rejected' | 'suspended',
+      };
+    }
+
     // Return user without password
-    const { password: _, is_admin, ...userWithoutPassword } = user;
+    const { password: _, is_admin, user_type, ...userWithoutPassword } = user;
 
     return NextResponse.json(
-      { message: 'Login successful', user: { ...userWithoutPassword, isAdmin: is_admin || false } },
+      {
+        message: 'Login successful',
+        user: {
+          ...userWithoutPassword,
+          isAdmin: is_admin || false,
+          ...sellerInfo,
+        }
+      },
       { status: 200 }
     );
   } catch (error) {

@@ -9,6 +9,10 @@ interface User {
   mobile: string;
   location?: string;
   isAdmin?: boolean;
+  // Seller fields
+  isSeller?: boolean;
+  sellerId?: string;
+  sellerStatus?: 'pending' | 'approved' | 'rejected' | 'suspended';
 }
 
 interface AuthContextType {
@@ -18,6 +22,9 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  // Seller status
+  isSeller: boolean;
+  isApprovedSeller: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.isAdmin || false,
+        isSeller: user?.isSeller || false,
+        isApprovedSeller: user?.isSeller === true && user?.sellerStatus === 'approved',
       }}
     >
       {children}
