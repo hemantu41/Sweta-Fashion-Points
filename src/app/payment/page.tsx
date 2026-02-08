@@ -47,10 +47,6 @@ function PaymentContent() {
   const [razorpayOrderId, setRazorpayOrderId] = useState('');
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [razorpayQrUrl, setRazorpayQrUrl] = useState('');
-
-  // Timer state for QR expiry (3 minutes = 180 seconds)
-  const [timeRemaining, setTimeRemaining] = useState(180);
   const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
 
   // UPI state
@@ -96,35 +92,16 @@ function PaymentContent() {
     };
   }, [pollingInterval]);
 
-  // Auto-start payment checking and countdown timer when QR code is generated
+  // Auto-open Razorpay Checkout when order is created for QR payment
   useEffect(() => {
-    if (razorpayQrUrl && method === 'upi' && upiType === 'qr' && !qrCodeGenerated) {
+    if (razorpayOrderId && method === 'upi' && upiType === 'qr' && !qrCodeGenerated) {
       setQrCodeGenerated(true);
-      // Start payment status polling immediately
-      startPaymentStatusPolling();
+      // Auto-open Razorpay checkout for UPI QR payments
+      setTimeout(() => {
+        openRazorpayCheckout();
+      }, 500);
     }
-  }, [razorpayQrUrl, method, upiType, qrCodeGenerated]);
-
-  // Countdown timer for QR code expiry (3 minutes)
-  useEffect(() => {
-    if (!qrCodeGenerated || stage !== 'form') return;
-
-    const timerInterval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerInterval);
-          setStage('expired');
-          if (pollingInterval) {
-            clearInterval(pollingInterval);
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timerInterval);
-  }, [qrCodeGenerated, stage, pollingInterval]);
+  }, [razorpayOrderId, method, upiType, qrCodeGenerated]);
 
   const createRazorpayOrder = async () => {
     setCreatingOrder(true);
@@ -149,33 +126,106 @@ function PaymentContent() {
       console.log('[Payment] Razorpay order created:', data.orderId);
       setRazorpayOrderId(data.orderId);
       setOrderNumber(data.orderNumber);
-
-      // Create Razorpay QR code for UPI payments
-      const qrResponse = await fetch('/api/payment/create-qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: data.orderId,
-          amount: data.amount, // Amount in paise
-          customerName: order?.address?.name,
-          customerContact: order?.address?.phone,
-        }),
-      });
-
-      const qrData = await qrResponse.json();
-
-      if (qrResponse.ok && qrData.qrCodeUrl) {
-        console.log('[Payment] Razorpay QR code created');
-        setRazorpayQrUrl(qrData.qrCodeUrl);
-      } else {
-        console.error('[Payment] Failed to create QR code:', qrData.error);
-      }
     } catch (error: any) {
       console.error('[Payment] Error creating order:', error);
       alert('Failed to initialize payment. Please try again.');
     } finally {
       setCreatingOrder(false);
     }
+  };
+
+  const openRazorpayCheckout = () => {
+    if (!razorpayOrderId || !order) {
+      alert('Please wait for order initialization...');
+      return;
+    }
+
+    // Load Razorpay script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.totalPrice * 100, // Amount in paise
+        currency: 'INR',
+        name: 'Sweta Fashion Points',
+        description: `Order #${orderNumber}`,
+        order_id: razorpayOrderId,
+        prefill: {
+          name: order.address.name,
+          contact: order.address.phone,
+        },
+        notes: {
+          order_number: orderNumber,
+          user_id: user?.id,
+        },
+        theme: {
+          color: '#722F37',
+        },
+        handler: function (response: any) {
+          console.log('[Razorpay] Payment successful:', response);
+          handlePaymentSuccess(response);
+        },
+        modal: {
+          ondismiss: function () {
+            console.log('[Razorpay] Payment cancelled by user');
+            setStage('form');
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+
+      rzp.on('payment.failed', function (response: any) {
+        console.error('[Razorpay] Payment failed:', response);
+        handlePaymentFailure(response);
+      });
+
+      rzp.open();
+      setStage('processing');
+    };
+
+    script.onerror = () => {
+      alert('Failed to load Razorpay. Please check your internet connection.');
+    };
+
+    document.body.appendChild(script);
+  };
+
+  const handlePaymentSuccess = async (response: any) => {
+    setStage('checking-status');
+
+    try {
+      // Verify payment signature
+      const verifyResponse = await fetch('/api/payment/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+        }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyData.success) {
+        sessionStorage.removeItem('sweta_order');
+        clearCart();
+        setStage('success');
+      } else {
+        setStage('failed');
+      }
+    } catch (error) {
+      console.error('[Payment] Verification error:', error);
+      setStage('pending');
+    }
+  };
+
+  const handlePaymentFailure = (response: any) => {
+    console.error('[Payment] Payment failed:', response.error);
+    setStage('failed');
   };
 
   const startPaymentStatusPolling = () => {
@@ -225,11 +275,6 @@ function PaymentContent() {
     return `SFP-${y}${m}${d}-${rand}`;
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const formatCardNumber = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 16);
@@ -282,9 +327,10 @@ function PaymentContent() {
   };
 
   const handlePay = async () => {
-    // QR payments are automatic - no button needed
+    // QR payments are automatic - Razorpay modal opens automatically
     if (method === 'upi' && upiType === 'qr') {
-      return; // QR code auto-checks payment status
+      openRazorpayCheckout();
+      return;
     }
 
     if (method === 'upi' && !validateUpi()) return;
@@ -309,25 +355,15 @@ function PaymentContent() {
       }
     }
 
-    // For other payment methods, show processing
-    setStage('processing');
-
-    // For UPI ID/Mobile, this would integrate with Razorpay UPI flow
-    // For now, start polling after a short delay
-    setTimeout(() => {
-      setStage('checking-status');
-      startPaymentStatusPolling();
-    }, 2000);
+    // Open Razorpay Checkout for all payment methods
+    openRazorpayCheckout();
   };
 
   const handleRetry = () => {
-    // Reset states for new QR code
-    setTimeRemaining(180);
+    // Reset states and reopen Razorpay checkout
     setQrCodeGenerated(false);
-    setRazorpayQrUrl('');
     setStage('form');
-    // Create new Razorpay order and QR code
-    createRazorpayOrder();
+    openRazorpayCheckout();
   };
 
   const completePayment = async (status: 'success' | 'failed' | 'pending') => {
@@ -807,41 +843,40 @@ function PaymentContent() {
             {/* Scan QR Tab */}
             {upiType === 'qr' && (
               <div className="text-center">
-                <p className="text-sm text-[#6B6B6B] mb-4">Scan this QR code with any UPI app to complete payment</p>
-                {razorpayQrUrl ? (
+                <p className="text-sm text-[#6B6B6B] mb-4">Click below to open Razorpay's secure payment page</p>
+                {razorpayOrderId ? (
                   <>
-                    <div className="flex justify-center">
-                      <div className="p-4 bg-white rounded-xl border-2 border-[#E8E2D9] inline-block relative">
-                        <img
-                          src={razorpayQrUrl}
-                          alt="UPI QR Code"
-                          width={192}
-                          height={192}
-                          className="rounded-lg"
-                        />
+                    <div className="flex justify-center mb-4">
+                      <div className="p-8 bg-gradient-to-br from-[#722F37]/5 to-[#E8E2D9]/30 rounded-xl border-2 border-[#E8E2D9] inline-block">
+                        <svg className="w-24 h-24 text-[#722F37] mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                        </svg>
                       </div>
                     </div>
 
-                    {/* Timer and Status */}
+                    {/* Payment info */}
                     <div className="mt-4 space-y-3">
-                      {/* Countdown Timer */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 inline-block">
-                        <div className="flex items-center gap-2">
-                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-left">
+                        <h3 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <div>
-                            <p className="text-xs text-blue-600 font-medium">QR Code Expires In</p>
-                            <p className="text-lg font-bold text-blue-700">{formatTime(timeRemaining)}</p>
-                          </div>
-                        </div>
+                          Razorpay Payment Options
+                        </h3>
+                        <ul className="text-sm text-green-800 space-y-1">
+                          <li>• UPI QR Code - Scan with any UPI app</li>
+                          <li>• UPI ID - Enter your UPI ID directly</li>
+                          <li>• Cards - Debit/Credit cards accepted</li>
+                          <li>• Net Banking - All major banks supported</li>
+                          <li>• Wallets - Paytm, PhonePe, Google Pay & more</li>
+                        </ul>
                       </div>
 
-                      {/* Auto-checking status */}
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      {/* Auto-opening message */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <div className="flex items-center justify-center gap-2">
-                          <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-                          <p className="text-sm text-green-700 font-medium">Automatically checking payment status...</p>
+                          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                          <p className="text-sm text-blue-700 font-medium">Razorpay payment page will open automatically...</p>
                         </div>
                       </div>
                     </div>
@@ -850,11 +885,11 @@ function PaymentContent() {
                   <div className="flex justify-center items-center h-60">
                     <div className="text-center">
                       <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                      <p className="text-sm text-[#6B6B6B]">Generating QR code...</p>
+                      <p className="text-sm text-[#6B6B6B]">Preparing payment...</p>
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-[#6B6B6B] mt-4">Payment will be detected automatically within seconds</p>
+                <p className="text-xs text-[#6B6B6B] mt-4">Secure payment powered by Razorpay</p>
                 <div className="mt-4 pt-3 border-t border-gray-100 flex justify-center flex-wrap gap-2">
                   {[
                     { name: 'Google Pay', letter: 'G', color: '#00C853' },
