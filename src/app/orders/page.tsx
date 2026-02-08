@@ -64,33 +64,27 @@ export default function OrdersPage() {
       const response = await fetch(`/api/orders?userId=${user?.id}`);
       const data = await response.json();
 
-      console.log('[Orders Page] Raw response:', data);
-      console.log('[Orders Page] Type of data:', typeof data);
-      console.log('[Orders Page] data.success:', data.success);
-      console.log('[Orders Page] data.orders exists:', !!data.orders);
-      console.log('[Orders Page] data.orders is array:', Array.isArray(data.orders));
-      console.log('[Orders Page] Orders count:', data.orders?.length || 0);
-      console.log('[Orders Page] First order:', data.orders?.[0]);
+      console.log('📦 API Response:', JSON.stringify(data, null, 2));
 
-      // FORCE set orders if they exist, even if checks fail
-      if (data.orders?.length > 0) {
-        console.log('🔴 FORCE SETTING ORDERS:', data.orders.length);
-        setOrders(data.orders);
-      } else if (data.orders && Array.isArray(data.orders)) {
-        console.log('[Orders Page] Setting orders state with:', data.orders.length, 'orders');
-        setOrders(data.orders);
-      } else if (data.success) {
-        console.log('[Orders Page] Success but no orders array');
-        setOrders([]);
-      } else {
-        console.error('[Orders Page] Error:', data.error);
-        setError(data.error || 'Failed to load orders');
-      }
+      // NUCLEAR OPTION: Just set whatever comes back
+      const ordersArray = data.orders || data || [];
+      console.log('🚀 SETTING ORDERS LENGTH:', ordersArray.length);
+      console.log('🚀 ORDERS DATA:', ordersArray);
+
+      setOrders(ordersArray);
+
+      console.log('✅ setOrders() called with', ordersArray.length, 'orders');
+
+      // Force a second set after a delay to bypass any React batching issues
+      setTimeout(() => {
+        console.log('⏰ RETRY: Setting orders again');
+        setOrders(ordersArray);
+      }, 100);
     } catch (err) {
-      console.error('[Orders Page] Fetch error:', err);
+      console.error('❌ Fetch error:', err);
       setError('Failed to load orders');
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 200);
     }
   };
 
