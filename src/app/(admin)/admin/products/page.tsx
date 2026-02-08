@@ -163,7 +163,7 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4">
                       {product.mainImage ? (
                         <Image
-                          src={`https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_50,h_50/${product.mainImage}`}
+                          src={`https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_50,h_50/${product.mainImage!}`}
                           alt={product.name}
                           width={50}
                           height={50}
