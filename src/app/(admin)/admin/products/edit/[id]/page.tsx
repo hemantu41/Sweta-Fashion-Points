@@ -88,50 +88,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
-    try {
-      const response = await fetch(`/api/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          product: {
-            name: formData.name,
-            nameHi: formData.nameHi,
-            category: formData.category,
-            subCategory: formData.subCategory,
-            price: parseInt(formData.price),
-            originalPrice: formData.originalPrice ? parseInt(formData.originalPrice) : undefined,
-            priceRange: formData.priceRange,
-            description: formData.description,
-            descriptionHi: formData.descriptionHi,
-            fabric: formData.fabric,
-            fabricHi: formData.fabricHi,
-            mainImage: formData.images[0] || '',
-            images: formData.images,
-            stockQuantity: parseInt(formData.stockQuantity),
-            isNewArrival: formData.isNewArrival,
-            isBestSeller: formData.isBestSeller,
-            isActive: formData.isActive,
-          },
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage('Product updated successfully!');
-        setTimeout(() => router.push('/admin/products'), 1500);
-      } else {
-        setMessage(data.error || 'Failed to update product');
-      }
-    } catch (error) {
-      setMessage('Error updating product');
-    } finally {
-      setLoading(false);
-    }
+    // DISABLED: Products are loaded from static file, editing is not available
+    setMessage('Cannot save changes: Products are currently loaded from static file. To enable editing, migrate products to the database first.');
   };
 
   if (fetching) {
@@ -383,17 +341,18 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           <div className="flex gap-4">
             <button
               type="submit"
-              disabled={loading}
-              className="px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50"
+              disabled={true}
+              className="px-8 py-3 bg-gray-400 text-white font-semibold rounded-full cursor-not-allowed opacity-60"
+              title="Editing disabled - products are loaded from static file"
             >
-              {loading ? 'Updating...' : 'Update Product'}
+              Save Changes (Disabled)
             </button>
             <button
               type="button"
               onClick={() => router.push('/admin/products')}
               className="px-8 py-3 border-2 border-[#722F37] text-[#722F37] font-semibold rounded-full hover:bg-[#722F37] hover:text-white transition-all"
             >
-              Cancel
+              Back to Products
             </button>
           </div>
         </form>

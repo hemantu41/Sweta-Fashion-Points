@@ -39,52 +39,8 @@ export default function AddProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
-    try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          product: {
-            productId: formData.productId,
-            name: formData.name,
-            nameHi: formData.nameHi,
-            category: formData.category,
-            subCategory: formData.subCategory,
-            price: parseInt(formData.price),
-            originalPrice: formData.originalPrice ? parseInt(formData.originalPrice) : undefined,
-            priceRange: formData.priceRange,
-            description: formData.description,
-            descriptionHi: formData.descriptionHi,
-            fabric: formData.fabric,
-            fabricHi: formData.fabricHi,
-            mainImage: formData.images[0] || '',
-            images: formData.images,
-            colors: [],
-            sizes: [],
-            stockQuantity: parseInt(formData.stockQuantity),
-            isNewArrival: formData.isNewArrival,
-            isBestSeller: formData.isBestSeller,
-          },
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage('Product created successfully!');
-        setTimeout(() => router.push('/admin/products'), 1500);
-      } else {
-        setMessage(data.error || 'Failed to create product');
-      }
-    } catch (error) {
-      setMessage('Error creating product');
-    } finally {
-      setLoading(false);
-    }
+    // DISABLED: Products are loaded from static file, adding new products is not available
+    setMessage('Cannot add new product: Products are currently loaded from static file. To enable this feature, migrate products to the database first.');
   };
 
   return (
@@ -319,17 +275,18 @@ export default function AddProductPage() {
           <div className="flex gap-4">
             <button
               type="submit"
-              disabled={loading}
-              className="px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50"
+              disabled={true}
+              className="px-8 py-3 bg-gray-400 text-white font-semibold rounded-full cursor-not-allowed opacity-60"
+              title="Adding products disabled - products are loaded from static file"
             >
-              {loading ? 'Creating...' : 'Create Product'}
+              Create Product (Disabled)
             </button>
             <button
               type="button"
               onClick={() => router.push('/admin/products')}
               className="px-8 py-3 border-2 border-[#722F37] text-[#722F37] font-semibold rounded-full hover:bg-[#722F37] hover:text-white transition-all"
             >
-              Cancel
+              Back to Products
             </button>
           </div>
         </form>
