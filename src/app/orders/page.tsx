@@ -64,14 +64,19 @@ export default function OrdersPage() {
       const response = await fetch(`/api/orders?userId=${user?.id}`);
       const data = await response.json();
 
-      console.log('[Orders Page] Response:', data);
+      console.log('[Orders Page] Raw response:', data);
+      console.log('[Orders Page] Type of data:', typeof data);
       console.log('[Orders Page] data.success:', data.success);
+      console.log('[Orders Page] data.orders exists:', !!data.orders);
+      console.log('[Orders Page] data.orders is array:', Array.isArray(data.orders));
       console.log('[Orders Page] Orders count:', data.orders?.length || 0);
       console.log('[Orders Page] First order:', data.orders?.[0]);
-      console.log('[Orders Page] First order items:', data.orders?.[0]?.items);
 
-      // Set orders if we have data, regardless of success flag
-      if (data.orders && Array.isArray(data.orders)) {
+      // FORCE set orders if they exist, even if checks fail
+      if (data.orders?.length > 0) {
+        console.log('🔴 FORCE SETTING ORDERS:', data.orders.length);
+        setOrders(data.orders);
+      } else if (data.orders && Array.isArray(data.orders)) {
         console.log('[Orders Page] Setting orders state with:', data.orders.length, 'orders');
         setOrders(data.orders);
       } else if (data.success) {
