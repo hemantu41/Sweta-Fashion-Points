@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
 
     // Get user data
     const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, name, email, mobile')
+      .from('spf_users')
+      .select('id, name, email, mobile, location, is_admin')
       .eq('email', email.toLowerCase())
       .single();
 
@@ -53,8 +53,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { is_admin, ...userData } = user;
+
     return NextResponse.json(
-      { message: 'OTP verified successfully', user },
+      { message: 'OTP verified successfully', user: { ...userData, isAdmin: is_admin || false } },
       { status: 200 }
     );
   } catch (error) {

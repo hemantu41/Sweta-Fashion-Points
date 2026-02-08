@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Find user by email or mobile in spf_users table
     const { data: user, error } = await supabase
       .from('spf_users')
-      .select('id, name, email, mobile, location, password')
+      .select('id, name, email, mobile, location, password, is_admin')
       .or(`email.eq.${identifier.toLowerCase()},mobile.eq.${identifier}`)
       .single();
 
@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Return user without password
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, is_admin, ...userWithoutPassword } = user;
 
     return NextResponse.json(
-      { message: 'Login successful', user: userWithoutPassword },
+      { message: 'Login successful', user: { ...userWithoutPassword, isAdmin: is_admin || false } },
       { status: 200 }
     );
   } catch (error) {

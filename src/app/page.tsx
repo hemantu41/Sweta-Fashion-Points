@@ -1,14 +1,39 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { HeroSection, CategoryCard, ProductCard, WhyChooseUs, LocationSection } from '@/components';
-import { categories, getNewArrivals, getBestSellers } from '@/data/products';
+import { categories } from '@/data/products';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Home() {
   const { t } = useLanguage();
-  const newArrivals = getNewArrivals();
-  const bestSellers = getBestSellers();
+  const [newArrivals, setNewArrivals] = useState<any[]>([]);
+  const [bestSellers, setBestSellers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const [newArrivalsRes, bestSellersRes] = await Promise.all([
+        fetch('/api/products?isNewArrival=true'),
+        fetch('/api/products?isBestSeller=true'),
+      ]);
+
+      const newArrivalsData = await newArrivalsRes.json();
+      const bestSellersData = await bestSellersRes.json();
+
+      setNewArrivals(newArrivalsData.products || []);
+      setBestSellers(bestSellersData.products || []);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
