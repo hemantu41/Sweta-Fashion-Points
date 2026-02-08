@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
-import QRCode from 'react-qr-code';
 
 interface OrderData {
   items: {
@@ -48,6 +47,7 @@ function PaymentContent() {
   const [razorpayOrderId, setRazorpayOrderId] = useState('');
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [razorpayQrUrl, setRazorpayQrUrl] = useState('');
 
   // Timer state for QR expiry (3 minutes = 180 seconds)
   const [timeRemaining, setTimeRemaining] = useState(180);
@@ -98,12 +98,12 @@ function PaymentContent() {
 
   // Auto-start payment checking and countdown timer when QR code is generated
   useEffect(() => {
-    if (razorpayOrderId && method === 'upi' && upiType === 'qr' && !qrCodeGenerated) {
+    if (razorpayQrUrl && method === 'upi' && upiType === 'qr' && !qrCodeGenerated) {
       setQrCodeGenerated(true);
       // Start payment status polling immediately
       startPaymentStatusPolling();
     }
-  }, [razorpayOrderId, method, upiType, qrCodeGenerated]);
+  }, [razorpayQrUrl, method, upiType, qrCodeGenerated]);
 
   // Countdown timer for QR code expiry (3 minutes)
   useEffect(() => {
@@ -149,6 +149,27 @@ function PaymentContent() {
       console.log('[Payment] Razorpay order created:', data.orderId);
       setRazorpayOrderId(data.orderId);
       setOrderNumber(data.orderNumber);
+
+      // Create Razorpay QR code for UPI payments
+      const qrResponse = await fetch('/api/payment/create-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: data.orderId,
+          amount: data.amount, // Amount in paise
+          customerName: order?.address?.name,
+          customerContact: order?.address?.phone,
+        }),
+      });
+
+      const qrData = await qrResponse.json();
+
+      if (qrResponse.ok && qrData.qrCodeUrl) {
+        console.log('[Payment] Razorpay QR code created');
+        setRazorpayQrUrl(qrData.qrCodeUrl);
+      } else {
+        console.error('[Payment] Failed to create QR code:', qrData.error);
+      }
     } catch (error: any) {
       console.error('[Payment] Error creating order:', error);
       alert('Failed to initialize payment. Please try again.');
@@ -303,8 +324,9 @@ function PaymentContent() {
     // Reset states for new QR code
     setTimeRemaining(180);
     setQrCodeGenerated(false);
+    setRazorpayQrUrl('');
     setStage('form');
-    // Create new Razorpay order
+    // Create new Razorpay order and QR code
     createRazorpayOrder();
   };
 
@@ -786,13 +808,16 @@ function PaymentContent() {
             {upiType === 'qr' && (
               <div className="text-center">
                 <p className="text-sm text-[#6B6B6B] mb-4">Scan this QR code with any UPI app to complete payment</p>
-                {razorpayOrderId ? (
+                {razorpayQrUrl ? (
                   <>
                     <div className="flex justify-center">
                       <div className="p-4 bg-white rounded-xl border-2 border-[#E8E2D9] inline-block relative">
-                        <QRCode
-                          value={`upi://pay?pa=8294153256@ybl&pn=Sweta+Fashion+Points&am=${order.totalPrice}&tn=Order+${orderNumber}&tr=${razorpayOrderId}`}
-                          size={192}
+                        <img
+                          src={razorpayQrUrl}
+                          alt="UPI QR Code"
+                          width={192}
+                          height={192}
+                          className="rounded-lg"
                         />
                       </div>
                     </div>
