@@ -39,8 +39,52 @@ export default function AddProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // DISABLED: Products are loaded from static file, adding new products is not available
-    setMessage('Cannot add new product: Products are currently loaded from static file. To enable this feature, migrate products to the database first.');
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          product: {
+            productId: formData.productId,
+            name: formData.name,
+            nameHi: formData.nameHi,
+            category: formData.category,
+            subCategory: formData.subCategory,
+            price: parseInt(formData.price),
+            originalPrice: formData.originalPrice ? parseInt(formData.originalPrice) : undefined,
+            priceRange: formData.priceRange,
+            description: formData.description,
+            descriptionHi: formData.descriptionHi,
+            fabric: formData.fabric,
+            fabricHi: formData.fabricHi,
+            mainImage: formData.images[0] || '',
+            images: formData.images,
+            colors: [],
+            sizes: [],
+            stockQuantity: parseInt(formData.stockQuantity),
+            isNewArrival: formData.isNewArrival,
+            isBestSeller: formData.isBestSeller,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage('Product created successfully!');
+        setTimeout(() => router.push('/admin/products'), 1500);
+      } else {
+        setMessage(data.error || 'Failed to create product');
+      }
+    } catch (error) {
+      setMessage('Error creating product');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,30 +95,6 @@ export default function AddProductPage() {
             Add New Product
           </h1>
           <p className="text-[#6B6B6B] mt-1">Create a new product in your inventory</p>
-        </div>
-
-        {/* Warning Banner - Static Products Mode */}
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
-                Feature Disabled: Products are currently loaded from static file
-              </h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                <p>
-                  Adding new products is temporarily disabled. Products need to be migrated to the database first.
-                </p>
-                <p className="mt-2">
-                  <strong>To enable this feature:</strong> Products must be stored in the <code className="bg-yellow-100 px-1 rounded">spf_productdetails</code> database table instead of the static file.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {message && (
@@ -275,18 +295,17 @@ export default function AddProductPage() {
           <div className="flex gap-4">
             <button
               type="submit"
-              disabled={true}
-              className="px-8 py-3 bg-gray-400 text-white font-semibold rounded-full cursor-not-allowed opacity-60"
-              title="Adding products disabled - products are loaded from static file"
+              disabled={loading}
+              className="px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50"
             >
-              Create Product (Disabled)
+              {loading ? 'Creating...' : 'Create Product'}
             </button>
             <button
               type="button"
               onClick={() => router.push('/admin/products')}
               className="px-8 py-3 border-2 border-[#722F37] text-[#722F37] font-semibold rounded-full hover:bg-[#722F37] hover:text-white transition-all"
             >
-              Back to Products
+              Cancel
             </button>
           </div>
         </form>

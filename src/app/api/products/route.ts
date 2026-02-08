@@ -22,31 +22,67 @@ export async function GET(request: NextRequest) {
     const priceRange = searchParams.get('priceRange');
     const isActive = searchParams.get('isActive');
 
-    // TEMPORARY FIX: Use static products file instead of database
-    const { products: staticProducts } = await import('@/data/products');
-
-    let filteredProducts = staticProducts;
+    // Build query
+    let query = supabase.from('spf_productdetails').select('*');
 
     // Apply filters
     if (category) {
-      filteredProducts = filteredProducts.filter(p => p.category === category);
+      query = query.eq('category', category);
     }
     if (subCategory) {
-      filteredProducts = filteredProducts.filter(p => p.subCategory === subCategory);
+      query = query.eq('sub_category', subCategory);
     }
     if (isNewArrival === 'true') {
-      filteredProducts = filteredProducts.filter(p => p.isNewArrival);
+      query = query.eq('is_new_arrival', true);
     }
     if (isBestSeller === 'true') {
-      filteredProducts = filteredProducts.filter(p => p.isBestSeller);
+      query = query.eq('is_best_seller', true);
     }
     if (priceRange) {
-      filteredProducts = filteredProducts.filter(p => p.priceRange === priceRange);
+      query = query.eq('price_range', priceRange);
+    }
+    if (isActive !== 'all') {
+      query = query.eq('is_active', true);
     }
 
-    console.log(`[Products API] Returning ${filteredProducts.length} products for category: ${category}`);
+    const { data: products, error } = await query.order('created_at', { ascending: false });
 
-    return NextResponse.json({ products: filteredProducts });
+    if (error) {
+      console.error('[Products API] Database error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch products' },
+        { status: 500 }
+      );
+    }
+
+    // Transform to camelCase for frontend
+    const transformedProducts = products?.map(p => ({
+      id: p.id,
+      productId: p.product_id,
+      name: p.name,
+      nameHi: p.name_hi,
+      category: p.category,
+      subCategory: p.sub_category,
+      price: p.price,
+      originalPrice: p.original_price,
+      priceRange: p.price_range,
+      description: p.description,
+      descriptionHi: p.description_hi,
+      fabric: p.fabric,
+      fabricHi: p.fabric_hi,
+      mainImage: p.main_image,
+      images: p.images || [],
+      colors: p.colors || [],
+      sizes: p.sizes || [],
+      stockQuantity: p.stock_quantity,
+      isNewArrival: p.is_new_arrival,
+      isBestSeller: p.is_best_seller,
+      isActive: p.is_active,
+    })) || [];
+
+    console.log(`[Products API] Returning ${transformedProducts.length} products for category: ${category}`);
+
+    return NextResponse.json({ products: transformedProducts });
   } catch (error) {
     console.error('Products API error:', error);
     return NextResponse.json(
