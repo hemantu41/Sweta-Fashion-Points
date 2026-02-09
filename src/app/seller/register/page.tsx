@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SellerRegisterPage() {
-  const { user, isSeller, sellerStatus, isApprovedSeller } = useAuth();
+  const { user, isSeller, sellerStatus, isApprovedSeller, login } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -59,8 +59,23 @@ export default function SellerRegisterPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('Registration submitted successfully! You will be notified once your account is approved by admin.');
-        setTimeout(() => router.push('/'), 3000);
+        setMessage('Registration submitted successfully! You will see your application status.');
+
+        // Update user session with seller info
+        const updatedUser = {
+          ...user,
+          isSeller: true,
+          sellerId: data.seller?.id,
+          sellerStatus: 'pending' as const,
+        };
+
+        // Update AuthContext and localStorage
+        login(updatedUser);
+
+        // Wait a moment to show success message, then page will auto-refresh showing status
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       } else {
         setMessage(data.error || 'Registration failed');
       }
