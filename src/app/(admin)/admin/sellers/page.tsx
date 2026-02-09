@@ -21,7 +21,7 @@ interface Seller {
   user: {
     name: string;
     email: string;
-    phone_number: string;
+    mobile: string;
   };
 }
 
@@ -32,6 +32,7 @@ export default function AdminSellersPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'suspended'>('all');
   const [search, setSearch] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -44,6 +45,7 @@ export default function AdminSellersPage() {
   const fetchSellers = async () => {
     try {
       setLoading(true);
+      setError(null);
       const statusParam = filter === 'all' ? '' : `&status=${filter}`;
       const response = await fetch(`/api/sellers?userId=${user?.id}${statusParam}`);
       const data = await response.json();
@@ -52,9 +54,11 @@ export default function AdminSellersPage() {
         setSellers(data.sellers || []);
       } else {
         console.error('Failed to fetch sellers:', data.error);
+        setError(data.error || 'Failed to fetch sellers');
       }
     } catch (error) {
       console.error('Fetch sellers error:', error);
+      setError('An error occurred while fetching sellers');
     } finally {
       setLoading(false);
     }
@@ -238,13 +242,26 @@ export default function AdminSellersPage() {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="text-red-600 text-xl">⚠️</div>
+              <div>
+                <p className="text-red-800 font-semibold">Error Loading Sellers</p>
+                <p className="text-red-600 text-sm mt-1">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Sellers Table */}
         <div className="bg-white rounded-xl border border-[#E8E2D9] overflow-hidden">
           {loading ? (
             <div className="p-12 text-center text-[#6B6B6B]">Loading sellers...</div>
           ) : filteredSellers.length === 0 ? (
             <div className="p-12 text-center text-[#6B6B6B]">
-              No sellers found matching your criteria.
+              {error ? 'Unable to load sellers. Please refresh the page.' : 'No sellers found matching your criteria.'}
             </div>
           ) : (
             <div className="overflow-x-auto">

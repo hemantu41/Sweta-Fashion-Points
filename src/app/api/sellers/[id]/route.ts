@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabase';
 async function isAdmin(userId: string): Promise<boolean> {
   const { data } = await supabase
     .from('spf_users')
-    .select('user_type')
+    .select('is_admin, user_type')
     .eq('id', userId)
     .single();
-  return data?.user_type === 'admin';
+  // Check both is_admin column AND user_type for backwards compatibility
+  return data?.is_admin === true || data?.user_type === 'admin';
 }
 
 // Helper to check if user is the seller or admin
@@ -61,7 +62,7 @@ export async function GET(
           id,
           name,
           email,
-          phone_number
+          mobile
         )
       `)
       .eq('id', sellerId)
