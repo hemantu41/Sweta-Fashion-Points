@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       .from('spf_sellers')
       .select('id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to return null instead of error when not found
 
     if (existingSeller) {
       return NextResponse.json(
