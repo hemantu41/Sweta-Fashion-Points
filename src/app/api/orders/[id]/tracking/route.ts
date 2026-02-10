@@ -33,43 +33,56 @@ export async function GET(
     }
 
     // Get delivery record with partner info
-    const { data: delivery } = await supabase
-      .from('spf_order_deliveries')
-      .select(`
-        id,
-        status,
-        assigned_at,
-        accepted_at,
-        picked_up_at,
-        in_transit_at,
-        out_for_delivery_at,
-        delivered_at,
-        estimated_delivery_date,
-        actual_delivery_date,
-        delivery_notes,
-        customer_rating,
-        customer_feedback,
-        delivery_partner:spf_delivery_partners(
-          id,
-          name,
-          mobile,
-          vehicle_type,
-          vehicle_number
-        )
-      `)
-      .eq('order_id', orderId)
-      .maybeSingle();
-
-    // Get status history
+    // Try to get delivery info, but handle gracefully if tables don't exist
+    let delivery = null;
     let statusHistory = [];
-    if (delivery) {
-      const { data: historyData } = await supabase
-        .from('spf_delivery_status_history')
-        .select('new_status, created_at, notes')
-        .eq('order_delivery_id', delivery.id)
-        .order('created_at', { ascending: true });
 
-      statusHistory = historyData || [];
+    try {
+      const { data: deliveryData, error: deliveryError } = await supabase
+        .from('spf_order_deliveries')
+        .select(`
+          id,
+          status,
+          assigned_at,
+          accepted_at,
+          picked_up_at,
+          in_transit_at,
+          out_for_delivery_at,
+          delivered_at,
+          estimated_delivery_date,
+          actual_delivery_date,
+          delivery_notes,
+          customer_rating,
+          customer_feedback,
+          delivery_partner:spf_delivery_partners(
+            id,
+            name,
+            mobile,
+            vehicle_type,
+            vehicle_number
+          )
+        `)
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      // Only use delivery data if no error
+      if (!deliveryError) {
+        delivery = deliveryData;
+      }
+
+      // Get status history if delivery exists
+      if (delivery) {
+        const { data: historyData } = await supabase
+          .from('spf_delivery_status_history')
+          .select('new_status, created_at, notes')
+          .eq('order_delivery_id', delivery.id)
+          .order('created_at', { ascending: true });
+
+        statusHistory = historyData || [];
+      }
+    } catch (deliveryTableError) {
+      // Tables might not exist yet - continue without delivery data
+      console.log('[Tracking API] Delivery tables not found - showing basic tracking');
     }
 
     // Build timeline for customer
