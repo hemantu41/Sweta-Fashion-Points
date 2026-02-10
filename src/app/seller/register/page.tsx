@@ -672,13 +672,14 @@ export default function SellerRegisterPage() {
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                  Address Line 1
+                  Address Line 1 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="addressLine1"
                   value={formData.addressLine1}
                   onChange={handleChange}
+                  required
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                   placeholder="Building, Street"
                 />
@@ -693,46 +694,50 @@ export default function SellerRegisterPage() {
                   value={formData.addressLine2}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
-                  placeholder="Locality, Landmark"
+                  placeholder="Locality, Landmark (Optional)"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                    City
+                    City <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
+                    required
                     className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                     placeholder="City"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                    State
+                    State <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
+                    required
                     className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                     placeholder="State"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                    Pincode
+                    Pincode <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="pincode"
                     value={formData.pincode}
                     onChange={handleChange}
+                    required
                     maxLength={6}
+                    pattern="[0-9]{6}"
                     className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                     placeholder="123456"
                   />
@@ -748,53 +753,59 @@ export default function SellerRegisterPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                  Account Holder Name
+                  Account Holder Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="bankAccountName"
                   value={formData.bankAccountName}
                   onChange={handleChange}
+                  required
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                   placeholder="As per bank records"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                  Account Number
+                  Account Number <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="bankAccountNumber"
                   value={formData.bankAccountNumber}
                   onChange={handleChange}
+                  required
+                  pattern="[0-9]{9,18}"
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                   placeholder="Bank account number"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                  IFSC Code
+                  IFSC Code <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="bankIfsc"
                   value={formData.bankIfsc}
                   onChange={handleChange}
+                  required
                   maxLength={11}
+                  pattern="[A-Z]{4}0[A-Z0-9]{6}"
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                   placeholder="ABCD0123456"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                  Bank Name
+                  Bank Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="bankName"
                   value={formData.bankName}
                   onChange={handleChange}
+                  required
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
                   placeholder="Bank name"
                 />

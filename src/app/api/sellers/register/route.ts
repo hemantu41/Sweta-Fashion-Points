@@ -33,6 +33,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate business address fields
+    if (!addressLine1 || !city || !state || !pincode) {
+      return NextResponse.json(
+        { error: 'Missing required address fields: addressLine1, city, state, pincode' },
+        { status: 400 }
+      );
+    }
+
+    // Validate bank details
+    if (!bankAccountName || !bankAccountNumber || !bankIfsc || !bankName) {
+      return NextResponse.json(
+        { error: 'Missing required bank details: bankAccountName, bankAccountNumber, bankIfsc, bankName' },
+        { status: 400 }
+      );
+    }
+
     // Check if user exists
     const { data: user, error: userError } = await supabase
       .from('spf_users')
