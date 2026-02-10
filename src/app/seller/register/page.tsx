@@ -28,11 +28,161 @@ export default function SellerRegisterPage() {
     bankName: '',
   });
 
+  // Verification states
+  const [emailVerification, setEmailVerification] = useState({
+    otpSent: false,
+    otp: '',
+    verified: false,
+    loading: false,
+    error: '',
+  });
+  const [phoneVerification, setPhoneVerification] = useState({
+    otpSent: false,
+    otp: '',
+    verified: false,
+    loading: false,
+    error: '',
+  });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+
+    // Reset verification if email or phone changes
+    if (e.target.name === 'businessEmail' && emailVerification.verified) {
+      setEmailVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
+    }
+    if (e.target.name === 'businessPhone' && phoneVerification.verified) {
+      setPhoneVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
+    }
+  };
+
+  // Send email OTP
+  const sendEmailOTP = async () => {
+    if (!formData.businessEmail) {
+      setEmailVerification(prev => ({ ...prev, error: 'Please enter business email' }));
+      return;
+    }
+
+    setEmailVerification(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/sellers/send-verification-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'email',
+          value: formData.businessEmail,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailVerification(prev => ({ ...prev, otpSent: true, loading: false }));
+      } else {
+        setEmailVerification(prev => ({ ...prev, error: data.error || 'Failed to send OTP', loading: false }));
+      }
+    } catch (error) {
+      setEmailVerification(prev => ({ ...prev, error: 'Error sending OTP', loading: false }));
+    }
+  };
+
+  // Verify email OTP
+  const verifyEmailOTP = async () => {
+    if (!emailVerification.otp || emailVerification.otp.length !== 6) {
+      setEmailVerification(prev => ({ ...prev, error: 'Please enter a valid 6-digit OTP' }));
+      return;
+    }
+
+    setEmailVerification(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/sellers/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'email',
+          value: formData.businessEmail,
+          otp: emailVerification.otp,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.verified) {
+        setEmailVerification(prev => ({ ...prev, verified: true, loading: false }));
+      } else {
+        setEmailVerification(prev => ({ ...prev, error: data.error || 'Invalid OTP', loading: false }));
+      }
+    } catch (error) {
+      setEmailVerification(prev => ({ ...prev, error: 'Error verifying OTP', loading: false }));
+    }
+  };
+
+  // Send phone OTP
+  const sendPhoneOTP = async () => {
+    if (!formData.businessPhone || formData.businessPhone.length !== 10) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Please enter a valid 10-digit phone number' }));
+      return;
+    }
+
+    setPhoneVerification(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/sellers/send-verification-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'phone',
+          value: formData.businessPhone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPhoneVerification(prev => ({ ...prev, otpSent: true, loading: false }));
+      } else {
+        setPhoneVerification(prev => ({ ...prev, error: data.error || 'Failed to send OTP', loading: false }));
+      }
+    } catch (error) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Error sending OTP', loading: false }));
+    }
+  };
+
+  // Verify phone OTP
+  const verifyPhoneOTP = async () => {
+    if (!phoneVerification.otp || phoneVerification.otp.length !== 6) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Please enter a valid 6-digit OTP' }));
+      return;
+    }
+
+    setPhoneVerification(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/sellers/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'phone',
+          value: formData.businessPhone,
+          otp: phoneVerification.otp,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.verified) {
+        setPhoneVerification(prev => ({ ...prev, verified: true, loading: false }));
+      } else {
+        setPhoneVerification(prev => ({ ...prev, error: data.error || 'Invalid OTP', loading: false }));
+      }
+    } catch (error) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Error verifying OTP', loading: false }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +192,19 @@ export default function SellerRegisterPage() {
 
     if (!user) {
       setMessage('Please login first to register as a seller');
+      setLoading(false);
+      return;
+    }
+
+    // Check if email and phone are verified
+    if (!emailVerification.verified) {
+      setMessage('Please verify your business email before submitting');
+      setLoading(false);
+      return;
+    }
+
+    if (!phoneVerification.verified) {
+      setMessage('Please verify your business phone before submitting');
       setLoading(false);
       return;
     }
@@ -354,38 +517,152 @@ export default function SellerRegisterPage() {
             </div>
           </div>
 
-          {/* Contact Information */}
+          {/* Contact Information with Verification */}
           <div className="mb-8">
             <h2 className="text-xl font-bold text-[#722F37] mb-4">Contact Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                  Business Email <span className="text-red-500">*</span>
-                </label>
+            <p className="text-sm text-[#6B6B6B] mb-4">
+              We'll send OTPs to verify your business email and phone number to ensure genuine sellers.
+            </p>
+
+            {/* Business Email with Verification */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
+                Business Email <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
                 <input
                   type="email"
                   name="businessEmail"
                   value={formData.businessEmail}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
+                  disabled={emailVerification.verified}
+                  className="flex-1 px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] disabled:bg-gray-50"
                   placeholder="business@example.com"
                 />
+                {!emailVerification.verified && (
+                  <button
+                    type="button"
+                    onClick={sendEmailOTP}
+                    disabled={emailVerification.loading || !formData.businessEmail}
+                    className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#8B3D47] transition-all disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {emailVerification.loading ? 'Sending...' : emailVerification.otpSent ? 'Resend OTP' : 'Send OTP'}
+                  </button>
+                )}
+                {emailVerification.verified && (
+                  <div className="flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Verified
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                  Business Phone <span className="text-red-500">*</span>
-                </label>
+
+              {/* Email OTP Input */}
+              {emailVerification.otpSent && !emailVerification.verified && (
+                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 mb-3">Enter the 6-digit OTP sent to your email</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={emailVerification.otp}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setEmailVerification(prev => ({ ...prev, otp: value, error: '' }));
+                      }}
+                      maxLength={6}
+                      className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] text-center text-lg tracking-widest"
+                      placeholder="000000"
+                    />
+                    <button
+                      type="button"
+                      onClick={verifyEmailOTP}
+                      disabled={emailVerification.loading || emailVerification.otp.length !== 6}
+                      className="px-6 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#8B3D47] transition-all disabled:opacity-50"
+                    >
+                      {emailVerification.loading ? 'Verifying...' : 'Verify'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Email Error */}
+              {emailVerification.error && (
+                <p className="text-red-600 text-sm mt-2">{emailVerification.error}</p>
+              )}
+            </div>
+
+            {/* Business Phone with Verification */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
+                Business Phone <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
                 <input
                   type="tel"
                   name="businessPhone"
                   value={formData.businessPhone}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
+                  disabled={phoneVerification.verified}
+                  maxLength={10}
+                  className="flex-1 px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] disabled:bg-gray-50"
                   placeholder="1234567890"
                 />
+                {!phoneVerification.verified && (
+                  <button
+                    type="button"
+                    onClick={sendPhoneOTP}
+                    disabled={phoneVerification.loading || formData.businessPhone.length !== 10}
+                    className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#8B3D47] transition-all disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {phoneVerification.loading ? 'Sending...' : phoneVerification.otpSent ? 'Resend OTP' : 'Send OTP'}
+                  </button>
+                )}
+                {phoneVerification.verified && (
+                  <div className="flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Verified
+                  </div>
+                )}
               </div>
+
+              {/* Phone OTP Input */}
+              {phoneVerification.otpSent && !phoneVerification.verified && (
+                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 mb-3">Enter the 6-digit OTP sent to your phone via SMS</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={phoneVerification.otp}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setPhoneVerification(prev => ({ ...prev, otp: value, error: '' }));
+                      }}
+                      maxLength={6}
+                      className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] text-center text-lg tracking-widest"
+                      placeholder="000000"
+                    />
+                    <button
+                      type="button"
+                      onClick={verifyPhoneOTP}
+                      disabled={phoneVerification.loading || phoneVerification.otp.length !== 6}
+                      className="px-6 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#8B3D47] transition-all disabled:opacity-50"
+                    >
+                      {phoneVerification.loading ? 'Verifying...' : 'Verify'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Phone Error */}
+              {phoneVerification.error && (
+                <p className="text-red-600 text-sm mt-2">{phoneVerification.error}</p>
+              )}
             </div>
           </div>
 
@@ -529,8 +806,8 @@ export default function SellerRegisterPage() {
           <div className="flex gap-4">
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50"
+              disabled={loading || !emailVerification.verified || !phoneVerification.verified}
+              className="flex-1 px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Submitting...' : 'Submit Registration'}
             </button>
@@ -541,6 +818,15 @@ export default function SellerRegisterPage() {
               Cancel
             </Link>
           </div>
+
+          {/* Verification Warning */}
+          {(!emailVerification.verified || !phoneVerification.verified) && (
+            <div className="mt-6 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+              <p className="text-sm text-yellow-800">
+                <strong>⚠️ Verification Required:</strong> Please verify both your business email and phone number before submitting the registration form.
+              </p>
+            </div>
+          )}
 
           {/* Info */}
           <div className="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-200">

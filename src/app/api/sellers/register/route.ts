@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create seller record
+    // Create seller record with verification status
     const { data: newSeller, error: sellerError } = await supabase
       .from('spf_sellers')
       .insert({
@@ -83,6 +83,10 @@ export async function POST(request: NextRequest) {
         bank_name: bankName,
         documents: documents || [],
         status: 'pending', // Requires admin approval
+        email_verified: true, // Set to true since OTP was verified before registration
+        phone_verified: true, // Set to true since OTP was verified before registration
+        email_verified_at: new Date().toISOString(),
+        phone_verified_at: new Date().toISOString(),
       })
       .select()
       .single();
