@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -115,7 +115,7 @@ export default function ProfilePage() {
         setFormData({ ...formData, profile_photo: data.secure_url });
 
         // Auto-save photo to database
-        await fetch('/api/user/profile', {
+        const saveResponse = await fetch('/api/user/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -124,7 +124,13 @@ export default function ProfilePage() {
           }),
         });
 
-        setMessage({ type: 'success', text: 'Photo uploaded successfully!' });
+        if (saveResponse.ok) {
+          setMessage({ type: 'success', text: 'Photo uploaded successfully!' });
+          // Refresh profile data to ensure consistency
+          await fetchProfile();
+        } else {
+          setMessage({ type: 'error', text: 'Photo uploaded but failed to save. Please try again.' });
+        }
       } else {
         setMessage({ type: 'error', text: 'Failed to upload photo. Please try again.' });
       }
@@ -155,6 +161,19 @@ export default function ProfilePage() {
       if (response.ok) {
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
         setIsEditing(false);
+
+        // Update AuthContext with new user data
+        if (user && data.profile) {
+          login({
+            ...user,
+            name: data.profile.name,
+            mobile: data.profile.mobile,
+            location: data.profile.location,
+          });
+        }
+
+        // Refresh profile data from database
+        await fetchProfile();
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to save profile' });
       }
