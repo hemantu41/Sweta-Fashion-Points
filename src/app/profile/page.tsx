@@ -42,13 +42,22 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (response.ok && data.profile) {
+        // Format date_of_birth to YYYY-MM-DD for input type="date"
+        let formattedDate = '';
+        if (data.profile.date_of_birth) {
+          const date = new Date(data.profile.date_of_birth);
+          if (!isNaN(date.getTime())) {
+            formattedDate = date.toISOString().split('T')[0];
+          }
+        }
+
         setFormData({
           name: data.profile.name || user?.name || '',
           email: data.profile.email || user?.email || '',
           mobile: data.profile.mobile || user?.mobile || '',
           location: data.profile.location || '',
           gender: data.profile.gender || '',
-          date_of_birth: data.profile.date_of_birth || '',
+          date_of_birth: formattedDate,
           citizenship: data.profile.citizenship || 'Indian',
           profile_photo: data.profile.profile_photo || '',
         });
