@@ -118,17 +118,17 @@ CREATE TABLE IF NOT EXISTS spf_delivery_status_history (
 );
 
 -- Indexes for Performance
-CREATE INDEX idx_delivery_partners_mobile ON spf_delivery_partners(mobile);
-CREATE INDEX idx_delivery_partners_status ON spf_delivery_partners(status, availability_status);
-CREATE INDEX idx_delivery_partners_pincode ON spf_delivery_partners USING GIN(service_pincodes);
+CREATE INDEX IF NOT EXISTS idx_delivery_partners_mobile ON spf_delivery_partners(mobile);
+CREATE INDEX IF NOT EXISTS idx_delivery_partners_status ON spf_delivery_partners(status, availability_status);
+CREATE INDEX IF NOT EXISTS idx_delivery_partners_pincode ON spf_delivery_partners USING GIN(service_pincodes);
 
-CREATE INDEX idx_order_deliveries_order ON spf_order_deliveries(order_id);
-CREATE INDEX idx_order_deliveries_partner ON spf_order_deliveries(delivery_partner_id);
-CREATE INDEX idx_order_deliveries_status ON spf_order_deliveries(status);
-CREATE INDEX idx_order_deliveries_date ON spf_order_deliveries(estimated_delivery_date, actual_delivery_date);
+CREATE INDEX IF NOT EXISTS idx_order_deliveries_order ON spf_order_deliveries(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_deliveries_partner ON spf_order_deliveries(delivery_partner_id);
+CREATE INDEX IF NOT EXISTS idx_order_deliveries_status ON spf_order_deliveries(status);
+CREATE INDEX IF NOT EXISTS idx_order_deliveries_date ON spf_order_deliveries(estimated_delivery_date, actual_delivery_date);
 
-CREATE INDEX idx_delivery_history_order ON spf_delivery_status_history(order_delivery_id);
-CREATE INDEX idx_delivery_history_created ON spf_delivery_status_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_delivery_history_order ON spf_delivery_status_history(order_delivery_id);
+CREATE INDEX IF NOT EXISTS idx_delivery_history_created ON spf_delivery_status_history(created_at DESC);
 
 -- Add delivery tracking to existing orders table
 ALTER TABLE spf_payment_orders
@@ -156,6 +156,9 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Drop trigger if exists and recreate
+DROP TRIGGER IF EXISTS trigger_set_tracking_number ON spf_payment_orders;
 
 CREATE TRIGGER trigger_set_tracking_number
 BEFORE INSERT ON spf_payment_orders
