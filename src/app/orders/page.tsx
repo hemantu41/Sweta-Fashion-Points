@@ -64,27 +64,16 @@ export default function OrdersPage() {
       const response = await fetch(`/api/orders?userId=${user?.id}`);
       const data = await response.json();
 
-      console.log('📦 API Response:', JSON.stringify(data, null, 2));
-
-      // NUCLEAR OPTION: Just set whatever comes back
-      const ordersArray = data.orders || data || [];
-      console.log('🚀 SETTING ORDERS LENGTH:', ordersArray.length);
-      console.log('🚀 ORDERS DATA:', ordersArray);
-
-      setOrders(ordersArray);
-
-      console.log('✅ setOrders() called with', ordersArray.length, 'orders');
-
-      // Force a second set after a delay to bypass any React batching issues
-      setTimeout(() => {
-        console.log('⏰ RETRY: Setting orders again');
-        setOrders(ordersArray);
-      }, 100);
+      if (response.ok) {
+        setOrders(data.orders || []);
+      } else {
+        setError(data.error || 'Failed to load orders');
+      }
     } catch (err) {
-      console.error('❌ Fetch error:', err);
+      console.error('Fetch orders error:', err);
       setError('Failed to load orders');
     } finally {
-      setTimeout(() => setLoading(false), 200);
+      setLoading(false);
     }
   };
 
@@ -149,15 +138,6 @@ export default function OrdersPage() {
             Order History
           </h1>
           <p className="text-[#6B6B6B] mt-2">Track and manage your orders</p>
-        </div>
-
-        {/* Debug Info */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-          <p className="text-yellow-900 font-bold mb-2">DEBUG INFO:</p>
-          <p className="text-sm text-yellow-800">Orders state length: {orders.length}</p>
-          <p className="text-sm text-yellow-800">Loading: {loading.toString()}</p>
-          <p className="text-sm text-yellow-800">Error: {error || 'None'}</p>
-          <p className="text-sm text-yellow-800 mt-2">Check console for detailed logs</p>
         </div>
 
         {/* Error Message */}
