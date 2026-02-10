@@ -24,6 +24,8 @@ interface AuthContextType {
   isAdmin: boolean;
   // Seller status
   isSeller: boolean;
+  sellerId?: string;
+  sellerStatus?: 'pending' | 'approved' | 'rejected' | 'suspended';
   isApprovedSeller: boolean;
 }
 
@@ -66,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isAdmin: user?.isAdmin || false,
         isSeller: user?.isSeller || false,
+        sellerId: user?.sellerId,
+        sellerStatus: user?.sellerStatus,
         isApprovedSeller: user?.isSeller === true && user?.sellerStatus === 'approved',
       }}
     >
