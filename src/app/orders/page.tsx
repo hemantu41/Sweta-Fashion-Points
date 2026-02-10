@@ -24,6 +24,8 @@ interface Order {
   amount: number;
   currency: string;
   status: string;
+  delivery_status?: string;
+  tracking_number?: string;
   items: OrderItem[];
   delivery_address: {
     name: string;
@@ -107,6 +109,62 @@ export default function OrdersPage() {
     }
   };
 
+  const getDeliveryStatusColor = (status?: string) => {
+    if (!status) return 'bg-gray-100 text-gray-700 border-gray-200';
+
+    switch (status) {
+      case 'delivered':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'out_for_delivery':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'in_transit':
+        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+      case 'picked_up':
+        return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'accepted':
+        return 'bg-teal-100 text-teal-700 border-teal-200';
+      case 'assigned':
+        return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+      case 'pending_assignment':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'failed':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getDeliveryStatusText = (status?: string) => {
+    if (!status) return 'Pending Assignment';
+
+    switch (status) {
+      case 'pending_assignment':
+        return 'Pending Assignment';
+      case 'assigned':
+        return 'Assigned';
+      case 'accepted':
+        return 'Accepted';
+      case 'picked_up':
+        return 'Picked Up';
+      case 'in_transit':
+        return 'In Transit';
+      case 'out_for_delivery':
+        return 'Out for Delivery';
+      case 'delivered':
+        return 'Delivered';
+      case 'failed':
+        return 'Delivery Failed';
+      case 'returned':
+        return 'Returned';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -156,13 +214,18 @@ export default function OrdersPage() {
                 <div className="bg-gradient-to-r from-[#722F37]/5 to-[#E8E2D9]/30 px-6 py-4 border-b border-[#E8E2D9]">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-3 mb-1">
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
                         <h3 className="font-bold text-[#2D2D2D] text-lg">
                           Order #{order.order_number}
                         </h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
                           {getStatusText(order.status)}
                         </span>
+                        {order.status === 'captured' && (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getDeliveryStatusColor(order.delivery_status)}`}>
+                            {getDeliveryStatusText(order.delivery_status)}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-[#6B6B6B]">
                         Placed on {formatDate(order.created_at)}
@@ -170,6 +233,11 @@ export default function OrdersPage() {
                       {order.payment_completed_at && (
                         <p className="text-sm text-green-600">
                           Paid on {formatDate(order.payment_completed_at)}
+                        </p>
+                      )}
+                      {order.tracking_number && (
+                        <p className="text-sm text-[#6B6B6B] mt-1">
+                          Tracking: <span className="font-medium text-[#722F37]">{order.tracking_number}</span>
                         </p>
                       )}
                     </div>
@@ -253,13 +321,28 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Order Actions */}
-                {order.razorpay_payment_id && (
-                  <div className="px-6 pb-6">
-                    <p className="text-xs text-[#6B6B6B]">
-                      Payment ID: {order.razorpay_payment_id}
-                    </p>
+                <div className="px-6 pb-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      {order.razorpay_payment_id && (
+                        <p className="text-xs text-[#6B6B6B]">
+                          Payment ID: {order.razorpay_payment_id}
+                        </p>
+                      )}
+                    </div>
+                    {order.status === 'captured' && (
+                      <Link
+                        href={`/orders/${order.id}/track`}
+                        className="inline-flex items-center gap-2 bg-[#722F37] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#8B3D47] transition-colors text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        Track Order
+                      </Link>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
