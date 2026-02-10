@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { notifyOrderAssigned } from '@/lib/delivery-notifications';
 
 // POST - Assign order to delivery partner (Admin Only)
 export async function POST(
@@ -128,6 +129,28 @@ export async function POST(
         .update({ delivery_status: 'assigned' })
         .eq('id', orderId);
 
+      // Send notification
+      try {
+        const orderDetails = {
+          orderNumber: order.order_number || orderId,
+          trackingNumber: order.tracking_number,
+          customerName: order.delivery_address.name,
+          customerPhone: order.delivery_address.phone,
+          customerEmail: order.delivery_address.email,
+          deliveryAddress: `${order.delivery_address.address_line1}, ${order.delivery_address.city}`,
+          amount: order.amount || 0,
+        };
+
+        const partnerDetails = {
+          name: partner.name,
+          mobile: partner.mobile,
+        };
+
+        await notifyOrderAssigned(orderDetails, partnerDetails, estimatedDeliveryDate);
+      } catch (notifError) {
+        console.error('[Order Assignment API] Notification error:', notifError);
+      }
+
       return NextResponse.json({
         success: true,
         delivery: updatedDelivery,
@@ -173,6 +196,28 @@ export async function POST(
         .from('spf_payment_orders')
         .update({ delivery_status: 'assigned' })
         .eq('id', orderId);
+
+      // Send notification
+      try {
+        const orderDetails = {
+          orderNumber: order.order_number || orderId,
+          trackingNumber: order.tracking_number,
+          customerName: order.delivery_address.name,
+          customerPhone: order.delivery_address.phone,
+          customerEmail: order.delivery_address.email,
+          deliveryAddress: `${order.delivery_address.address_line1}, ${order.delivery_address.city}`,
+          amount: order.amount || 0,
+        };
+
+        const partnerDetails = {
+          name: partner.name,
+          mobile: partner.mobile,
+        };
+
+        await notifyOrderAssigned(orderDetails, partnerDetails, estimatedDeliveryDate);
+      } catch (notifError) {
+        console.error('[Order Assignment API] Notification error:', notifError);
+      }
 
       return NextResponse.json({
         success: true,

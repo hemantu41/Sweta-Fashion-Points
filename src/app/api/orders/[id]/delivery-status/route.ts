@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import {
+  notifyOrderAccepted,
+  notifyOutForDelivery,
+  notifyOrderDelivered,
+  notifyDeliveryFailed,
+} from '@/lib/delivery-notifications';
 
 // PUT - Update delivery status
 export async function PUT(
@@ -196,6 +202,60 @@ export async function PUT(
           })
           .eq('id', delivery.delivery_partner_id);
       }
+    }
+
+    // Send notifications based on status change
+    try {
+      // Get order and partner details for notifications
+      const { data: orderData } = await supabase
+        .from('spf_payment_orders')
+        .select('order_number, tracking_number, amount, delivery_address, user_id')
+        .eq('id', orderId)
+        .single();
+
+      if (orderData && delivery.delivery_partner_id) {
+        const { data: partnerData } = await supabase
+          .from('spf_delivery_partners')
+          .select('name, mobile')
+          .eq('id', delivery.delivery_partner_id)
+          .single();
+
+        if (partnerData && orderData.delivery_address) {
+          const orderDetails = {
+            orderNumber: orderData.order_number,
+            trackingNumber: orderData.tracking_number,
+            customerName: orderData.delivery_address.name,
+            customerPhone: orderData.delivery_address.phone,
+            customerEmail: orderData.delivery_address.email,
+            deliveryAddress: `${orderData.delivery_address.address_line1}, ${orderData.delivery_address.city}`,
+            amount: orderData.amount,
+          };
+
+          const partnerDetails = {
+            name: partnerData.name,
+            mobile: partnerData.mobile,
+          };
+
+          // Send appropriate notification based on status
+          switch (status) {
+            case 'accepted':
+              await notifyOrderAccepted(orderDetails, partnerDetails);
+              break;
+            case 'out_for_delivery':
+              await notifyOutForDelivery(orderDetails, partnerDetails);
+              break;
+            case 'delivered':
+              await notifyOrderDelivered(orderDetails);
+              break;
+            case 'failed':
+              await notifyDeliveryFailed(orderDetails, failedReason || 'Unable to deliver');
+              break;
+          }
+        }
+      }
+    } catch (notifError) {
+      // Log notification errors but don't fail the request
+      console.error('[Delivery Status API] Notification error:', notifError);
     }
 
     return NextResponse.json({
