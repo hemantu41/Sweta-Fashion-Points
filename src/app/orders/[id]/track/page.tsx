@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -32,7 +32,8 @@ interface TrackingInfo {
   deliveryAddress: any;
 }
 
-export default function TrackOrderPage({ params }: { params: { id: string } }) {
+export default function TrackOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: orderId } = use(params);
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [tracking, setTracking] = useState<TrackingInfo | null>(null);
@@ -46,19 +47,19 @@ export default function TrackOrderPage({ params }: { params: { id: string } }) {
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    if (user?.id && params.id) {
+    if (user?.id && orderId) {
       fetchTracking();
     }
-  }, [user, params.id]);
+  }, [user, orderId]);
 
   const fetchTracking = async () => {
     try {
       setLoading(true);
       setError('');
 
-      console.log('[Track Page] Fetching tracking for order:', params.id, 'user:', user?.id);
+      console.log('[Track Page] Fetching tracking for order:', orderId, 'user:', user?.id);
 
-      const url = `/api/orders/${params.id}/tracking?userId=${user?.id}`;
+      const url = `/api/orders/${orderId}/tracking?userId=${user?.id}`;
       console.log('[Track Page] API URL:', url);
 
       // Add timeout to prevent hanging
