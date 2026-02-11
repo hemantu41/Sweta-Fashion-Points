@@ -10,10 +10,10 @@ import {
 // PUT - Update delivery status
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const orderId = params.id;
+    const { id: orderId } = await params;
     const body = await request.json();
     const {
       status,

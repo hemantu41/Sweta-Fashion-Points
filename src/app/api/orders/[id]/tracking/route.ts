@@ -4,10 +4,10 @@ import { supabase } from '@/lib/supabase';
 // GET - Get delivery tracking details (Customer facing)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const orderId = params.id;
+    const { id: orderId } = await params;
     const userId = request.nextUrl.searchParams.get('userId');
 
     console.log('[Tracking API] Request for order:', orderId, 'by user:', userId);

@@ -4,10 +4,10 @@ import { supabase } from '@/lib/supabase';
 // GET - Get partner earnings
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const status = request.nextUrl.searchParams.get('status'); // pending, paid, all
     const startDate = request.nextUrl.searchParams.get('startDate');
     const endDate = request.nextUrl.searchParams.get('endDate');

@@ -1,0 +1,55 @@
+
+> sweta-fashion-points@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.2:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 762ms
+ GET /orders/d911f872-8592-4099-9ba9-a268edd935e4/track 200 in 1759ms (compile: 1651ms, render: 108ms)
+Error: Route "/api/orders/[id]/tracking" used `params.id`. `params` is a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (src/app/api/orders/[id]/tracking/route.ts:10:28)
+   8 | ) {
+   9 |   try {
+> 10 |     const orderId = params.id;
+     |                            ^
+  11 |     const userId = request.nextUrl.searchParams.get('userId');
+  12 |
+  13 |     console.log('[Tracking API] Request for order:', orderId, 'by user:', userId);
+[Tracking API] Request for order: undefined by user: test-user
+[Tracking API] Order query result: {
+  order: null,
+  orderError: {
+    code: '22P02',
+    details: null,
+    hint: null,
+    message: 'invalid input syntax for type uuid: "undefined"'
+  }
+}
+[Tracking API] Order query error: {
+  code: '22P02',
+  details: null,
+  hint: null,
+  message: 'invalid input syntax for type uuid: "undefined"'
+}
+ GET /api/orders/test-order-id/tracking?userId=test-user 500 in 1468ms (compile: 880ms, render: 588ms)
+[Tracking API] Request for order: test-order-id by user: test-user
+[Tracking API] Order query result: {
+  order: null,
+  orderError: {
+    code: '22P02',
+    details: null,
+    hint: null,
+    message: 'invalid input syntax for type uuid: "test-order-id"'
+  }
+}
+[Tracking API] Order query error: {
+  code: '22P02',
+  details: null,
+  hint: null,
+  message: 'invalid input syntax for type uuid: "test-order-id"'
+}
+ GET /api/orders/test-order-id/tracking?userId=test-user 500 in 478ms (compile: 52ms, render: 426ms)

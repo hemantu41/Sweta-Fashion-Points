@@ -4,10 +4,10 @@ import { supabase } from '@/lib/supabase';
 // GET - Get single delivery partner details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const { data: partner, error } = await supabase
       .from('spf_delivery_partners')
