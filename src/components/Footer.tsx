@@ -69,6 +69,11 @@ export default function Footer() {
                   Become a Seller <span className="text-xs">✨</span>
                 </Link>
               </li>
+              <li>
+                <Link href="/delivery-partner/register" className="text-[#C9A962] hover:text-white transition-colors text-sm tracking-wide font-medium flex items-center gap-2">
+                  Become a Delivery Partner <span className="text-xs">🚚</span>
+                </Link>
+              </li>
             </ul>
           </div>
 

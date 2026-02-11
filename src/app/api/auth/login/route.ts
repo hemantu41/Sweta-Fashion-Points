@@ -60,6 +60,33 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    // Check if user is a delivery partner and get partner details
+    let deliveryPartnerInfo = {
+      isDeliveryPartner: false,
+      deliveryPartnerId: undefined as string | undefined,
+      deliveryPartnerStatus: undefined as 'active' | 'inactive' | 'suspended' | undefined,
+    };
+
+    const { data: deliveryPartner } = await supabase
+      .from('spf_delivery_partners')
+      .select('id, status')
+      .eq('created_by', user.id)
+      .single();
+
+    if (deliveryPartner) {
+      // Map status to deliveryPartnerStatus
+      let status: 'active' | 'inactive' | 'suspended' | undefined = undefined;
+      if (deliveryPartner.status === 'active') status = 'active';
+      else if (deliveryPartner.status === 'pending_approval' || deliveryPartner.status === 'inactive') status = 'inactive';
+      else if (deliveryPartner.status === 'suspended') status = 'suspended';
+
+      deliveryPartnerInfo = {
+        isDeliveryPartner: true,
+        deliveryPartnerId: deliveryPartner.id,
+        deliveryPartnerStatus: status,
+      };
+    }
+
     // Return user without password
     const { password: _, is_admin, user_type, ...userWithoutPassword } = user;
 
@@ -70,6 +97,7 @@ export async function POST(request: NextRequest) {
           ...userWithoutPassword,
           isAdmin: is_admin || false,
           ...sellerInfo,
+          ...deliveryPartnerInfo,
         }
       },
       { status: 200 }
