@@ -13,6 +13,10 @@ interface User {
   isSeller?: boolean;
   sellerId?: string;
   sellerStatus?: 'pending' | 'approved' | 'rejected' | 'suspended';
+  // Delivery partner fields
+  isDeliveryPartner?: boolean;
+  deliveryPartnerId?: string;
+  deliveryPartnerStatus?: 'active' | 'inactive' | 'suspended';
 }
 
 interface AuthContextType {
@@ -27,6 +31,11 @@ interface AuthContextType {
   sellerId?: string;
   sellerStatus?: 'pending' | 'approved' | 'rejected' | 'suspended';
   isApprovedSeller: boolean;
+  // Delivery partner status
+  isDeliveryPartner: boolean;
+  deliveryPartnerId?: string;
+  deliveryPartnerStatus?: 'active' | 'inactive' | 'suspended';
+  isActiveDeliveryPartner: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sellerId: user?.sellerId,
         sellerStatus: user?.sellerStatus,
         isApprovedSeller: user?.isSeller === true && user?.sellerStatus === 'approved',
+        isDeliveryPartner: user?.isDeliveryPartner || false,
+        deliveryPartnerId: user?.deliveryPartnerId,
+        deliveryPartnerStatus: user?.deliveryPartnerStatus,
+        isActiveDeliveryPartner: user?.isDeliveryPartner === true && user?.deliveryPartnerStatus === 'active',
       }}
     >
       {children}
