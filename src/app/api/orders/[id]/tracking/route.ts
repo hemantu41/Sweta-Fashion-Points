@@ -10,14 +10,27 @@ export async function GET(
     const orderId = params.id;
     const userId = request.nextUrl.searchParams.get('userId');
 
+    console.log('[Tracking API] Request for order:', orderId, 'by user:', userId);
+
     // Get order with delivery info
     const { data: order, error: orderError } = await supabase
       .from('spf_payment_orders')
-      .select('id, order_number, status, delivery_status, tracking_number, user_id, delivery_address, created_at')
+      .select('id, order_number, status, delivery_status, tracking_number, user_id, delivery_address, created_at, amount')
       .eq('id', orderId)
-      .single();
+      .maybeSingle();
 
-    if (orderError || !order) {
+    console.log('[Tracking API] Order query result:', { order, orderError });
+
+    if (orderError) {
+      console.error('[Tracking API] Order query error:', orderError);
+      return NextResponse.json(
+        { error: 'Failed to fetch order', details: orderError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!order) {
+      console.log('[Tracking API] Order not found for ID:', orderId);
       return NextResponse.json(
         { error: 'Order not found' },
         { status: 404 }
@@ -202,11 +215,13 @@ export async function GET(
       }
     }
 
+    console.log('[Tracking API] Returning tracking data with timeline length:', timeline.length);
+
     return NextResponse.json({
       success: true,
       tracking: {
-        orderNumber: order.order_number,
-        trackingNumber: order.tracking_number,
+        orderNumber: order.order_number || orderId,
+        trackingNumber: order.tracking_number || null,
         orderStatus: order.status,
         deliveryStatus: order.delivery_status || 'pending_assignment',
         estimatedDeliveryDate: delivery?.estimated_delivery_date || null,
@@ -214,7 +229,14 @@ export async function GET(
         deliveryPartner: partnerContact,
         timeline,
         statusHistory,
-        deliveryAddress: order.delivery_address,
+        deliveryAddress: order.delivery_address || {
+          name: 'N/A',
+          phone: 'N/A',
+          address_line1: 'N/A',
+          city: 'N/A',
+          state: 'N/A',
+          pincode: 'N/A'
+        },
       },
     });
   } catch (error: any) {
