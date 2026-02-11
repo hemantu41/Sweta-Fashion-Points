@@ -54,18 +54,49 @@ export default function TrackOrderPage({ params }: { params: { id: string } }) {
   const fetchTracking = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/orders/${params.id}/tracking?userId=${user?.id}`);
+      setError('');
+
+      console.log('[Track Page] Fetching tracking for order:', params.id, 'user:', user?.id);
+
+      const url = `/api/orders/${params.id}/tracking?userId=${user?.id}`;
+      console.log('[Track Page] API URL:', url);
+
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      console.log('[Track Page] Response status:', response.status);
+
       const data = await response.json();
+      console.log('[Track Page] Response data:', data);
 
       if (response.ok) {
+        console.log('[Track Page] Setting tracking data:', data.tracking);
         setTracking(data.tracking);
       } else {
+        console.error('[Track Page] Error response:', data);
         setError(data.error || 'Failed to load tracking information');
       }
     } catch (err) {
-      console.error('Fetch tracking error:', err);
-      setError('Failed to load tracking information');
+      console.error('[Track Page] Fetch tracking error:', err);
+
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Request timed out. Please try again.');
+      } else {
+        setError(`Failed to load tracking information: ${err instanceof Error ? err.message : String(err)}`);
+      }
     } finally {
+      console.log('[Track Page] Setting loading to false');
       setLoading(false);
     }
   };
