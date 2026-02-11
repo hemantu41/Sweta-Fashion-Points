@@ -170,6 +170,16 @@ export default function Navbar() {
                       {isAdmin && (
                         <div className="border-t border-[#E8E2D9] pt-2 mt-2">
                           <Link
+                            href="/admin/orders"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center space-x-3 px-4 py-2.5 text-[#722F37] bg-[#F5F0E8] font-medium hover:bg-[#E8E2D9] transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            <span>Manage Orders & Delivery</span>
+                          </Link>
+                          <Link
                             href="/admin/products"
                             onClick={() => setIsUserMenuOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2.5 text-[#722F37] bg-[#F5F0E8] font-medium hover:bg-[#E8E2D9] transition-colors"
