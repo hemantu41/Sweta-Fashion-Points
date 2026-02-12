@@ -49,10 +49,10 @@ export async function GET(
 // PUT - Update delivery partner (Admin Only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const {
       name,
@@ -187,10 +187,10 @@ export async function PUT(
 // DELETE - Deactivate/suspend delivery partner (Admin Only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Check if partner exists
     const { data: existingPartner } = await supabase
