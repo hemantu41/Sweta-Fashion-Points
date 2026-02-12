@@ -38,11 +38,31 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
       .single();
 
-    if (existingUser?.is_delivery_partner) {
-      return NextResponse.json(
-        { error: 'You are already registered as a delivery partner' },
-        { status: 400 }
-      );
+    // If user is marked as delivery partner, verify the record actually exists
+    if (existingUser?.is_delivery_partner && existingUser?.delivery_partner_id) {
+      const { data: partnerRecord } = await supabase
+        .from('spf_delivery_partners')
+        .select('id')
+        .eq('id', existingUser.delivery_partner_id)
+        .single();
+
+      if (partnerRecord) {
+        return NextResponse.json(
+          { error: 'You are already registered as a delivery partner' },
+          { status: 400 }
+        );
+      } else {
+        // Data inconsistency: user marked as partner but no record exists
+        // Reset the user flags so they can register again
+        await supabase
+          .from('spf_users')
+          .update({
+            is_delivery_partner: false,
+            delivery_partner_id: null,
+            delivery_partner_status: null,
+          })
+          .eq('id', userId);
+      }
     }
 
     // Check if mobile number already exists
