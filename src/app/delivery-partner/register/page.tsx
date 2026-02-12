@@ -90,9 +90,10 @@ export default function DeliveryPartnerRegisterPage() {
 
       if (response.ok) {
         setSuccess(true);
-        // Redirect to status page after 3 seconds
+        // Redirect to status page with partner ID after 3 seconds
         setTimeout(() => {
-          router.push('/delivery-partner/status');
+          const partnerId = data.partner?.id;
+          router.push(`/delivery-partner/status${partnerId ? `?partnerId=${partnerId}` : ''}`);
         }, 3000);
       } else {
         setError(data.error || 'Registration failed');

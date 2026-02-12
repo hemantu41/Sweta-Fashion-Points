@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface PartnerStatus {
@@ -16,9 +16,14 @@ interface PartnerStatus {
 export default function DeliveryPartnerStatusPage() {
   const { user, isAuthenticated, isDeliveryPartner, deliveryPartnerId } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [partnerStatus, setPartnerStatus] = useState<PartnerStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Get partner ID from URL params or AuthContext
+  const partnerIdFromUrl = searchParams.get('partnerId');
+  const activePartnerId = partnerIdFromUrl || deliveryPartnerId;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -26,17 +31,17 @@ export default function DeliveryPartnerStatusPage() {
       return;
     }
 
-    if (isDeliveryPartner && deliveryPartnerId) {
-      fetchStatus();
+    if (activePartnerId) {
+      fetchStatus(activePartnerId);
     } else {
       setError('No delivery partner account found');
       setLoading(false);
     }
-  }, [isAuthenticated, isDeliveryPartner, deliveryPartnerId, router]);
+  }, [isAuthenticated, activePartnerId, router]);
 
-  const fetchStatus = async () => {
+  const fetchStatus = async (partnerId: string) => {
     try {
-      const response = await fetch(`/api/delivery-partners/${deliveryPartnerId}`);
+      const response = await fetch(`/api/delivery-partners/${partnerId}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -57,6 +62,39 @@ export default function DeliveryPartnerStatusPage() {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-[#6B6B6B]">Loading status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Link
+            href="/profile"
+            className="inline-flex items-center text-[#722F37] hover:underline mb-6"
+          >
+            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Profile
+          </Link>
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl shadow-md p-8 text-center">
+            <svg className="w-16 h-16 text-red-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-2xl font-bold text-[#722F37] mb-2" style={{ fontFamily: 'var(--font-playfair)' }}>
+              Error Loading Status
+            </h2>
+            <p className="text-red-700 mb-4">{error}</p>
+            <Link
+              href="/delivery-partner/register"
+              className="inline-block bg-[#722F37] text-white py-2 px-6 rounded-lg font-medium hover:bg-[#8B3D47] transition-colors"
+            >
+              Register as Delivery Partner
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -184,7 +222,7 @@ export default function DeliveryPartnerStatusPage() {
           {partnerStatus?.status === 'active' && (
             <div className="mt-6">
               <Link
-                href={`/delivery/dashboard?partnerId=${deliveryPartnerId}`}
+                href={`/delivery/dashboard?partnerId=${activePartnerId}`}
                 className="block w-full bg-[#722F37] text-white text-center py-3 px-6 rounded-lg font-medium hover:bg-[#8B3D47] transition-colors"
               >
                 Go to Dashboard
