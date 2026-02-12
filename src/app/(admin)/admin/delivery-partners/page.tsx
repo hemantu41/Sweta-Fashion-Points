@@ -209,6 +209,33 @@ export default function DeliveryPartnersPage() {
     }
   };
 
+  const handleReactivate = async (partnerId: string) => {
+    if (!confirm('Are you sure you want to reactivate this delivery partner?')) return;
+
+    try {
+      const response = await fetch(`/api/delivery-partners/${partnerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'active',
+          availabilityStatus: 'offline',
+          updatedBy: user?.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Delivery partner reactivated successfully!');
+        fetchPartners();
+      } else {
+        alert(data.error || 'Failed to reactivate delivery partner');
+      }
+    } catch (error) {
+      alert('Error reactivating delivery partner');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const colors: { [key: string]: string } = {
       active: 'bg-green-100 text-green-700 border-green-200',
@@ -481,12 +508,21 @@ export default function DeliveryPartnersPage() {
                               Suspend
                             </button>
                           )}
-                          <button
-                            onClick={() => handleDelete(partner.id)}
-                            className="text-red-600 hover:text-red-800 text-sm font-medium"
-                          >
-                            Deactivate
-                          </button>
+                          {partner.status === 'inactive' || partner.status === 'suspended' ? (
+                            <button
+                              onClick={() => handleReactivate(partner.id)}
+                              className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                              ↻ Reactivate
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleDelete(partner.id)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              Deactivate
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
