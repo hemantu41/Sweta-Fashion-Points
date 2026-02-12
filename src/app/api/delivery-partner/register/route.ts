@@ -47,28 +47,39 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (partnerRecord) {
-        // If partner exists and is not rejected, prevent re-registration
-        if (partnerRecord.status !== 'rejected') {
+        // If partner is inactive or suspended, they cannot re-register
+        if (partnerRecord.status === 'inactive' || partnerRecord.status === 'suspended') {
+          return NextResponse.json(
+            { error: 'Your delivery partner account has been deactivated. You cannot register with this mobile number or DL number. Please contact support for assistance.' },
+            { status: 403 }
+          );
+        }
+
+        // If partner is already active or pending approval, prevent duplicate registration
+        if (partnerRecord.status === 'active' || partnerRecord.status === 'pending_approval') {
           return NextResponse.json(
             { error: 'You are already registered as a delivery partner' },
             { status: 400 }
           );
         }
-        // If rejected, delete the old record and allow re-registration
-        await supabase
-          .from('spf_delivery_partners')
-          .delete()
-          .eq('id', existingUser.delivery_partner_id);
 
-        // Reset user flags
-        await supabase
-          .from('spf_users')
-          .update({
-            is_delivery_partner: false,
-            delivery_partner_id: null,
-            delivery_partner_status: null,
-          })
-          .eq('id', userId);
+        // If rejected, delete the old record and allow re-registration
+        if (partnerRecord.status === 'rejected') {
+          await supabase
+            .from('spf_delivery_partners')
+            .delete()
+            .eq('id', existingUser.delivery_partner_id);
+
+          // Reset user flags
+          await supabase
+            .from('spf_users')
+            .update({
+              is_delivery_partner: false,
+              delivery_partner_id: null,
+              delivery_partner_status: null,
+            })
+            .eq('id', userId);
+        }
       } else {
         // Data inconsistency: user marked as partner but no record exists
         // Reset the user flags so they can register again
