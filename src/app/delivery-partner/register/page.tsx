@@ -64,7 +64,17 @@ export default function DeliveryPartnerRegisterPage() {
 
     try {
       // Validate required fields
-      if (!formData.name || !formData.mobile || !formData.vehicleType || !formData.vehicleNumber) {
+      if (
+        !formData.name ||
+        !formData.mobile ||
+        !formData.vehicleType ||
+        !formData.vehicleNumber ||
+        !formData.licenseNumber ||
+        !formData.aadharNumber ||
+        !formData.panNumber ||
+        !formData.addressLine1 ||
+        !formData.pincode
+      ) {
         setError('Please fill all required fields');
         setLoading(false);
         return;
@@ -272,13 +282,14 @@ export default function DeliveryPartnerRegisterPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Driving License Number
+                  Driving License Number <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="licenseNumber"
                   value={formData.licenseNumber}
                   onChange={handleChange}
+                  required
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                   placeholder="License number"
                 />
@@ -292,18 +303,19 @@ export default function DeliveryPartnerRegisterPage() {
               <svg className="w-6 h-6 mr-2 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Documents (Optional)
+              Documents
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Aadhar Number
+                  Aadhar Number <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="aadharNumber"
                   value={formData.aadharNumber}
                   onChange={handleChange}
+                  required
                   pattern="[0-9]{12}"
                   maxLength={12}
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
@@ -312,13 +324,14 @@ export default function DeliveryPartnerRegisterPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  PAN Number
+                  PAN Number <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="panNumber"
                   value={formData.panNumber}
                   onChange={handleChange}
+                  required
                   pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
                   maxLength={10}
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
@@ -340,13 +353,14 @@ export default function DeliveryPartnerRegisterPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Address Line 1
+                  Address Line 1 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="addressLine1"
                   value={formData.addressLine1}
                   onChange={handleChange}
+                  required
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                   placeholder="Street address"
                 />
@@ -392,13 +406,14 @@ export default function DeliveryPartnerRegisterPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Pincode
+                  Pincode <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="pincode"
                   value={formData.pincode}
                   onChange={handleChange}
+                  required
                   pattern="[0-9]{6}"
                   maxLength={6}
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!userId || !name || !mobile || !vehicleType || !vehicleNumber) {
+    if (!userId || !name || !mobile || !vehicleType || !vehicleNumber || !licenseNumber || !aadharNumber || !panNumber || !addressLine1 || !pincode) {
       return NextResponse.json(
         { error: 'Please provide all required fields' },
         { status: 400 }
