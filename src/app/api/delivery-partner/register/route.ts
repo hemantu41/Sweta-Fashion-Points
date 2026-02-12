@@ -94,21 +94,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure columns exist in spf_users
-    // Note: These should already exist from previous migration
-    const { error: alterError } = await supabase.rpc('exec_sql', {
-      sql: `
-        ALTER TABLE spf_users
-        ADD COLUMN IF NOT EXISTS is_delivery_partner BOOLEAN DEFAULT false,
-        ADD COLUMN IF NOT EXISTS delivery_partner_id UUID REFERENCES spf_delivery_partners(id),
-        ADD COLUMN IF NOT EXISTS delivery_partner_status VARCHAR(20);
-      `
-    }).catch(() => {
-      // Ignore error if RPC doesn't exist, columns likely already added manually
-      return { error: null };
-    });
-
     // Link user account to delivery partner
+    // Note: Ensure the columns (is_delivery_partner, delivery_partner_id, delivery_partner_status)
+    // exist in spf_users table. They should be added via database migration.
     const { error: linkError } = await supabase
       .from('spf_users')
       .update({
