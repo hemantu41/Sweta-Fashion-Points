@@ -114,7 +114,8 @@ export default function DeliveryPartnersPage() {
         fetchPartners();
       } else {
         const data = await response.json();
-        setModalError(data.error || 'Failed to approve delivery partner');
+        const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error;
+        setModalError(errorMsg || 'Failed to approve delivery partner');
       }
     } catch (error) {
       setModalError('Error approving delivery partner');
@@ -152,7 +153,8 @@ export default function DeliveryPartnersPage() {
         fetchPartners();
       } else {
         const data = await response.json();
-        setModalError(data.error || 'Failed to reject delivery partner');
+        const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error;
+        setModalError(errorMsg || 'Failed to reject delivery partner');
       }
     } catch (error) {
       setModalError('Error rejecting delivery partner');
