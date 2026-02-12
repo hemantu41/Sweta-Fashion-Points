@@ -39,6 +39,8 @@ export default function DeliveryPartnersPage() {
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [modalError, setModalError] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -83,11 +85,16 @@ export default function DeliveryPartnersPage() {
   const handleRejectClick = (partnerId: string, partnerName: string) => {
     setSelectedPartnerId(partnerId);
     setSelectedPartnerName(partnerName);
+    setRejectionReason('');
+    setModalError('');
     setShowRejectModal(true);
   };
 
   const handleApprove = async () => {
     if (!selectedPartnerId) return;
+
+    setIsProcessing(true);
+    setModalError('');
 
     try {
       const response = await fetch(`/api/delivery-partners/${selectedPartnerId}`, {
@@ -103,21 +110,27 @@ export default function DeliveryPartnersPage() {
         setShowApproveModal(false);
         setSelectedPartnerId(null);
         setSelectedPartnerName('');
+        setError(null);
         fetchPartners();
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to approve delivery partner');
+        setModalError(data.error || 'Failed to approve delivery partner');
       }
     } catch (error) {
-      setError('Error approving delivery partner');
+      setModalError('Error approving delivery partner');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleReject = async () => {
     if (!selectedPartnerId || !rejectionReason.trim()) {
-      setError('Please provide a rejection reason');
+      setModalError('Please provide a rejection reason');
       return;
     }
+
+    setIsProcessing(true);
+    setModalError('');
 
     try {
       const response = await fetch(`/api/delivery-partners/${selectedPartnerId}`, {
@@ -125,7 +138,7 @@ export default function DeliveryPartnersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'rejected',
-          rejection_reason: rejectionReason,
+          rejectionReason: rejectionReason, // Fixed: changed from rejection_reason to rejectionReason
           updatedBy: user?.id,
         }),
       });
@@ -135,13 +148,16 @@ export default function DeliveryPartnersPage() {
         setSelectedPartnerId(null);
         setSelectedPartnerName('');
         setRejectionReason('');
+        setError(null);
         fetchPartners();
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to reject delivery partner');
+        setModalError(data.error || 'Failed to reject delivery partner');
       }
     } catch (error) {
-      setError('Error rejecting delivery partner');
+      setModalError('Error rejecting delivery partner');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -552,22 +568,30 @@ export default function DeliveryPartnersPage() {
                 They will be able to access the delivery dashboard and receive delivery assignments.
               </p>
             </div>
+            {modalError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-red-700 text-sm">{modalError}</p>
+              </div>
+            )}
             <div className="flex gap-4">
               <button
                 onClick={() => {
                   setShowApproveModal(false);
                   setSelectedPartnerId(null);
                   setSelectedPartnerName('');
+                  setModalError('');
                 }}
-                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                disabled={isProcessing}
+                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleApprove}
-                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                disabled={isProcessing}
+                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Approve
+                {isProcessing ? 'Approving...' : 'Approve'}
               </button>
             </div>
           </div>
@@ -593,11 +617,20 @@ export default function DeliveryPartnersPage() {
               </label>
               <textarea
                 value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
+                onChange={(e) => {
+                  setRejectionReason(e.target.value);
+                  setModalError(''); // Clear error when user types
+                }}
                 rows={4}
-                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                disabled={isProcessing}
+                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Please provide a reason for rejection..."
               />
+              {modalError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                  <p className="text-red-700 text-sm">{modalError}</p>
+                </div>
+              )}
             </div>
             <div className="flex gap-4">
               <button
@@ -606,17 +639,19 @@ export default function DeliveryPartnersPage() {
                   setSelectedPartnerId(null);
                   setSelectedPartnerName('');
                   setRejectionReason('');
+                  setModalError('');
                 }}
-                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                disabled={isProcessing}
+                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReject}
-                disabled={!rejectionReason.trim()}
-                className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={!rejectionReason.trim() || isProcessing}
+                className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Reject
+                {isProcessing ? 'Rejecting...' : 'Reject'}
               </button>
             </div>
           </div>
