@@ -34,6 +34,11 @@ export default function DeliveryPartnersPage() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+  const [selectedPartnerName, setSelectedPartnerName] = useState<string>('');
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -69,6 +74,77 @@ export default function DeliveryPartnersPage() {
     }
   };
 
+  const handleApproveClick = (partnerId: string, partnerName: string) => {
+    setSelectedPartnerId(partnerId);
+    setSelectedPartnerName(partnerName);
+    setShowApproveModal(true);
+  };
+
+  const handleRejectClick = (partnerId: string, partnerName: string) => {
+    setSelectedPartnerId(partnerId);
+    setSelectedPartnerName(partnerName);
+    setShowRejectModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedPartnerId) return;
+
+    try {
+      const response = await fetch(`/api/delivery-partners/${selectedPartnerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'active',
+          updatedBy: user?.id,
+        }),
+      });
+
+      if (response.ok) {
+        setShowApproveModal(false);
+        setSelectedPartnerId(null);
+        setSelectedPartnerName('');
+        fetchPartners();
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to approve delivery partner');
+      }
+    } catch (error) {
+      setError('Error approving delivery partner');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedPartnerId || !rejectionReason.trim()) {
+      setError('Please provide a rejection reason');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/delivery-partners/${selectedPartnerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'rejected',
+          rejection_reason: rejectionReason,
+          updatedBy: user?.id,
+        }),
+      });
+
+      if (response.ok) {
+        setShowRejectModal(false);
+        setSelectedPartnerId(null);
+        setSelectedPartnerName('');
+        setRejectionReason('');
+        fetchPartners();
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to reject delivery partner');
+      }
+    } catch (error) {
+      setError('Error rejecting delivery partner');
+    }
+  };
+
   const handleStatusChange = async (partnerId: string, newStatus: string) => {
     if (!confirm(`Are you sure you want to change the status to ${newStatus}?`)) return;
 
@@ -85,13 +161,12 @@ export default function DeliveryPartnersPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Status updated successfully!');
         fetchPartners();
       } else {
-        alert(data.error || 'Failed to update status');
+        setError(data.error || 'Failed to update status');
       }
     } catch (error) {
-      alert('Error updating status');
+      setError('Error updating status');
     }
   };
 
@@ -186,6 +261,33 @@ export default function DeliveryPartnersPage() {
             </p>
           </div>
         </div>
+
+        {/* Pending Approvals Banner */}
+        {partners.filter((p) => p.status === 'pending_approval').length > 0 && (
+          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl shadow-md p-6 mb-6 border-2 border-yellow-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="bg-yellow-400 rounded-full p-2">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-[#722F37]">Pending Approvals</h2>
+                  <p className="text-sm text-yellow-800">
+                    {partners.filter((p) => p.status === 'pending_approval').length} delivery partner(s) waiting for approval
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setStatusFilter('pending_approval')}
+                className="bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors"
+              >
+                View All Pending
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Filters and Search */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-[#E8E2D9]">
@@ -338,12 +440,20 @@ export default function DeliveryPartnersPage() {
                             View
                           </Link>
                           {partner.status === 'pending_approval' && (
-                            <button
-                              onClick={() => handleStatusChange(partner.id, 'active')}
-                              className="text-green-600 hover:text-green-800 text-sm font-medium"
-                            >
-                              Approve
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleApproveClick(partner.id, partner.name)}
+                                className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                              >
+                                ✓ Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectClick(partner.id, partner.name)}
+                                className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                              >
+                                ✗ Reject
+                              </button>
+                            </>
                           )}
                           {partner.status === 'active' && (
                             <button
@@ -419,6 +529,95 @@ export default function DeliveryPartnersPage() {
               >
                 Go to Form
               </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approve Confirmation Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-[#722F37] mb-2">Approve Delivery Partner?</h3>
+              <p className="text-[#6B6B6B]">
+                Are you sure you want to approve <strong>{selectedPartnerName}</strong>?
+              </p>
+              <p className="text-sm text-[#6B6B6B] mt-2">
+                They will be able to access the delivery dashboard and receive delivery assignments.
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setShowApproveModal(false);
+                  setSelectedPartnerId(null);
+                  setSelectedPartnerName('');
+                }}
+                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApprove}
+                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-[#722F37] text-center mb-2">Reject Application?</h3>
+              <p className="text-[#6B6B6B] text-center mb-4">
+                Rejecting <strong>{selectedPartnerName}</strong>&apos;s application
+              </p>
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                Reason for Rejection <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="Please provide a reason for rejection..."
+              />
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setSelectedPartnerId(null);
+                  setSelectedPartnerName('');
+                  setRejectionReason('');
+                }}
+                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={!rejectionReason.trim()}
+                className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Reject
+              </button>
             </div>
           </div>
         </div>

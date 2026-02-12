@@ -16,7 +16,7 @@ interface User {
   // Delivery partner fields
   isDeliveryPartner?: boolean;
   deliveryPartnerId?: string;
-  deliveryPartnerStatus?: 'active' | 'inactive' | 'suspended';
+  deliveryPartnerStatus?: 'active' | 'inactive' | 'suspended' | 'pending_approval' | 'rejected';
 }
 
 interface AuthContextType {
@@ -34,7 +34,7 @@ interface AuthContextType {
   // Delivery partner status
   isDeliveryPartner: boolean;
   deliveryPartnerId?: string;
-  deliveryPartnerStatus?: 'active' | 'inactive' | 'suspended';
+  deliveryPartnerStatus?: 'active' | 'inactive' | 'suspended' | 'pending_approval' | 'rejected';
   isActiveDeliveryPartner: boolean;
 }
 

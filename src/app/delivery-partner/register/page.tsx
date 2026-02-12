@@ -90,9 +90,9 @@ export default function DeliveryPartnerRegisterPage() {
 
       if (response.ok) {
         setSuccess(true);
-        // Redirect after 3 seconds
+        // Redirect to status page after 3 seconds
         setTimeout(() => {
-          router.push('/profile');
+          router.push('/delivery-partner/status');
         }, 3000);
       } else {
         setError(data.error || 'Registration failed');

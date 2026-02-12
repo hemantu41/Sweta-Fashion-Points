@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, login } = useAuth();
@@ -267,6 +268,35 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
+
+          {/* Delivery Partner Status Section */}
+          {user?.isDeliveryPartner && (
+            <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-[#E8E2D9]">
+              <h2 className="text-xl font-bold text-[#722F37] mb-4">Delivery Partner Status</h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-[#6B6B6B] mb-2">Account Status:</p>
+                  <span className={`px-4 py-2 rounded-full text-sm font-medium border ${
+                    user.deliveryPartnerStatus === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
+                    user.deliveryPartnerStatus === 'pending_approval' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                    user.deliveryPartnerStatus === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
+                    'bg-gray-100 text-gray-700 border-gray-200'
+                  }`}>
+                    {user.deliveryPartnerStatus === 'pending_approval' ? 'Pending Approval' :
+                     user.deliveryPartnerStatus === 'active' ? 'Active' :
+                     user.deliveryPartnerStatus === 'rejected' ? 'Rejected' :
+                     user.deliveryPartnerStatus?.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <Link
+                  href="/delivery-partner/status"
+                  className="text-[#722F37] hover:underline font-medium"
+                >
+                  View Details →
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Message */}
           {message.text && (

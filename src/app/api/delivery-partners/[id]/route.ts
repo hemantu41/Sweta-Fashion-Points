@@ -71,6 +71,7 @@ export async function PUT(
       servicePincodes,
       status,
       availabilityStatus,
+      rejectionReason, // Rejection reason when status is rejected
       updatedBy, // Admin user ID
     } = body;
 
@@ -141,7 +142,13 @@ export async function PUT(
     if (state !== undefined) updateData.state = state;
     if (pincode !== undefined) updateData.pincode = pincode;
     if (servicePincodes !== undefined) updateData.service_pincodes = servicePincodes;
-    if (status !== undefined) updateData.status = status;
+    if (status !== undefined) {
+      updateData.status = status;
+      // Store rejection reason when rejecting a partner
+      if (status === 'rejected' && rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+      }
+    }
     if (availabilityStatus !== undefined) updateData.availability_status = availabilityStatus;
 
     // Update delivery partner
