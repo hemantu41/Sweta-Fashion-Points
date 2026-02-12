@@ -38,19 +38,37 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
       .single();
 
-    // If user is marked as delivery partner, verify the record actually exists
+    // If user is marked as delivery partner, verify the record actually exists and check status
     if (existingUser?.is_delivery_partner && existingUser?.delivery_partner_id) {
       const { data: partnerRecord } = await supabase
         .from('spf_delivery_partners')
-        .select('id')
+        .select('id, status')
         .eq('id', existingUser.delivery_partner_id)
         .single();
 
       if (partnerRecord) {
-        return NextResponse.json(
-          { error: 'You are already registered as a delivery partner' },
-          { status: 400 }
-        );
+        // If partner exists and is not rejected, prevent re-registration
+        if (partnerRecord.status !== 'rejected') {
+          return NextResponse.json(
+            { error: 'You are already registered as a delivery partner' },
+            { status: 400 }
+          );
+        }
+        // If rejected, delete the old record and allow re-registration
+        await supabase
+          .from('spf_delivery_partners')
+          .delete()
+          .eq('id', existingUser.delivery_partner_id);
+
+        // Reset user flags
+        await supabase
+          .from('spf_users')
+          .update({
+            is_delivery_partner: false,
+            delivery_partner_id: null,
+            delivery_partner_status: null,
+          })
+          .eq('id', userId);
       } else {
         // Data inconsistency: user marked as partner but no record exists
         // Reset the user flags so they can register again
