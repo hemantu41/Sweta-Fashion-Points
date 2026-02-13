@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
   notifyOrderAccepted,
   notifyOutForDelivery,
@@ -57,7 +57,7 @@ export async function PUT(
     }
 
     // Get existing delivery record
-    const { data: delivery, error: deliveryError } = await supabase
+    const { data: delivery, error: deliveryError } = await supabaseAdmin
       .from('spf_order_deliveries')
       .select('*')
       .eq('order_id', orderId)
@@ -133,7 +133,7 @@ export async function PUT(
     }
 
     // Update delivery record
-    const { data: updatedDelivery, error: updateError } = await supabase
+    const { data: updatedDelivery, error: updateError } = await supabaseAdmin
       .from('spf_order_deliveries')
       .update(updateData)
       .eq('id', delivery.id)
@@ -149,7 +149,7 @@ export async function PUT(
     }
 
     // Record status change in history
-    await supabase.from('spf_delivery_status_history').insert([
+    await supabaseAdmin.from('spf_delivery_status_history').insert([
       {
         order_delivery_id: delivery.id,
         previous_status: delivery.status,
@@ -162,21 +162,21 @@ export async function PUT(
     ]);
 
     // Update order delivery status
-    await supabase
+    await supabaseAdmin
       .from('spf_payment_orders')
       .update({ delivery_status: status })
       .eq('id', orderId);
 
     // Update delivery partner statistics if delivered
     if (status === 'delivered' && delivery.delivery_partner_id) {
-      const { data: partner } = await supabase
+      const { data: partner } = await supabaseAdmin
         .from('spf_delivery_partners')
         .select('total_deliveries, successful_deliveries')
         .eq('id', delivery.delivery_partner_id)
         .single();
 
       if (partner) {
-        await supabase
+        await supabaseAdmin
           .from('spf_delivery_partners')
           .update({
             total_deliveries: (partner.total_deliveries || 0) + 1,
@@ -188,14 +188,14 @@ export async function PUT(
 
     // Update delivery partner statistics if failed
     if (status === 'failed' && delivery.delivery_partner_id) {
-      const { data: partner } = await supabase
+      const { data: partner } = await supabaseAdmin
         .from('spf_delivery_partners')
         .select('total_deliveries')
         .eq('id', delivery.delivery_partner_id)
         .single();
 
       if (partner) {
-        await supabase
+        await supabaseAdmin
           .from('spf_delivery_partners')
           .update({
             total_deliveries: (partner.total_deliveries || 0) + 1,
@@ -207,14 +207,14 @@ export async function PUT(
     // Send notifications based on status change
     try {
       // Get order and partner details for notifications
-      const { data: orderData } = await supabase
+      const { data: orderData } = await supabaseAdmin
         .from('spf_payment_orders')
         .select('order_number, tracking_number, amount, delivery_address, user_id')
         .eq('id', orderId)
         .single();
 
       if (orderData && delivery.delivery_partner_id) {
-        const { data: partnerData } = await supabase
+        const { data: partnerData } = await supabaseAdmin
           .from('spf_delivery_partners')
           .select('name, mobile')
           .eq('id', delivery.delivery_partner_id)
@@ -284,7 +284,7 @@ export async function GET(
     const orderId = params.id;
 
     // Get delivery record with partner info
-    const { data: delivery, error: deliveryError } = await supabase
+    const { data: delivery, error: deliveryError } = await supabaseAdmin
       .from('spf_order_deliveries')
       .select(`
         *,
@@ -304,7 +304,7 @@ export async function GET(
     // Get status history
     let history = [];
     if (delivery) {
-      const { data: historyData } = await supabase
+      const { data: historyData } = await supabaseAdmin
         .from('spf_delivery_status_history')
         .select('*')
         .eq('order_delivery_id', delivery.id)
