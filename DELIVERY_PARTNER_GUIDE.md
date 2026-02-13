@@ -400,7 +400,6 @@ Navigate to `/admin/delivery-partners`
 | `total_deliveries` | INTEGER | DEFAULT 0 | Total deliveries count |
 | `successful_deliveries` | INTEGER | DEFAULT 0 | Successful count |
 | `average_rating` | DECIMAL | DEFAULT 0 | Average rating |
-| `total_ratings` | INTEGER | DEFAULT 0 | Total ratings received |
 | `created_by` | UUID | FOREIGN KEY | User who registered |
 | `created_at` | TIMESTAMP | DEFAULT NOW() | Registration date |
 | `updated_at` | TIMESTAMP | DEFAULT NOW() | Last update |

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { supabase } from '@/lib/supabase';
 
 // GET - Get single delivery partner details
 export async function GET(
@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const { data: partner, error } = await supabaseAdmin
+    const { data: partner, error } = await supabase
       .from('spf_delivery_partners')
       .select('*')
       .eq('id', id)
@@ -76,7 +76,7 @@ export async function PUT(
     } = body;
 
     // Check if partner exists
-    const { data: existingPartner } = await supabaseAdmin
+    const { data: existingPartner } = await supabase
       .from('spf_delivery_partners')
       .select('id')
       .eq('id', id)
@@ -91,7 +91,7 @@ export async function PUT(
 
     // If mobile is being updated, check for duplicates
     if (mobile) {
-      const { data: duplicateMobile } = await supabaseAdmin
+      const { data: duplicateMobile } = await supabase
         .from('spf_delivery_partners')
         .select('id')
         .eq('mobile', mobile)
@@ -108,7 +108,7 @@ export async function PUT(
 
     // If email is being updated, check for duplicates
     if (email) {
-      const { data: duplicateEmail } = await supabaseAdmin
+      const { data: duplicateEmail } = await supabase
         .from('spf_delivery_partners')
         .select('id')
         .eq('email', email.toLowerCase())
@@ -152,7 +152,7 @@ export async function PUT(
     if (availabilityStatus !== undefined) updateData.availability_status = availabilityStatus;
 
     // Update delivery partner
-    const { data: updatedPartner, error } = await supabaseAdmin
+    const { data: updatedPartner, error } = await supabase
       .from('spf_delivery_partners')
       .update(updateData)
       .eq('id', id)
@@ -165,21 +165,6 @@ export async function PUT(
         { error: 'Failed to update delivery partner', details: error.message },
         { status: 500 }
       );
-    }
-
-    // If status was updated, sync it to the user table
-    if (status !== undefined) {
-      const { error: userUpdateError } = await supabaseAdmin
-        .from('spf_users')
-        .update({
-          delivery_partner_status: status,
-        })
-        .eq('delivery_partner_id', id);
-
-      if (userUpdateError) {
-        console.error('[Delivery Partner API] Error syncing status to user:', userUpdateError);
-        // Don't fail the request, just log the error
-      }
     }
 
     return NextResponse.json({
@@ -208,7 +193,7 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if partner exists
-    const { data: existingPartner } = await supabaseAdmin
+    const { data: existingPartner } = await supabase
       .from('spf_delivery_partners')
       .select('id, status')
       .eq('id', id)
@@ -222,7 +207,7 @@ export async function DELETE(
     }
 
     // Soft delete - set status to inactive
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('spf_delivery_partners')
       .update({
         status: 'inactive',

@@ -137,11 +137,9 @@ export default function DeliveryDashboardPage() {
         alert('Status updated successfully!');
         fetchOrders();
       } else {
-        console.error('[Dashboard] Status update failed:', data);
-        alert(`${data.error || 'Failed to update status'}${data.details ? ': ' + data.details : ''}`);
+        alert(data.error || 'Failed to update status');
       }
     } catch (error) {
-      console.error('[Dashboard] Status update error:', error);
       alert('Error updating status');
     }
   };
