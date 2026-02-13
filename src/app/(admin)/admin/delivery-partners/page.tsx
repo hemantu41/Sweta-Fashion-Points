@@ -21,6 +21,7 @@ interface DeliveryPartner {
   total_deliveries: number;
   successful_deliveries: number;
   average_rating: number;
+  total_ratings: number;
   created_at: string;
 }
 
@@ -472,6 +473,7 @@ export default function DeliveryPartnersPage() {
                           {partner.average_rating > 0 && (
                             <p className="text-sm text-[#6B6B6B]">
                               ⭐ {partner.average_rating.toFixed(1)}
+                              {partner.total_ratings > 0 && ` (${partner.total_ratings})`}
                             </p>
                           )}
                         </div>

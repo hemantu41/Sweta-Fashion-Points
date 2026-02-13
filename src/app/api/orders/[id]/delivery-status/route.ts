@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import {
   notifyOrderAccepted,
   notifyOutForDelivery,
@@ -57,7 +57,7 @@ export async function PUT(
     }
 
     // Get existing delivery record
-    const { data: delivery, error: deliveryError } = await supabase
+    const { data: delivery, error: deliveryError } = await supabaseAdmin
       .from('spf_order_deliveries')
       .select('*')
       .eq('order_id', orderId)
@@ -133,7 +133,8 @@ export async function PUT(
     }
 
     // Update delivery record
-    const { data: updatedDelivery, error: updateError } = await supabase
+    console.log('[Delivery Status API] Updating delivery:', delivery.id, 'with data:', JSON.stringify(updateData));
+    const { data: updatedDelivery, error: updateError } = await supabaseAdmin
       .from('spf_order_deliveries')
       .update(updateData)
       .eq('id', delivery.id)
@@ -141,80 +142,102 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      console.error('[Delivery Status API] Update error:', updateError);
+      console.error('[Delivery Status API] Update error:', JSON.stringify(updateError));
       return NextResponse.json(
         { error: 'Failed to update delivery status', details: updateError.message },
         { status: 500 }
       );
     }
 
-    // Record status change in history
-    await supabase.from('spf_delivery_status_history').insert([
-      {
-        order_delivery_id: delivery.id,
-        previous_status: delivery.status,
-        new_status: status,
-        changed_by: changedBy || null,
-        changed_by_partner: changedByPartner || null,
-        notes: deliveryNotes || null,
-        location: currentLocation || null,
-      },
-    ]);
+    // Record status change in history (non-blocking)
+    try {
+      const { error: historyError } = await supabaseAdmin.from('spf_delivery_status_history').insert([
+        {
+          order_delivery_id: delivery.id,
+          previous_status: delivery.status,
+          new_status: status,
+          changed_by: changedBy || null,
+          changed_by_partner: changedByPartner || null,
+          notes: deliveryNotes || null,
+          location: currentLocation || null,
+        },
+      ]);
+      if (historyError) {
+        console.error('[Delivery Status API] History insert error:', historyError);
+      }
+    } catch (histErr) {
+      console.error('[Delivery Status API] History insert exception:', histErr);
+    }
 
-    // Update order delivery status
-    await supabase
-      .from('spf_payment_orders')
-      .update({ delivery_status: status })
-      .eq('id', orderId);
+    // Update order delivery status (non-blocking)
+    try {
+      const { error: orderUpdateError } = await supabaseAdmin
+        .from('spf_payment_orders')
+        .update({ delivery_status: status })
+        .eq('id', orderId);
+      if (orderUpdateError) {
+        console.error('[Delivery Status API] Order status update error:', orderUpdateError);
+      }
+    } catch (orderErr) {
+      console.error('[Delivery Status API] Order status update exception:', orderErr);
+    }
 
-    // Update delivery partner statistics if delivered
+    // Update delivery partner statistics if delivered (non-blocking)
     if (status === 'delivered' && delivery.delivery_partner_id) {
-      const { data: partner } = await supabase
-        .from('spf_delivery_partners')
-        .select('total_deliveries, successful_deliveries')
-        .eq('id', delivery.delivery_partner_id)
-        .single();
-
-      if (partner) {
-        await supabase
+      try {
+        const { data: partner } = await supabaseAdmin
           .from('spf_delivery_partners')
-          .update({
-            total_deliveries: (partner.total_deliveries || 0) + 1,
-            successful_deliveries: (partner.successful_deliveries || 0) + 1,
-          })
-          .eq('id', delivery.delivery_partner_id);
+          .select('total_deliveries, successful_deliveries')
+          .eq('id', delivery.delivery_partner_id)
+          .single();
+
+        if (partner) {
+          await supabaseAdmin
+            .from('spf_delivery_partners')
+            .update({
+              total_deliveries: (partner.total_deliveries || 0) + 1,
+              successful_deliveries: (partner.successful_deliveries || 0) + 1,
+            })
+            .eq('id', delivery.delivery_partner_id);
+        }
+      } catch (statsErr) {
+        console.error('[Delivery Status API] Partner stats update exception:', statsErr);
       }
     }
 
-    // Update delivery partner statistics if failed
+    // Update delivery partner statistics if failed (non-blocking)
     if (status === 'failed' && delivery.delivery_partner_id) {
-      const { data: partner } = await supabase
-        .from('spf_delivery_partners')
-        .select('total_deliveries')
-        .eq('id', delivery.delivery_partner_id)
-        .single();
-
-      if (partner) {
-        await supabase
+      try {
+        const { data: partner } = await supabaseAdmin
           .from('spf_delivery_partners')
-          .update({
-            total_deliveries: (partner.total_deliveries || 0) + 1,
-          })
-          .eq('id', delivery.delivery_partner_id);
+          .select('total_deliveries')
+          .eq('id', delivery.delivery_partner_id)
+          .single();
+
+        if (partner) {
+          await supabaseAdmin
+            .from('spf_delivery_partners')
+            .update({
+              total_deliveries: (partner.total_deliveries || 0) + 1,
+            })
+            .eq('id', delivery.delivery_partner_id);
+        }
+      } catch (statsErr) {
+        console.error('[Delivery Status API] Partner stats update exception:', statsErr);
       }
     }
 
     // Send notifications based on status change
     try {
       // Get order and partner details for notifications
-      const { data: orderData } = await supabase
+      const { data: orderData } = await supabaseAdmin
         .from('spf_payment_orders')
         .select('order_number, tracking_number, amount, delivery_address, user_id')
         .eq('id', orderId)
         .single();
 
       if (orderData && delivery.delivery_partner_id) {
-        const { data: partnerData } = await supabase
+        const { data: partnerData } = await supabaseAdmin
           .from('spf_delivery_partners')
           .select('name, mobile')
           .eq('id', delivery.delivery_partner_id)
@@ -264,7 +287,7 @@ export async function PUT(
       message: `Delivery status updated to ${status}`,
     });
   } catch (error: any) {
-    console.error('[Delivery Status API] Error:', error);
+    console.error('[Delivery Status API] Outer catch error:', error?.message || error, error?.stack);
     return NextResponse.json(
       {
         error: 'Failed to update delivery status',
@@ -284,7 +307,7 @@ export async function GET(
     const orderId = params.id;
 
     // Get delivery record with partner info
-    const { data: delivery, error: deliveryError } = await supabase
+    const { data: delivery, error: deliveryError } = await supabaseAdmin
       .from('spf_order_deliveries')
       .select(`
         *,
@@ -304,7 +327,7 @@ export async function GET(
     // Get status history
     let history = [];
     if (delivery) {
-      const { data: historyData } = await supabase
+      const { data: historyData } = await supabaseAdmin
         .from('spf_delivery_status_history')
         .select('*')
         .eq('order_delivery_id', delivery.id)
