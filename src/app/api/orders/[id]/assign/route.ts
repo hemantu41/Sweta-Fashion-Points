@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notifyOrderAssigned } from '@/lib/delivery-notifications';
 
 // POST - Assign order to delivery partner (Admin Only)
