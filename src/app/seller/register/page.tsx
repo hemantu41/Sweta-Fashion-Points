@@ -756,7 +756,7 @@ export default function SellerRegisterPage() {
           <div className="flex gap-4">
             <button
               type="submit"
-              disabled={loading || !emailVerification.verified || !phoneVerification.verified}
+              disabled={loading || !emailVerification.verified}
               className="flex-1 px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Submitting...' : 'Submit Registration'}
