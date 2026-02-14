@@ -770,10 +770,10 @@ export default function SellerRegisterPage() {
           </div>
 
           {/* Verification Warning */}
-          {(!emailVerification.verified || !phoneVerification.verified) && (
+          {!emailVerification.verified && (
             <div className="mt-6 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
               <p className="text-sm text-yellow-800">
-                <strong>⚠️ Verification Required:</strong> Please verify both your business email and phone number before submitting the registration form.
+                <strong>⚠️ Verification Required:</strong> Please verify your business email before submitting the registration form.
               </p>
             </div>
           )}

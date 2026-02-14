@@ -423,10 +423,10 @@ export default function SignupPage() {
             )}
 
             {/* Verification Warning */}
-            {(!emailVerification.verified || !mobileVerification.verified) && (
+            {!emailVerification.verified && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-xs text-yellow-800">
-                  <strong>⚠️ Verification Required:</strong> Please verify both email and mobile number before signing up.
+                  <strong>⚠️ Verification Required:</strong> Please verify your email before signing up.
                 </p>
               </div>
             )}
@@ -434,7 +434,7 @@ export default function SignupPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || !emailVerification.verified || !mobileVerification.verified}
+              disabled={isLoading || !emailVerification.verified}
               className="w-full bg-[#722F37] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#5a252c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
