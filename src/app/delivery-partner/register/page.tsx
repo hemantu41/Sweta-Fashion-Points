@@ -66,7 +66,6 @@ export default function DeliveryPartnerRegisterPage() {
       // Validate required fields
       if (
         !formData.name ||
-        !formData.mobile ||
         !formData.vehicleType ||
         !formData.vehicleNumber ||
         !formData.licenseNumber ||
@@ -209,14 +208,13 @@ export default function DeliveryPartnerRegisterPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Mobile Number <span className="text-red-500">*</span>
+                  Mobile Number <span className="text-gray-500 text-xs">(Optional)</span>
                 </label>
                 <input
                   type="tel"
                   name="mobile"
                   value={formData.mobile}
                   onChange={handleChange}
-                  required
                   pattern="[0-9]{10}"
                   className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                   placeholder="10-digit mobile number"

@@ -184,13 +184,14 @@ export default function SignupPage() {
     setError('');
     setSuccess('');
 
-    // Check if email and mobile are verified
+    // Check if email is verified
     if (!emailVerification.verified) {
       setError('Please verify your email address before signing up');
       return;
     }
 
-    if (!mobileVerification.verified) {
+    // Check if mobile is provided and verify it
+    if (formData.mobile && !mobileVerification.verified) {
       setError('Please verify your mobile number before signing up');
       return;
     }
@@ -348,7 +349,7 @@ export default function SignupPage() {
             {/* Mobile with Verification */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mobile Number <span className="text-red-500">*</span>
+                Mobile Number <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
               <div className="flex gap-2">
                 <div className="flex flex-1">
@@ -360,7 +361,6 @@ export default function SignupPage() {
                     name="mobile"
                     value={formData.mobile}
                     onChange={handleChange}
-                    required
                     disabled={mobileVerification.verified}
                     maxLength={10}
                     className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all disabled:bg-gray-50"

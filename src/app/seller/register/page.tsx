@@ -196,14 +196,15 @@ export default function SellerRegisterPage() {
       return;
     }
 
-    // Check if email and phone are verified
+    // Check if email is verified
     if (!emailVerification.verified) {
       setMessage('Please verify your business email before submitting');
       setLoading(false);
       return;
     }
 
-    if (!phoneVerification.verified) {
+    // Check if phone is provided and verify it
+    if (formData.businessPhone && !phoneVerification.verified) {
       setMessage('Please verify your business phone before submitting');
       setLoading(false);
       return;
@@ -597,7 +598,7 @@ export default function SellerRegisterPage() {
             {/* Business Phone with Verification */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
-                Business Phone <span className="text-red-500">*</span>
+                Business Phone <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
               <div className="flex gap-2">
                 <input
@@ -605,7 +606,6 @@ export default function SellerRegisterPage() {
                   name="businessPhone"
                   value={formData.businessPhone}
                   onChange={handleChange}
-                  required
                   disabled={phoneVerification.verified}
                   maxLength={10}
                   className="flex-1 px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] disabled:bg-gray-50"
