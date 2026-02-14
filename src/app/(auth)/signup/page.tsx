@@ -190,12 +190,6 @@ export default function SignupPage() {
       return;
     }
 
-    // Check if mobile is provided and verify it
-    if (formData.mobile && !mobileVerification.verified) {
-      setError('Please verify your mobile number before signing up');
-      return;
-    }
-
     // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -346,77 +340,25 @@ export default function SignupPage() {
               )}
             </div>
 
-            {/* Mobile with Verification */}
+            {/* Mobile */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mobile Number <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
-              <div className="flex gap-2">
-                <div className="flex flex-1">
-                  <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-600 text-sm">
-                    +91
-                  </span>
-                  <input
-                    type="tel"
-                    name="mobile"
-                    value={formData.mobile}
-                    onChange={handleChange}
-                    disabled={mobileVerification.verified}
-                    maxLength={10}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all disabled:bg-gray-50"
-                    placeholder="10 digit number"
-                  />
-                </div>
-                {!mobileVerification.verified && (
-                  <button
-                    type="button"
-                    onClick={sendMobileOTP}
-                    disabled={mobileVerification.loading || formData.mobile.length !== 10}
-                    className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#5a252c] transition-all disabled:opacity-50 whitespace-nowrap text-sm"
-                  >
-                    {mobileVerification.loading ? 'Sending...' : mobileVerification.otpSent ? 'Resend' : 'Verify'}
-                  </button>
-                )}
-                {mobileVerification.verified && (
-                  <div className="flex items-center px-3 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
+              <div className="flex">
+                <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-600 text-sm">
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  name="mobile"
+                  value={formData.mobile}
+                  onChange={handleChange}
+                  maxLength={10}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
+                  placeholder="10 digit number"
+                />
               </div>
-
-              {/* Mobile OTP Input */}
-              {mobileVerification.otpSent && !mobileVerification.verified && (
-                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-xs text-blue-800 mb-2">Enter 6-digit OTP sent via SMS</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={mobileVerification.otp}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                        setMobileVerification(prev => ({ ...prev, otp: value, error: '' }));
-                      }}
-                      maxLength={6}
-                      className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] text-center text-lg tracking-widest"
-                      placeholder="000000"
-                    />
-                    <button
-                      type="button"
-                      onClick={verifyMobileOTP}
-                      disabled={mobileVerification.loading || mobileVerification.otp.length !== 6}
-                      className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#5a252c] transition-all disabled:opacity-50 text-sm"
-                    >
-                      {mobileVerification.loading ? 'Verifying...' : 'Verify'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {mobileVerification.error && (
-                <p className="text-red-600 text-xs mt-1">{mobileVerification.error}</p>
-              )}
             </div>
 
             {/* Location */}

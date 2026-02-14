@@ -203,13 +203,6 @@ export default function SellerRegisterPage() {
       return;
     }
 
-    // Check if phone is provided and verify it
-    if (formData.businessPhone && !phoneVerification.verified) {
-      setMessage('Please verify your business phone before submitting');
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch('/api/sellers/register', {
         method: 'POST',
@@ -595,74 +588,20 @@ export default function SellerRegisterPage() {
               )}
             </div>
 
-            {/* Business Phone with Verification */}
+            {/* Business Phone */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
                 Business Phone <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  name="businessPhone"
-                  value={formData.businessPhone}
-                  onChange={handleChange}
-                  disabled={phoneVerification.verified}
-                  maxLength={10}
-                  className="flex-1 px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] disabled:bg-gray-50"
-                  placeholder="1234567890"
-                />
-                {!phoneVerification.verified && (
-                  <button
-                    type="button"
-                    onClick={sendPhoneOTP}
-                    disabled={phoneVerification.loading || formData.businessPhone.length !== 10}
-                    className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#8B3D47] transition-all disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {phoneVerification.loading ? 'Sending...' : phoneVerification.otpSent ? 'Resend OTP' : 'Send OTP'}
-                  </button>
-                )}
-                {phoneVerification.verified && (
-                  <div className="flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Verified
-                  </div>
-                )}
-              </div>
-
-              {/* Phone OTP Input */}
-              {phoneVerification.otpSent && !phoneVerification.verified && (
-                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800 mb-3">Enter the 6-digit OTP sent to your phone via SMS</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={phoneVerification.otp}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                        setPhoneVerification(prev => ({ ...prev, otp: value, error: '' }));
-                      }}
-                      maxLength={6}
-                      className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] text-center text-lg tracking-widest"
-                      placeholder="000000"
-                    />
-                    <button
-                      type="button"
-                      onClick={verifyPhoneOTP}
-                      disabled={phoneVerification.loading || phoneVerification.otp.length !== 6}
-                      className="px-6 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#8B3D47] transition-all disabled:opacity-50"
-                    >
-                      {phoneVerification.loading ? 'Verifying...' : 'Verify'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Phone Error */}
-              {phoneVerification.error && (
-                <p className="text-red-600 text-sm mt-2">{phoneVerification.error}</p>
-              )}
+              <input
+                type="tel"
+                name="businessPhone"
+                value={formData.businessPhone}
+                onChange={handleChange}
+                maxLength={10}
+                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
+                placeholder="1234567890"
+              />
             </div>
           </div>
 
