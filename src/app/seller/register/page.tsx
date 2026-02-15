@@ -32,27 +32,35 @@ export default function SellerRegisterPage() {
   // Fetch latest seller status from database on mount
   useEffect(() => {
     const refreshSellerStatus = async () => {
-      if (!user || !isSeller) {
+      if (!user) {
         setRefreshing(false);
         return;
       }
 
+      // Try to fetch seller status even if not marked as seller yet
       try {
         const response = await fetch(`/api/sellers/me?userId=${user.id}`);
+        console.log('Seller status refresh response:', response.status);
+
         if (response.ok) {
           const data = await response.json();
+          console.log('Seller data from API:', data);
           const latestStatus = data.seller?.status;
 
-          // Update user context if status has changed
-          if (latestStatus && latestStatus !== sellerStatus) {
+          // Always update user context with latest seller data
+          if (data.seller) {
             const updatedUser = {
               ...user,
               isSeller: true,
-              sellerId: data.seller?.id,
+              sellerId: data.seller.id,
               sellerStatus: latestStatus,
             };
+            console.log('Updating user with status:', latestStatus);
             login(updatedUser);
           }
+        } else if (response.status === 404) {
+          // User is not a seller
+          console.log('User is not a seller');
         }
       } catch (error) {
         console.error('Error refreshing seller status:', error);
