@@ -157,12 +157,14 @@ export default function SellerDashboardPage() {
         {/* Action Bar */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-[#722F37]">My Products</h2>
-          <Link
-            href="/seller/dashboard/products/new"
-            className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white rounded-full font-semibold hover:shadow-lg transition-all"
-          >
-            + Add New Product
-          </Link>
+          {products.length > 0 && (
+            <Link
+              href="/seller/dashboard/products/new"
+              className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white rounded-full font-semibold hover:shadow-lg transition-all"
+            >
+              + Add New Product
+            </Link>
+          )}
         </div>
 
         {/* Products Table */}
