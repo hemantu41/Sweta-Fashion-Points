@@ -97,18 +97,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/products - Create new product (Admin only)
+// POST /api/products - Create new product (Admin or Seller)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, product } = body;
+    const { userId, sellerId, product } = body;
 
-    // Check admin authorization
-    if (!userId || !(await isAdmin(userId))) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
+        { error: 'User ID required' },
+        { status: 400 }
       );
+    }
+
+    // Check if user is admin or approved seller
+    const userIsAdmin = await isAdmin(userId);
+    let userSellerId = sellerId;
+
+    if (!userIsAdmin) {
+      // Check if user is an approved seller
+      const { data: sellerData } = await supabase
+        .from('spf_sellers')
+        .select('id, status')
+        .eq('user_id', userId)
+        .single();
+
+      if (!sellerData || sellerData.status !== 'approved') {
+        return NextResponse.json(
+          { error: 'Unauthorized. Only admins and approved sellers can create products.' },
+          { status: 403 }
+        );
+      }
+
+      userSellerId = sellerData.id;
     }
 
     // Validate required fields
@@ -133,22 +154,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get seller_id if user is a seller
-    let sellerId = null;
-    if (product.sellerId) {
-      sellerId = product.sellerId;
-    } else {
-      // Check if user is a seller and get their seller_id
-      const { data: sellerData } = await supabase
-        .from('spf_sellers')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('status', 'approved')
-        .single();
+    // Update seller profile with shop information if provided
+    if (userSellerId && (product.shopName || product.shopMobile || product.shopLocation)) {
+      const updateData: any = {};
 
-      if (sellerData) {
-        sellerId = sellerData.id;
-      }
+      if (product.shopName) updateData.business_name = product.shopName;
+      if (product.shopMobile) updateData.business_phone = product.shopMobile;
+      if (product.shopLocation) updateData.address_line1 = product.shopLocation;
+
+      await supabase
+        .from('spf_sellers')
+        .update(updateData)
+        .eq('id', userSellerId);
     }
 
     // Insert product
@@ -175,7 +192,7 @@ export async function POST(request: NextRequest) {
         is_new_arrival: product.isNewArrival || false,
         is_best_seller: product.isBestSeller || false,
         is_active: product.isActive !== false,
-        seller_id: sellerId,
+        seller_id: userSellerId || null,
         created_by: userId,
         updated_by: userId,
       })
