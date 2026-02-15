@@ -5,6 +5,14 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
 
+interface Seller {
+  id: string;
+  businessName: string;
+  businessNameHi?: string;
+  city?: string;
+  state?: string;
+}
+
 interface Product {
   id: string;
   productId?: string;
@@ -16,6 +24,8 @@ interface Product {
   image?: string; // Legacy field from static products
   stockQuantity?: number;
   isActive?: boolean;
+  sellerId?: string | null;
+  seller?: Seller | null;
 }
 
 export default function AdminProductsPage() {
@@ -153,6 +163,7 @@ export default function AdminProductsPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#2D2D2D]">Product ID</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#2D2D2D]">Name</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#2D2D2D]">Category</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#2D2D2D]">Seller</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#2D2D2D]">Price</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#2D2D2D]">Stock</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#2D2D2D]">Status</th>
@@ -178,6 +189,18 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4 text-sm text-[#6B6B6B]">{product.productId || product.id}</td>
                     <td className="px-6 py-4 text-sm font-medium text-[#2D2D2D]">{product.name}</td>
                     <td className="px-6 py-4 text-sm text-[#6B6B6B] capitalize">{product.category}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {product.seller ? (
+                        <div>
+                          <p className="font-medium text-[#2D2D2D]">{product.seller.businessName}</p>
+                          {product.seller.city && (
+                            <p className="text-xs text-[#6B6B6B]">{product.seller.city}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="px-2 py-1 bg-[#722F37] text-white text-xs rounded">Admin</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm text-[#2D2D2D]">
                       <div>
                         <span className="font-semibold">₹{product.price.toLocaleString('en-IN')}</span>

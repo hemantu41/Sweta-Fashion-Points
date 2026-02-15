@@ -8,13 +8,20 @@ interface MultiImageUploadProps {
   currentImageIds?: string[];
   label?: string;
   maxImages?: number;
+  // Optional metadata for Cloudinary tagging and organization
+  sellerId?: string;
+  category?: string;
+  productId?: string;
 }
 
 export default function MultiImageUpload({
   onImagesChange,
   currentImageIds = [],
   label = 'Upload Images',
-  maxImages = 5
+  maxImages = 5,
+  sellerId,
+  category,
+  productId
 }: MultiImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -50,6 +57,11 @@ export default function MultiImageUpload({
         // Upload to server
         const formData = new FormData();
         formData.append('file', file);
+
+        // Add optional metadata for Cloudinary tagging
+        if (sellerId) formData.append('sellerId', sellerId);
+        if (category) formData.append('category', category);
+        if (productId) formData.append('productId', productId);
 
         const response = await fetch('/api/upload/image', {
           method: 'POST',

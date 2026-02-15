@@ -21,7 +21,17 @@ export async function GET(
 
     const { data: product, error } = await supabase
       .from('spf_productdetails')
-      .select('*')
+      .select(`
+        *,
+        seller:spf_sellers!spf_productdetails_seller_id_fkey (
+          id,
+          business_name,
+          business_name_hi,
+          city,
+          state,
+          business_phone
+        )
+      `)
       .eq('product_id', productId)
       .single();
 
@@ -56,6 +66,15 @@ export async function GET(
       isBestSeller: product.is_best_seller,
       isActive: product.is_active,
       sellerId: product.seller_id,
+      // Seller information
+      seller: product.seller ? {
+        id: product.seller.id,
+        businessName: product.seller.business_name,
+        businessNameHi: product.seller.business_name_hi,
+        city: product.seller.city,
+        state: product.seller.state,
+        businessPhone: product.seller.business_phone,
+      } : null,
       createdAt: product.created_at,
       updatedAt: product.updated_at,
     };

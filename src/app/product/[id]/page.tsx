@@ -464,6 +464,41 @@ export default function ProductDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Seller Information Card */}
+            {product.seller && (
+              <div className="bg-white rounded-xl border border-[#E8E2D9] p-5">
+                <h3 className="font-semibold text-[#2D2D2D] mb-3 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                  <svg className="w-5 h-5 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  {language === 'hi' ? 'विक्रेता की जानकारी' : 'Sold By'}
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="font-semibold text-[#2D2D2D] text-base">
+                      {language === 'hi' && product.seller.businessNameHi ? product.seller.businessNameHi : product.seller.businessName}
+                    </p>
+                    {(product.seller.city || product.seller.state) && (
+                      <p className="text-[#6B6B6B] mt-1 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {product.seller.city}{product.seller.city && product.seller.state ? ', ' : ''}{product.seller.state}
+                      </p>
+                    )}
+                  </div>
+                  <div className="pt-3 border-t border-[#F0EDE8]">
+                    <p className="text-xs text-[#6B6B6B]">
+                      {language === 'hi'
+                        ? '✓ भरोसेमंद विक्रेता द्वारा बेचा गया'
+                        : '✓ Sold by a verified seller'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

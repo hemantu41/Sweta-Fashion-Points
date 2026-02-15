@@ -4,6 +4,15 @@ export interface ProductColor {
   hex: string;
 }
 
+export interface Seller {
+  id: string;
+  businessName: string;
+  businessNameHi?: string;
+  city?: string;
+  state?: string;
+  businessPhone?: string;
+}
+
 export interface Product {
   id: string;
   productId?: string;
@@ -27,6 +36,8 @@ export interface Product {
   fabricHi?: string;
   stockQuantity?: number;
   isActive?: boolean;
+  sellerId?: string | null;
+  seller?: Seller | null; // Seller information for multi-seller marketplace
 }
 
 export interface Category {

@@ -436,6 +436,9 @@ export default function SellerAddProductPage() {
               currentImageIds={formData.images}
               onImagesChange={(imageIds) => setFormData({ ...formData, images: imageIds })}
               maxImages={5}
+              sellerId={sellerId}
+              category={formData.category}
+              productId={formData.productId}
             />
             <p className="text-sm text-[#6B6B6B] mt-2">
               First image will be used as the main product image

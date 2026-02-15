@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const sellerId = formData.get('sellerId') as string | null;
+    const category = formData.get('category') as string | null;
+    const productId = formData.get('productId') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -43,12 +46,25 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    // Build tags for organization
+    const tags: string[] = ['product'];
+    if (sellerId) tags.push(`seller:${sellerId}`);
+    if (category) tags.push(`category:${category}`);
+    if (productId) tags.push(`product:${productId}`);
+
+    // Determine folder structure: category-based for better organization
+    let folder = 'sweta-fashion-points';
+    if (category) {
+      folder = `sweta-fashion-points/${category}`;
+    }
+
     // Upload to Cloudinary
     const result = await new Promise<any>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: 'sweta-fashion-points',
+          folder,
           resource_type: 'image',
+          tags, // Add tags for filtering and organization
           transformation: [
             { width: 1000, height: 1000, crop: 'limit' },
             { quality: 'auto' },

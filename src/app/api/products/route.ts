@@ -23,8 +23,18 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive');
     const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
 
-    // Build query
-    let query = supabase.from('spf_productdetails').select('*');
+    // Build query with seller information
+    let query = supabase.from('spf_productdetails').select(`
+      *,
+      seller:spf_sellers!spf_productdetails_seller_id_fkey (
+        id,
+        business_name,
+        business_name_hi,
+        city,
+        state,
+        business_phone
+      )
+    `);
 
     // Apply filters
     if (category) {
@@ -83,6 +93,15 @@ export async function GET(request: NextRequest) {
       isBestSeller: p.is_best_seller,
       isActive: p.is_active,
       sellerId: p.seller_id,
+      // Seller information
+      seller: p.seller ? {
+        id: p.seller.id,
+        businessName: p.seller.business_name,
+        businessNameHi: p.seller.business_name_hi,
+        city: p.seller.city,
+        state: p.seller.state,
+        businessPhone: p.seller.business_phone,
+      } : null,
     })) || [];
 
     console.log(`[Products API] Returning ${transformedProducts.length} products for category: ${category}`);

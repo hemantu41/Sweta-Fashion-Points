@@ -34,6 +34,16 @@ The seller system allows approved merchants to:
 - Automatic status refresh on page load
 - Shop information collection during product creation
 - Cloudinary integration for product images
+- Database-driven multi-seller marketplace architecture
+
+**📚 Related Documentation:**
+- **[MULTI_SELLER_ARCHITECTURE.md](MULTI_SELLER_ARCHITECTURE.md)** - Complete technical documentation of the database-driven multi-seller system, including:
+  - Architecture decisions and design rationale
+  - How seller products are displayed to customers
+  - Cloudinary organization with tags
+  - API endpoints and query patterns
+  - Security and authorization
+  - Future roadmap
 
 ---
 
@@ -1018,9 +1028,66 @@ if (!userIsAdmin) {
 **Files Changed:**
 - `src/app/api/products/route.ts` (lines 100-132)
 
+### Enhancement: Auto-Populate Shop Information (Feb 2024)
+**Update:** Shop information now auto-fills from seller profile when adding products.
+
+**Problem Solved:** Sellers had to manually enter shop name, mobile, and location every time they added a product, even though this information was already in their profile.
+
+**Solution:** Automatically fetch and pre-fill shop information from seller profile on page load.
+
+**Implementation:**
+```typescript
+// Fetch seller profile on page load
+useEffect(() => {
+  const fetchSellerProfile = async () => {
+    const response = await fetch(`/api/sellers/me?userId=${user.id}`);
+    if (response.ok) {
+      const data = await response.json();
+      const seller = data.seller;
+
+      // Pre-populate shop information
+      setFormData(prev => ({
+        ...prev,
+        shopName: seller.businessName || '',
+        shopMobile: seller.businessPhone || '',
+        shopLocation: seller.addressLine1 || `${seller.city}, ${seller.state}`,
+      }));
+    }
+  };
+  fetchSellerProfile();
+}, [user?.id]);
+```
+
+**Field Mapping:**
+| Form Field | Database Field | Description |
+|------------|---------------|-------------|
+| Shop Name | `business_name` | Seller's registered business name |
+| Shop Mobile | `business_phone` | Seller's business phone number |
+| Shop Location | `address_line1` or `city, state` | Seller's business address |
+
+**User Experience:**
+- **Loading State:** Shows "Loading your shop information..." while fetching
+- **Visual Indicator:** Green background with "✓ Auto-filled from your profile"
+- **Help Text:** "These details are automatically filled from your seller profile. You can update them if needed."
+- **Editable:** Fields remain editable if seller wants to update information
+
+**Benefits:**
+- ✅ Saves time - no manual entry required
+- ✅ Reduces errors - uses existing verified data
+- ✅ Consistency - same shop info across all products
+- ✅ Flexibility - can still update if needed
+
+**Files Changed:**
+- `src/app/seller/dashboard/products/new/page.tsx` (lines 38-68, 119-132, 147-158)
+
 ---
 
 ## Version History
+
+### Version 1.2 (February 2024)
+- ✅ Auto-populate shop information from seller profile
+- ✅ Improved UX with loading states and visual indicators
+- ✅ Enhanced seller product creation experience
 
 ### Version 1.1 (February 2024)
 - ✅ Fixed seller dashboard access errors
