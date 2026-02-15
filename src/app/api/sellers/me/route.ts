@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
           id,
           name,
           email,
-          phone_number
+          mobile
         )
       `)
       .eq('user_id', userId)
