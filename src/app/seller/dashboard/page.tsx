@@ -158,7 +158,7 @@ export default function SellerDashboardPage() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-[#722F37]">My Products</h2>
           <Link
-            href="/seller/products/new"
+            href="/seller/dashboard/products/new"
             className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white rounded-full font-semibold hover:shadow-lg transition-all"
           >
             + Add New Product
@@ -171,7 +171,7 @@ export default function SellerDashboardPage() {
             <div className="p-12 text-center">
               <p className="text-[#6B6B6B] mb-4">You haven't added any products yet.</p>
               <Link
-                href="/seller/products/new"
+                href="/seller/dashboard/products/new"
                 className="inline-block px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white rounded-full font-semibold hover:shadow-lg transition-all"
               >
                 Add Your First Product
