@@ -233,7 +233,7 @@ export default function SellerDashboardPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <Link
-                            href={`/seller/products/edit/${product.productId}`}
+                            href={`/seller/dashboard/products/edit/${product.productId}`}
                             className="px-3 py-1 bg-[#722F37] text-white text-xs rounded-lg hover:bg-[#8B3D47]"
                           >
                             Edit
