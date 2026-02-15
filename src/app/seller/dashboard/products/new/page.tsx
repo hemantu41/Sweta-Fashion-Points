@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,6 +10,7 @@ export default function SellerAddProductPage() {
   const { user, sellerId } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [message, setMessage] = useState('');
 
   const [formData, setFormData] = useState({
@@ -29,11 +30,43 @@ export default function SellerAddProductPage() {
     images: [] as string[],
     stockQuantity: '100',
 
-    // Shop Information (Mandatory for Sellers)
+    // Shop Information (Auto-populated from seller profile)
     shopName: '',
     shopMobile: '',
     shopLocation: '',
   });
+
+  // Fetch seller profile and pre-populate shop information
+  useEffect(() => {
+    const fetchSellerProfile = async () => {
+      if (!user?.id) {
+        setLoadingProfile(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/sellers/me?userId=${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          const seller = data.seller;
+
+          // Pre-populate shop information from seller profile
+          setFormData(prev => ({
+            ...prev,
+            shopName: seller.businessName || '',
+            shopMobile: seller.businessPhone || '',
+            shopLocation: seller.addressLine1 || `${seller.city || ''}, ${seller.state || ''}`.trim(),
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching seller profile:', error);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchSellerProfile();
+  }, [user?.id]);
 
   const subCategories = {
     mens: ['jeans', 'shirts', 'tshirts', 'ethnic'],
@@ -116,6 +149,21 @@ export default function SellerAddProductPage() {
     }
   };
 
+  // Show loading while fetching seller profile
+  if (loadingProfile) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] p-8">
+        <div className="max-w-4xl mx-auto text-center py-12">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/4 mx-auto"></div>
+          </div>
+          <p className="text-[#6B6B6B] mt-4">Loading your shop information...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FAF7F2] p-8">
       <div className="max-w-4xl mx-auto">
@@ -143,12 +191,19 @@ export default function SellerAddProductPage() {
         )}
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-[#E8E2D9] p-8">
-          {/* Shop Information (Mandatory) */}
-          <div className="mb-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-4 flex items-center gap-2">
+          {/* Shop Information (Auto-populated) */}
+          <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-2 flex items-center gap-2">
               <span>🏪</span> Shop Information
-              <span className="text-sm font-normal text-red-500">(Required)</span>
+              {loadingProfile ? (
+                <span className="text-sm font-normal text-gray-500">(Loading...)</span>
+              ) : (
+                <span className="text-sm font-normal text-green-600">✓ Auto-filled from your profile</span>
+              )}
             </h2>
+            <p className="text-xs text-gray-600 mb-4">
+              These details are automatically filled from your seller profile. You can update them if needed.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
