@@ -46,6 +46,7 @@ export default function SellerRegisterPage() {
           const data = await response.json();
           console.log('Seller data from API:', data);
           const latestStatus = data.seller?.status;
+          const currentStatus = sellerStatus;
 
           // Always update user context with latest seller data
           if (data.seller) {
@@ -57,6 +58,16 @@ export default function SellerRegisterPage() {
             };
             console.log('Updating user with status:', latestStatus);
             login(updatedUser);
+
+            // If status changed from non-approved to approved, force full page reload
+            // This ensures all components (especially Navbar) get the fresh data
+            if (currentStatus !== 'approved' && latestStatus === 'approved') {
+              console.log('Status changed to approved - forcing page reload in 500ms');
+              setTimeout(() => {
+                window.location.reload();
+              }, 500);
+              return; // Don't set refreshing to false since we're reloading
+            }
           }
         } else if (response.status === 404) {
           // User is not a seller
