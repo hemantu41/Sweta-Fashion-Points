@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // GET /api/sellers/me - Get current user's seller profile
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: seller, error } = await supabase
+    const { data: seller, error } = await supabaseAdmin
       .from('spf_sellers')
       .select(`
         *,
