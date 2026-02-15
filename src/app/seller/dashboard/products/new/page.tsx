@@ -36,26 +36,18 @@ export default function SellerAddProductPage() {
     shopLocation: '',
   });
 
-  // Auto-generate product ID when name and subcategory are filled
+  // Auto-generate product ID when category and subcategory are selected
   useEffect(() => {
-    if (formData.name && formData.subCategory) {
-      // Convert product name to URL-friendly format
-      const nameSlug = formData.name
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-        .replace(/\s+/g, '-') // Replace spaces with hyphens
-        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-        .trim();
-
+    if (formData.category && formData.subCategory) {
       // Generate random number (timestamp + random)
       const randomNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
 
-      // Format: productname_subcategory_randomnumber
-      const generatedId = `${nameSlug}_${formData.subCategory}_${randomNum}`;
+      // Format: category_subcategory_randomnumber
+      const generatedId = `${formData.category}_${formData.subCategory}_${randomNum}`;
 
       setFormData(prev => ({ ...prev, productId: generatedId }));
     }
-  }, [formData.name, formData.subCategory]);
+  }, [formData.category, formData.subCategory]);
 
   // Fetch seller profile and pre-populate shop information
   useEffect(() => {
@@ -103,7 +95,7 @@ export default function SellerAddProductPage() {
 
     // Validate product ID is generated
     if (!formData.productId) {
-      setMessage('Please enter product name and select subcategory to generate product ID');
+      setMessage('Please select category and subcategory to generate product ID');
       setLoading(false);
       return;
     }
@@ -352,7 +344,7 @@ export default function SellerAddProductPage() {
                     Auto-Generated Product ID
                   </h3>
                   <p className="text-xs text-green-700 mb-3">
-                    This unique ID is automatically created based on your product name and subcategory
+                    This unique ID is automatically created based on category and subcategory
                   </p>
                   <div className="bg-white rounded-lg p-3 border border-green-300">
                     <code className="text-sm font-mono text-[#722F37] font-semibold break-all">
