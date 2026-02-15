@@ -228,10 +228,13 @@ These fields update the seller's profile:
 - **Shop Location** → saved to `address_line1`
 
 #### 2. Product Information
-- **Product ID** (unique identifier, e.g., `mens-jeans-6`)
 - **Product Name** (English & Hindi)
 - **Category** (mens, womens, sarees, kids)
 - **Sub-Category** (varies by category)
+- **Product ID** (auto-generated based on category_subcategory_randomnumber)
+  - Example: Category "mens" + Subcategory "jeans" → `mens_jeans_45678`
+  - Displayed in green highlighted box after category and subcategory are selected
+  - Cannot be manually edited
 - **Price** (₹)
 - **Original Price** (₹, optional)
 - **Price Range** (budget, mid, premium)
@@ -276,7 +279,7 @@ Content-Type: application/json
   "userId": "user-uuid",
   "sellerId": "seller-uuid",
   "product": {
-    "productId": "mens-jeans-6",
+    "productId": "mens_jeans_45678",  // Auto-generated: category_subcategory_randomnumber
     "name": "Classic Blue Jeans",
     "nameHi": "क्लासिक ब्लू जींस",
     "category": "mens",
@@ -327,6 +330,15 @@ Content-Type: application/json
 ## Managing Products
 
 ### View Products
+**Dashboard:** `/seller/dashboard`
+
+Sellers can view all their products in a table with:
+- Product image and name
+- Category and price
+- Stock quantity
+- Active/Inactive status
+- Edit and Delete buttons
+
 **API Endpoint:**
 ```http
 GET /api/products?sellerId={seller-id}
@@ -335,7 +347,18 @@ GET /api/products?sellerId={seller-id}
 Returns all products for the specified seller.
 
 ### Edit Product
-**Route:** `/admin/products/edit/[id]`
+**Route:** `/seller/dashboard/products/edit/[productId]`
+
+**Prerequisites:**
+- Seller must own the product (authorization check)
+- Seller status must be `approved`
+
+**Features:**
+- Pre-populated form with existing product data
+- Shop information displayed as read-only (from seller profile)
+- Product ID displayed as read-only (cannot be changed)
+- All other fields editable (name, price, description, images, etc.)
+- Can add/remove images while keeping existing ones
 
 **API Endpoint:**
 ```http
@@ -344,15 +367,37 @@ Content-Type: application/json
 
 {
   "userId": "user-uuid",
-  "product": { /* updated fields */ }
+  "product": {
+    "name": "Updated Product Name",
+    "price": 1499,
+    "description": "Updated description",
+    "images": ["cloudinary-id-1", "cloudinary-id-2"],
+    /* other updated fields */
+  }
 }
 ```
 
+**Authorization:**
+- Seller can only edit their own products
+- Admin can edit any product
+- API verifies ownership before allowing updates
+
 ### Delete Product
+**Action:** Click "Delete" button in seller dashboard product table
+
+**Behavior:**
+- Soft delete (sets `is_active = false`)
+- Product hidden from customer view
+- Product remains in database for records
+
 **API Endpoint:**
 ```http
 DELETE /api/products/{product-id}?userId={user-id}
 ```
+
+**Authorization:**
+- Seller can only delete their own products
+- Admin can delete any product
 
 ---
 
@@ -1080,9 +1125,149 @@ useEffect(() => {
 **Files Changed:**
 - `src/app/seller/dashboard/products/new/page.tsx` (lines 38-68, 119-132, 147-158)
 
+### Enhancement: Auto-Generated Product ID (February 2024)
+**Update:** Product IDs are now automatically generated based on category and subcategory.
+
+**Problem Solved:** Sellers had to manually create unique product IDs, which was:
+- Error-prone (duplicate IDs, incorrect format)
+- Time-consuming (had to think of IDs for each product)
+- Inconsistent (different naming conventions)
+
+**Solution:** Automatically generate product ID when seller selects category and subcategory.
+
+**Implementation:**
+```typescript
+// Auto-generate product ID when category and subcategory are selected
+useEffect(() => {
+  if (formData.category && formData.subCategory) {
+    // Generate random number (timestamp + random)
+    const randomNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
+
+    // Format: category_subcategory_randomnumber
+    const generatedId = `${formData.category}_${formData.subCategory}_${randomNum}`;
+
+    setFormData(prev => ({ ...prev, productId: generatedId }));
+  }
+}, [formData.category, formData.subCategory]);
+```
+
+**Format:** `category_subcategory_randomnumber`
+
+**Examples:**
+- Category: "mens" + Subcategory: "jeans" → `mens_jeans_45678`
+- Category: "womens" + Subcategory: "party" → `womens_party_12345`
+- Category: "sarees" + Subcategory: "wedding" → `sarees_wedding_98765`
+- Category: "kids" + Subcategory: "4-7" → `kids_4-7_54321`
+
+**User Experience:**
+- Seller selects category and subcategory first
+- Product ID is instantly generated and displayed in a green highlighted box
+- ID is read-only (cannot be manually edited)
+- Seller can see the generated ID before submitting the form
+- Random number at the end ensures uniqueness
+
+**Benefits:**
+- ✅ No manual ID entry required
+- ✅ Guaranteed unique IDs
+- ✅ Consistent naming convention
+- ✅ Organized by category structure
+- ✅ Faster product creation
+
+**Files Changed:**
+- `src/app/seller/dashboard/products/new/page.tsx` (lines 39-50, 254-350)
+
+### Feature: Seller Product Edit Functionality (February 2024)
+**Update:** Sellers can now edit their own products through the seller dashboard.
+
+**Problem Solved:** Sellers could not update their products after creation. Any changes required admin intervention.
+
+**Solution:** Added dedicated edit page for sellers at `/seller/dashboard/products/edit/[id]`.
+
+**Implementation:**
+
+**1. Edit Page Route:**
+```typescript
+// Route: /seller/dashboard/products/edit/[id]/page.tsx
+export default function SellerEditProductPage() {
+  // Fetch existing product data
+  // Validate seller ownership
+  // Pre-populate form
+  // Allow updates via PUT API
+}
+```
+
+**2. Authorization Check:**
+```typescript
+// Verify seller owns the product
+if (product.sellerId !== sellerId) {
+  setMessage('You are not authorized to edit this product');
+  return;
+}
+```
+
+**3. Pre-Population:**
+- All form fields pre-filled with existing product data
+- Shop information shown as read-only (cannot be changed)
+- Product ID shown as read-only (cannot be changed)
+- Images pre-loaded in MultiImageUpload component
+
+**Features:**
+- **Edit Button:** Added to seller dashboard product table
+- **Link Fix:** Updated from `/seller/products/edit/` to `/seller/dashboard/products/edit/`
+- **Form Pre-Population:** All fields filled with current values
+- **Image Management:** Can add/remove product images
+- **Validation:** Same validation as product creation
+- **Authorization:** Sellers can only edit their own products
+
+**User Experience:**
+1. Seller clicks "Edit" button on product in dashboard
+2. Edit page loads with all current product data
+3. Product ID and shop info displayed as read-only
+4. Seller updates desired fields (price, description, images, etc.)
+5. Clicks "Update Product"
+6. Redirected back to dashboard
+7. Changes reflected immediately
+
+**API Call:**
+```typescript
+PUT /api/products/{productId}
+{
+  "userId": "user-id",
+  "product": {
+    "name": "Updated Name",
+    "price": 1499,
+    "images": ["img1", "img2"]
+    // ... other fields
+  }
+}
+```
+
+**Security:**
+- Seller can only edit their own products
+- Admin can edit any product
+- Product ID cannot be changed (prevents conflicts)
+- Shop information cannot be changed (use seller profile to update)
+
+**Benefits:**
+- ✅ Sellers can update product information independently
+- ✅ No admin intervention needed for price changes, descriptions, etc.
+- ✅ Can add/update product images easily
+- ✅ Maintains data integrity with authorization checks
+
+**Files Changed:**
+- `src/app/seller/dashboard/products/edit/[id]/page.tsx` (NEW - complete edit page)
+- `src/app/seller/dashboard/page.tsx` (line 236 - fixed edit button link)
+
 ---
 
 ## Version History
+
+### Version 1.3 (February 2024)
+- ✅ Auto-generated product IDs based on category and subcategory
+- ✅ Seller product edit functionality
+- ✅ Improved product management UX
+- ✅ Enhanced seller dashboard with edit/delete actions
+- ✅ Fixed edit button 404 error
 
 ### Version 1.2 (February 2024)
 - ✅ Auto-populate shop information from seller profile
@@ -1105,6 +1290,6 @@ useEffect(() => {
 ---
 
 **Last Updated:** February 15, 2024
-**Current Version:** 1.1
+**Current Version:** 1.3
 **Project:** Sweta Fashion Points
 **Framework:** Next.js 16 (App Router) + Supabase + Vercel
