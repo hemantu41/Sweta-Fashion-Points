@@ -10,6 +10,7 @@ export default function SellerRegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [refreshing, setRefreshing] = useState(true);
   const [formData, setFormData] = useState({
     businessName: '',
     businessNameHi: '',
@@ -27,6 +28,41 @@ export default function SellerRegisterPage() {
     bankIfsc: '',
     bankName: '',
   });
+
+  // Fetch latest seller status from database on mount
+  useEffect(() => {
+    const refreshSellerStatus = async () => {
+      if (!user || !isSeller) {
+        setRefreshing(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/sellers/me?userId=${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          const latestStatus = data.seller?.status;
+
+          // Update user context if status has changed
+          if (latestStatus && latestStatus !== sellerStatus) {
+            const updatedUser = {
+              ...user,
+              isSeller: true,
+              sellerId: data.seller?.id,
+              sellerStatus: latestStatus,
+            };
+            login(updatedUser);
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing seller status:', error);
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
+    refreshSellerStatus();
+  }, [user?.id]);
 
   // Verification states
   const [emailVerification, setEmailVerification] = useState({
