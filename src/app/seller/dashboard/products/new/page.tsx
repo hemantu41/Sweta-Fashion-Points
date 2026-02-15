@@ -36,6 +36,27 @@ export default function SellerAddProductPage() {
     shopLocation: '',
   });
 
+  // Auto-generate product ID when name and subcategory are filled
+  useEffect(() => {
+    if (formData.name && formData.subCategory) {
+      // Convert product name to URL-friendly format
+      const nameSlug = formData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .trim();
+
+      // Generate random number (timestamp + random)
+      const randomNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
+
+      // Format: productname_subcategory_randomnumber
+      const generatedId = `${nameSlug}_${formData.subCategory}_${randomNum}`;
+
+      setFormData(prev => ({ ...prev, productId: generatedId }));
+    }
+  }, [formData.name, formData.subCategory]);
+
   // Fetch seller profile and pre-populate shop information
   useEffect(() => {
     const fetchSellerProfile = async () => {
@@ -79,6 +100,13 @@ export default function SellerAddProductPage() {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+
+    // Validate product ID is generated
+    if (!formData.productId) {
+      setMessage('Please enter product name and select subcategory to generate product ID');
+      setLoading(false);
+      return;
+    }
 
     // Validate shop information
     if (!formData.shopName || !formData.shopMobile || !formData.shopLocation) {
@@ -254,19 +282,6 @@ export default function SellerAddProductPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Product ID <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.productId}
-                  onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  placeholder="e.g., mens-jeans-6"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
                   Product Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -322,6 +337,32 @@ export default function SellerAddProductPage() {
               </div>
             </div>
           </div>
+
+          {/* Auto-Generated Product ID */}
+          {formData.productId && (
+            <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-green-900 mb-1">
+                    Auto-Generated Product ID
+                  </h3>
+                  <p className="text-xs text-green-700 mb-3">
+                    This unique ID is automatically created based on your product name and subcategory
+                  </p>
+                  <div className="bg-white rounded-lg p-3 border border-green-300">
+                    <code className="text-sm font-mono text-[#722F37] font-semibold break-all">
+                      {formData.productId}
+                    </code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Pricing */}
           <div className="mb-8">
