@@ -683,6 +683,63 @@ console.log('Is Approved Seller:', isApprovedSeller);
    mainImage: formData.images[0] // First image
    ```
 
+### Issue: 404 Error when clicking "Add New Product"
+
+**Cause:** Incorrect link path
+
+**Solution:** Ensure all links point to correct path
+```typescript
+// ✅ Correct
+href="/seller/dashboard/products/new"
+
+// ❌ Wrong
+href="/seller/products/new"
+```
+
+**Check Links In:**
+- Seller dashboard action bar
+- Seller dashboard empty state
+- Any other navigation links
+
+### Issue: Multiple "Add Product" Buttons Showing
+
+**Cause:** Action bar button not conditionally rendered
+
+**Solution:**
+```typescript
+{/* Only show when products exist */}
+{products.length > 0 && (
+  <Link href="/seller/dashboard/products/new">
+    + Add New Product
+  </Link>
+)}
+```
+
+### Issue: Product Creation Fails with "Unauthorized"
+
+**Causes:**
+1. Seller not approved (`status` not `'approved'`)
+2. User not logged in
+3. `sellerId` missing from request
+
+**Check:**
+```typescript
+// Verify seller is approved
+const { data: sellerData } = await supabase
+  .from('spf_sellers')
+  .select('status')
+  .eq('user_id', userId)
+  .single();
+
+console.log('Seller Status:', sellerData?.status);
+// Should be 'approved'
+```
+
+**API Requirements:**
+- `userId` must be provided
+- User must be admin OR approved seller
+- If seller, `sellerId` must match their record
+
 ---
 
 ## Important Notes
@@ -838,7 +895,149 @@ Product Visible in Seller's Product List
 
 ---
 
-**Generated:** February 2024
-**Version:** 1.0
+## Recent Fixes & Updates
+
+### Fix: "Add New Product" 404 Error (Feb 2024)
+**Issue:** Clicking "Add New Product" from seller dashboard resulted in 404 error.
+
+**Root Cause:** Links were pointing to `/seller/products/new` but page created at `/seller/dashboard/products/new`
+
+**Solution:**
+```typescript
+// Fixed in /seller/dashboard/page.tsx
+<Link href="/seller/dashboard/products/new">  // ✅ Correct path
+  + Add New Product
+</Link>
+```
+
+**Files Changed:**
+- `src/app/seller/dashboard/page.tsx` (lines 161, 174)
+
+### Fix: Duplicate "Add Product" Buttons (Feb 2024)
+**Issue:** Both "Add New Product" and "Add Your First Product" buttons showing simultaneously.
+
+**Root Cause:** Action bar button always visible regardless of product count.
+
+**Solution:**
+```typescript
+// Only show action bar button when products exist
+{products.length > 0 && (
+  <Link href="/seller/dashboard/products/new">
+    + Add New Product
+  </Link>
+)}
+```
+
+**Behavior Now:**
+- **No products**: Shows only "Add Your First Product" (centered in empty state)
+- **Has products**: Shows only "+ Add New Product" (in action bar)
+
+**Files Changed:**
+- `src/app/seller/dashboard/page.tsx` (line 160)
+
+### Fix: Seller Dashboard Access Error (Feb 2024)
+**Issue:** "You are not registered as a seller. Please contact admin." error even after approval.
+
+**Root Causes:**
+1. API using `supabase` client (subject to RLS) instead of `supabaseAdmin`
+2. Column name mismatch: `phone_number` vs `mobile`
+
+**Solutions:**
+```typescript
+// 1. Use supabaseAdmin in API route
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+// 2. Fix column name
+user:spf_users!spf_sellers_user_id_fkey (
+  id, name, email, mobile  // Changed from phone_number
+)
+```
+
+**Files Changed:**
+- `src/app/api/sellers/me/route.ts` (lines 2, 28)
+
+### Fix: Seller Status Not Updating After Approval (Feb 2024)
+**Issue:** Seller status remained "pending" in UI after admin approved.
+
+**Root Cause:** Status cached in localStorage, no auto-refresh mechanism.
+
+**Solution:**
+```typescript
+// Added status refresh on /seller/register page load
+useEffect(() => {
+  const refreshSellerStatus = async () => {
+    const response = await fetch(`/api/sellers/me?userId=${user.id}`);
+    if (response.ok) {
+      const data = await response.json();
+      // Update localStorage with fresh status
+      login(updatedUser);
+
+      // Force reload if status changed to approved
+      if (latestStatus === 'approved') {
+        setTimeout(() => window.location.reload(), 500);
+      }
+    }
+  };
+  refreshSellerStatus();
+}, [user?.id]);
+```
+
+**Files Changed:**
+- `src/app/seller/register/page.tsx` (lines 32-65)
+
+### Enhancement: Seller Product Creation Authorization (Feb 2024)
+**Update:** API now allows both admins AND approved sellers to create products.
+
+**Before:** Only admins could create products
+**After:** Approved sellers can create products for themselves
+
+**Implementation:**
+```typescript
+// Check if user is admin or approved seller
+const userIsAdmin = await isAdmin(userId);
+let userSellerId = sellerId;
+
+if (!userIsAdmin) {
+  const { data: sellerData } = await supabase
+    .from('spf_sellers')
+    .select('id, status')
+    .eq('user_id', userId)
+    .single();
+
+  if (!sellerData || sellerData.status !== 'approved') {
+    return NextResponse.json(
+      { error: 'Unauthorized. Only admins and approved sellers can create products.' },
+      { status: 403 }
+    );
+  }
+
+  userSellerId = sellerData.id;
+}
+```
+
+**Files Changed:**
+- `src/app/api/products/route.ts` (lines 100-132)
+
+---
+
+## Version History
+
+### Version 1.1 (February 2024)
+- ✅ Fixed seller dashboard access errors
+- ✅ Fixed seller status refresh mechanism
+- ✅ Added seller product creation capability
+- ✅ Fixed routing and UI issues
+- ✅ Updated documentation with troubleshooting
+
+### Version 1.0 (February 2024)
+- Initial seller flow implementation
+- Admin approval system
+- Basic product creation for admins
+- Seller registration process
+
+---
+
+**Last Updated:** February 15, 2024
+**Current Version:** 1.1
 **Project:** Sweta Fashion Points
 **Framework:** Next.js 16 (App Router) + Supabase + Vercel
