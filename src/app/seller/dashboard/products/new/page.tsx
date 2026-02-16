@@ -157,7 +157,7 @@ export default function SellerAddProductPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('Product created successfully!');
+        setMessage('Product created successfully! It will be visible to customers once approved by admin.');
         setTimeout(() => router.push('/seller/dashboard'), 1500);
       } else {
         setMessage(data.error || 'Failed to create product');

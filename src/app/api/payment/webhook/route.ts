@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,6 +100,9 @@ async function handlePaymentCaptured(payment: any, request: NextRequest) {
 
   console.log('[Webhook] Order updated:', paymentOrder.order_number);
 
+  // Calculate seller earnings
+  await calculateSellerEarnings(paymentOrder);
+
   // Send payment notifications
   try {
     await fetch(`${request.nextUrl.origin}/api/notifications/payment`, {
@@ -152,4 +156,62 @@ async function handleOrderPaid(order: any, request: NextRequest) {
 
   // Similar to payment.captured but for order-level events
   await handlePaymentCaptured({ order_id: order.id, ...order }, request);
+}
+
+async function calculateSellerEarnings(paymentOrder: any) {
+  try {
+    const items = paymentOrder.items || [];
+    console.log('[Webhook] Calculating seller earnings for', items.length, 'items');
+
+    for (const item of items) {
+      // Skip items without seller
+      if (!item.sellerId) {
+        console.log('[Webhook] Skipping item without sellerId:', item.name);
+        continue;
+      }
+
+      // Fetch seller commission percentage
+      const { data: seller } = await supabaseAdmin
+        .from('spf_sellers')
+        .select('commission_percentage, id')
+        .eq('id', item.sellerId)
+        .single();
+
+      if (!seller) {
+        console.log('[Webhook] Seller not found:', item.sellerId);
+        continue;
+      }
+
+      const commissionPercentage = seller.commission_percentage || 10.0;
+      const totalItemPrice = parseFloat(item.price) * item.quantity;
+      const commissionAmount = totalItemPrice * (commissionPercentage / 100);
+      const sellerEarning = totalItemPrice - commissionAmount;
+
+      // Create earning record
+      const { data, error } = await supabaseAdmin.from('spf_seller_earnings').insert({
+        seller_id: item.sellerId,
+        order_id: paymentOrder.id,
+        product_id: item.productId || null,
+        item_name: item.name || 'Unknown Product',
+        quantity: item.quantity,
+        unit_price: parseFloat(item.price),
+        total_item_price: totalItemPrice,
+        commission_percentage: commissionPercentage,
+        commission_amount: commissionAmount,
+        seller_earning: sellerEarning,
+        payment_status: 'pending',
+        order_date: paymentOrder.payment_completed_at || new Date().toISOString(),
+        order_number: paymentOrder.order_number,
+      });
+
+      if (error) {
+        console.error('[Webhook] Error creating earning record:', error);
+      } else {
+        console.log('[Webhook] Earning record created for seller:', item.sellerId, 'Amount:', sellerEarning);
+      }
+    }
+  } catch (error) {
+    console.error('[Webhook] Earnings calculation error:', error);
+    // Don't fail the webhook if earnings calculation fails
+  }
 }

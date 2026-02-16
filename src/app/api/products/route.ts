@@ -59,6 +59,12 @@ export async function GET(request: NextRequest) {
       query = query.eq('seller_id', sellerId);
     }
 
+    // IMPORTANT: Only show approved products for customer-facing queries
+    // Sellers querying their own products can see all statuses
+    if (!sellerId) {
+      query = query.eq('approval_status', 'approved');
+    }
+
     const { data: products, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
@@ -188,6 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert product
+    // Admins create approved products, sellers create pending products
     const { data: newProduct, error } = await supabase
       .from('spf_productdetails')
       .insert({
@@ -210,7 +217,8 @@ export async function POST(request: NextRequest) {
         stock_quantity: product.stockQuantity || 0,
         is_new_arrival: product.isNewArrival || false,
         is_best_seller: product.isBestSeller || false,
-        is_active: product.isActive !== false,
+        is_active: userIsAdmin ? (product.isActive !== false) : false, // Sellers: inactive until approved
+        approval_status: userIsAdmin ? 'approved' : 'pending', // Sellers need approval
         seller_id: userSellerId || null,
         created_by: userId,
         updated_by: userId,
