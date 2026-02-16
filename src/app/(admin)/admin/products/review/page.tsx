@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import AdminAuthGuard from '@/components/AdminAuthGuard';
 import Image from 'next/image';
 
