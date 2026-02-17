@@ -14,8 +14,12 @@ export default function SellerEarningsPage() {
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
-    fetchSellerProfile();
-  }, [user]);
+    if (user?.id) {
+      fetchSellerProfile();
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (sellerId) {

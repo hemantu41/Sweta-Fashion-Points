@@ -14,8 +14,12 @@ export default function SellerAnalyticsPage() {
   const [period, setPeriod] = useState(30);
 
   useEffect(() => {
-    fetchSellerProfile();
-  }, [user]);
+    if (user?.id) {
+      fetchSellerProfile();
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (sellerId) {
