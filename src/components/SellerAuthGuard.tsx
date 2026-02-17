@@ -19,7 +19,7 @@ export default function SellerAuthGuard({ children }: { children: React.ReactNod
 
       try {
         // Check if user is a seller
-        const response = await fetch(`/api/sellers/profile?userId=${user.id}`);
+        const response = await fetch(`/api/sellers/me?userId=${user.id}`);
         const data = await response.json();
 
         if (data.seller) {
