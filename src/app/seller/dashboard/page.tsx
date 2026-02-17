@@ -68,7 +68,14 @@ export default function SellerDashboardPage() {
       const productsData = await productsResponse.json();
 
       if (productsResponse.ok) {
-        setProducts(productsData.products || []);
+        const fetchedProducts = productsData.products || [];
+        console.log('Fetched products:', fetchedProducts);
+        console.log('Approval statuses:', fetchedProducts.map((p: any) => ({
+          name: p.name,
+          approvalStatus: p.approvalStatus,
+          isActive: p.isActive
+        })));
+        setProducts(fetchedProducts);
       }
     } catch (error) {
       console.error('Fetch seller data error:', error);
@@ -124,6 +131,10 @@ export default function SellerDashboardPage() {
     approved: products.filter(p => p.approvalStatus === 'approved').length,
     lowStock: products.filter(p => p.stockQuantity < 10).length,
   };
+
+  // Debug: Log stats
+  console.log('Stats:', stats);
+  console.log('Products approval statuses:', products.map(p => p.approvalStatus));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FAF7F2] via-white to-[#F5F0E8] p-8">
