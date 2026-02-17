@@ -26,9 +26,11 @@ export default function SellerAnalyticsPage() {
   const fetchSellerProfile = async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`/api/sellers/profile?userId=${user.id}`);
+      const response = await fetch(`/api/sellers/me?userId=${user.id}`);
       const data = await response.json();
-      setSellerId(data.seller?.id);
+      if (response.ok) {
+        setSellerId(data.seller?.id);
+      }
     } catch (error) {
       console.error('Error fetching seller profile:', error);
     }
