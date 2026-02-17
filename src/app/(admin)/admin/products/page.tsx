@@ -24,6 +24,7 @@ interface Product {
   image?: string; // Legacy field from static products
   stockQuantity?: number;
   isActive?: boolean;
+  approvalStatus?: string;
   sellerId?: string | null;
   seller?: Seller | null;
 }
@@ -83,6 +84,7 @@ export default function AdminProductsPage() {
   const stats = {
     total: products.length,
     active: products.filter(p => p.isActive).length,
+    pending: products.filter(p => p.approvalStatus === 'pending').length,
     outOfStock: products.filter(p => p.stockQuantity === 0).length,
   };
 
@@ -105,16 +107,29 @@ export default function AdminProductsPage() {
             </h1>
             <p className="text-[#6B6B6B] mt-1">Manage your products inventory</p>
           </div>
-          <Link
-            href="/admin/products/new"
-            className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all"
-          >
-            + Add New Product
-          </Link>
+          <div className="flex gap-3">
+            {stats.pending > 0 && (
+              <Link
+                href="/admin/products/review"
+                className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-full hover:bg-orange-700 hover:shadow-lg transition-all flex items-center gap-2"
+              >
+                <span className="bg-white text-orange-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                  {stats.pending}
+                </span>
+                Review Pending
+              </Link>
+            )}
+            <Link
+              href="/admin/products/new"
+              className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all"
+            >
+              + Add New Product
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
             <p className="text-[#6B6B6B] text-sm">Total Products</p>
             <p className="text-3xl font-bold text-[#722F37] mt-2">{stats.total}</p>
@@ -122,6 +137,10 @@ export default function AdminProductsPage() {
           <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
             <p className="text-[#6B6B6B] text-sm">Active Products</p>
             <p className="text-3xl font-bold text-green-600 mt-2">{stats.active}</p>
+          </div>
+          <div className="bg-orange-50 rounded-xl border border-orange-200 p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => window.location.href = '/admin/products/review'}>
+            <p className="text-orange-700 text-sm font-semibold">Pending Approval</p>
+            <p className="text-3xl font-bold text-orange-600 mt-2">{stats.pending}</p>
           </div>
           <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
             <p className="text-[#6B6B6B] text-sm">Out of Stock</p>
