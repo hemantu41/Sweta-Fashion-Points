@@ -24,15 +24,22 @@ export default function SellerAnalyticsPage() {
   }, [sellerId, period]);
 
   const fetchSellerProfile = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await fetch(`/api/sellers/me?userId=${user.id}`);
       const data = await response.json();
-      if (response.ok) {
-        setSellerId(data.seller?.id);
+      if (response.ok && data.seller?.id) {
+        setSellerId(data.seller.id);
+      } else {
+        console.error('No seller profile found');
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching seller profile:', error);
+      setLoading(false);
     }
   };
 
