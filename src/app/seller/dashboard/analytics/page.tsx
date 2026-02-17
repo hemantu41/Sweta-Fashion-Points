@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import SellerAuthGuard from '@/components/SellerAuthGuard';
+import Link from 'next/link';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function SellerAnalyticsPage() {
@@ -71,6 +72,34 @@ export default function SellerAnalyticsPage() {
               <option value={30}>Last 30 days</option>
               <option value={90}>Last 90 days</option>
             </select>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="bg-white rounded-xl shadow-md mb-6 p-2 flex gap-2 overflow-x-auto">
+            <Link
+              href="/seller/dashboard"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium text-[#6B6B6B] hover:bg-[#F0EDE8] transition-colors text-center"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/seller/dashboard/earnings"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium text-[#6B6B6B] hover:bg-[#F0EDE8] transition-colors text-center"
+            >
+              Earnings
+            </Link>
+            <Link
+              href="/seller/dashboard/analytics"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium bg-[#722F37] text-white text-center"
+            >
+              Analytics
+            </Link>
+            <Link
+              href="/seller/dashboard/products/new"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium text-[#6B6B6B] hover:bg-[#F0EDE8] transition-colors text-center"
+            >
+              + Add Product
+            </Link>
           </div>
 
           {/* Overview Cards */}

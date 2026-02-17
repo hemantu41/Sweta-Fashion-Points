@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import SellerAuthGuard from '@/components/SellerAuthGuard';
+import Link from 'next/link';
 
 export default function SellerEarningsPage() {
   const { user } = useAuth();
@@ -57,6 +58,34 @@ export default function SellerEarningsPage() {
       <div className="min-h-screen bg-[#FAF7F2] p-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-[#722F37] mb-6">My Earnings</h1>
+
+          {/* Navigation Tabs */}
+          <div className="bg-white rounded-xl shadow-md mb-6 p-2 flex gap-2 overflow-x-auto">
+            <Link
+              href="/seller/dashboard"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium text-[#6B6B6B] hover:bg-[#F0EDE8] transition-colors text-center"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/seller/dashboard/earnings"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium bg-[#722F37] text-white text-center"
+            >
+              Earnings
+            </Link>
+            <Link
+              href="/seller/dashboard/analytics"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium text-[#6B6B6B] hover:bg-[#F0EDE8] transition-colors text-center"
+            >
+              Analytics
+            </Link>
+            <Link
+              href="/seller/dashboard/products/new"
+              className="flex-1 min-w-[120px] py-3 px-6 rounded-lg font-medium text-[#6B6B6B] hover:bg-[#F0EDE8] transition-colors text-center"
+            >
+              + Add Product
+            </Link>
+          </div>
 
           {/* Summary Cards */}
           {summary && (
