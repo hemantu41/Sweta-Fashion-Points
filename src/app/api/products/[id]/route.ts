@@ -207,10 +207,10 @@ export async function DELETE(
       );
     }
 
-    // Soft delete (set is_active to false)
+    // Hard delete (actually remove from database)
     const { error } = await supabase
       .from('spf_productdetails')
-      .update({ is_active: false, updated_by: userId })
+      .delete()
       .eq('product_id', productId);
 
     if (error) {
