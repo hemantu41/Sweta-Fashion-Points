@@ -108,17 +108,21 @@ export default function AdminProductsPage() {
             <p className="text-[#6B6B6B] mt-1">Manage your products inventory</p>
           </div>
           <div className="flex gap-3">
-            {stats.pending > 0 && (
-              <Link
-                href="/admin/products/review"
-                className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-full hover:bg-orange-700 hover:shadow-lg transition-all flex items-center gap-2"
-              >
-                <span className="bg-white text-orange-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+            <Link
+              href="/admin/products/review"
+              className={`px-6 py-3 font-semibold rounded-full hover:shadow-lg transition-all flex items-center gap-2 ${
+                stats.pending > 0
+                  ? 'bg-orange-600 text-white hover:bg-orange-700'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {stats.pending > 0 && (
+                <span className="bg-white text-orange-600 rounded-full min-w-[24px] h-6 px-2 flex items-center justify-center text-sm font-bold">
                   {stats.pending}
                 </span>
-                Review Pending
-              </Link>
-            )}
+              )}
+              Review Products
+            </Link>
             <Link
               href="/admin/products/new"
               className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all"

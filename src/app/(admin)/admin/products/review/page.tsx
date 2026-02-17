@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import AdminAuthGuard from '@/components/AdminAuthGuard';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function AdminProductReviewPage() {
   const { user } = useAuth();
@@ -74,7 +75,16 @@ export default function AdminProductReviewPage() {
     <AdminAuthGuard>
       <div className="min-h-screen bg-[#FAF7F2] p-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-[#722F37] mb-6">Product Review</h1>
+          {/* Header with Back Button */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-[#722F37]">Product Review</h1>
+            <Link
+              href="/admin/products"
+              className="px-6 py-3 bg-[#722F37] text-white font-semibold rounded-full hover:bg-[#8B3D47] hover:shadow-lg transition-all"
+            >
+              ← Back to Dashboard
+            </Link>
+          </div>
 
           {/* Filter Tabs */}
           <div className="bg-white rounded-xl shadow-md mb-6 p-1 flex gap-2">
@@ -108,13 +118,18 @@ export default function AdminProductReviewPage() {
                   className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E8E2D9]"
                 >
                   <div className="relative h-48 bg-[#F0EDE8]">
-                    {product.main_image && (
+                    {product.main_image ? (
                       <Image
-                        src={product.main_image}
-                        alt={product.name}
+                        src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/w_400,h_400,c_fill/${product.main_image}`}
+                        alt={product.name || 'Product'}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <span className="text-6xl">📦</span>
+                      </div>
                     )}
                   </div>
                   <div className="p-4">
