@@ -22,6 +22,7 @@ interface Product {
   mainImage?: string;
   stockQuantity: number;
   isActive: boolean;
+  approvalStatus?: string;
 }
 
 export default function SellerDashboardPage() {
@@ -62,8 +63,8 @@ export default function SellerDashboardPage() {
         return;
       }
 
-      // Fetch seller's products
-      const productsResponse = await fetch(`/api/products?sellerId=${sellerData.seller.id}`);
+      // Fetch seller's products (including pending/inactive ones)
+      const productsResponse = await fetch(`/api/products?sellerId=${sellerData.seller.id}&isActive=all`);
       const productsData = await productsResponse.json();
 
       if (productsResponse.ok) {
@@ -119,7 +120,8 @@ export default function SellerDashboardPage() {
   const stats = {
     total: products.length,
     active: products.filter(p => p.isActive).length,
-    inactive: products.filter(p => !p.isActive).length,
+    pending: products.filter(p => p.approvalStatus === 'pending').length,
+    approved: products.filter(p => p.approvalStatus === 'approved').length,
     lowStock: products.filter(p => p.stockQuantity < 10).length,
   };
 
@@ -141,16 +143,16 @@ export default function SellerDashboardPage() {
             <p className="text-3xl font-bold text-[#722F37]">{stats.total}</p>
           </div>
           <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-            <p className="text-sm text-green-700 mb-1">Active Products</p>
-            <p className="text-3xl font-bold text-green-800">{stats.active}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-            <p className="text-sm text-gray-700 mb-1">Inactive Products</p>
-            <p className="text-3xl font-bold text-gray-800">{stats.inactive}</p>
+            <p className="text-sm text-green-700 mb-1">Approved</p>
+            <p className="text-3xl font-bold text-green-800">{stats.approved}</p>
           </div>
           <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
-            <p className="text-sm text-orange-700 mb-1">Low Stock</p>
-            <p className="text-3xl font-bold text-orange-800">{stats.lowStock}</p>
+            <p className="text-sm text-orange-700 mb-1">Pending Approval</p>
+            <p className="text-3xl font-bold text-orange-800">{stats.pending}</p>
+          </div>
+          <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+            <p className="text-sm text-red-700 mb-1">Low Stock</p>
+            <p className="text-3xl font-bold text-red-800">{stats.lowStock}</p>
           </div>
         </div>
 
@@ -190,7 +192,8 @@ export default function SellerDashboardPage() {
                     <th className="px-6 py-4 text-left text-sm font-semibold">Category</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold">Price</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Stock</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold">Status</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Approval</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold">Active</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -223,11 +226,22 @@ export default function SellerDashboardPage() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          product.approvalStatus === 'approved'
+                            ? 'bg-green-100 text-green-700'
+                            : product.approvalStatus === 'pending'
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {product.approvalStatus === 'approved' ? 'Approved' : product.approvalStatus === 'pending' ? 'Pending' : 'Rejected'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           product.isActive
                             ? 'bg-green-100 text-green-700'
                             : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {product.isActive ? 'Active' : 'Inactive'}
+                          {product.isActive ? 'Yes' : 'No'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
