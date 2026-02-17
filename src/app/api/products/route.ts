@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
       isNewArrival: p.is_new_arrival,
       isBestSeller: p.is_best_seller,
       isActive: p.is_active,
+      approvalStatus: p.approval_status,
       sellerId: p.seller_id,
       // Seller information
       seller: p.seller ? {
