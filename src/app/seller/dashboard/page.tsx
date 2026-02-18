@@ -23,6 +23,7 @@ interface Product {
   stockQuantity: number;
   isActive: boolean;
   approvalStatus?: string;
+  rejectionReason?: string;
 }
 
 export default function SellerDashboardPage() {
@@ -227,68 +228,88 @@ export default function SellerDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E8E2D9]">
                   {products.map((product, index) => (
-                    <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
-                      <td className="px-6 py-4">
-                        {product.mainImage ? (
-                          <Image
-                            src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/w_60,h_60,c_fill/${product.mainImage}`}
-                            alt={product.name}
-                            width={60}
-                            height={60}
-                            className="rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="w-[60px] h-[60px] bg-gray-200 rounded-lg flex items-center justify-center">
-                            <span className="text-2xl">📦</span>
+                    <>
+                      <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
+                        <td className="px-6 py-4">
+                          {product.mainImage ? (
+                            <Image
+                              src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/w_60,h_60,c_fill/${product.mainImage}`}
+                              alt={product.name}
+                              width={60}
+                              height={60}
+                              className="rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-[60px] h-[60px] bg-gray-200 rounded-lg flex items-center justify-center">
+                              <span className="text-2xl">📦</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-mono text-sm text-[#6B6B6B]">{product.productId}</td>
+                        <td className="px-6 py-4 font-semibold text-[#2D2D2D]">{product.name}</td>
+                        <td className="px-6 py-4 text-[#6B6B6B] capitalize">{product.category}</td>
+                        <td className="px-6 py-4 font-bold text-[#722F37]">₹{product.price.toLocaleString('en-IN')}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={product.stockQuantity < 10 ? 'text-orange-600 font-bold' : 'text-[#2D2D2D]'}>
+                            {product.stockQuantity}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            product.approvalStatus === 'approved'
+                              ? 'bg-green-100 text-green-700'
+                              : product.approvalStatus === 'pending'
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {product.approvalStatus === 'approved' ? 'Approved' : product.approvalStatus === 'pending' ? 'Pending' : 'Rejected'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            product.isActive
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {product.isActive ? 'Yes' : 'No'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Link
+                              href={`/seller/dashboard/products/edit/${product.productId}`}
+                              className="px-3 py-1 bg-[#722F37] text-white text-xs rounded-lg hover:bg-[#8B3D47]"
+                            >
+                              Edit
+                            </Link>
+                            <button
+                              onClick={() => handleDelete(product.productId)}
+                              className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700"
+                            >
+                              Delete
+                            </button>
                           </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 font-mono text-sm text-[#6B6B6B]">{product.productId}</td>
-                      <td className="px-6 py-4 font-semibold text-[#2D2D2D]">{product.name}</td>
-                      <td className="px-6 py-4 text-[#6B6B6B] capitalize">{product.category}</td>
-                      <td className="px-6 py-4 font-bold text-[#722F37]">₹{product.price.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={product.stockQuantity < 10 ? 'text-orange-600 font-bold' : 'text-[#2D2D2D]'}>
-                          {product.stockQuantity}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          product.approvalStatus === 'approved'
-                            ? 'bg-green-100 text-green-700'
-                            : product.approvalStatus === 'pending'
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {product.approvalStatus === 'approved' ? 'Approved' : product.approvalStatus === 'pending' ? 'Pending' : 'Rejected'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          product.isActive
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {product.isActive ? 'Yes' : 'No'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <Link
-                            href={`/seller/dashboard/products/edit/${product.productId}`}
-                            className="px-3 py-1 bg-[#722F37] text-white text-xs rounded-lg hover:bg-[#8B3D47]"
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(product.productId)}
-                            className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {/* Rejection Reason Row */}
+                      {product.approvalStatus === 'rejected' && product.rejectionReason && (
+                        <tr key={`${product.id}-rejection`} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
+                          <td colSpan={9} className="px-6 py-3">
+                            <div className="bg-red-50 border-l-4 border-red-500 rounded-r-lg p-3">
+                              <div className="flex items-start gap-2">
+                                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                  <p className="text-sm font-semibold text-red-800 mb-1">Rejection Reason:</p>
+                                  <p className="text-sm text-red-700">{product.rejectionReason}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>
