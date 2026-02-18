@@ -138,8 +138,19 @@ export async function PUT(
       );
     }
 
+    // Check if user is admin
+    const userIsAdmin = await isAdmin(userId);
+
     // Build update object (only include provided fields)
     const updateData: any = { updated_by: userId };
+
+    // If seller (not admin) is editing, reset to pending approval
+    if (!userIsAdmin) {
+      updateData.approval_status = 'pending';
+      updateData.is_active = false;
+      updateData.approved_by = null;
+      updateData.approved_at = null;
+    }
 
     if (product.name !== undefined) updateData.name = product.name;
     if (product.nameHi !== undefined) updateData.name_hi = product.nameHi;
