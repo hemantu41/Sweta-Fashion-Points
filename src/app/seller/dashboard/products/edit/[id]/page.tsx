@@ -32,12 +32,18 @@ export default function SellerEditProductPage() {
     fabricHi: '',
     images: [] as string[],
     stockQuantity: '100',
+    sizes: [] as string[],
+    colors: [] as Array<{ name: string; nameHi: string; hex: string }>,
 
     // Shop Information (Auto-populated from seller profile)
     shopName: '',
     shopMobile: '',
     shopLocation: '',
   });
+
+  // Size and color management
+  const [newSize, setNewSize] = useState('');
+  const [newColor, setNewColor] = useState({ name: '', nameHi: '', hex: '#000000' });
 
   // Fetch product data
   useEffect(() => {
@@ -79,6 +85,8 @@ export default function SellerEditProductPage() {
           fabricHi: product.fabricHi || '',
           images: product.images || [],
           stockQuantity: product.stockQuantity?.toString() || '100',
+          sizes: product.sizes || [],
+          colors: product.colors || [],
           shopName: product.seller?.businessName || '',
           shopMobile: product.seller?.businessPhone || '',
           shopLocation: product.seller?.city && product.seller?.state
@@ -148,6 +156,8 @@ export default function SellerEditProductPage() {
             mainImage: formData.images[0] || '',
             images: formData.images,
             stockQuantity: parseInt(formData.stockQuantity),
+            sizes: formData.sizes,
+            colors: formData.colors,
           },
         }),
       });
@@ -421,6 +431,106 @@ export default function SellerEditProductPage() {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Sizes */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Sizes</h2>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={newSize}
+                onChange={(e) => setNewSize(e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                placeholder="e.g., S, M, L, XL or 4-6Y, 6-8Y"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newSize.trim() && !formData.sizes.includes(newSize.trim())) {
+                    setFormData({ ...formData, sizes: [...formData.sizes, newSize.trim()] });
+                    setNewSize('');
+                  }
+                }}
+                className="px-6 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+              >
+                Add Size
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.sizes.map((size, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-[#F5F0E8] px-3 py-1.5 rounded-lg border border-[#E8E2D9]">
+                  <span className="text-sm font-medium text-[#2D2D2D]">{size}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, sizes: formData.sizes.filter((_, i) => i !== idx) })}
+                    className="text-red-600 hover:text-red-700 font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {formData.sizes.length === 0 && (
+                <p className="text-sm text-[#6B6B6B]">No sizes added yet</p>
+              )}
+            </div>
+          </div>
+
+          {/* Colors */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Colors</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+              <input
+                type="text"
+                value={newColor.name}
+                onChange={(e) => setNewColor({ ...newColor, name: e.target.value })}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                placeholder="Color name (English)"
+              />
+              <input
+                type="text"
+                value={newColor.nameHi}
+                onChange={(e) => setNewColor({ ...newColor, nameHi: e.target.value })}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                placeholder="रंग का नाम (Hindi)"
+              />
+              <input
+                type="color"
+                value={newColor.hex}
+                onChange={(e) => setNewColor({ ...newColor, hex: e.target.value })}
+                className="w-full h-10 border border-gray-300 rounded-lg cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newColor.name.trim()) {
+                    setFormData({ ...formData, colors: [...formData.colors, newColor] });
+                    setNewColor({ name: '', nameHi: '', hex: '#000000' });
+                  }
+                }}
+                className="px-6 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+              >
+                Add Color
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.colors.map((color, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-[#F5F0E8] px-3 py-1.5 rounded-lg border border-[#E8E2D9]">
+                  <div className="w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: color.hex }}></div>
+                  <span className="text-sm font-medium text-[#2D2D2D]">{color.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, colors: formData.colors.filter((_, i) => i !== idx) })}
+                    className="text-red-600 hover:text-red-700 font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {formData.colors.length === 0 && (
+                <p className="text-sm text-[#6B6B6B]">No colors added yet</p>
+              )}
             </div>
           </div>
 
