@@ -42,7 +42,7 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const url = '/api/products?isActive=all';
+      const url = '/api/products?isActive=all&includeAllStatuses=true';
       const response = await fetch(url, { cache: 'no-store' });
       const data = await response.json();
       setProducts(data.products || []);

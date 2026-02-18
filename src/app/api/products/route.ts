@@ -61,7 +61,9 @@ export async function GET(request: NextRequest) {
 
     // IMPORTANT: Only show approved products for customer-facing queries
     // Sellers querying their own products can see all statuses
-    if (!sellerId) {
+    // Admin can use includeAllStatuses=true to see pending/rejected products
+    const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
+    if (!sellerId && !includeAllStatuses) {
       query = query.eq('approval_status', 'approved');
     }
 
