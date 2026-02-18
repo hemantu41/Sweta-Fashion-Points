@@ -134,6 +134,8 @@ export default function CheckoutPage() {
     sessionStorage.setItem('sweta_order', JSON.stringify({
       items: items.map(i => ({
         id: i.product.id,
+        productId: i.product.productId || i.product.id, // Use productId if available, fallback to id
+        sellerId: i.product.sellerId || null, // Include sellerId for earnings calculation
         name: i.product.name,
         nameHi: i.product.nameHi,
         image: i.product.image,

@@ -36,6 +36,12 @@ export default function SellerAddProductPage() {
     shopLocation: '',
   });
 
+  // Separate state for colors and sizes
+  const [colors, setColors] = useState<{ name: string; nameHi: string; hex: string }[]>([]);
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [newColor, setNewColor] = useState({ name: '', nameHi: '', hex: '#000000' });
+  const [newSize, setNewSize] = useState('');
+
   // Auto-generate product ID when category and subcategory are selected
   useEffect(() => {
     if (formData.category && formData.subCategory) {
@@ -141,8 +147,8 @@ export default function SellerAddProductPage() {
             fabricHi: formData.fabricHi,
             mainImage: formData.images[0] || '',
             images: formData.images,
-            colors: [],
-            sizes: [],
+            colors: colors,
+            sizes: sizes,
             stockQuantity: parseInt(formData.stockQuantity),
             isNewArrival: false,
             isBestSeller: false,
@@ -457,6 +463,147 @@ export default function SellerAddProductPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Colors */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Available Colors (Optional)</h2>
+
+            {/* Add Color Form */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#2D2D2D] mb-1">Color Name</label>
+                  <input
+                    type="text"
+                    value={newColor.name}
+                    onChange={(e) => setNewColor({ ...newColor, name: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    placeholder="e.g., Red"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#2D2D2D] mb-1">Color Name (Hindi)</label>
+                  <input
+                    type="text"
+                    value={newColor.nameHi}
+                    onChange={(e) => setNewColor({ ...newColor, nameHi: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    placeholder="लाल"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#2D2D2D] mb-1">Color Code</label>
+                  <input
+                    type="color"
+                    value={newColor.hex}
+                    onChange={(e) => setNewColor({ ...newColor, hex: e.target.value })}
+                    className="w-full h-10 border border-gray-300 rounded-lg cursor-pointer"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newColor.name.trim()) {
+                        setColors([...colors, { ...newColor }]);
+                        setNewColor({ name: '', nameHi: '', hex: '#000000' });
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-[#722F37] text-white text-sm rounded-lg hover:bg-[#5a252c] transition-colors"
+                  >
+                    Add Color
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Colors List */}
+            {colors.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {colors.map((color, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg"
+                  >
+                    <div
+                      className="w-6 h-6 rounded border border-gray-300"
+                      style={{ backgroundColor: color.hex }}
+                    ></div>
+                    <span className="text-sm">{color.name}</span>
+                    {color.nameHi && <span className="text-sm text-gray-500">({color.nameHi})</span>}
+                    <button
+                      type="button"
+                      onClick={() => setColors(colors.filter((_, i) => i !== index))}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sizes */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Available Sizes (Optional)</h2>
+
+            {/* Add Size Form */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={newSize}
+                  onChange={(e) => setNewSize(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  placeholder="e.g., S, M, L, XL or 30, 32, 34"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newSize.trim() && !sizes.includes(newSize.trim())) {
+                        setSizes([...sizes, newSize.trim()]);
+                        setNewSize('');
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newSize.trim() && !sizes.includes(newSize.trim())) {
+                      setSizes([...sizes, newSize.trim()]);
+                      setNewSize('');
+                    }
+                  }}
+                  className="px-6 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#5a252c] transition-colors"
+                >
+                  Add Size
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Press Enter or click Add Size to add</p>
+            </div>
+
+            {/* Sizes List */}
+            {sizes.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {sizes.map((size, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg"
+                  >
+                    <span className="text-sm font-medium">{size}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSizes(sizes.filter((_, i) => i !== index))}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Image Upload */}

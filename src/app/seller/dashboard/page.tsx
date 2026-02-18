@@ -17,13 +17,26 @@ interface Product {
   id: string;
   productId: string;
   name: string;
+  nameHi?: string;
   category: string;
+  subCategory?: string;
   price: number;
+  originalPrice?: number;
+  priceRange?: string;
+  description?: string;
+  descriptionHi?: string;
+  fabric?: string;
+  fabricHi?: string;
   mainImage?: string;
+  images?: string[];
+  colors?: Array<{ name: string; nameHi?: string; hex: string }>;
+  sizes?: string[];
   stockQuantity: number;
   isActive: boolean;
   approvalStatus?: string;
   rejectionReason?: string;
+  isNewArrival?: boolean;
+  isBestSeller?: boolean;
 }
 
 export default function SellerDashboardPage() {
@@ -32,6 +45,8 @@ export default function SellerDashboardPage() {
   const [seller, setSeller] = useState<Seller | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -45,8 +60,10 @@ export default function SellerDashboardPage() {
     try {
       setLoading(true);
 
-      // Fetch seller profile
-      const sellerResponse = await fetch(`/api/sellers/me?userId=${user?.id}`);
+      // Fetch seller profile first
+      const sellerResponse = await fetch(`/api/sellers/me?userId=${user?.id}`, {
+        cache: 'no-store'
+      });
       const sellerData = await sellerResponse.json();
 
       if (!sellerResponse.ok) {
@@ -55,17 +72,21 @@ export default function SellerDashboardPage() {
         return;
       }
 
-      setSeller(sellerData.seller);
-
-      // Check if seller is approved
+      // Check if seller is approved before fetching products
       if (sellerData.seller.status !== 'approved') {
         alert(`Your seller account is ${sellerData.seller.status}. Please wait for admin approval.`);
         router.push('/');
         return;
       }
 
-      // Fetch seller's products (including pending/inactive ones)
-      const productsResponse = await fetch(`/api/products?sellerId=${sellerData.seller.id}&isActive=all`);
+      // Set seller data immediately so UI can start rendering
+      setSeller(sellerData.seller);
+
+      // Fetch products - this will be faster now
+      const productsResponse = await fetch(
+        `/api/products?sellerId=${sellerData.seller.id}&isActive=all`,
+        { cache: 'no-store' }
+      );
       const productsData = await productsResponse.json();
 
       if (productsResponse.ok) {
@@ -98,11 +119,63 @@ export default function SellerDashboardPage() {
     }
   };
 
+  const handleProductClick = async (product: Product) => {
+    // If product is rejected, just show rejection reason
+    if (product.approvalStatus === 'rejected') {
+      setSelectedProduct(product);
+      setShowModal(true);
+      return;
+    }
+
+    // For approved/pending, fetch full details
+    try {
+      const response = await fetch(`/api/products/${product.productId}`);
+      const data = await response.json();
+      if (response.ok && data.product) {
+        setSelectedProduct(data.product);
+        setShowModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching product details:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#FAF7F2] via-white to-[#F5F0E8] p-8">
-        <div className="max-w-7xl mx-auto text-center py-12">
-          <p className="text-[#6B6B6B]">Loading your seller dashboard...</p>
+        <div className="max-w-7xl mx-auto">
+          {/* Header Skeleton */}
+          <div className="mb-8">
+            <div className="h-9 w-64 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-48 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+
+          {/* Navigation Tabs Skeleton */}
+          <div className="bg-white rounded-xl shadow-md mb-6 p-2 flex gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex-1 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-xl p-6 border border-[#E8E2D9]">
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table Skeleton */}
+          <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
+            <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -228,9 +301,12 @@ export default function SellerDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#E8E2D9]">
                   {products.map((product, index) => (
-                    <>
-                      <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
-                        <td className="px-6 py-4">
+                    <tr
+                      key={product.id}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'} cursor-pointer hover:bg-[#F0EDE8] transition-colors`}
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <td className="px-6 py-4">
                           {product.mainImage ? (
                             <Image
                               src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/w_60,h_60,c_fill/${product.mainImage}`}
@@ -274,7 +350,7 @@ export default function SellerDashboardPage() {
                             {product.isActive ? 'Yes' : 'No'}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">
                             <Link
                               href={`/seller/dashboard/products/edit/${product.productId}`}
@@ -291,25 +367,6 @@ export default function SellerDashboardPage() {
                           </div>
                         </td>
                       </tr>
-                      {/* Rejection Reason Row */}
-                      {product.approvalStatus === 'rejected' && product.rejectionReason && (
-                        <tr key={`${product.id}-rejection`} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
-                          <td colSpan={9} className="px-6 py-3">
-                            <div className="bg-red-50 border-l-4 border-red-500 rounded-r-lg p-3">
-                              <div className="flex items-start gap-2">
-                                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <div>
-                                  <p className="text-sm font-semibold text-red-800 mb-1">Rejection Reason:</p>
-                                  <p className="text-sm text-red-700">{product.rejectionReason}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
                   ))}
                 </tbody>
               </table>
@@ -335,6 +392,238 @@ export default function SellerDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Product Details Modal */}
+        {showModal && selectedProduct && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowModal(false)}
+          >
+            <div
+              className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="sticky top-0 bg-white border-b border-[#E8E2D9] px-6 py-4 flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-[#722F37]">
+                  {selectedProduct.approvalStatus === 'rejected' ? 'Rejection Details' : 'Product Details'}
+                </h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-[#6B6B6B] hover:text-[#2D2D2D] transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                {selectedProduct.approvalStatus === 'rejected' ? (
+                  /* Rejection Reason Display */
+                  <div className="bg-red-50 border-l-4 border-red-500 rounded-r-lg p-6">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-red-800 mb-2">Why was this product rejected?</h3>
+                        <p className="text-red-700 mb-4">{selectedProduct.rejectionReason}</p>
+                        <div className="bg-white rounded-lg p-4 border border-red-200">
+                          <p className="text-sm font-semibold text-[#2D2D2D] mb-2">Product: {selectedProduct.name}</p>
+                          <p className="text-sm text-[#6B6B6B]">Product ID: {selectedProduct.productId}</p>
+                        </div>
+                        <div className="mt-4 flex gap-3">
+                          <Link
+                            href={`/seller/dashboard/products/edit/${selectedProduct.productId}`}
+                            className="px-4 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+                          >
+                            Edit Product
+                          </Link>
+                          <button
+                            onClick={() => setShowModal(false)}
+                            className="px-4 py-2 border border-[#E8E2D9] text-[#2D2D2D] rounded-lg hover:bg-[#F0EDE8] transition-colors"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Product Details Display */
+                  <div className="space-y-6">
+                    {/* Images */}
+                    {selectedProduct.mainImage && (
+                      <div className="flex gap-4 overflow-x-auto">
+                        <div className="flex-shrink-0">
+                          <Image
+                            src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/w_300,h_300,c_fill/${selectedProduct.mainImage}`}
+                            alt={selectedProduct.name}
+                            width={300}
+                            height={300}
+                            className="rounded-lg object-cover border border-[#E8E2D9]"
+                          />
+                        </div>
+                        {selectedProduct.images && selectedProduct.images.length > 0 && (
+                          <div className="flex gap-2">
+                            {selectedProduct.images.slice(0, 3).map((img, idx) => (
+                              <Image
+                                key={idx}
+                                src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/w_100,h_100,c_fill/${img}`}
+                                alt={`${selectedProduct.name} ${idx + 1}`}
+                                width={100}
+                                height={100}
+                                className="rounded-lg object-cover border border-[#E8E2D9]"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Basic Info */}
+                    <div>
+                      <h3 className="text-2xl font-bold text-[#2D2D2D] mb-2">{selectedProduct.name}</h3>
+                      {selectedProduct.nameHi && (
+                        <p className="text-lg text-[#6B6B6B] mb-2">{selectedProduct.nameHi}</p>
+                      )}
+                      <div className="flex items-center gap-4 mb-4">
+                        <span className="text-3xl font-bold text-[#722F37]">₹{selectedProduct.price.toLocaleString('en-IN')}</span>
+                        {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
+                          <span className="text-lg text-gray-400 line-through">₹{selectedProduct.originalPrice.toLocaleString('en-IN')}</span>
+                        )}
+                      </div>
+                      {selectedProduct.priceRange && (
+                        <p className="text-sm text-[#6B6B6B] mb-4">Price Range: {selectedProduct.priceRange}</p>
+                      )}
+                    </div>
+
+                    {/* Status Badges */}
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        selectedProduct.approvalStatus === 'approved'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {selectedProduct.approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        selectedProduct.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {selectedProduct.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                      {selectedProduct.isNewArrival && (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">New Arrival</span>
+                      )}
+                      {selectedProduct.isBestSeller && (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Best Seller</span>
+                      )}
+                    </div>
+
+                    {/* Category & Stock */}
+                    <div className="grid grid-cols-2 gap-4 bg-[#FAF7F2] rounded-lg p-4">
+                      <div>
+                        <p className="text-sm text-[#6B6B6B] mb-1">Category</p>
+                        <p className="font-semibold text-[#2D2D2D] capitalize">{selectedProduct.category}</p>
+                        {selectedProduct.subCategory && (
+                          <p className="text-sm text-[#6B6B6B] capitalize">{selectedProduct.subCategory}</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-[#6B6B6B] mb-1">Stock Quantity</p>
+                        <p className={`font-semibold ${selectedProduct.stockQuantity < 10 ? 'text-orange-600' : 'text-[#2D2D2D]'}`}>
+                          {selectedProduct.stockQuantity} units
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    {selectedProduct.description && (
+                      <div>
+                        <h4 className="font-semibold text-[#2D2D2D] mb-2">Description</h4>
+                        <p className="text-[#6B6B6B] whitespace-pre-wrap">{selectedProduct.description}</p>
+                        {selectedProduct.descriptionHi && (
+                          <p className="text-[#6B6B6B] mt-2 whitespace-pre-wrap">{selectedProduct.descriptionHi}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Fabric */}
+                    {selectedProduct.fabric && (
+                      <div>
+                        <h4 className="font-semibold text-[#2D2D2D] mb-2">Fabric</h4>
+                        <p className="text-[#6B6B6B]">{selectedProduct.fabric}</p>
+                        {selectedProduct.fabricHi && (
+                          <p className="text-[#6B6B6B] mt-1">{selectedProduct.fabricHi}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sizes */}
+                    {selectedProduct.sizes && selectedProduct.sizes.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-[#2D2D2D] mb-2">Available Sizes</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedProduct.sizes.map((size, idx) => (
+                            <span key={idx} className="px-3 py-1 bg-white border border-[#E8E2D9] rounded-lg text-sm">
+                              {size}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Colors */}
+                    {selectedProduct.colors && selectedProduct.colors.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-[#2D2D2D] mb-2">Available Colors</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {selectedProduct.colors.map((color, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-white border border-[#E8E2D9] rounded-lg px-3 py-2">
+                              <div
+                                className="w-6 h-6 rounded-full border border-gray-300"
+                                style={{ backgroundColor: color.hex }}
+                              ></div>
+                              <div>
+                                <p className="text-sm font-medium text-[#2D2D2D]">{color.name}</p>
+                                {color.nameHi && (
+                                  <p className="text-xs text-[#6B6B6B]">{color.nameHi}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Product ID */}
+                    <div className="text-sm text-[#6B6B6B] border-t border-[#E8E2D9] pt-4">
+                      Product ID: <span className="font-mono">{selectedProduct.productId}</span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-4 border-t border-[#E8E2D9]">
+                      <Link
+                        href={`/seller/dashboard/products/edit/${selectedProduct.productId}`}
+                        className="px-4 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+                      >
+                        Edit Product
+                      </Link>
+                      <button
+                        onClick={() => setShowModal(false)}
+                        className="px-4 py-2 border border-[#E8E2D9] text-[#2D2D2D] rounded-lg hover:bg-[#F0EDE8] transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

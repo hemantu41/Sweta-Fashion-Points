@@ -9,6 +9,8 @@ import Link from 'next/link';
 interface OrderData {
   items: {
     id: string;
+    productId?: string; // Product ID from database for earnings tracking
+    sellerId?: string | null; // Seller ID for multi-seller marketplace earnings
     name: string;
     nameHi: string;
     image: string;
