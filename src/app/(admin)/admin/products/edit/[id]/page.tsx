@@ -27,11 +27,17 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     fabric: '',
     fabricHi: '',
     images: [] as string[],
+    colors: [] as Array<{ name: string; nameHi: string; hex: string }>,
+    sizes: [] as string[],
     stockQuantity: '100',
     isNewArrival: false,
     isBestSeller: false,
     isActive: true,
   });
+
+  // Color and size management
+  const [newSize, setNewSize] = useState('');
+  const [newColor, setNewColor] = useState({ name: '', nameHi: '', hex: '#000000' });
 
   const subCategories = {
     mens: ['jeans', 'shirts', 'tshirts', 'ethnic'],
@@ -67,6 +73,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             fabric: product.fabric || '',
             fabricHi: product.fabricHi || '',
             images: product.images || (product.mainImage ? [product.mainImage] : []),
+            colors: product.colors || [],
+            sizes: product.sizes || [],
             stockQuantity: product.stockQuantity?.toString() || '100',
             isNewArrival: product.isNewArrival || false,
             isBestSeller: product.isBestSeller || false,
@@ -111,6 +119,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             fabricHi: formData.fabricHi,
             mainImage: formData.images[0] || '',
             images: formData.images,
+            colors: formData.colors,
+            sizes: formData.sizes,
             stockQuantity: parseInt(formData.stockQuantity),
             isNewArrival: formData.isNewArrival,
             isBestSeller: formData.isBestSeller,
@@ -285,6 +295,17 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  placeholder="Describe the product..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Description (Hindi)</label>
+                <textarea
+                  value={formData.descriptionHi}
+                  onChange={(e) => setFormData({ ...formData, descriptionHi: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  placeholder="उत्पाद का विवरण..."
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -295,29 +316,159 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                     value={formData.fabric}
                     onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    placeholder="e.g., Cotton, Silk"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Stock Quantity</label>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Fabric (Hindi)</label>
+                  <input
+                    type="text"
+                    value={formData.fabricHi}
+                    onChange={(e) => setFormData({ ...formData, fabricHi: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    placeholder="कपड़े का प्रकार"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                    Stock Quantity <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
+                    required
                     value={formData.stockQuantity}
                     onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                   />
                 </div>
               </div>
-
-              {/* Image Upload */}
-              <div className="mt-4">
-                <MultiImageUpload
-                  label="Product Images"
-                  currentImageIds={formData.images}
-                  onImagesChange={(imageIds) => setFormData({ ...formData, images: imageIds })}
-                  maxImages={5}
-                />
-              </div>
             </div>
+          </div>
+
+          {/* Colors */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Available Colors (Optional)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+              <input
+                type="text"
+                value={newColor.name}
+                onChange={(e) => setNewColor({ ...newColor, name: e.target.value })}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                placeholder="Color name (English)"
+              />
+              <input
+                type="text"
+                value={newColor.nameHi}
+                onChange={(e) => setNewColor({ ...newColor, nameHi: e.target.value })}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                placeholder="रंग का नाम (Hindi)"
+              />
+              <input
+                type="color"
+                value={newColor.hex}
+                onChange={(e) => setNewColor({ ...newColor, hex: e.target.value })}
+                className="w-full h-10 border border-gray-300 rounded-lg cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newColor.name.trim()) {
+                    setFormData({ ...formData, colors: [...formData.colors, newColor] });
+                    setNewColor({ name: '', nameHi: '', hex: '#000000' });
+                  }
+                }}
+                className="px-6 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+              >
+                Add Color
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.colors.map((color, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-[#F5F0E8] px-3 py-1.5 rounded-lg border border-[#E8E2D9]">
+                  <div className="w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: color.hex }}></div>
+                  <span className="text-sm font-medium text-[#2D2D2D]">{color.name}</span>
+                  {color.nameHi && <span className="text-sm text-[#6B6B6B]">({color.nameHi})</span>}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, colors: formData.colors.filter((_, i) => i !== idx) })}
+                    className="text-red-600 hover:text-red-700 font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {formData.colors.length === 0 && (
+                <p className="text-sm text-[#6B6B6B]">No colors added yet</p>
+              )}
+            </div>
+          </div>
+
+          {/* Sizes */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Available Sizes (Optional)</h2>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={newSize}
+                onChange={(e) => setNewSize(e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                placeholder="e.g., S, M, L, XL or 30, 32, 34"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (newSize.trim() && !formData.sizes.includes(newSize.trim())) {
+                      setFormData({ ...formData, sizes: [...formData.sizes, newSize.trim()] });
+                      setNewSize('');
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newSize.trim() && !formData.sizes.includes(newSize.trim())) {
+                    setFormData({ ...formData, sizes: [...formData.sizes, newSize.trim()] });
+                    setNewSize('');
+                  }
+                }}
+                className="px-6 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+              >
+                Add Size
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.sizes.map((size, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-[#F5F0E8] px-3 py-1.5 rounded-lg border border-[#E8E2D9]">
+                  <span className="text-sm font-medium text-[#2D2D2D]">{size}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, sizes: formData.sizes.filter((_, i) => i !== idx) })}
+                    className="text-red-600 hover:text-red-700 font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {formData.sizes.length === 0 && (
+                <p className="text-sm text-[#6B6B6B]">No sizes added yet</p>
+              )}
+            </div>
+          </div>
+
+          {/* Image Upload */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-[#722F37] mb-4">
+              Product Images <span className="text-red-500">*</span>
+            </h2>
+            <MultiImageUpload
+              label="Upload product images (max 5)"
+              currentImageIds={formData.images}
+              onImagesChange={(imageIds) => setFormData({ ...formData, images: imageIds })}
+              maxImages={5}
+            />
+            <p className="text-sm text-[#6B6B6B] mt-2">
+              First image will be used as the main product image
+            </p>
           </div>
 
           {/* Flags */}
