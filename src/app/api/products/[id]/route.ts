@@ -219,7 +219,9 @@ export async function DELETE(
     }
 
     // Hard delete (actually remove from database)
-    const { error } = await supabase
+    // Use supabaseAdmin to bypass RLS for authorized deletions
+    const { supabaseAdmin } = await import('@/lib/supabase-admin');
+    const { error } = await supabaseAdmin
       .from('spf_productdetails')
       .delete()
       .eq('product_id', productId);
@@ -227,7 +229,7 @@ export async function DELETE(
     if (error) {
       console.error('Product delete error:', error);
       return NextResponse.json(
-        { error: 'Failed to delete product' },
+        { error: 'Failed to delete product', details: error.message },
         { status: 500 }
       );
     }
