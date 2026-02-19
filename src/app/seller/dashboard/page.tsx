@@ -47,6 +47,9 @@ export default function SellerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [deletionReason, setDeletionReason] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -99,16 +102,35 @@ export default function SellerDashboardPage() {
     }
   };
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+  const handleDelete = (productId: string) => {
+    setProductToDelete(productId);
+    setDeletionReason('');
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete || !user?.id) return;
+
+    if (!deletionReason.trim()) {
+      alert('Please provide a reason for deletion');
+      return;
+    }
 
     try {
-      const response = await fetch(`/api/products/${productId}?userId=${user?.id}`, {
+      const response = await fetch(`/api/products/${productToDelete}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          deletionReason: deletionReason.trim(),
+        }),
       });
 
       if (response.ok) {
         alert('Product deleted successfully');
+        setShowDeleteModal(false);
+        setProductToDelete(null);
+        setDeletionReason('');
         fetchSellerData();
       } else {
         const data = await response.json();
@@ -620,6 +642,51 @@ export default function SellerDashboardPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Deletion Reason Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h2 className="text-xl font-bold text-[#2D2D2D] mb-4">Delete Product</h2>
+              <p className="text-sm text-[#6B6B6B] mb-4">
+                Please provide a reason for deleting this product. This will be visible to the admin.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                  Deletion Reason *
+                </label>
+                <textarea
+                  value={deletionReason}
+                  onChange={(e) => setDeletionReason(e.target.value)}
+                  className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
+                  rows={4}
+                  placeholder="e.g., Out of stock permanently, Product quality issues, Supplier discontinued..."
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setProductToDelete(null);
+                    setDeletionReason('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-[#E8E2D9] text-[#2D2D2D] rounded-lg hover:bg-[#F0EDE8] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete Product
+                </button>
               </div>
             </div>
           </div>

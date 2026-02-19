@@ -17,16 +17,32 @@ interface Product {
   id: string;
   productId?: string;
   name: string;
+  nameHi?: string;
   category: string;
+  subCategory?: string;
   price: number;
   originalPrice?: number;
+  priceRange?: string;
+  description?: string;
+  descriptionHi?: string;
+  fabric?: string;
+  fabricHi?: string;
   mainImage?: string | null;
   image?: string; // Legacy field from static products
+  images?: string[];
+  colors?: { name: string; nameHi?: string; hex: string }[];
+  sizes?: string[];
   stockQuantity?: number;
   isActive?: boolean;
+  isNewArrival?: boolean;
+  isBestSeller?: boolean;
   approvalStatus?: string;
+  rejectionReason?: string;
   sellerId?: string | null;
   seller?: Seller | null;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  deletionReason?: string | null;
 }
 
 export default function AdminProductsPage() {
@@ -35,6 +51,8 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -71,6 +89,11 @@ export default function AdminProductsPage() {
       console.error('Delete error:', error);
       alert('Error deleting product');
     }
+  };
+
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+    setShowModal(true);
   };
 
   const filteredProducts = products.filter(p => {
@@ -195,7 +218,11 @@ export default function AdminProductsPage() {
               </thead>
               <tbody>
                 {filteredProducts.map((product, index) => (
-                  <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
+                  <tr
+                    key={product.id}
+                    className={`${index % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'} hover:bg-[#F0EDE8] transition-colors cursor-pointer`}
+                    onClick={() => handleProductClick(product)}
+                  >
                     <td className="px-6 py-4">
                       {(product.mainImage || product.image) ? (
                         <Image
@@ -248,7 +275,7 @@ export default function AdminProductsPage() {
                         {product.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
                         <Link
                           href={`/admin/products/edit/${product.productId || product.id}`}
@@ -276,6 +303,256 @@ export default function AdminProductsPage() {
             </div>
           )}
         </div>
+
+        {/* Product Details Modal */}
+        {showModal && selectedProduct && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-[#E8E2D9] px-6 py-4 flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-[#722F37]">Product Details</h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-[#6B6B6B] hover:text-[#2D2D2D] text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Product Images */}
+                {selectedProduct.mainImage && (
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Image
+                        src={`https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_400,h_400/${selectedProduct.mainImage}`}
+                        alt={selectedProduct.name}
+                        width={400}
+                        height={400}
+                        className="rounded-xl object-cover w-full"
+                      />
+                    </div>
+                    {selectedProduct.images && selectedProduct.images.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        {selectedProduct.images.slice(0, 3).map((img, idx) => (
+                          <Image
+                            key={idx}
+                            src={`https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_100,h_100/${img}`}
+                            alt={`${selectedProduct.name} ${idx + 1}`}
+                            width={100}
+                            height={100}
+                            className="rounded-lg object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Product Info */}
+                <div>
+                  <h3 className="text-2xl font-bold text-[#2D2D2D] mb-2">{selectedProduct.name}</h3>
+                  {selectedProduct.nameHi && (
+                    <p className="text-lg text-[#6B6B6B] mb-2">{selectedProduct.nameHi}</p>
+                  )}
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="text-3xl font-bold text-[#722F37]">₹{selectedProduct.price.toLocaleString('en-IN')}</span>
+                    {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
+                      <span className="text-lg text-gray-400 line-through">₹{selectedProduct.originalPrice.toLocaleString('en-IN')}</span>
+                    )}
+                  </div>
+                  {selectedProduct.priceRange && (
+                    <p className="text-sm text-[#6B6B6B] mb-4">Price Range: {selectedProduct.priceRange}</p>
+                  )}
+                </div>
+
+                {/* Status Badges */}
+                <div className="flex flex-wrap gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedProduct.approvalStatus === 'approved'
+                      ? 'bg-green-100 text-green-700'
+                      : selectedProduct.approvalStatus === 'rejected'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-orange-100 text-orange-700'
+                  }`}>
+                    {selectedProduct.approvalStatus === 'approved' ? 'Approved' : selectedProduct.approvalStatus === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedProduct.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedProduct.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                  {selectedProduct.deletedAt && (
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                      Soft Deleted
+                    </span>
+                  )}
+                  {selectedProduct.isNewArrival && (
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">New Arrival</span>
+                  )}
+                  {selectedProduct.isBestSeller && (
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Best Seller</span>
+                  )}
+                </div>
+
+                {/* Deletion Reason - IMPORTANT: Show if product was deleted */}
+                {selectedProduct.deletedAt && selectedProduct.deletionReason && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-red-900 mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      Deletion Reason
+                    </h4>
+                    <p className="text-red-800">{selectedProduct.deletionReason}</p>
+                    <p className="text-xs text-red-600 mt-2">
+                      Deleted on: {new Date(selectedProduct.deletedAt).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                {/* Rejection Reason */}
+                {selectedProduct.approvalStatus === 'rejected' && selectedProduct.rejectionReason && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-red-900 mb-2">Rejection Reason</h4>
+                    <p className="text-red-800">{selectedProduct.rejectionReason}</p>
+                  </div>
+                )}
+
+                {/* Category & Stock */}
+                <div className="grid grid-cols-2 gap-4 bg-[#FAF7F2] rounded-lg p-4">
+                  <div>
+                    <p className="text-sm text-[#6B6B6B] mb-1">Category</p>
+                    <p className="font-semibold text-[#2D2D2D] capitalize">{selectedProduct.category}</p>
+                    {selectedProduct.subCategory && (
+                      <p className="text-sm text-[#6B6B6B] capitalize">{selectedProduct.subCategory}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#6B6B6B] mb-1">Stock Quantity</p>
+                    <p className={`font-semibold ${(selectedProduct.stockQuantity || 0) < 10 ? 'text-orange-600' : 'text-[#2D2D2D]'}`}>
+                      {selectedProduct.stockQuantity || 0} units
+                    </p>
+                  </div>
+                </div>
+
+                {/* Seller Information */}
+                {selectedProduct.seller && (
+                  <div className="bg-[#F0EDE8] rounded-lg p-4">
+                    <h4 className="font-semibold text-[#2D2D2D] mb-2">Seller Information</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-sm text-[#6B6B6B]">Business Name</p>
+                        <p className="font-medium text-[#2D2D2D]">{selectedProduct.seller.businessName}</p>
+                        {selectedProduct.seller.businessNameHi && (
+                          <p className="text-sm text-[#6B6B6B]">{selectedProduct.seller.businessNameHi}</p>
+                        )}
+                      </div>
+                      {selectedProduct.seller.city && (
+                        <div>
+                          <p className="text-sm text-[#6B6B6B]">Location</p>
+                          <p className="font-medium text-[#2D2D2D]">
+                            {selectedProduct.seller.city}{selectedProduct.seller.state && `, ${selectedProduct.seller.state}`}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {selectedProduct.description && (
+                  <div>
+                    <h4 className="font-semibold text-[#2D2D2D] mb-2">Description</h4>
+                    <p className="text-[#6B6B6B] whitespace-pre-wrap">{selectedProduct.description}</p>
+                    {selectedProduct.descriptionHi && (
+                      <p className="text-[#6B6B6B] mt-2 whitespace-pre-wrap">{selectedProduct.descriptionHi}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Fabric */}
+                {selectedProduct.fabric && (
+                  <div className="flex gap-8">
+                    <div>
+                      <h4 className="font-semibold text-[#2D2D2D] mb-2">Fabric</h4>
+                      <p className="text-[#6B6B6B]">{selectedProduct.fabric}</p>
+                      {selectedProduct.fabricHi && (
+                        <p className="text-[#6B6B6B]">{selectedProduct.fabricHi}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sizes */}
+                {selectedProduct.sizes && selectedProduct.sizes.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-[#2D2D2D] mb-2">Available Sizes</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProduct.sizes.map((size, idx) => (
+                        <span
+                          key={idx}
+                          className="px-4 py-2 bg-white border border-[#E8E2D9] rounded-lg text-sm font-medium text-[#2D2D2D]"
+                        >
+                          {size}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Colors */}
+                {selectedProduct.colors && selectedProduct.colors.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-[#2D2D2D] mb-2">Available Colors</h4>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedProduct.colors.map((color, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-white border border-[#E8E2D9] rounded-lg px-3 py-2">
+                          <div
+                            className="w-6 h-6 rounded-full border border-gray-300"
+                            style={{ backgroundColor: color.hex }}
+                          ></div>
+                          <div>
+                            <p className="text-sm font-medium text-[#2D2D2D]">{color.name}</p>
+                            {color.nameHi && (
+                              <p className="text-xs text-[#6B6B6B]">{color.nameHi}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Product ID */}
+                <div className="text-sm text-[#6B6B6B] border-t border-[#E8E2D9] pt-4">
+                  Product ID: <span className="font-mono">{selectedProduct.productId || selectedProduct.id}</span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 border-t border-[#E8E2D9]">
+                  <Link
+                    href={`/admin/products/edit/${selectedProduct.productId || selectedProduct.id}`}
+                    className="px-4 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+                  >
+                    Edit Product
+                  </Link>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 border border-[#E8E2D9] text-[#2D2D2D] rounded-lg hover:bg-[#F0EDE8] transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

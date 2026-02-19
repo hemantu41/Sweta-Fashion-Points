@@ -207,8 +207,8 @@ export async function DELETE(
 ) {
   try {
     const { id: productId } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const body = await request.json();
+    const { userId, deletionReason } = body;
 
     // Check authorization
     if (!userId || !(await canEditProduct(userId, productId))) {
@@ -218,12 +218,26 @@ export async function DELETE(
       );
     }
 
-    // Hard delete (actually remove from database)
+    // Require deletion reason for approved products
+    if (!deletionReason || deletionReason.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Deletion reason is required' },
+        { status: 400 }
+      );
+    }
+
+    // Soft delete (mark as inactive and deleted)
     // Use supabaseAdmin to bypass RLS for authorized deletions
     const { supabaseAdmin } = await import('@/lib/supabase-admin');
     const { error } = await supabaseAdmin
       .from('spf_productdetails')
-      .delete()
+      .update({
+        is_active: false,
+        deleted_at: new Date().toISOString(),
+        deleted_by: userId,
+        deletion_reason: deletionReason.trim(),
+        updated_at: new Date().toISOString(),
+      })
       .eq('product_id', productId);
 
     if (error) {

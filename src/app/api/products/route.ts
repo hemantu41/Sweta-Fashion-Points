@@ -57,6 +57,8 @@ export async function GET(request: NextRequest) {
     }
     if (sellerId) {
       query = query.eq('seller_id', sellerId);
+      // Sellers should not see their deleted products
+      query = query.is('deleted_at', null);
     }
 
     // IMPORTANT: Only show approved products for customer-facing queries
@@ -65,6 +67,8 @@ export async function GET(request: NextRequest) {
     const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
     if (!sellerId && !includeAllStatuses) {
       query = query.eq('approval_status', 'approved');
+      // Customer-facing queries should also exclude deleted products
+      query = query.is('deleted_at', null);
     }
 
     const { data: products, error } = await query.order('created_at', { ascending: false });
@@ -103,6 +107,10 @@ export async function GET(request: NextRequest) {
       approvalStatus: p.approval_status,
       rejectionReason: p.rejection_reason,
       sellerId: p.seller_id,
+      // Deletion tracking
+      deletedAt: p.deleted_at,
+      deletedBy: p.deleted_by,
+      deletionReason: p.deletion_reason,
       // Seller information
       seller: p.seller ? {
         id: p.seller.id,
