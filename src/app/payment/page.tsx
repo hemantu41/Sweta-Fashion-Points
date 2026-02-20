@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { PaymentLoadingState } from '@/components/LoadingState';
 
 interface OrderData {
   items: {
@@ -439,15 +440,8 @@ function PaymentContent() {
   if (stage === 'checking-status') {
     return (
       <div className="min-h-screen bg-[#FAF7F2] py-12 px-4">
-        <div className="max-w-lg mx-auto text-center">
-          <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-
-          <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-            Checking Payment Status
-          </h1>
-          <p className="text-[#6B6B6B] mb-6">Please wait while we verify your payment...</p>
+        <div className="max-w-lg mx-auto">
+          <PaymentLoadingState />
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
             <div className="flex items-start gap-3">
