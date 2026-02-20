@@ -66,7 +66,7 @@ ON spf_seller_earnings(seller_id, order_date, payment_status);
 
 -- Index for partner earnings queries
 CREATE INDEX IF NOT EXISTS idx_delivery_earnings_partner_date
-ON spf_delivery_earnings(delivery_partner_id, earning_date DESC);
+ON spf_delivery_earnings(delivery_partner_id, delivery_date DESC);
 
 -- Index for payment status
 CREATE INDEX IF NOT EXISTS idx_delivery_earnings_payment_status
