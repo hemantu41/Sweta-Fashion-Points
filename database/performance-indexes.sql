@@ -111,10 +111,6 @@ ON spf_sellers(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sellers_user
 ON spf_sellers(user_id);
 
--- Index for seller verification
-CREATE INDEX IF NOT EXISTS idx_sellers_verification
-ON spf_sellers(verification_status, created_at DESC);
-
 -- ============================================
 -- DELIVERY PARTNER INDEXES
 -- ============================================
