@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { compressImage } from '@/lib/image-compression';
 
 interface MultiImageUploadProps {
   onImagesChange: (imageIds: string[]) => void;
@@ -26,6 +27,8 @@ export default function MultiImageUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [images, setImages] = useState<string[]>(currentImageIds);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [compressing, setCompressing] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -38,22 +41,37 @@ export default function MultiImageUpload({
     }
 
     setError('');
-    setUploading(true);
+    setCompressing(true);
+    setUploadProgress(0);
 
     try {
-      const uploadPromises = files.map(async (file) => {
+      // Compress images first
+      const compressedFiles = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
         // Validate file type
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!validTypes.includes(file.type)) {
           throw new Error('Please select valid image files (JPEG, PNG, or WebP)');
         }
 
-        // Validate file size (max 5MB)
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-          throw new Error('File size must be less than 5MB');
-        }
+        // Compress the image
+        const compressed = await compressImage(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+          quality: 0.85,
+        });
 
+        compressedFiles.push(compressed);
+        setUploadProgress(Math.round(((i + 1) / files.length) * 50)); // First 50% for compression
+      }
+
+      setCompressing(false);
+      setUploading(true);
+
+      // Upload compressed images
+      const uploadPromises = compressedFiles.map(async (file, index) => {
         // Upload to server
         const formData = new FormData();
         formData.append('file', file);
@@ -81,10 +99,15 @@ export default function MultiImageUpload({
       const newImages = [...images, ...uploadedImageIds];
       setImages(newImages);
       onImagesChange(newImages);
+      setUploadProgress(100);
+
+      // Reset progress after a short delay
+      setTimeout(() => setUploadProgress(0), 1000);
     } catch (error: any) {
       setError(error.message || 'Failed to upload images. Please try again.');
     } finally {
       setUploading(false);
+      setCompressing(false);
     }
   };
 
@@ -138,10 +161,23 @@ export default function MultiImageUpload({
         <div>
           <label className="relative cursor-pointer">
             <div className="border-2 border-dashed border-[#E8E2D9] rounded-lg p-6 hover:border-[#722F37] transition-colors text-center">
-              {uploading ? (
-                <div className="flex flex-col items-center gap-2">
+              {(compressing || uploading) ? (
+                <div className="flex flex-col items-center gap-3">
                   <div className="w-8 h-8 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-sm text-[#6B6B6B]">Uploading...</p>
+                  <p className="text-sm text-[#2D2D2D] font-medium">
+                    {compressing ? 'Compressing images...' : 'Uploading...'}
+                  </p>
+                  {uploadProgress > 0 && (
+                    <>
+                      <div className="w-full max-w-xs h-2 bg-[#E8E2D9] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#722F37] transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-[#6B6B6B]">{uploadProgress}%</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
@@ -160,7 +196,7 @@ export default function MultiImageUpload({
               type="file"
               accept="image/jpeg,image/jpg,image/png,image/webp"
               onChange={handleFileChange}
-              disabled={uploading}
+              disabled={uploading || compressing}
               multiple
               className="hidden"
             />

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getCachedData, sellerCache } from '@/lib/cache';
 
 // Helper to check if user is admin
 async function isAdmin(userId: string): Promise<boolean> {
@@ -27,37 +28,41 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build query
-    let query = supabase
-      .from('spf_sellers')
-      .select(`
-        *,
-        user:spf_users!spf_sellers_user_id_fkey (
-          id,
-          name,
-          email,
-          mobile,
-          created_at
-        )
-      `);
+    // Create unique cache key based on status filter
+    const cacheKey = `sellers:${status || 'all'}`;
 
-    // Apply status filter
-    if (status) {
-      query = query.eq('status', status);
-    }
+    // Fetch sellers with caching (10 minute TTL)
+    const transformedSellers = await getCachedData(
+      cacheKey,
+      async () => {
+        // Build query
+        let query = supabase
+          .from('spf_sellers')
+          .select(`
+            *,
+            user:spf_users!spf_sellers_user_id_fkey (
+              id,
+              name,
+              email,
+              mobile,
+              created_at
+            )
+          `);
 
-    const { data: sellers, error } = await query.order('created_at', { ascending: false });
+        // Apply status filter
+        if (status) {
+          query = query.eq('status', status);
+        }
 
-    if (error) {
-      console.error('[Sellers API] Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch sellers' },
-        { status: 500 }
-      );
-    }
+        const { data: sellers, error } = await query.order('created_at', { ascending: false });
 
-    // Transform to camelCase
-    const transformedSellers = sellers?.map(s => ({
+        if (error) {
+          console.error('[Sellers API] Database error:', error);
+          throw new Error('Failed to fetch sellers');
+        }
+
+        // Transform to camelCase
+        return sellers?.map(s => ({
       id: s.id,
       userId: s.user_id,
       businessName: s.business_name,
@@ -82,11 +87,15 @@ export async function GET(request: NextRequest) {
       commissionPercentage: s.commission_percentage,
       isActive: s.is_active,
       documents: s.documents,
-      notes: s.notes,
-      createdAt: s.created_at,
-      updatedAt: s.updated_at,
-      user: s.user,
-    })) || [];
+          notes: s.notes,
+          createdAt: s.created_at,
+          updatedAt: s.updated_at,
+          user: s.user,
+        })) || [];
+      },
+      sellerCache,
+      600 // 10 minutes TTL
+    );
 
     return NextResponse.json({
       success: true,

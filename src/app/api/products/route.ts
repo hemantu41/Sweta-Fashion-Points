@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getCachedData, productCache } from '@/lib/cache';
 
 // Helper to check if user is admin
 async function isAdmin(userId: string): Promise<boolean> {
@@ -23,66 +24,70 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive');
     const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
 
-    // Build query with seller information
-    let query = supabase.from('spf_productdetails').select(`
+    // Create unique cache key based on query parameters
+    const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}`;
+
+    // Fetch products with caching (10 minute TTL)
+    const transformedProducts = await getCachedData(
+      cacheKey,
+      async () => {
+        // Build query with seller information
+        let query = supabase.from('spf_productdetails').select(`
       *,
-      seller:spf_sellers!spf_productdetails_seller_id_fkey (
-        id,
-        business_name,
-        business_name_hi,
-        city,
-        state,
-        business_phone
-      )
-    `);
+          seller:spf_sellers!spf_productdetails_seller_id_fkey (
+            id,
+            business_name,
+            business_name_hi,
+            city,
+            state,
+            business_phone
+          )
+        `);
 
-    // Apply filters
-    if (category) {
-      query = query.eq('category', category);
-    }
-    if (subCategory) {
-      query = query.eq('sub_category', subCategory);
-    }
-    if (isNewArrival === 'true') {
-      query = query.eq('is_new_arrival', true);
-    }
-    if (isBestSeller === 'true') {
-      query = query.eq('is_best_seller', true);
-    }
-    if (priceRange) {
-      query = query.eq('price_range', priceRange);
-    }
-    if (isActive !== 'all') {
-      query = query.eq('is_active', true);
-    }
-    if (sellerId) {
-      query = query.eq('seller_id', sellerId);
-      // Sellers should not see their deleted products
-      query = query.is('deleted_at', null);
-    }
+        // Apply filters
+        if (category) {
+          query = query.eq('category', category);
+        }
+        if (subCategory) {
+          query = query.eq('sub_category', subCategory);
+        }
+        if (isNewArrival === 'true') {
+          query = query.eq('is_new_arrival', true);
+        }
+        if (isBestSeller === 'true') {
+          query = query.eq('is_best_seller', true);
+        }
+        if (priceRange) {
+          query = query.eq('price_range', priceRange);
+        }
+        if (isActive !== 'all') {
+          query = query.eq('is_active', true);
+        }
+        if (sellerId) {
+          query = query.eq('seller_id', sellerId);
+          // Sellers should not see their deleted products
+          query = query.is('deleted_at', null);
+        }
 
-    // IMPORTANT: Only show approved products for customer-facing queries
-    // Sellers querying their own products can see all statuses
-    // Admin can use includeAllStatuses=true to see pending/rejected products
-    const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
-    if (!sellerId && !includeAllStatuses) {
-      query = query.eq('approval_status', 'approved');
-      // Customer-facing queries should also exclude deleted products
-      query = query.is('deleted_at', null);
-    }
+        // IMPORTANT: Only show approved products for customer-facing queries
+        // Sellers querying their own products can see all statuses
+        // Admin can use includeAllStatuses=true to see pending/rejected products
+        const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
+        if (!sellerId && !includeAllStatuses) {
+          query = query.eq('approval_status', 'approved');
+          // Customer-facing queries should also exclude deleted products
+          query = query.is('deleted_at', null);
+        }
 
-    const { data: products, error } = await query.order('created_at', { ascending: false });
+        const { data: products, error } = await query.order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('[Products API] Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch products' },
-        { status: 500 }
-      );
-    }
+        if (error) {
+          console.error('[Products API] Database error:', error);
+          throw new Error('Failed to fetch products');
+        }
 
-    // Transform to camelCase for frontend
-    const transformedProducts = products?.map(p => ({
+        // Transform to camelCase for frontend
+        return products?.map(p => ({
       id: p.id,
       productId: p.product_id,
       name: p.name,
@@ -111,16 +116,20 @@ export async function GET(request: NextRequest) {
       deletedAt: p.deleted_at,
       deletedBy: p.deleted_by,
       deletionReason: p.deletion_reason,
-      // Seller information
-      seller: p.seller ? {
-        id: p.seller.id,
-        businessName: p.seller.business_name,
-        businessNameHi: p.seller.business_name_hi,
-        city: p.seller.city,
-        state: p.seller.state,
-        businessPhone: p.seller.business_phone,
-      } : null,
-    })) || [];
+          // Seller information
+          seller: p.seller ? {
+            id: p.seller.id,
+            businessName: p.seller.business_name,
+            businessNameHi: p.seller.business_name_hi,
+            city: p.seller.city,
+            state: p.seller.state,
+            businessPhone: p.seller.business_phone,
+          } : null,
+        })) || [];
+      },
+      productCache,
+      600 // 10 minutes TTL
+    );
 
     console.log(`[Products API] Returning ${transformedProducts.length} products for category: ${category}`);
 
@@ -245,6 +254,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Clear product cache when new product is created
+    productCache.clear();
 
     return NextResponse.json({
       message: 'Product created successfully',
