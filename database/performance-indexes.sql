@@ -9,9 +9,9 @@
 CREATE INDEX IF NOT EXISTS idx_payment_orders_status_created
 ON spf_payment_orders(status, created_at DESC);
 
--- Index for user's orders
-CREATE INDEX IF NOT EXISTS idx_payment_orders_user_created
-ON spf_payment_orders(user_id, created_at DESC);
+-- Index for user's orders (if user_id column exists in your schema)
+-- CREATE INDEX IF NOT EXISTS idx_payment_orders_user_created
+-- ON spf_payment_orders(user_id, created_at DESC);
 
 -- Index for order search by number
 CREATE INDEX IF NOT EXISTS idx_payment_orders_number
@@ -123,10 +123,6 @@ ON spf_delivery_partners(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_delivery_partners_availability
 ON spf_delivery_partners(availability_status)
 WHERE status = 'active';
-
--- Index for partner user lookup
-CREATE INDEX IF NOT EXISTS idx_delivery_partners_user
-ON spf_delivery_partners(user_id);
 
 -- ============================================
 -- USER INDEXES
