@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { productCache } from '@/lib/cache';
 
 // Helper to check if user is admin
 async function isAdmin(userId: string): Promise<boolean> {
@@ -152,6 +153,27 @@ export async function PUT(
       updateData.approved_at = null;
     }
 
+    // Admin can update approval fields
+    if (userIsAdmin) {
+      if (product.approvalStatus !== undefined) {
+        updateData.approval_status = product.approvalStatus;
+
+        // Auto-set approval metadata when approving
+        if (product.approvalStatus === 'approved') {
+          updateData.approved_by = userId;
+          updateData.approved_at = new Date().toISOString();
+          updateData.is_active = true; // Activate product when approved
+        } else if (product.approvalStatus === 'rejected') {
+          updateData.approved_by = null;
+          updateData.approved_at = null;
+          updateData.is_active = false; // Deactivate when rejected
+          if (product.rejectionReason) {
+            updateData.rejection_reason = product.rejectionReason;
+          }
+        }
+      }
+    }
+
     if (product.name !== undefined) updateData.name = product.name;
     if (product.nameHi !== undefined) updateData.name_hi = product.nameHi;
     if (product.category !== undefined) updateData.category = product.category;
@@ -170,7 +192,8 @@ export async function PUT(
     if (product.stockQuantity !== undefined) updateData.stock_quantity = product.stockQuantity;
     if (product.isNewArrival !== undefined) updateData.is_new_arrival = product.isNewArrival;
     if (product.isBestSeller !== undefined) updateData.is_best_seller = product.isBestSeller;
-    if (product.isActive !== undefined) updateData.is_active = product.isActive;
+    // Admin can update isActive directly, sellers cannot
+    if (product.isActive !== undefined && userIsAdmin) updateData.is_active = product.isActive;
 
     const { data: updatedProduct, error } = await supabase
       .from('spf_productdetails')
@@ -186,6 +209,10 @@ export async function PUT(
         { status: 500 }
       );
     }
+
+    // Clear product cache after update
+    productCache.clear();
+    console.log('[Product API] Cache cleared after product update');
 
     return NextResponse.json({
       message: 'Product updated successfully',
@@ -247,6 +274,10 @@ export async function DELETE(
         { status: 500 }
       );
     }
+
+    // Clear product cache after deletion
+    productCache.clear();
+    console.log('[Product API] Cache cleared after product deletion');
 
     return NextResponse.json({
       message: 'Product deleted successfully',
