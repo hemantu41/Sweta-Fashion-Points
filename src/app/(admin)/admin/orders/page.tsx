@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { COURIER_PROVIDERS } from '@/lib/courier-providers';
+import { Pagination } from '@/components/Pagination';
 
 interface Order {
   id: string;
@@ -46,6 +47,8 @@ export default function AdminOrdersPage() {
   const [deliveryStatusFilter, setDeliveryStatusFilter] = useState<string>('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'partner' | 'courier'>('partner');
@@ -71,23 +74,28 @@ export default function AdminOrdersPage() {
     }
     fetchOrders();
     fetchPartners();
-  }, [user, statusFilter, deliveryStatusFilter]);
+  }, [user, statusFilter, deliveryStatusFilter, page]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/admin/orders');
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', '20'); // 20 orders per page
+      if (statusFilter && statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
+
+      const response = await fetch(`/api/admin/orders?${params}`);
       const data = await response.json();
 
       if (response.ok) {
-        let filteredOrders = data.orders || [];
+        let filteredOrders = data.data || [];
 
-        // Apply filters
-        if (statusFilter) {
-          filteredOrders = filteredOrders.filter((o: Order) => o.status === statusFilter);
-        }
+        // Apply delivery status filter (client-side for now)
         if (deliveryStatusFilter) {
           filteredOrders = filteredOrders.filter(
             (o: Order) => (o.delivery_status || 'pending_assignment') === deliveryStatusFilter
@@ -95,6 +103,7 @@ export default function AdminOrdersPage() {
         }
 
         setOrders(filteredOrders);
+        setPagination(data.pagination);
       } else {
         setError(data.error || 'Failed to fetch orders');
       }
@@ -599,6 +608,19 @@ export default function AdminOrdersPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={setPage}
+                hasNext={pagination.hasNext}
+                hasPrev={pagination.hasPrev}
+                total={pagination.total}
+                showTotal={true}
+              />
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-md p-12 text-center border border-[#E8E2D9]">
