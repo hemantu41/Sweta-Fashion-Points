@@ -74,7 +74,7 @@ ON spf_delivery_earnings(delivery_partner_id, payment_status);
 
 -- Index for delivery lookup
 CREATE INDEX IF NOT EXISTS idx_delivery_earnings_delivery
-ON spf_delivery_earnings(delivery_id);
+ON spf_delivery_earnings(order_delivery_id);
 
 -- ============================================
 -- PRODUCT INDEXES
