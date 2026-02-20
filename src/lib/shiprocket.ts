@@ -92,7 +92,16 @@ class ShiprocketService {
       return this.auth.token;
     }
 
+    // Check if credentials are set
+    if (!this.email || !this.password) {
+      const errorMsg = `Shiprocket credentials not configured. Email: ${!!this.email}, Password: ${!!this.password}`;
+      console.error('[Shiprocket]', errorMsg);
+      throw new Error(errorMsg);
+    }
+
     try {
+      console.log('[Shiprocket] Authenticating with email:', this.email);
+
       const response = await fetch(`${this.baseUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,12 +111,27 @@ class ShiprocketService {
         }),
       });
 
+      const responseText = await response.text();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Shiprocket auth failed: ${error.message || response.statusText}`);
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          errorData = { message: responseText };
+        }
+
+        const errorMsg = `Shiprocket auth failed (${response.status}): ${errorData.message || errorData.error || response.statusText}`;
+        console.error('[Shiprocket]', errorMsg);
+        console.error('[Shiprocket] Response:', responseText);
+        throw new Error(errorMsg);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
+
+      if (!data.token) {
+        throw new Error('Shiprocket auth succeeded but no token received');
+      }
 
       // Cache token for 9 days (tokens expire after 10 days)
       this.auth = {
@@ -115,9 +139,10 @@ class ShiprocketService {
         expiresAt: Date.now() + (9 * 24 * 60 * 60 * 1000),
       };
 
+      console.log('[Shiprocket] Authentication successful');
       return data.token;
-    } catch (error) {
-      console.error('[Shiprocket] Authentication error:', error);
+    } catch (error: any) {
+      console.error('[Shiprocket] Authentication error:', error.message);
       throw error;
     }
   }
