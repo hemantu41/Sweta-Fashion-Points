@@ -57,6 +57,13 @@ export default function AdminOrdersPage() {
   const [courierNotes, setCourierNotes] = useState('');
   const [assigning, setAssigning] = useState(false);
 
+  // Shiprocket states
+  const [showShiprocketModal, setShowShiprocketModal] = useState(false);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [availableCouriers, setAvailableCouriers] = useState<any[]>([]);
+  const [selectedCourierId, setSelectedCourierId] = useState<number | null>(null);
+  const [creatingShipment, setCreatingShipment] = useState(false);
+
   useEffect(() => {
     if (!user) {
       router.push('/login');
@@ -227,6 +234,95 @@ export default function AdminOrdersPage() {
       }
     } catch (error) {
       alert('Error auto-assigning order');
+    }
+  };
+
+  // Shiprocket functions
+  const handleUseShiprocket = async () => {
+    if (!selectedOrder) return;
+
+    setLoadingRates(true);
+    setShowShiprocketModal(true);
+
+    try {
+      // Fetch available couriers and rates
+      const response = await fetch(
+        `/api/shiprocket/serviceability?` +
+          new URLSearchParams({
+            pickupPincode: '302001', // You can make this configurable
+            deliveryPincode: selectedOrder.delivery_address.pincode,
+            weight: '0.5', // Default 500g, can be made dynamic
+            cod: 'false',
+            declaredValue: (selectedOrder.amount / 100).toString(),
+          })
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setAvailableCouriers(data.couriers || []);
+        // Auto-select cheapest courier
+        if (data.recommendedCourier) {
+          setSelectedCourierId(data.recommendedCourier.courier_company_id);
+        }
+      } else {
+        alert(data.error || 'Failed to fetch courier rates');
+        setShowShiprocketModal(false);
+      }
+    } catch (error) {
+      console.error('Error fetching rates:', error);
+      alert('Error fetching courier rates');
+      setShowShiprocketModal(false);
+    } finally {
+      setLoadingRates(false);
+    }
+  };
+
+  const handleCreateShiprocketShipment = async () => {
+    if (!selectedOrder || !selectedCourierId) {
+      alert('Please select a courier');
+      return;
+    }
+
+    try {
+      setCreatingShipment(true);
+
+      const response = await fetch('/api/shiprocket/create-shipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: selectedOrder.id,
+          courierCompanyId: selectedCourierId,
+          weight: 0.5, // Default 500g, can be made dynamic
+          dimensions: {
+            // Default dimensions, can be made dynamic
+            length: 30,
+            breadth: 20,
+            height: 10,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert(
+          `Shipment created successfully!\n\n` +
+            `Courier: ${data.courierName}\n` +
+            `AWB: ${data.awbCode}\n\n` +
+            `Order has been updated with tracking details.`
+        );
+        setShowShiprocketModal(false);
+        setShowAssignModal(false);
+        fetchOrders();
+      } else {
+        alert(data.error || 'Failed to create shipment');
+      }
+    } catch (error) {
+      console.error('Error creating shipment:', error);
+      alert('Error creating shipment');
+    } finally {
+      setCreatingShipment(false);
     }
   };
 
@@ -637,6 +733,41 @@ export default function AdminOrdersPage() {
             {/* Courier Service Form */}
             {deliveryType === 'courier' && (
               <>
+                {/* Shiprocket Auto-Booking */}
+                <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-blue-900 mb-1">Shiprocket Auto-Booking</h4>
+                      <p className="text-sm text-blue-700 mb-3">
+                        Automatically generate AWB number, compare rates across 17+ couriers, and select the cheapest option
+                      </p>
+                      <button
+                        onClick={handleUseShiprocket}
+                        className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        Use Shiprocket Auto-Booking
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Manual Courier Entry */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="flex-1 border-t border-[#E8E2D9]"></div>
+                    <span className="text-xs text-[#6B6B6B] font-medium">OR ENTER MANUALLY</span>
+                    <div className="flex-1 border-t border-[#E8E2D9]"></div>
+                  </div>
+                </div>
+
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
                     Courier Company <span className="text-red-500">*</span>
@@ -715,6 +846,160 @@ export default function AdminOrdersPage() {
                 {assigning ? 'Assigning...' : deliveryType === 'partner' ? 'Assign Partner' : 'Assign Courier'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shiprocket Rate Comparison Modal */}
+      {showShiprocketModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-[#722F37] flex items-center gap-2">
+                  <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Shiprocket - Compare Couriers
+                </h3>
+                <p className="text-sm text-[#6B6B6B] mt-1">Order #{selectedOrder.order_number}</p>
+                <p className="text-sm text-[#6B6B6B]">
+                  Delivery to: {selectedOrder.delivery_address?.city} - {selectedOrder.delivery_address?.pincode}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowShiprocketModal(false);
+                  setAvailableCouriers([]);
+                  setSelectedCourierId(null);
+                }}
+                className="text-[#6B6B6B] hover:text-[#2D2D2D]"
+                disabled={creatingShipment}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {loadingRates ? (
+              <div className="text-center py-12">
+                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-[#6B6B6B]">Fetching courier rates from Shiprocket...</p>
+              </div>
+            ) : (
+              <>
+                {availableCouriers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <svg className="w-16 h-16 text-[#6B6B6B] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <p className="text-[#6B6B6B]">No couriers available for this route</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        <strong>{availableCouriers.length} couriers available</strong> - Select a courier or use the recommended option (cheapest)
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 mb-6">
+                      {availableCouriers.map((courier, index) => (
+                        <button
+                          key={courier.courier_company_id}
+                          onClick={() => setSelectedCourierId(courier.courier_company_id)}
+                          className={`w-full p-4 border-2 rounded-lg transition-all text-left ${
+                            selectedCourierId === courier.courier_company_id
+                              ? 'border-blue-600 bg-blue-50'
+                              : 'border-[#E8E2D9] hover:border-blue-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                selectedCourierId === courier.courier_company_id ? 'border-blue-600' : 'border-[#E8E2D9]'
+                              }`}>
+                                {selectedCourierId === courier.courier_company_id && (
+                                  <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                                )}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-[#2D2D2D]">{courier.courier_name}</p>
+                                  {index === 0 && (
+                                    <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                                      Recommended
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-[#6B6B6B] mt-1">
+                                  Delivery: {courier.estimated_delivery_days} days
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xl font-bold text-[#722F37]">₹{courier.rate.toFixed(2)}</p>
+                              <p className="text-xs text-[#6B6B6B]">Freight: ₹{courier.freight_charge.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                      <div className="flex gap-2">
+                        <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div className="text-sm text-yellow-800">
+                          <p className="font-medium mb-1">What will happen?</p>
+                          <ul className="list-disc list-inside space-y-1 text-xs">
+                            <li>Shipment will be created in Shiprocket</li>
+                            <li>AWB number will be auto-generated</li>
+                            <li>Pickup will be scheduled automatically</li>
+                            <li>Order will be updated with tracking details</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => {
+                          setShowShiprocketModal(false);
+                          setAvailableCouriers([]);
+                          setSelectedCourierId(null);
+                        }}
+                        className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                        disabled={creatingShipment}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleCreateShiprocketShipment}
+                        disabled={!selectedCourierId || creatingShipment}
+                        className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {creatingShipment ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Creating Shipment...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Create Shipment
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
