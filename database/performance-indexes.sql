@@ -128,9 +128,9 @@ WHERE status = 'active';
 -- USER INDEXES
 -- ============================================
 
--- Index for user phone lookup (already exists, but ensuring)
-CREATE INDEX IF NOT EXISTS idx_users_phone
-ON spf_users(phone);
+-- Index for user mobile lookup (already exists, but ensuring)
+CREATE INDEX IF NOT EXISTS idx_users_mobile
+ON spf_users(mobile);
 
 -- Index for admin users
 CREATE INDEX IF NOT EXISTS idx_users_admin
