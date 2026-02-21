@@ -75,7 +75,7 @@ export async function sendSMS(params: SMSParams): Promise<{ success: boolean; er
  */
 export async function sendWhatsApp(params: WhatsAppParams): Promise<{ success: boolean; error?: string }> {
   const apiKey = process.env.GUPSHUP_API_KEY;
-  const appName = process.env.GUPSHUP_APP_NAME || 'SwetaFashionPoints';
+  const appName = process.env.GUPSHUP_APP_NAME || 'FashionPoints';
   const sourceNumber = process.env.GUPSHUP_SOURCE_NUMBER;
 
   if (!apiKey || !sourceNumber) {
@@ -143,13 +143,13 @@ export async function sendPaymentNotification(params: PaymentNotificationParams)
   let whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_SUCCESS || '';
 
   if (status === 'success') {
-    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} was successful! Your order is being processed. Track at: swetafashionpoints.com/orders - Sweta Fashion Points`;
+    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} was successful! Your order is being processed. Track at: fashionpoints.co.in/orders - Fashion Points`;
     whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_SUCCESS || 'payment_success';
   } else if (status === 'failed') {
-    message = `Hi ${name}, payment of ₹${formattedAmount} for order ${orderNumber} failed. Please try again or contact support. - Sweta Fashion Points`;
+    message = `Hi ${name}, payment of ₹${formattedAmount} for order ${orderNumber} failed. Please try again or contact support. - Fashion Points`;
     whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_FAILED || 'payment_failed';
   } else if (status === 'pending') {
-    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} is pending verification. You'll be notified once confirmed. - Sweta Fashion Points`;
+    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} is pending verification. You'll be notified once confirmed. - Fashion Points`;
     whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_PENDING || 'payment_pending';
   }
 

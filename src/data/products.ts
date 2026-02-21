@@ -18,7 +18,7 @@ export interface Product {
   productId?: string;
   name: string;
   nameHi: string;
-  category: 'mens' | 'womens' | 'sarees' | 'kids';
+  category: 'mens' | 'womens' | 'sarees' | 'kids' | 'makeup';
   subCategory: string;
   price: number;
   originalPrice?: number;

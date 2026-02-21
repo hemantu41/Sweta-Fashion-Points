@@ -71,8 +71,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>Sweta</span>
-            <span className="text-lg font-light text-[#6B6B6B] tracking-wide">Fashion Points</span>
+            <span className="text-2xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>Fashion Points</span>
           </Link>
 
           {/* Desktop Navigation */}

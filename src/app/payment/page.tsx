@@ -152,7 +152,7 @@ function PaymentContent() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: order.totalPrice * 100, // Amount in paise
         currency: 'INR',
-        name: 'Sweta Fashion Points',
+        name: 'Fashion Points',
         description: `Order #${orderNumber}`,
         order_id: razorpayOrderId,
         prefill: {
@@ -491,7 +491,7 @@ function PaymentContent() {
           <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
             Order Placed Successfully!
           </h1>
-          <p className="text-[#6B6B6B] mb-6">Thank you for shopping with Sweta Fashion Points</p>
+          <p className="text-[#6B6B6B] mb-6">Thank you for shopping with Fashion Points</p>
 
           {/* Order Number */}
           <div className="bg-white rounded-xl border border-[#E8E2D9] p-4 mb-6">

@@ -43,7 +43,7 @@ export default function LocationSection() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">{t('contact.address')}</h3>
-                  <p className="text-gray-600">Sweta Fashion Points</p>
+                  <p className="text-gray-600">Fashion Points</p>
                   <p className="text-gray-600">Amas, Gaya, Bihar - 824219</p>
                 </div>
               </div>

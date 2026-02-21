@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { productCache } from '@/lib/cache';
 
 // GET /api/admin/products/review - Fetch products pending approval
 export async function GET(request: NextRequest) {
@@ -100,6 +101,10 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Clear product cache after approval/rejection
+    productCache.clear();
+    console.log('[Admin Product Review API] Cache cleared after product approval/rejection');
 
     return NextResponse.json({
       success: true,

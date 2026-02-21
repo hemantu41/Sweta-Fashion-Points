@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { HeroSection, CategoryCard, ProductCard, WhyChooseUs, LocationSection, CollectionSection, BannerCarousel } from '@/components';
+import { CategoryCard, ProductCard, WhyChooseUs, LocationSection, CollectionSection, BannerCarousel } from '@/components';
 import { categories } from '@/data/products';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -37,14 +37,11 @@ export default function Home() {
 
   return (
     <>
-      {/* Hero Section */}
-      <HeroSection />
+      {/* Banner Carousel - Sliding banners for all collections */}
+      <BannerCarousel />
 
       {/* Collection Section - Shows all 5 collections with representative photos */}
       <CollectionSection />
-
-      {/* Banner Carousel - Sliding banners for all collections */}
-      <BannerCarousel />
 
       {/* New Arrivals Section - Premium Design */}
       {newArrivals.length > 0 && (

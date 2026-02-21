@@ -60,7 +60,9 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const url = '/api/products?isActive=all&includeAllStatuses=true';
+      // Add timestamp to bust both browser and server cache
+      const timestamp = Date.now();
+      const url = `/api/products?isActive=all&includeAllStatuses=true&_t=${timestamp}`;
       const response = await fetch(url, { cache: 'no-store' });
       const data = await response.json();
       setProducts(data.products || []);

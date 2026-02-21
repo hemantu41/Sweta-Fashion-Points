@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     // Create Razorpay QR Code
     const qrCode = await razorpay.qrCode.create({
       type: 'upi_qr',
-      name: 'Sweta Fashion Points',
+      name: 'Fashion Points',
       usage: 'single_use',
       fixed_amount: true,
       payment_amount: amount,

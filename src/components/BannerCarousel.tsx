@@ -20,6 +20,18 @@ interface Banner {
 
 const banners: Banner[] = [
   {
+    id: 'welcome',
+    title: 'Your Style, Your Story',
+    titleHi: 'आपकी शैली, आपकी कहानी',
+    subtitle: 'Amas, Gaya, Bihar | fashionpoints.co.in',
+    subtitleHi: 'अमास, गया, बिहार | fashionpoints.co.in',
+    buttonText: 'Shop Now',
+    buttonTextHi: 'अभी खरीदें',
+    link: '/shop',
+    bgGradient: 'from-purple-50 via-pink-50 to-rose-50',
+    icon: '✨',
+  },
+  {
     id: 'mens',
     title: "Men's Collection",
     titleHi: 'पुरुषों का कलेक्शन',
@@ -106,9 +118,9 @@ export default function BannerCarousel() {
   const prevSlide = () => goToSlide((currentSlide - 1 + banners.length) % banners.length);
 
   return (
-    <section className="relative w-full h-[450px] md:h-[550px] overflow-hidden bg-[#FAF7F2]">
-      {/* Slides */}
-      <div className="relative h-full">
+    <section className="relative w-full py-12 bg-[#FAF7F2]">
+      <div className="max-w-[95%] mx-auto px-4">
+        <div className="relative h-[450px] md:h-[550px] overflow-hidden rounded-2xl shadow-2xl">
         {banners.map((banner, index) => (
           <div
             key={banner.id}
@@ -180,43 +192,44 @@ export default function BannerCarousel() {
             </div>
           </div>
         ))}
-      </div>
 
-      {/* Navigation - Minimal & Premium */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-md"
-        aria-label="Previous"
-      >
-        <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
+        {/* Navigation - Minimal & Premium */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-md"
+          aria-label="Previous"
+        >
+          <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-      <button
-        onClick={nextSlide}
-        className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-md"
-        aria-label="Next"
-      >
-        <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
+        <button
+          onClick={nextSlide}
+          className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-md"
+          aria-label="Next"
+        >
+          <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
-      {/* Dots - Clean & Minimal */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-        {banners.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`transition-all duration-300 rounded-full ${
-              index === currentSlide
-                ? 'w-10 h-2 bg-[#722F37]'
-                : 'w-2 h-2 bg-[#722F37]/40 hover:bg-[#722F37]/60'
-            }`}
-            aria-label={`Slide ${index + 1}`}
-          />
-        ))}
+        {/* Dots - Clean & Minimal */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          {banners.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`transition-all duration-300 rounded-full ${
+                index === currentSlide
+                  ? 'w-10 h-2 bg-[#722F37]'
+                  : 'w-2 h-2 bg-[#722F37]/40 hover:bg-[#722F37]/60'
+              }`}
+              aria-label={`Slide ${index + 1}`}
+            />
+          ))}
+        </div>
+        </div>
       </div>
     </section>
   );

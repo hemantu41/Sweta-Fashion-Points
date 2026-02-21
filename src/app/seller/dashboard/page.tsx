@@ -86,8 +86,10 @@ export default function SellerDashboardPage() {
       setSeller(sellerData.seller);
 
       // Fetch products - this will be faster now
+      // Add timestamp to bust both browser and server cache
+      const timestamp = Date.now();
       const productsResponse = await fetch(
-        `/api/products?sellerId=${sellerData.seller.id}&isActive=all`,
+        `/api/products?sellerId=${sellerData.seller.id}&isActive=all&_t=${timestamp}`,
         { cache: 'no-store' }
       );
       const productsData = await productsResponse.json();

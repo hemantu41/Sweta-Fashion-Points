@@ -241,7 +241,7 @@ export default function SellerAddProductPage() {
                   value={formData.shopName}
                   onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  placeholder="e.g., Sweta Fashion Store"
+                  placeholder="e.g., Fashion Store"
                 />
               </div>
               <div>

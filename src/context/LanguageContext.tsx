@@ -45,7 +45,7 @@ const translations: Record<Language, Record<string, string>> = {
     'cat.kidsDesc': 'Comfortable & Stylish',
 
     // Why Choose Us
-    'why.title': 'Why Choose Sweta Fashion Points?',
+    'why.title': 'Why Choose Fashion Points?',
     'why.quality': 'Premium Quality',
     'why.qualityDesc': 'Handpicked fabrics and materials for lasting comfort',
     'why.price': 'Affordable Prices',

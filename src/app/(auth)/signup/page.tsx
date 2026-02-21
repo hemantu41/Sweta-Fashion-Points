@@ -241,7 +241,7 @@ export default function SignupPage() {
           <Link href="/" className="inline-block">
             <Image
               src="/images/logo.png"
-              alt="Sweta Fashion Points"
+              alt="Fashion Points"
               width={120}
               height={120}
               className="mx-auto"
@@ -250,7 +250,7 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold text-[#722F37] mt-4" style={{ fontFamily: 'var(--font-playfair)' }}>
             Create Account
           </h1>
-          <p className="text-[#6B6B6B] mt-2">Join Sweta Fashion Points</p>
+          <p className="text-[#6B6B6B] mt-2">Join Fashion Points</p>
         </div>
 
         {/* Form */}

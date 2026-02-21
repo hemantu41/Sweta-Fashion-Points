@@ -13,8 +13,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center space-x-2 mb-5">
-              <span className="text-2xl font-bold text-[#C9A962]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>Sweta</span>
-              <span className="text-lg font-light text-gray-300 tracking-wide">Fashion Points</span>
+              <span className="text-2xl font-bold text-[#C9A962]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>Fashion Points</span>
             </div>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
               {t('footer.tagline')}
@@ -141,7 +140,7 @@ export default function Footer() {
         <div className="border-t border-[#2D2D2D] mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} Sweta Fashion Points. {t('footer.rights')}.
+              © {new Date().getFullYear()} Fashion Points. {t('footer.rights')}.
             </p>
             <p className="text-[#C9A962] text-sm tracking-wider">
               fashionpoints.co.in

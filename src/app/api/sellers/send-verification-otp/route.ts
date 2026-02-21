@@ -75,13 +75,13 @@ export async function POST(request: NextRequest) {
       }
 
       const { error: emailError } = await resend.emails.send({
-        from: 'Sweta Fashion Points <noreply@fashionpoints.co.in>',
+        from: 'Fashion Points <noreply@fashionpoints.co.in>',
         to: value,
-        subject: 'Verify Your Business Email - Sweta Fashion Points',
+        subject: 'Verify Your Business Email - Fashion Points',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #722F37; margin: 0;">Sweta Fashion Points</h1>
+              <h1 style="color: #722F37; margin: 0;">Fashion Points</h1>
               <p style="color: #6B6B6B; margin-top: 10px;">Seller Registration Verification</p>
             </div>
             <div style="background: #f8f8f8; padding: 30px; border-radius: 10px; text-align: center;">
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       }
     } else if (type === 'phone') {
       // Send OTP via SMS
-      const smsMessage = `Your OTP for seller registration at Sweta Fashion Points is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
+      const smsMessage = `Your OTP for seller registration at Fashion Points is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
 
       const smsResult = await sendSMS({
         phone: value,

@@ -135,7 +135,7 @@ export default function LoginPage() {
           <Link href="/" className="inline-block">
             <Image
               src="/images/logo.png"
-              alt="Sweta Fashion Points"
+              alt="Fashion Points"
               width={120}
               height={120}
               className="mx-auto"

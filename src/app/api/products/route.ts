@@ -23,8 +23,9 @@ export async function GET(request: NextRequest) {
     const priceRange = searchParams.get('priceRange');
     const isActive = searchParams.get('isActive');
     const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
+    // Note: _t parameter is ignored for cache key (used only for browser cache busting)
 
-    // Create unique cache key based on query parameters
+    // Create unique cache key based on query parameters (excluding _t)
     const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}`;
 
     // Fetch products with caching (10 minute TTL)
