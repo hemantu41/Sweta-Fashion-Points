@@ -149,29 +149,22 @@ export default function BannerCarousel() {
             <div className="relative h-full flex items-center">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                 <div className="max-w-3xl">
-                  {/* Badge */}
-                  <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm border border-[#E8E2D9] rounded-full text-sm font-medium text-[#722F37] mb-6 animate-fade-in shadow-md">
-                    <span className="text-xl">{banner.icon}</span>
-                    <span className="tracking-wide">{language === 'hi' ? 'नया संग्रह' : 'NEW COLLECTION'}</span>
-                  </div>
-
                   {/* Title */}
                   <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-[#2D2D2D] leading-tight mb-6 animate-fade-in" style={{
-                    fontFamily: 'var(--font-playfair), Playfair Display, serif',
-                    animationDelay: '200ms'
+                    fontFamily: 'var(--font-playfair), Playfair Display, serif'
                   }}>
                     {language === 'hi' ? banner.titleHi : banner.title}
                   </h1>
 
                   {/* Subtitle */}
                   <p className="text-xl md:text-2xl text-[#6B6B6B] mb-10 leading-relaxed font-light animate-fade-in" style={{
-                    animationDelay: '400ms'
+                    animationDelay: '200ms'
                   }}>
                     {language === 'hi' ? banner.subtitleHi : banner.subtitle}
                   </p>
 
                   {/* CTA Button */}
-                  <div className="animate-fade-in" style={{ animationDelay: '600ms' }}>
+                  <div className="animate-fade-in" style={{ animationDelay: '400ms' }}>
                     <Link
                       href={banner.link}
                       className="group inline-flex items-center gap-3 px-8 py-4 bg-[#722F37] text-white font-semibold rounded-full hover:bg-[#5A252C] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
