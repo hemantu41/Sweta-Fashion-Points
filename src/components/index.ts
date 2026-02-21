@@ -9,3 +9,5 @@ export { default as LocationSection } from './LocationSection';
 export { default as CloudinaryImage } from './CloudinaryImage';
 export { default as AuthGuard } from './AuthGuard';
 export { default as MainLayout } from './MainLayout';
+export { default as CollectionSection } from './CollectionSection';
+export { default as BannerCarousel } from './BannerCarousel';

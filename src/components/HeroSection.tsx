@@ -38,32 +38,9 @@ export default function HeroSection() {
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-[#6B6B6B] mb-10 max-w-2xl mx-auto leading-relaxed font-light">
+          <p className="text-lg md:text-xl text-[#6B6B6B] mb-16 max-w-2xl mx-auto leading-relaxed font-light">
             {t('hero.subtitle')}
           </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link
-              href="/sarees"
-              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-medium rounded-full hover:shadow-xl hover:shadow-[#722F37]/25 transition-all duration-300 transform hover:-translate-y-0.5"
-            >
-              {t('hero.shopNow')}
-              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
-            <Link
-              href="/contact"
-              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 bg-white border-2 border-[#722F37] text-[#722F37] font-medium rounded-full hover:bg-[#722F37] hover:text-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {t('contact.visitStore')}
-            </Link>
-          </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 max-w-xl mx-auto">
