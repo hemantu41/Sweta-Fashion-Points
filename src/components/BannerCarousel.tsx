@@ -28,7 +28,7 @@ const banners: Banner[] = [
     buttonText: 'Explore Collection',
     buttonTextHi: 'कलेक्शन देखें',
     link: '/mens',
-    bgGradient: 'from-slate-900 via-gray-800 to-slate-900',
+    bgGradient: 'from-blue-50 via-slate-50 to-blue-50',
     icon: '👔',
   },
   {
@@ -40,7 +40,7 @@ const banners: Banner[] = [
     buttonText: 'Discover Styles',
     buttonTextHi: 'स्टाइल्स खोजें',
     link: '/womens',
-    bgGradient: 'from-rose-900 via-pink-800 to-rose-900',
+    bgGradient: 'from-pink-50 via-rose-50 to-pink-50',
     icon: '👗',
   },
   {
@@ -52,7 +52,7 @@ const banners: Banner[] = [
     buttonText: 'View Sarees',
     buttonTextHi: 'साड़ियां देखें',
     link: '/sarees',
-    bgGradient: 'from-purple-900 via-violet-800 to-purple-900',
+    bgGradient: 'from-purple-50 via-violet-50 to-purple-50',
     icon: '🥻',
   },
   {
@@ -64,7 +64,7 @@ const banners: Banner[] = [
     buttonText: 'Shop Kids',
     buttonTextHi: 'बच्चों के लिए खरीदें',
     link: '/kids',
-    bgGradient: 'from-amber-600 via-orange-600 to-amber-600',
+    bgGradient: 'from-amber-50 via-orange-50 to-amber-50',
     icon: '👶',
   },
   {
@@ -76,7 +76,7 @@ const banners: Banner[] = [
     buttonText: 'Explore Beauty',
     buttonTextHi: 'ब्यूटी देखें',
     link: '/makeup',
-    bgGradient: 'from-red-800 via-pink-700 to-red-800',
+    bgGradient: 'from-red-50 via-pink-50 to-red-50',
     icon: '💄',
   },
 ];
@@ -106,7 +106,7 @@ export default function BannerCarousel() {
   const prevSlide = () => goToSlide((currentSlide - 1 + banners.length) % banners.length);
 
   return (
-    <section className="relative w-full h-[450px] md:h-[550px] overflow-hidden bg-gray-900">
+    <section className="relative w-full h-[450px] md:h-[550px] overflow-hidden bg-[#FAF7F2]">
       {/* Slides */}
       <div className="relative h-full">
         {banners.map((banner, index) => (
@@ -127,22 +127,20 @@ export default function BannerCarousel() {
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url(${banner.bgImage})` }}
                   ></div>
-                  {/* Dark Overlay for text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/50"></div>
+                  {/* Light Overlay for subtle effect */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/20 via-white/10 to-white/5"></div>
                 </>
               ) : (
                 <>
                   {/* Gradient Background */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${banner.bgGradient}`}></div>
-                  {/* Overlay Pattern */}
-                  <div className="absolute inset-0 opacity-10">
+                  {/* Subtle Pattern */}
+                  <div className="absolute inset-0 opacity-5">
                     <div className="absolute inset-0" style={{
-                      backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+                      backgroundImage: 'radial-gradient(circle at 2px 2px, #722F37 1px, transparent 0)',
                       backgroundSize: '48px 48px'
                     }}></div>
                   </div>
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20"></div>
                 </>
               )}
             </div>
@@ -152,24 +150,22 @@ export default function BannerCarousel() {
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                 <div className="max-w-3xl">
                   {/* Badge */}
-                  <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-sm font-medium text-white mb-6 animate-fade-in">
+                  <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm border border-[#E8E2D9] rounded-full text-sm font-medium text-[#722F37] mb-6 animate-fade-in shadow-md">
                     <span className="text-xl">{banner.icon}</span>
                     <span className="tracking-wide">{language === 'hi' ? 'नया संग्रह' : 'NEW COLLECTION'}</span>
                   </div>
 
                   {/* Title */}
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6 animate-fade-in" style={{
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-[#2D2D2D] leading-tight mb-6 animate-fade-in" style={{
                     fontFamily: 'var(--font-playfair), Playfair Display, serif',
-                    animationDelay: '200ms',
-                    textShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                    animationDelay: '200ms'
                   }}>
                     {language === 'hi' ? banner.titleHi : banner.title}
                   </h1>
 
                   {/* Subtitle */}
-                  <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed font-light animate-fade-in" style={{
-                    animationDelay: '400ms',
-                    textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  <p className="text-xl md:text-2xl text-[#6B6B6B] mb-10 leading-relaxed font-light animate-fade-in" style={{
+                    animationDelay: '400ms'
                   }}>
                     {language === 'hi' ? banner.subtitleHi : banner.subtitle}
                   </p>
@@ -178,7 +174,7 @@ export default function BannerCarousel() {
                   <div className="animate-fade-in" style={{ animationDelay: '600ms' }}>
                     <Link
                       href={banner.link}
-                      className="group inline-flex items-center gap-3 px-8 py-4 bg-white text-gray-900 font-semibold rounded-full hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:shadow-white/20 transform hover:scale-105"
+                      className="group inline-flex items-center gap-3 px-8 py-4 bg-[#722F37] text-white font-semibold rounded-full hover:bg-[#5A252C] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                       <span className="tracking-wide">{language === 'hi' ? banner.buttonTextHi : banner.buttonText}</span>
                       <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,20 +192,20 @@ export default function BannerCarousel() {
       {/* Navigation - Minimal & Premium */}
       <button
         onClick={prevSlide}
-        className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/20 rounded-full flex items-center justify-center transition-all duration-300 group"
+        className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-md"
         aria-label="Previous"
       >
-        <svg className="w-6 h-6 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
       </button>
 
       <button
         onClick={nextSlide}
-        className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/20 rounded-full flex items-center justify-center transition-all duration-300 group"
+        className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-md"
         aria-label="Next"
       >
-        <svg className="w-6 h-6 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
@@ -222,8 +218,8 @@ export default function BannerCarousel() {
             onClick={() => goToSlide(index)}
             className={`transition-all duration-300 rounded-full ${
               index === currentSlide
-                ? 'w-10 h-2 bg-white'
-                : 'w-2 h-2 bg-white/40 hover:bg-white/60'
+                ? 'w-10 h-2 bg-[#722F37]'
+                : 'w-2 h-2 bg-[#722F37]/40 hover:bg-[#722F37]/60'
             }`}
             aria-label={`Slide ${index + 1}`}
           />
