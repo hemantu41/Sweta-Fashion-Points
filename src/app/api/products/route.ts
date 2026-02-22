@@ -23,10 +23,11 @@ export async function GET(request: NextRequest) {
     const priceRange = searchParams.get('priceRange');
     const isActive = searchParams.get('isActive');
     const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
+    const search = searchParams.get('search'); // NEW: Search query
     // Note: _t parameter is ignored for cache key (used only for browser cache busting)
 
     // Create unique cache key based on query parameters (excluding _t)
-    const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}`;
+    const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}:${search || 'none'}`;
 
     // Fetch products with caching (10 minute TTL)
     const transformedProducts = await getCachedData(
@@ -68,6 +69,10 @@ export async function GET(request: NextRequest) {
           query = query.eq('seller_id', sellerId);
           // Sellers should not see their deleted products
           query = query.is('deleted_at', null);
+        }
+        if (search) {
+          // Search in name, description, category, and subcategory
+          query = query.or(`name.ilike.%${search}%,name_hi.ilike.%${search}%,description.ilike.%${search}%,description_hi.ilike.%${search}%,category.ilike.%${search}%,sub_category.ilike.%${search}%`);
         }
 
         // IMPORTANT: Only show approved products for customer-facing queries

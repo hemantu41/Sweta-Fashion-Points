@@ -56,7 +56,7 @@ const translations: Record<Language, Record<string, string>> = {
     'why.trustDesc': 'Serving families in Gaya region for years',
 
     // Contact
-    'contact.title': 'Visit Our Store',
+    'contact.title': 'Contact Us',
     'contact.address': 'Address',
     'contact.phone': 'Phone',
     'contact.hours': 'Business Hours',
@@ -173,7 +173,7 @@ const translations: Record<Language, Record<string, string>> = {
     'why.trustDesc': 'वर्षों से गया क्षेत्र के परिवारों की सेवा',
 
     // Contact
-    'contact.title': 'हमारे स्टोर पर आएं',
+    'contact.title': 'संपर्क करें',
     'contact.address': 'पता',
     'contact.phone': 'फोन',
     'contact.hours': 'व्यापार के घंटे',

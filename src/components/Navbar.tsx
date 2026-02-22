@@ -10,6 +10,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { t } = useLanguage();
   const { user, logout, isAuthenticated, isAdmin, isApprovedSeller, isActiveDeliveryPartner, deliveryPartnerId } = useAuth();
   const { totalItems } = useCart();
@@ -27,13 +28,10 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { href: '/', label: t('nav.home') },
     { href: '/mens', label: t('nav.mens') },
     { href: '/womens', label: t('nav.womens') },
-    { href: '/sarees', label: t('nav.sarees'), highlight: true },
+    { href: '/sarees', label: t('nav.sarees') },
     { href: '/kids', label: t('nav.kids') },
-    { href: '/new-arrivals', label: t('nav.newArrivals') },
-    { href: '/contact', label: t('nav.visitStore') },
   ];
 
   const userMenuItems = [
@@ -65,14 +63,42 @@ export default function Navbar() {
     setIsUserMenuOpen(false);
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+    }
+  };
+
   return (
     <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-[#E8E2D9]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
             <span className="text-2xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>Fashion Points</span>
           </Link>
+
+          {/* Search Bar - Desktop */}
+          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-md mx-6">
+            <div className="relative w-full">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for products..."
+                className="w-full px-4 py-2.5 pl-11 pr-4 bg-[#F5F0E8] border border-[#E8E2D9] rounded-full text-sm text-[#2D2D2D] placeholder-[#6B6B6B] focus:outline-none focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
+              />
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B6B6B]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </form>
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1">
@@ -80,14 +106,9 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-4 py-2 text-sm font-medium tracking-wide transition-all duration-300 ${
-                  link.highlight
-                    ? 'bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white rounded-full hover:shadow-lg hover:shadow-[#722F37]/20'
-                    : 'text-[#2D2D2D] hover:text-[#722F37] elegant-underline'
-                }`}
+                className="px-4 py-2 text-sm font-bold tracking-wide transition-all duration-300 text-[#2D2D2D] hover:text-[#722F37] elegant-underline"
               >
                 {link.label}
-                {link.highlight && <span className="ml-1 text-[#C9A962]">✦</span>}
               </Link>
             ))}
           </div>
@@ -384,20 +405,36 @@ export default function Navbar() {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="lg:hidden py-6 border-t border-[#E8E2D9]">
+            {/* Search Bar - Mobile */}
+            <form onSubmit={handleSearch} className="mb-4 px-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search for products..."
+                  className="w-full px-4 py-3 pl-11 pr-4 bg-[#F5F0E8] border border-[#E8E2D9] rounded-full text-sm text-[#2D2D2D] placeholder-[#6B6B6B] focus:outline-none focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                />
+                <svg
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B6B6B]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </form>
+
             <div className="flex flex-col space-y-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`px-4 py-3 rounded-lg text-base font-medium transition-colors ${
-                    link.highlight
-                      ? 'bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white'
-                      : 'text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8]'
-                  }`}
+                  className="px-4 py-3 rounded-lg text-base font-bold transition-colors text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8]"
                 >
                   {link.label}
-                  {link.highlight && <span className="ml-2 text-[#C9A962]">✦</span>}
                 </Link>
               ))}
             </div>
