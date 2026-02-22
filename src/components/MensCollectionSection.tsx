@@ -100,7 +100,7 @@ export default function MensCollectionSection() {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Circular Card Container */}
-              <div className="relative w-40 h-40 md:w-48 md:h-48 mb-4">
+              <div className="relative w-48 h-48 md:w-64 md:h-64 mb-4">
                 {/* Gradient Background Circle */}
                 <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${category.bgGradient} transition-all duration-300 group-hover:scale-105`}></div>
 
@@ -124,21 +124,6 @@ export default function MensCollectionSection() {
               </h3>
             </Link>
           ))}
-        </div>
-
-        {/* View All Button */}
-        <div className="text-center mt-10">
-          <Link
-            href="/mens"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-[#722F37] text-white font-semibold rounded-full hover:bg-[#5A252C] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            <span className="tracking-wide">
-              {language === 'hi' ? 'सभी पुरुषों के उत्पाद देखें' : 'View All Men\'s Products'}
-            </span>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </Link>
         </div>
       </div>
     </section>
