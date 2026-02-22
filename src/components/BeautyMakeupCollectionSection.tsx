@@ -21,7 +21,7 @@ const beautyCategories: BeautyCategory[] = [
     nameHi: 'स्किनकेयर',
     description: 'Glow & Radiance',
     descriptionHi: 'चमक और निखार',
-    link: '/beauty?category=skincare',
+    link: '/makeup?category=skincare',
     bgGradient: 'from-pink-100 via-rose-100 to-pink-200',
     bgImage: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
@@ -31,7 +31,7 @@ const beautyCategories: BeautyCategory[] = [
     nameHi: 'मेकअप',
     description: 'Beauty Essentials',
     descriptionHi: 'ब्यूटी एसेंशियल',
-    link: '/beauty?category=makeup',
+    link: '/makeup?category=makeup',
     bgGradient: 'from-purple-100 via-fuchsia-100 to-purple-200',
     bgImage: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
@@ -41,7 +41,7 @@ const beautyCategories: BeautyCategory[] = [
     nameHi: 'फ्रेगरेंस',
     description: 'Signature Scents',
     descriptionHi: 'खास सुगंध',
-    link: '/beauty?category=fragrance',
+    link: '/makeup?category=fragrance',
     bgGradient: 'from-violet-100 via-indigo-100 to-violet-200',
     bgImage: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
@@ -51,7 +51,7 @@ const beautyCategories: BeautyCategory[] = [
     nameHi: 'हेयर केयर',
     description: 'Healthy & Shiny',
     descriptionHi: 'स्वस्थ और चमकदार',
-    link: '/beauty?category=haircare',
+    link: '/makeup?category=haircare',
     bgGradient: 'from-teal-100 via-cyan-100 to-teal-200',
     bgImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
@@ -165,7 +165,7 @@ export default function BeautyMakeupCollectionSection() {
         {/* View All Button */}
         <div className="text-center mt-10">
           <Link
-            href="/beauty"
+            href="/makeup"
             className="inline-flex items-center gap-2 px-8 py-3 bg-[#722F37] text-white font-semibold rounded-full hover:bg-[#5A252C] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <span className="tracking-wide">

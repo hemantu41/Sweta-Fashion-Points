@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ProductCard } from '@/components';
 import { sareesSubCategories } from '@/data/products';
 import { useLanguage } from '@/context/LanguageContext';
@@ -9,14 +10,23 @@ type FilterType = 'occasion' | 'price';
 
 export default function SareesPage() {
   const { language } = useLanguage();
+  const searchParams = useSearchParams();
+  const categoryFromUrl = searchParams.get('category');
   const [filterType, setFilterType] = useState<FilterType>('occasion');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(categoryFromUrl);
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Update active category when URL changes
+  useEffect(() => {
+    if (categoryFromUrl) {
+      setActiveCategory(categoryFromUrl);
+    }
+  }, [categoryFromUrl]);
 
   const fetchProducts = async () => {
     try {

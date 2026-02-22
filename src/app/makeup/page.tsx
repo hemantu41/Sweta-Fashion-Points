@@ -1,23 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ProductCard } from '@/components';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function MakeupPage() {
   const { language } = useLanguage();
+  const searchParams = useSearchParams();
+  const categoryFromUrl = searchParams.get('category');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>(categoryFromUrl || 'all');
 
   const subCategories = [
     { id: 'all', name: 'All Products', nameHi: 'सभी प्रोडक्ट्स' },
-    { id: 'lipstick', name: 'Lipsticks', nameHi: 'लिपस्टिक' },
-    { id: 'foundation', name: 'Foundation', nameHi: 'फाउंडेशन' },
-    { id: 'eyeshadow', name: 'Eyeshadow', nameHi: 'आईशैडो' },
-    { id: 'mascara', name: 'Mascara', nameHi: 'मस्कारा' },
     { id: 'skincare', name: 'Skincare', nameHi: 'स्किनकेयर' },
+    { id: 'makeup', name: 'Makeup', nameHi: 'मेकअप' },
+    { id: 'fragrance', name: 'Fragrance', nameHi: 'परफ्यूम' },
+    { id: 'haircare', name: 'Hair Care', nameHi: 'हेयर केयर' },
   ];
+
+  // Update category when URL changes
+  useEffect(() => {
+    if (categoryFromUrl && categoryFromUrl !== 'all') {
+      setSelectedSubCategory(categoryFromUrl);
+    }
+  }, [categoryFromUrl]);
 
   useEffect(() => {
     fetchProducts();
