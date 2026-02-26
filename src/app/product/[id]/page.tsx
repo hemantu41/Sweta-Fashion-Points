@@ -1,0 +1,683 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { CldImage } from 'next-cloudinary';
+import { useParams } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
+import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+
+const sizeChartData: Record<string, { headers: { en: string[]; hi: string[] }; rows: string[][] }> = {
+  mens_top: {
+    headers: {
+      en: ['Size', 'Chest (in)', 'Length (in)', 'Shoulder (in)'],
+      hi: ['साइज़', 'छाती (इंच)', 'लंबाई (इंच)', 'कंधा (इंच)'],
+    },
+    rows: [
+      ['S', '36', '27', '16'],
+      ['M', '38', '28', '17'],
+      ['L', '40', '29', '17.5'],
+      ['XL', '42', '30', '18'],
+      ['XXL', '44', '31', '18.5'],
+    ],
+  },
+  mens_bottom: {
+    headers: {
+      en: ['Size', 'Waist (in)', 'Length (in)'],
+      hi: ['साइज़', 'कमर (इंच)', 'लंबाई (इंच)'],
+    },
+    rows: [
+      ['30', '30', '30'],
+      ['32', '32', '30.5'],
+      ['34', '34', '31'],
+      ['36', '36', '31.5'],
+      ['38', '38', '32'],
+    ],
+  },
+  womens: {
+    headers: {
+      en: ['Size', 'Bust (in)', 'Waist (in)', 'Hips (in)'],
+      hi: ['साइज़', 'बस्ट (इंच)', 'कमर (इंच)', 'हिप (इंच)'],
+    },
+    rows: [
+      ['XS', '32', '24', '34'],
+      ['S', '34', '26', '36'],
+      ['M', '36', '28', '38'],
+      ['L', '38', '30', '40'],
+      ['XL', '40', '32', '42'],
+    ],
+  },
+  kids: {
+    headers: {
+      en: ['Size', 'Age', 'Height (cm)', 'Chest (cm)'],
+      hi: ['साइज़', 'उम्र', 'ऊंचाई (सेमी)', 'छाती (सेमी)'],
+    },
+    rows: [
+      ['4-6Y', '4-6 Yrs', '100-115', '54-58'],
+      ['6-8Y', '6-8 Yrs', '115-125', '58-62'],
+      ['8-10Y', '8-10 Yrs', '125-140', '62-67'],
+    ],
+  },
+};
+
+function getSizeChartKey(category: string, subCategory: string): string {
+  if (category === 'mens' && subCategory === 'jeans') return 'mens_bottom';
+  if (category === 'mens') return 'mens_top';
+  if (category === 'womens') return 'womens';
+  if (category === 'kids') return 'kids';
+  return 'mens_top';
+}
+
+// Parse beauty product fabric field (format: "Brand: X, Shade: Y, Volume: Z, Expiry: W months")
+function parseBeautyDetails(fabric: string): { brand?: string; shade?: string; volume?: string; expiry?: string } {
+  const details: any = {};
+  const parts = fabric.split(',').map(p => p.trim());
+  parts.forEach(part => {
+    const [key, value] = part.split(':').map(s => s.trim());
+    if (key && value) {
+      details[key.toLowerCase()] = value;
+    }
+  });
+  return details;
+}
+
+// Parse footwear fabric field (format: "Brand: X, Material: Y")
+function parseFootwearDetails(fabric: string): { brand?: string; material?: string } {
+  const details: any = {};
+  const parts = fabric.split(',').map(p => p.trim());
+  parts.forEach(part => {
+    const [key, value] = part.split(':').map(s => s.trim());
+    if (key && value) {
+      details[key.toLowerCase()] = value;
+    }
+  });
+  return details;
+}
+
+interface Address {
+  id: string;
+  name: string;
+  phone: string;
+  address_line1: string;
+  address_line2?: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  is_default: boolean;
+}
+
+const categoryLabels: Record<string, { en: string; hi: string }> = {
+  mens: { en: "Men's", hi: 'पुरुष' },
+  womens: { en: "Women's", hi: 'महिला' },
+  sarees: { en: 'Sarees', hi: 'साड़ियां' },
+  kids: { en: 'Kids', hi: 'बच्चे' },
+  beauty: { en: 'Beauty & Makeup', hi: 'ब्यूटी और मेकअप' },
+  footwear: { en: 'Footwear', hi: 'जूते' },
+};
+
+export default function ProductDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { language, t } = useLanguage();
+  const { addToCart } = useCart();
+  const { user, isAuthenticated } = useAuth();
+
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedColor, setSelectedColor] = useState(0);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [sizeError, setSizeError] = useState(false);
+  const [showSizeChart, setShowSizeChart] = useState(false);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
+  const [showRatingTooltip, setShowRatingTooltip] = useState(false);
+
+  // Fetch product data
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        const response = await fetch(`/api/products/${id}`, { cache: 'no-store' });
+        const data = await response.json();
+        if (response.ok && data.product) {
+          setProduct(data.product);
+        }
+      } catch (error) {
+        console.error('Failed to fetch product:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProduct();
+  }, [id]);
+
+  // Reset image index when product changes
+  useEffect(() => {
+    setSelectedImage(0);
+    setSelectedSize(null);
+    setSelectedColor(0);
+  }, [product]);
+
+  // Fetch addresses
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetch(`/api/user/addresses?userId=${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.addresses?.length > 0) {
+            setAddresses(data.addresses);
+            const def = data.addresses.find((a: Address) => a.is_default);
+            setSelectedAddress(def || data.addresses[0]);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAuthenticated, user?.id]);
+
+  // Auto-select Free Size for sarees
+  useEffect(() => {
+    if (product?.sizes?.length === 1 && product.sizes[0] === 'Free Size') {
+      setSelectedSize('Free Size');
+    }
+  }, [product]);
+
+  const isFreeSize = product?.sizes?.length === 1 && product.sizes[0] === 'Free Size';
+  const discountPercent = product?.originalPrice
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0;
+
+  const allImages = product?.images?.length > 0 ? product.images : product?.mainImage ? [product.mainImage] : [];
+  const isCloudinary = (img: string) => img && !img.startsWith('/') && !img.startsWith('http');
+
+  const sizeChartKey = product ? getSizeChartKey(product.category, product.subCategory) : 'mens_top';
+  const chartData = sizeChartData[sizeChartKey];
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    // Skip size validation for beauty/footwear products or products without sizes
+    const requiresSize = product.sizes && product.sizes.length > 0 && !isFreeSize;
+    if (requiresSize && !selectedSize) {
+      setSizeError(true);
+      return;
+    }
+    addToCart(product, selectedSize || undefined);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
+        <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-[#722F37] mb-2">Product Not Found</h1>
+          <p className="text-[#6B6B6B] mb-4">The product you're looking for doesn't exist.</p>
+          <Link href="/" className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all inline-block">
+            Return to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FAF7F2] py-6 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Breadcrumb */}
+        <nav className="text-sm text-[#6B6B6B] mb-6 flex items-center gap-2 flex-wrap">
+          <Link href="/" className="hover:text-[#722F37] transition-colors">{t('nav.home')}</Link>
+          <span>/</span>
+          <Link
+            href={product.category === 'beauty' ? '/makeup' : product.category === 'footwear' ? '/footwear' : `/${product.category}`}
+            className="hover:text-[#722F37] transition-colors"
+          >
+            {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
+          </Link>
+          <span>/</span>
+          <span className="text-[#2D2D2D] font-medium truncate">{language === 'hi' ? product.nameHi : product.name}</span>
+        </nav>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Images */}
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <div className="flex gap-3">
+              {/* Vertical Thumbnails - Left Side */}
+              {allImages.length > 1 && (
+                <div className="flex flex-col gap-2">
+                  {allImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImage(idx)}
+                      className={`relative w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                        selectedImage === idx ? 'border-[#722F37] shadow-md ring-2 ring-[#722F37]' : 'border-[#E8E2D9] hover:border-[#722F37]'
+                      }`}
+                    >
+                      {isCloudinary(img) ? (
+                        <CldImage src={img} alt="" fill className="object-cover" sizes="80px" />
+                      ) : (
+                        <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Main Image - Right Side */}
+              <div className="flex-1 relative aspect-square rounded-xl overflow-hidden bg-[#F5F0E8]">
+                {allImages.length > 0 && isCloudinary(allImages[selectedImage]) ? (
+                  <CldImage
+                    src={allImages[selectedImage]}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                ) : allImages.length > 0 && !isCloudinary(allImages[selectedImage]) ? (
+                  <img src={allImages[selectedImage]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-8xl opacity-40">
+                      {product.category === 'mens' && '👔'}
+                      {product.category === 'womens' && '👗'}
+                      {product.category === 'sarees' && '🥻'}
+                      {product.category === 'kids' && '👶'}
+                      {product.category === 'beauty' && '💄'}
+                      {product.category === 'footwear' && '👟'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Details */}
+          <div className="space-y-5">
+            {/* Name & Badges */}
+            <div>
+              <div className="flex gap-2 mb-2">
+                {product.isNewArrival && (
+                  <span className="bg-[#722F37] text-white text-xs font-medium px-2.5 py-0.5 rounded-full">{t('product.newArrival')}</span>
+                )}
+                {product.isBestSeller && (
+                  <span className="bg-[#C9A962] text-white text-xs font-medium px-2.5 py-0.5 rounded-full">{t('product.bestSeller')}</span>
+                )}
+              </div>
+              <h1 className="text-2xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                {language === 'hi' ? product.nameHi : product.name}
+              </h1>
+              {product.fabric && product.category === 'beauty' && (() => {
+                const details = parseBeautyDetails(product.fabric);
+                return (
+                  <p className="text-sm text-[#6B6B6B] mt-1">
+                    {details.brand && `${details.brand}`}
+                    {details.shade && ` • ${details.shade}`}
+                    {details.volume && ` • ${details.volume}`}
+                  </p>
+                );
+              })()}
+              {product.fabric && product.category === 'footwear' && (() => {
+                const details = parseFootwearDetails(product.fabric);
+                return (
+                  <p className="text-sm text-[#6B6B6B] mt-1">
+                    {details.brand && `${details.brand}`}
+                    {details.material && ` • ${details.material}`}
+                  </p>
+                );
+              })()}
+              {product.fabric && !['beauty', 'footwear'].includes(product.category) && (
+                <p className="text-sm text-[#6B6B6B] mt-1">{language === 'hi' ? product.fabricHi : product.fabric}</p>
+              )}
+            </div>
+
+            {/* Price */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-3xl font-bold text-[#722F37]">₹{product.price.toLocaleString('en-IN')}</span>
+              {product.originalPrice && (
+                <>
+                  <span className="text-lg text-[#6B6B6B] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+                  <span className="bg-green-100 text-green-700 text-sm font-semibold px-2.5 py-0.5 rounded-full">{discountPercent}% off</span>
+                </>
+              )}
+            </div>
+
+            {/* Rating */}
+            <div className="relative inline-block">
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onMouseEnter={() => setShowRatingTooltip(true)}
+                onMouseLeave={() => setShowRatingTooltip(false)}
+              >
+                <div className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg">
+                  <span className="font-semibold">4.5</span>
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                  </svg>
+                </div>
+                <span className="text-sm text-[#6B6B6B]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
+              </div>
+
+              {/* Rating Tooltip */}
+              {showRatingTooltip && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-[#E8E2D9] rounded-xl shadow-lg p-4 w-64 z-10">
+                  <h4 className="font-semibold text-[#2D2D2D] mb-3 text-sm">{language === 'hi' ? 'रेटिंग विवरण' : 'Rating Breakdown'}</h4>
+                  <div className="space-y-2">
+                    {[
+                      { stars: 5, count: 1520, percentage: 62 },
+                      { stars: 4, count: 618, percentage: 25 },
+                      { stars: 3, count: 221, percentage: 9 },
+                      { stars: 2, count: 73, percentage: 3 },
+                      { stars: 1, count: 24, percentage: 1 },
+                    ].map(({ stars, count, percentage }) => (
+                      <div key={stars} className="flex items-center gap-2">
+                        <span className="text-xs text-[#6B6B6B] w-8">{stars} ⭐</span>
+                        <div className="flex-1 h-2 bg-[#F0EDE8] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-600 transition-all"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-[#6B6B6B] w-12 text-right">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Colors */}
+            {product.colors && product.colors.length > 0 && product.category !== 'beauty' && (
+              <div>
+                <p className="text-sm font-semibold text-[#2D2D2D] mb-2">
+                  {t('product.color')}:{' '}
+                  <span className="font-normal text-[#6B6B6B]">
+                    {language === 'hi' ? product.colors[selectedColor]?.nameHi : product.colors[selectedColor]?.name}
+                  </span>
+                </p>
+                <div className="flex gap-2">
+                  {product.colors.map((color, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSelectedColor(idx);
+                        // Change image when color changes
+                        if (allImages.length > 0) {
+                          // If multiple images exist, distribute them across colors
+                          // For example: 3 colors with 9 images = 3 images per color
+                          const imagesPerColor = Math.max(1, Math.floor(allImages.length / product.colors.length));
+                          const startIndex = idx * imagesPerColor;
+                          // Show the first image for this color, or cycle if not enough images
+                          setSelectedImage(startIndex < allImages.length ? startIndex : idx % allImages.length);
+                        }
+                      }}
+                      className={`w-8 h-8 rounded-full border-2 transition-all duration-200 ${
+                        selectedColor === idx ? 'border-[#722F37] shadow-md scale-110' : 'border-[#E8E2D9] hover:border-[#C9A962]'
+                      }`}
+                      style={{ backgroundColor: color.hex }}
+                      aria-label={color.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sizes */}
+            {(product.sizes && product.sizes.length > 0) && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-[#2D2D2D]">{t('product.size')}</p>
+                  {!isFreeSize && !['beauty', 'footwear'].includes(product.category) && (
+                    <button onClick={() => setShowSizeChart(true)} className="text-sm text-[#722F37] hover:underline transition-colors">
+                      {t('product.sizeChart')}
+                    </button>
+                  )}
+                </div>
+                {isFreeSize ? (
+                  <p className="text-sm text-[#6B6B6B] bg-[#F5F0E8] rounded-lg px-4 py-2 inline-block">
+                    {t('product.freeSize')}
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {product.sizes?.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => { setSelectedSize(size); setSizeError(false); }}
+                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                          selectedSize === size
+                            ? 'bg-[#722F37] text-white border-[#722F37]'
+                            : 'border-[#E8E2D9] text-[#2D2D2D] hover:border-[#722F37]'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {sizeError && <p className="text-red-500 text-sm mt-1.5">{t('product.selectSize')}</p>}
+              </div>
+            )}
+
+            {/* Delivery Address */}
+            <div className="bg-[#F5F0E8] rounded-lg p-4">
+              {isAuthenticated ? (
+                selectedAddress ? (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-[#2D2D2D]">{t('product.deliverTo')}</p>
+                      {addresses.length > 1 && (
+                        <button onClick={() => setShowAddressDropdown(!showAddressDropdown)} className="text-sm text-[#722F37] hover:underline transition-colors">
+                          {t('product.changeAddress')}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm text-[#6B6B6B] mt-1">
+                      <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span> —{' '}
+                      {selectedAddress.address_line1}
+                      {selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
+                    </p>
+                    {showAddressDropdown && (
+                      <div className="mt-2 border border-[#E8E2D9] rounded-lg bg-white overflow-hidden">
+                        {addresses.map((addr) => (
+                          <button
+                            key={addr.id}
+                            onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
+                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#F5F0E8] transition-colors ${
+                              selectedAddress?.id === addr.id ? 'bg-[#F5F0E8] font-medium text-[#722F37]' : 'text-[#2D2D2D]'
+                            }`}
+                          >
+                            <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
+                            {addr.is_default && <span className="ml-2 text-xs text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#6B6B6B]">
+                    {t('product.deliverTo')}{' '}
+                    <Link href="/addresses" className="text-[#722F37] hover:underline">{t('product.addAddress')}</Link>
+                  </p>
+                )
+              ) : (
+                <p className="text-sm text-[#6B6B6B]">
+                  <Link href="/login" className="text-[#722F37] hover:underline">{t('product.loginDelivery')}</Link>
+                </p>
+              )}
+            </div>
+
+            {/* Add to Cart Button */}
+            <button
+              onClick={handleAddToCart}
+              className="w-full py-4 rounded-full text-white font-semibold text-base transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-[#722F37] to-[#8B3D47] hover:shadow-lg hover:shadow-[#722F37]/25"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              {t('product.addToCart')}
+            </button>
+
+            {/* Product Details Card */}
+            <div className="bg-white rounded-xl border border-[#E8E2D9] p-5">
+              <h3 className="font-semibold text-[#2D2D2D] mb-3" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                {t('product.productDetails')}
+              </h3>
+              <div className="space-y-0 text-sm">
+                <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                  <span className="text-[#6B6B6B]">{language === 'hi' ? 'श्रेणी' : 'Category'}</span>
+                  <span className="font-medium text-[#2D2D2D]">
+                    {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
+                  </span>
+                </div>
+
+                {/* Beauty Product Details */}
+                {product.category === 'beauty' && product.fabric && (() => {
+                  const details = parseBeautyDetails(product.fabric);
+                  return (
+                    <>
+                      {details.brand && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'ब्रांड' : 'Brand'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.brand}</span>
+                        </div>
+                      )}
+                      {details.shade && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'शेड' : 'Shade'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.shade}</span>
+                        </div>
+                      )}
+                      {details.volume && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'मात्रा' : 'Volume'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.volume}</span>
+                        </div>
+                      )}
+                      {details.expiry && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'समाप्ति' : 'Expiry'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.expiry}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Footwear Product Details */}
+                {product.category === 'footwear' && product.fabric && (() => {
+                  const details = parseFootwearDetails(product.fabric);
+                  return (
+                    <>
+                      {details.brand && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'ब्रांड' : 'Brand'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.brand}</span>
+                        </div>
+                      )}
+                      {details.material && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'सामग्री' : 'Material'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.material}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Clothing Product Details */}
+                {!['beauty', 'footwear'].includes(product.category) && product.fabric && (
+                  <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                    <span className="text-[#6B6B6B]">{language === 'hi' ? 'कपड़ा' : 'Fabric'}</span>
+                    <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? product.fabricHi : product.fabric}</span>
+                  </div>
+                )}
+
+                <div className="py-2">
+                  <span className="text-[#6B6B6B]">{language === 'hi' ? 'विवरण' : 'Description'}</span>
+                  <p className="text-[#2D2D2D] mt-1 leading-relaxed">
+                    {language === 'hi' ? product.descriptionHi : product.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Seller Information Card */}
+            <div className="bg-white rounded-xl border border-[#E8E2D9] p-5">
+              <h3 className="font-semibold text-[#2D2D2D] mb-3 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                <svg className="w-5 h-5 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                {language === 'hi' ? 'विक्रेता की जानकारी' : 'Sold By'}
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="font-semibold text-[#2D2D2D] text-base">
+                    {product.seller
+                      ? (language === 'hi' && product.seller.businessNameHi ? product.seller.businessNameHi : product.seller.businessName)
+                      : (language === 'hi' ? 'स्वेता फैशन पॉइंट्स' : 'Sweta Fashion Points')}
+                  </p>
+                  {product.seller && (product.seller.city || product.seller.state) && (
+                    <p className="text-[#6B6B6B] mt-1 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {product.seller.city}{product.seller.city && product.seller.state ? ', ' : ''}{product.seller.state}
+                    </p>
+                  )}
+                </div>
+                <div className="pt-3 border-t border-[#F0EDE8]">
+                  <p className="text-xs text-[#6B6B6B]">
+                    {language === 'hi'
+                      ? '✓ भरोसेमंद विक्रेता द्वारा बेचा गया'
+                      : '✓ Sold by a verified seller'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Size Chart Modal */}
+      {showSizeChart && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                {t('product.sizeChart')}
+              </h3>
+              <button onClick={() => setShowSizeChart(false)} className="text-[#6B6B6B] hover:text-[#2D2D2D] transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[#F5F0E8]">
+                  {chartData.headers[language].map((h, i) => (
+                    <th key={i} className="text-left px-3 py-2.5 font-semibold text-[#2D2D2D]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.rows.map((row, i) => (
+                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
+                    {row.map((cell, j) => (
+                      <td key={j} className="px-3 py-2 text-[#2D2D2D]">{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
