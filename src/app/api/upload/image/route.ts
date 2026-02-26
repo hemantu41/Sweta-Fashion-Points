@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
+import { uploadImageToS3 } from '@/lib/s3-upload-optimized';
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// POST /api/upload/image - Upload image to Cloudinary
+// POST /api/upload/image - Upload image to AWS S3 with optimization
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -33,11 +26,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (max 10MB before optimization)
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size too large. Maximum size is 5MB.' },
+        { error: 'File size too large. Maximum size is 10MB.' },
         { status: 400 }
       );
     }
@@ -46,53 +39,33 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Build tags for organization
-    const tags: string[] = ['product'];
-    if (sellerId) tags.push(`seller:${sellerId}`);
-    if (category) tags.push(`category:${category}`);
-    if (productId) tags.push(`product:${productId}`);
-
-    // Determine folder structure: category-based for better organization
-    let folder = 'sweta-fashion-points';
-    if (category) {
-      folder = `sweta-fashion-points/${category}`;
-    }
-
-    // Upload to Cloudinary
-    const result = await new Promise<any>((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          resource_type: 'image',
-          tags, // Add tags for filtering and organization
-          transformation: [
-            { width: 1000, height: 1000, crop: 'limit' },
-            { quality: 'auto' },
-            { fetch_format: 'auto' }
-          ]
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-
-      uploadStream.end(buffer);
+    // Upload to S3 with optimization
+    const result = await uploadImageToS3(buffer, file.name, {
+      sellerId: sellerId || undefined,
+      category: category || undefined,
+      productId: productId || undefined,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      quality: 85,
+      generateWebP: true,
     });
 
-    // Extract the public ID from the full public_id
-    // For example: "sweta-fashion-points/abc123" -> "sweta-fashion-points/abc123"
-    const publicId = result.public_id;
+    // Return S3 key as imageId for backward compatibility
+    // Extract just the filename part from the key for compatibility with existing code
+    // For example: "products/mens/123/1234567890-image.jpg" -> full key
+    const imageId = result.key;
 
     return NextResponse.json({
       success: true,
-      imageId: publicId,
-      url: result.secure_url,
+      imageId, // This is now the S3 key instead of Cloudinary public_id
+      url: result.url,
+      webpUrl: result.webpUrl,
       width: result.width,
       height: result.height,
+      size: result.size,
     });
   } catch (error: any) {
-    console.error('Image upload error:', error);
+    console.error('[Image Upload API] Error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to upload image' },
       { status: 500 }

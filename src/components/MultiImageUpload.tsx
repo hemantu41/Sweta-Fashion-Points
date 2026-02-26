@@ -132,7 +132,13 @@ export default function MultiImageUpload({
             <div key={index} className="relative group">
               <div className="relative w-full aspect-square rounded-lg overflow-hidden border-2 border-[#E8E2D9]">
                 <Image
-                  src={`https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_300,h_300/${imageId}`}
+                  src={
+                    imageId.startsWith('http')
+                      ? imageId // Already a full URL
+                      : imageId.includes('/')
+                      ? `${process.env.NEXT_PUBLIC_CDN_URL || 'https://d3p9b9yka11dgj.cloudfront.net'}/${imageId}` // S3 key -> CloudFront URL
+                      : `https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_300,h_300/${imageId}` // Legacy Cloudinary ID
+                  }
                   alt={`Product image ${index + 1}`}
                   fill
                   className="object-cover"

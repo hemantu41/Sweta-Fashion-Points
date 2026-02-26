@@ -68,8 +68,13 @@ export default function ImageUpload({ onImageUploaded, currentImageId, label = '
     }
   };
 
+  // Support both S3 keys (full paths) and legacy Cloudinary IDs
   const currentImageUrl = currentImageId
-    ? `https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_300,h_300/${currentImageId}`
+    ? currentImageId.startsWith('http')
+      ? currentImageId // Already a full URL
+      : currentImageId.includes('/')
+      ? `${process.env.NEXT_PUBLIC_CDN_URL || 'https://d3p9b9yka11dgj.cloudfront.net'}/${currentImageId}` // S3 key -> CloudFront URL
+      : `https://res.cloudinary.com/duoxrodmv/image/upload/c_fill,w_300,h_300/${currentImageId}` // Legacy Cloudinary ID
     : null;
 
   return (
