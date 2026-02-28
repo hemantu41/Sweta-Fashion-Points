@@ -53,10 +53,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user is a seller and get seller details
+    let sellerInfo = {
+      isSeller: false,
+      sellerId: undefined as string | undefined,
+      sellerStatus: undefined as 'pending' | 'approved' | 'rejected' | 'suspended' | undefined,
+    };
+
+    const { data: seller } = await supabase
+      .from('spf_sellers')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .single();
+
+    if (seller) {
+      sellerInfo = {
+        isSeller: true,
+        sellerId: seller.id,
+        sellerStatus: seller.status as 'pending' | 'approved' | 'rejected' | 'suspended',
+      };
+    }
+
+    // Check if user is a delivery partner and get partner details
+    let deliveryPartnerInfo = {
+      isDeliveryPartner: false,
+      deliveryPartnerId: undefined as string | undefined,
+      deliveryPartnerStatus: undefined as 'active' | 'inactive' | 'suspended' | undefined,
+    };
+
+    const { data: deliveryPartner } = await supabase
+      .from('spf_delivery_partners')
+      .select('id, status')
+      .eq('created_by', user.id)
+      .single();
+
+    if (deliveryPartner) {
+      let status: 'active' | 'inactive' | 'suspended' | undefined = undefined;
+      if (deliveryPartner.status === 'active') status = 'active';
+      else if (deliveryPartner.status === 'pending_approval' || deliveryPartner.status === 'inactive') status = 'inactive';
+      else if (deliveryPartner.status === 'suspended') status = 'suspended';
+
+      deliveryPartnerInfo = {
+        isDeliveryPartner: true,
+        deliveryPartnerId: deliveryPartner.id,
+        deliveryPartnerStatus: status,
+      };
+    }
+
     const { is_admin, ...userData } = user;
 
     return NextResponse.json(
-      { message: 'OTP verified successfully', user: { ...userData, isAdmin: is_admin || false } },
+      {
+        message: 'OTP verified successfully',
+        user: {
+          ...userData,
+          isAdmin: is_admin || false,
+          ...sellerInfo,
+          ...deliveryPartnerInfo,
+        }
+      },
       { status: 200 }
     );
   } catch (error) {
