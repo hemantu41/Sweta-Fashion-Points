@@ -496,7 +496,7 @@ export default function SellerDashboardPage() {
                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">
                             <Link
-                              href={`/seller/dashboard/products/edit/${product.productId}`}
+                              href={`/seller/dashboard/products/edit/${product.id}`}
                               className="px-3 py-1 bg-[#722F37] text-white text-xs rounded-lg hover:bg-[#8B3D47]"
                             >
                               Edit
@@ -596,7 +596,7 @@ export default function SellerDashboardPage() {
                         </div>
                         <div className="mt-4 flex gap-3">
                           <Link
-                            href={`/seller/dashboard/products/edit/${selectedProduct.productId}`}
+                            href={`/seller/dashboard/products/edit/${selectedProduct.id}`}
                             className="px-4 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
                           >
                             Edit Product
@@ -854,7 +854,7 @@ export default function SellerDashboardPage() {
                     {/* Actions */}
                     <div className="flex gap-3 pt-4 border-t border-[#E8E2D9]">
                       <Link
-                        href={`/seller/dashboard/products/edit/${selectedProduct.productId}`}
+                        href={`/seller/dashboard/products/edit/${selectedProduct.id}`}
                         className="px-4 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
                       >
                         Edit Product
