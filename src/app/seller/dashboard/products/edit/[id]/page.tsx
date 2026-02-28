@@ -7,7 +7,7 @@ import Link from 'next/link';
 import MultiImageUpload from '@/components/MultiImageUpload';
 
 export default function SellerEditProductPage() {
-  const { user, sellerId } = useAuth();
+  const { user, sellerId, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
@@ -47,14 +47,24 @@ export default function SellerEditProductPage() {
 
   // Fetch product data
   useEffect(() => {
+    // Wait for auth to finish loading before fetching
+    if (authLoading) return;
+
     const fetchProduct = async () => {
       if (!productId) {
         setLoadingProduct(false);
         return;
       }
 
+      if (!sellerId) {
+        setMessage('You are not authorized to edit this product');
+        setLoadingProduct(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/products/${productId}`);
+        // Pass sellerId so the API allows fetching seller's own products regardless of approval status
+        const response = await fetch(`/api/products/${productId}?sellerId=${sellerId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch product');
         }
@@ -102,7 +112,7 @@ export default function SellerEditProductPage() {
     };
 
     fetchProduct();
-  }, [productId, sellerId]);
+  }, [productId, sellerId, authLoading]);
 
   const subCategories = {
     mens: ['jeans', 'shirts', 'tshirts', 'ethnic'],

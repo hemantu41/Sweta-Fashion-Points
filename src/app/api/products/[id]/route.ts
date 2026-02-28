@@ -35,8 +35,12 @@ export async function GET(
       );
     }
 
-    // Only show approved and active products to customers
-    if (product.approval_status !== 'approved' || !product.is_active) {
+    // Allow sellers to view their own products regardless of approval status
+    const sellerIdParam = request.nextUrl.searchParams.get('sellerId');
+    const isSellerViewingOwnProduct = sellerIdParam && product.seller_id === sellerIdParam;
+
+    // Only show approved and active products to customers (not sellers viewing their own)
+    if (!isSellerViewingOwnProduct && (product.approval_status !== 'approved' || !product.is_active)) {
       return NextResponse.json(
         { error: 'Product not available' },
         { status: 404 }
