@@ -406,13 +406,13 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
                         <Link
-                          href={`/admin/products/edit/${product.productId || product.id}`}
+                          href={`/admin/products/edit/${product.id}`}
                           className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
                         >
                           Edit
                         </Link>
                         <button
-                          onClick={() => handleDelete(product.productId || product.id)}
+                          onClick={() => handleDelete(product.id)}
                           className="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
                         >
                           Delete
@@ -731,7 +731,7 @@ export default function AdminProductsPage() {
                 {/* Actions */}
                 <div className="flex gap-3 pt-4 border-t border-[#E8E2D9]">
                   <Link
-                    href={`/admin/products/edit/${selectedProduct.productId || selectedProduct.id}`}
+                    href={`/admin/products/edit/${selectedProduct.id}`}
                     className="px-4 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
                   >
                     Edit Product

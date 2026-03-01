@@ -54,7 +54,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         const id = resolvedParams.id;
         setProductId(id);
 
-        const response = await fetch(`/api/products/${id}`, { cache: 'no-store' });
+        const response = await fetch(`/api/products/${id}?adminView=true`, { cache: 'no-store' });
         const data = await response.json();
 
         if (response.ok && data.product) {

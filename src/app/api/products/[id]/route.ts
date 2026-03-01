@@ -39,8 +39,11 @@ export async function GET(
     const sellerIdParam = request.nextUrl.searchParams.get('sellerId');
     const isSellerViewingOwnProduct = sellerIdParam && product.seller_id === sellerIdParam;
 
-    // Only show approved and active products to customers (not sellers viewing their own)
-    if (!isSellerViewingOwnProduct && (product.approval_status !== 'approved' || !product.is_active)) {
+    // Allow admin to view any product regardless of approval/active status
+    const adminView = request.nextUrl.searchParams.get('adminView') === 'true';
+
+    // Only show approved and active products to customers
+    if (!adminView && !isSellerViewingOwnProduct && (product.approval_status !== 'approved' || !product.is_active)) {
       return NextResponse.json(
         { error: 'Product not available' },
         { status: 404 }
