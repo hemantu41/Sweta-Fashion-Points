@@ -141,11 +141,14 @@ export default function SellerDashboardPage() {
       });
 
       if (response.ok) {
-        alert('Product deleted successfully');
+        // Remove deleted product from local state immediately
+        setProducts(prev => prev.filter(p => p.id !== productToDelete));
         setShowDeleteModal(false);
+        setShowModal(false);
         setProductToDelete(null);
         setDeletionReason('');
-        fetchSellerData();
+        setSelectedProduct(null);
+        alert('Product deleted successfully');
       } else {
         const data = await response.json();
         alert(data.error || 'Failed to delete product');
@@ -164,7 +167,7 @@ export default function SellerDashboardPage() {
     if (product.deletedAt) {
       setLoadingHistory(true);
       try {
-        const response = await fetch(`/api/products/${product.productId}/deletion-history`);
+        const response = await fetch(`/api/products/${product.id}/deletion-history`);
         const data = await response.json();
         if (response.ok) {
           setDeletionHistory(data.history || []);
@@ -181,7 +184,7 @@ export default function SellerDashboardPage() {
     // For approved/pending (not rejected or deleted), try to fetch full details
     if (product.approvalStatus !== 'rejected' && !product.deletedAt) {
       try {
-        const response = await fetch(`/api/products/${product.productId}`);
+        const response = await fetch(`/api/products/${product.id}?sellerId=${product.sellerId}`);
         const data = await response.json();
         if (response.ok && data.product) {
           setSelectedProduct(data.product);
@@ -502,7 +505,7 @@ export default function SellerDashboardPage() {
                               Edit
                             </Link>
                             <button
-                              onClick={() => handleDelete(product.productId)}
+                              onClick={() => handleDelete(product.id)}
                               className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700"
                             >
                               Delete

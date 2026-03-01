@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
       }
       if (sellerId) {
         query = query.eq('seller_id', sellerId);
-        // Sellers should see their deleted products (to know what admin deleted)
-        // Do NOT filter out deleted products for sellers
+        // Exclude soft-deleted products from seller dashboard
+        query = query.is('deleted_at', null);
       }
       if (search) {
         // Search in name, description, fabric, category, and subcategory

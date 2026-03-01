@@ -199,10 +199,11 @@ export async function DELETE(
     }
 
     // Get product to check ownership and current deletion status
+    // Query by UUID (id) for reliability - product_id (custom string) may be null
     const { data: product, error: fetchError } = await supabase
       .from('spf_productdetails')
-      .select('seller_id, name, deleted_at')
-      .eq('product_id', productId)
+      .select('id, product_id, seller_id, name, deleted_at')
+      .eq('id', productId)
       .single();
 
     if (fetchError || !product) {
@@ -248,10 +249,11 @@ export async function DELETE(
     const isFirstDeletion = !product.deleted_at;
 
     // Step 1: Always add to deletion history table (tracks complete audit trail)
+    // Use product.product_id (custom string) for history FK, not the UUID
     const { error: historyError } = await supabase
       .from('spf_product_deletion_history')
       .insert({
-        product_id: productId,
+        product_id: product.product_id,
         product_name: product.name,
         deleted_by: userId,
         deleted_by_role: deletedByRole,
@@ -280,7 +282,7 @@ export async function DELETE(
           is_active: false, // Also mark as inactive
           updated_at: now,
         })
-        .eq('product_id', productId);
+        .eq('id', productId);
 
       if (deleteError) {
         console.error('[Product API] Delete error:', deleteError);
