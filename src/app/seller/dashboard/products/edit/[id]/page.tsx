@@ -175,8 +175,12 @@ export default function SellerEditProductPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('Product updated successfully!');
-        setTimeout(() => router.push('/seller/dashboard'), 1500);
+        setMessage(
+          data.requiresApproval
+            ? 'Product updated! It has been sent for admin approval and will be live once approved.'
+            : 'Product updated successfully!'
+        );
+        setTimeout(() => router.push('/seller/dashboard'), 2500);
       } else {
         setMessage(data.error || 'Failed to update product');
       }

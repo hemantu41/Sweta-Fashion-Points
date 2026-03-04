@@ -112,6 +112,21 @@ export async function PUT(
       );
     }
 
+    // Check if the updater is an admin
+    const { data: updaterUser } = await supabase
+      .from('spf_users')
+      .select('is_admin')
+      .eq('id', userId)
+      .single();
+
+    const isAdmin = updaterUser?.is_admin || false;
+
+    // If updated by a seller (not admin), reset approval status to pending
+    // so the product goes back for admin review before going live
+    const approvalFields = isAdmin
+      ? {}
+      : { approval_status: 'pending', is_active: false };
+
     // Update product
     const { data: updatedProduct, error } = await supabase
       .from('spf_productdetails')
@@ -134,9 +149,10 @@ export async function PUT(
         stock_quantity: product.stockQuantity,
         is_new_arrival: product.isNewArrival,
         is_best_seller: product.isBestSeller,
-        is_active: product.isActive,
+        is_active: isAdmin ? product.isActive : false,
         updated_by: userId,
         updated_at: new Date().toISOString(),
+        ...approvalFields,
       })
       .eq('id', id)
       .select()
@@ -151,8 +167,11 @@ export async function PUT(
     }
 
     return NextResponse.json({
-      message: 'Product updated successfully',
+      message: isAdmin
+        ? 'Product updated successfully'
+        : 'Product updated and sent for admin approval',
       product: updatedProduct,
+      requiresApproval: !isAdmin,
     });
   } catch (error) {
     console.error('[Product API] Error:', error);
