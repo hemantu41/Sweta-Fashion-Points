@@ -166,6 +166,10 @@ export async function PUT(
       );
     }
 
+    // Clear product cache so customers see updated status immediately
+    const { productCache } = await import('@/lib/cache');
+    productCache.clear();
+
     return NextResponse.json({
       message: isAdmin
         ? 'Product updated successfully'
