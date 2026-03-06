@@ -1183,84 +1183,171 @@ useEffect(() => {
 
 **Solution:** Added dedicated edit page for sellers at `/seller/dashboard/products/edit/[id]`.
 
-**Implementation:**
-
-**1. Edit Page Route:**
-```typescript
-// Route: /seller/dashboard/products/edit/[id]/page.tsx
-export default function SellerEditProductPage() {
-  // Fetch existing product data
-  // Validate seller ownership
-  // Pre-populate form
-  // Allow updates via PUT API
-}
-```
-
-**2. Authorization Check:**
-```typescript
-// Verify seller owns the product
-if (product.sellerId !== sellerId) {
-  setMessage('You are not authorized to edit this product');
-  return;
-}
-```
-
-**3. Pre-Population:**
-- All form fields pre-filled with existing product data
-- Shop information shown as read-only (cannot be changed)
-- Product ID shown as read-only (cannot be changed)
-- Images pre-loaded in MultiImageUpload component
-
-**Features:**
-- **Edit Button:** Added to seller dashboard product table
-- **Link Fix:** Updated from `/seller/products/edit/` to `/seller/dashboard/products/edit/`
-- **Form Pre-Population:** All fields filled with current values
-- **Image Management:** Can add/remove product images
-- **Validation:** Same validation as product creation
-- **Authorization:** Sellers can only edit their own products
-
-**User Experience:**
-1. Seller clicks "Edit" button on product in dashboard
-2. Edit page loads with all current product data
-3. Product ID and shop info displayed as read-only
-4. Seller updates desired fields (price, description, images, etc.)
-5. Clicks "Update Product"
-6. Redirected back to dashboard
-7. Changes reflected immediately
-
-**API Call:**
-```typescript
-PUT /api/products/{productId}
-{
-  "userId": "user-id",
-  "product": {
-    "name": "Updated Name",
-    "price": 1499,
-    "images": ["img1", "img2"]
-    // ... other fields
-  }
-}
-```
-
-**Security:**
-- Seller can only edit their own products
-- Admin can edit any product
-- Product ID cannot be changed (prevents conflicts)
-- Shop information cannot be changed (use seller profile to update)
-
-**Benefits:**
-- ✅ Sellers can update product information independently
-- ✅ No admin intervention needed for price changes, descriptions, etc.
-- ✅ Can add/update product images easily
-- ✅ Maintains data integrity with authorization checks
-
 **Files Changed:**
 - `src/app/seller/dashboard/products/edit/[id]/page.tsx` (NEW - complete edit page)
 - `src/app/seller/dashboard/page.tsx` (line 236 - fixed edit button link)
 
 ---
 
+### Fix: Edit Page "Failed to load product data" Error (March 2026)
+**Issue:** Seller dashboard edit page showed "Failed to load product data / Back to Dashboard" for all products, including approved ones.
+
+**Root Causes (two separate bugs):**
+1. GET `/api/products/[id]` returned 404 for non-approved/inactive products, so sellers couldn't load their own pending products for editing.
+2. `sellerId` was `undefined` on the first render (auth loads asynchronously from localStorage), causing the fetch to fire before the seller was identified.
+
+**Solutions:**
+1. Added `?sellerId=` query param bypass to the GET API — if the product belongs to that seller, the approval/active check is skipped.
+2. Edit page now reads `authLoading` from `useAuth()` and returns early from the `useEffect` until auth has finished loading.
+
+```typescript
+// GET API bypass
+const sellerIdParam = request.nextUrl.searchParams.get('sellerId');
+const isSellerViewingOwnProduct = sellerIdParam && product.seller_id === sellerIdParam;
+if (!adminView && !isSellerViewingOwnProduct && (product.approval_status !== 'approved' || !product.is_active)) {
+  return NextResponse.json({ error: 'Product not available' }, { status: 404 });
+}
+
+// Edit page — wait for auth before fetching
+const { user, sellerId, isLoading: authLoading } = useAuth();
+useEffect(() => {
+  if (authLoading) return;
+  if (!sellerId) { setMessage('You are not authorized...'); return; }
+  fetch(`/api/products/${productId}?sellerId=${sellerId}`);
+}, [productId, sellerId, authLoading]);
+```
+
+**Files Changed:**
+- `src/app/api/products/[id]/route.ts` (GET handler)
+- `src/app/seller/dashboard/products/edit/[id]/page.tsx`
+
+---
+
+### Fix: Edit Page Failing for OTP-Login Users (March 2026)
+**Issue:** Edit page worked for password-login users but failed for OTP-login users — `sellerId` was missing from the user session.
+
+**Root Cause:** The `verify-otp` route (`/api/auth/verify-otp`) did not include seller lookup in its response, while the password login route did. OTP-login users got a user object without `isSeller`, `sellerId`, or `sellerStatus`.
+
+**Solution:** Added seller and delivery partner lookup to `verify-otp` route, matching the same logic as the password login route.
+
+**Files Changed:**
+- `src/app/api/auth/verify-otp/route.ts`
+
+---
+
+### Fix: Edit/Delete Using Wrong Product ID (March 2026)
+**Issue:** Edit and delete operations failed silently or hit 404 errors.
+
+**Root Cause:** All edit links, delete buttons, and modal fetch calls used `product.productId` (the custom string like `mens-jeans-6`) instead of `product.id` (the UUID). The custom `product_id` can be null on older records, and the API routes query by UUID `id`.
+
+**Rule established:** Always use `product.id` (UUID) for all API calls. Never use `product.productId` (custom string).
+
+**Files Changed:**
+- `src/app/seller/dashboard/page.tsx` — edit links, delete button, modal fetch calls
+- `src/app/(admin)/admin/products/page.tsx` — edit links, delete button, modal edit link
+
+---
+
+### Fix: Product Deletion Not Working + No History Recorded (March 2026)
+**Issue:** Delete button appeared to work but product still appeared after refresh, and no deletion history was recorded.
+
+**Root Causes:**
+1. DELETE API queried by `product_id` (custom string) but was receiving a UUID → record not found.
+2. After success, `fetchSellerData()` was called but the list API wasn't filtering `deleted_at IS NULL` for seller queries → deleted products reappeared.
+
+**Solutions:**
+1. DELETE API now queries by `id` (UUID), then fetches `product_id` for the history table FK insert.
+2. Products API (`/api/products`) now adds `.is('deleted_at', null)` filter for seller queries.
+3. On successful delete, product is removed from local React state immediately (no refetch needed).
+
+**Files Changed:**
+- `src/app/api/products/[id]/route.ts` (DELETE handler)
+- `src/app/api/products/route.ts` (seller query filter)
+- `src/app/seller/dashboard/page.tsx` (local state update after delete)
+
+---
+
+### Fix: Admin Cannot Edit/Delete Seller-Added Products (March 2026)
+**Issue:** Admin clicked edit or delete on a seller's approved product but hit a 404 or error.
+
+**Root Causes:**
+1. Admin edit links also used `product.productId` instead of `product.id`.
+2. GET API blocked non-approved or inactive products — admin needed to edit a product that had been set to inactive, which returned 404.
+
+**Solutions:**
+1. Fixed all admin product page links to use `product.id` (UUID).
+2. Added `?adminView=true` bypass to GET API — admins can load any product regardless of approval/active status.
+3. Admin edit page passes `?adminView=true` when fetching product data.
+
+```typescript
+// GET API admin bypass
+const adminView = request.nextUrl.searchParams.get('adminView') === 'true';
+if (!adminView && !isSellerViewingOwnProduct && ...) { return 404 }
+
+// Admin edit page fetch
+fetch(`/api/products/${id}?adminView=true`, { cache: 'no-store' })
+```
+
+**Files Changed:**
+- `src/app/api/products/[id]/route.ts` (GET handler)
+- `src/app/(admin)/admin/products/page.tsx`
+- `src/app/(admin)/admin/products/edit/[id]/page.tsx`
+
+---
+
+### Fix: Seller-Edited Products Staying "Approved/Live" (March 2026)
+**Issue (Part 1 — Logic):** When a seller edited an approved product, `approval_status` remained `approved` and `is_active` remained `true`, so the product stayed live for customers without admin re-review.
+
+**Root Cause:** PUT API applied the same update regardless of who was editing (admin vs seller).
+
+**Solution:** PUT API now checks if the updater is an admin. If not, it resets `approval_status='pending'` and `is_active=false`, sending the product back for admin review.
+
+```typescript
+const { data: updaterUser } = await supabase.from('spf_users').select('is_admin').eq('id', userId).single();
+const isAdmin = updaterUser?.is_admin || false;
+const approvalFields = isAdmin ? {} : { approval_status: 'pending', is_active: false };
+// update includes: is_active: isAdmin ? product.isActive : false, ...approvalFields
+```
+
+**Issue (Part 2 — Cache):** Even after the logic fix above, customers still saw the old approved/live state because the PUT handler did NOT clear the product cache after the DB update. Products were served from the 10-minute server-side cache.
+
+**Solution:** Added `productCache.clear()` immediately after a successful PUT update (matching the same pattern already used by DELETE and the admin approval endpoint).
+
+**Files Changed:**
+- `src/app/api/products/[id]/route.ts` (PUT handler — both logic and cache fixes)
+- `src/app/seller/dashboard/products/edit/[id]/page.tsx` (success message informs seller of re-approval)
+
+**Product edit flow now:**
+```
+Seller edits approved product
+    ↓
+PUT API: approval_status='pending', is_active=false, cache cleared
+    ↓
+Product immediately hidden from customer site
+    ↓
+Seller sees: "Product updated! Sent for admin approval — will be live once approved."
+    ↓
+Admin reviews and approves → product goes live again
+```
+
+---
+
 ## Version History
+
+### Version 1.5 (March 2026)
+- ✅ Seller edit now resets approval status to pending (re-review required)
+- ✅ PUT API clears product cache immediately after update
+- ✅ Admin can edit/delete any seller product (`?adminView=true` bypass)
+- ✅ Product deletion fully working — soft delete + history recorded
+- ✅ All edit/delete operations use UUID (`product.id`), never custom string
+- ✅ OTP-login users now receive `sellerId` and seller info in session
+- ✅ Edit page waits for auth to load before fetching product data
+- ✅ Deleted products filtered from seller dashboard list
+
+### Version 1.4 (March 2026)
+- ✅ Fixed "Failed to load product data" error on seller edit page
+- ✅ Added `?sellerId=` bypass on GET API for seller editing own products
+- ✅ Fixed seller status not returned for OTP-login users
 
 ### Version 1.3 (February 2024)
 - ✅ Auto-generated product IDs based on category and subcategory
@@ -1289,7 +1376,7 @@ PUT /api/products/{productId}
 
 ---
 
-**Last Updated:** February 15, 2024
-**Current Version:** 1.3
+**Last Updated:** March 7, 2026
+**Current Version:** 1.5
 **Project:** Sweta Fashion Points
-**Framework:** Next.js 16 (App Router) + Supabase + Vercel
+**Framework:** Next.js 14 (App Router) + Supabase + Vercel

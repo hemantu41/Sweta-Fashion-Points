@@ -124,10 +124,19 @@ When pages fetch products after cache clear, you should see:
 [Cache] Set: products:all:all:any:any:any:all:123 (TTL: 600s)
 ```
 
-## Previous Related Fixes
-These files already had cache clearing added earlier (still valid):
-- `/api/products/[id]/route.ts` - PUT and DELETE methods clear cache
-- `/api/products/route.ts` - POST method clears cache after creating product
+## Related Fixes
+
+### PUT cache clearing (March 2026)
+**Problem:** When a seller edited a product, the product cache was NOT being cleared. So even after the DB updated `approval_status='pending'` and `is_active=false`, customers continued to see the old cached "approved/live" version for up to 10 minutes.
+
+**Fix:** Added `productCache.clear()` to the PUT handler in `/api/products/[id]/route.ts`, immediately after a successful DB update — matching the same pattern used by the DELETE handler.
+
+**File:** `src/app/api/products/[id]/route.ts` (PUT handler, after successful update)
+
+These files also clear cache on mutations:
+- `/api/products/[id]/route.ts` - PUT and DELETE methods clear cache ✅
+- `/api/products/route.ts` - POST method clears cache after creating product ✅
+- `/api/admin/products/review/route.ts` - Clears cache after admin approval/rejection ✅
 
 ## Cache Configuration
 - **Product Cache TTL:** 10 minutes (600 seconds)
