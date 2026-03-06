@@ -10,11 +10,16 @@ import MultiImageUpload from '@/components/MultiImageUpload';
 type ProductTab = 'clothes' | 'footwear' | 'beauty';
 
 // Define sub-categories for clothes
+// IMPORTANT: values must exactly match the category page tab filter strings
+// Mens page tabs:   shirts, tshirts, jeans, shorts
+// Womens page tabs: daily, party, ethnic, seasonal
+// Sarees page tabs: daily, party, wedding, festival
+// Kids page tabs:   0-3, 4-7, 8-12
 const clothesSubCategories = {
-  mens: ['shirts', 'tshirts', 'jeans', 'shorts-trousers'],
-  womens: ['casual-wear', 'daily-wear', 'party-wear', 'seasonal', 'ethnic-wear', 'wedding', 'festival'],
-  sarees: ['daily-wear', 'party-wear', 'wedding', 'festival', 'seasonal', 'ethnic-wear'],
-  kids: ['casual-wear', 'daily-wear', 'party-wear', 'seasonal', 'ethnic-wear', '0-3', '4-7', '8-12'],
+  mens: ['shirts', 'tshirts', 'jeans', 'shorts'],
+  womens: ['daily', 'party', 'ethnic', 'seasonal'],
+  sarees: ['daily', 'party', 'wedding', 'festival'],
+  kids: ['0-3', '4-7', '8-12'],
 };
 
 // Define sub-categories for footwear

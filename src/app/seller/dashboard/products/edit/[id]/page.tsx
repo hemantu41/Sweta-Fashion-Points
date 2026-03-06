@@ -115,7 +115,7 @@ export default function SellerEditProductPage() {
   }, [productId, sellerId, authLoading]);
 
   const subCategories = {
-    mens: ['jeans', 'shirts', 'tshirts', 'ethnic'],
+    mens: ['shirts', 'tshirts', 'jeans', 'shorts'],
     womens: ['daily', 'party', 'ethnic', 'seasonal'],
     sarees: ['daily', 'party', 'wedding', 'festival'],
     kids: ['0-3', '4-7', '8-12'],
