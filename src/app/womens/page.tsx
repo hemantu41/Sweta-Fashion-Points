@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { CldImage } from 'next-cloudinary';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function WomensPage() {
@@ -345,11 +345,11 @@ export default function WomensPage() {
                       <Link href={`/product/${product.id}`}>
                         <div className="relative aspect-[3/4] bg-[#F0EDE8] overflow-hidden">
                           {product.mainImage ? (
-                            <Image
-                              src={`https://res.cloudinary.com/duoxrodmv/image/upload/${product.mainImage}`}
+                            <CldImage
+                              src={product.mainImage}
                               alt={product.name}
                               fill
-                              unoptimized
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (
