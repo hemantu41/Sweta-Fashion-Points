@@ -32,6 +32,8 @@ export default function Navbar() {
     { href: '/womens', label: t('nav.womens') },
     { href: '/sarees', label: t('nav.sarees') },
     { href: '/kids', label: t('nav.kids') },
+    { href: '/footwear', label: t('nav.footwear') },
+    { href: '/makeup', label: t('nav.makeup') },
   ];
 
   const userMenuItems = [
