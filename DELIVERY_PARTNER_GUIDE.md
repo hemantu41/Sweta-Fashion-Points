@@ -20,6 +20,7 @@ The Delivery Partner System allows individuals to register as delivery partners,
 - **Admin approval workflow** with rejection reasons
 - **Status management** (pending, active, inactive, suspended, rejected)
 - **Reactivation capability** for inactive/suspended partners
+- **Status history audit trail** — every Approve, Reject, Suspend, Deactivate, and Reactivate action is logged with timestamp, admin name, and optional reason
 - **Delivery dashboard** for active partners
 
 ---
@@ -173,11 +174,13 @@ Navigate to `/admin/delivery-partners`
 #### Active Partners
 **Actions Available:**
 - **View** → See full partner details
-- **Suspend** → Temporarily suspend partner
+- **Suspend** → Opens modal to temporarily suspend partner
+  - Optional reason/note field (stored in status history)
   - Changes status to `suspended`
   - Partner loses dashboard access
   - Can be reactivated later
-- **Deactivate** → Permanently deactivate
+- **Deactivate** → Opens modal to permanently deactivate
+  - Optional reason/note field (stored in status history)
   - Changes status to `inactive`
   - Partner loses dashboard access
   - Can be reactivated later
@@ -185,7 +188,8 @@ Navigate to `/admin/delivery-partners`
 #### Suspended Partners
 **Actions Available:**
 - **View** → See full partner details
-- **↻ Reactivate** → Restore to active status
+- **↻ Reactivate** → Opens modal to restore to active status
+  - Optional reason/note field (stored in status history)
   - Changes status to `active`
   - Availability set to `offline`
   - Partner regains dashboard access
@@ -193,7 +197,8 @@ Navigate to `/admin/delivery-partners`
 #### Inactive Partners
 **Actions Available:**
 - **View** → See full partner details
-- **↻ Reactivate** → Restore to active status
+- **↻ Reactivate** → Opens modal to restore to active status
+  - Optional reason/note field (stored in status history)
   - Changes status to `active`
   - Availability set to `offline`
   - Partner regains dashboard access
@@ -202,6 +207,20 @@ Navigate to `/admin/delivery-partners`
 **Actions Available:**
 - **View** → See full partner details
 - Partner can submit fresh application
+
+### Status History (Discipline Tracking)
+
+Every status change on a delivery partner is permanently recorded in the `spf_delivery_partner_status_history` table. On the partner detail page (`/admin/delivery-partners/{id}`), a **Status History** section at the bottom of the page shows a vertical timeline with:
+
+- **Action badge** — colour-coded (green = Approved/Reactivated, yellow = Suspended, red = Rejected, gray = Deactivated)
+- **Status transition** — e.g. `Active → Suspended`
+- **Reason/note** — admin's explanation (highlighted block, if provided)
+- **Timestamp** — exact date and time in IST
+- **Admin name** — who performed the action
+
+This allows admins to quickly assess a partner's discipline record — e.g. how many times they were suspended, what the reasons were, and whether the pattern warrants permanent deactivation.
+
+---
 
 ### Approval Workflow
 
@@ -330,8 +349,10 @@ Navigate to `/admin/delivery-partners`
 {
   "status": "active|inactive|suspended|rejected",
   "rejectionReason": "string (required if status is rejected)",
+  "note": "string (optional — stored in status history for all status changes)",
   "availabilityStatus": "available|busy|offline",
-  "updatedBy": "uuid"
+  "updatedBy": "uuid",
+  "updatedByName": "string (admin display name, stored in history)"
 }
 ```
 
@@ -344,8 +365,19 @@ Navigate to `/admin/delivery-partners`
 }
 ```
 
+**Side effect:** If `status` changes, a row is inserted into `spf_delivery_partner_status_history` automatically.
+
 ### 4. Deactivate Delivery Partner (Admin Only)
 **Endpoint:** `DELETE /api/delivery-partners/{id}`
+
+**Request Body (optional):**
+```json
+{
+  "updatedBy": "uuid",
+  "updatedByName": "string",
+  "note": "string"
+}
+```
 
 **Response:**
 ```json
@@ -355,7 +387,34 @@ Navigate to `/admin/delivery-partners`
 }
 ```
 
-### 5. Get All Delivery Partners (Admin Only)
+**Side effect:** Always inserts a `Deactivated` row into `spf_delivery_partner_status_history`.
+
+### 5. Get Status History (Admin Only)
+**Endpoint:** `GET /api/delivery-partners/{id}/status-history`
+
+**Response:**
+```json
+{
+  "success": true,
+  "history": [
+    {
+      "id": "uuid",
+      "delivery_partner_id": "uuid",
+      "from_status": "active",
+      "to_status": "suspended",
+      "action": "Suspended",
+      "note": "Multiple late deliveries reported",
+      "changed_by": "uuid",
+      "changed_by_name": "Admin Name",
+      "changed_at": "2026-03-08T10:30:00Z"
+    }
+  ]
+}
+```
+
+Returned newest-first. `from_status` is `null` for the very first action on a partner.
+
+### 6. Get All Delivery Partners (Admin Only)
 **Endpoint:** `GET /api/delivery-partners`
 
 **Query Parameters:**
@@ -414,6 +473,28 @@ CHECK (status IN ('active', 'inactive', 'suspended', 'pending_approval', 'reject
 - `busy` - Currently on delivery
 - `offline` - Not available
 
+### Table: `spf_delivery_partner_status_history`
+
+Audit log of every status change. Rows are never deleted.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | Unique record ID |
+| `delivery_partner_id` | UUID | NOT NULL, FK → `spf_delivery_partners(id)` | Partner being changed |
+| `from_status` | VARCHAR(20) | NULLABLE | Status before the change (NULL on first action) |
+| `to_status` | VARCHAR(20) | NOT NULL | Status after the change |
+| `action` | VARCHAR(50) | NOT NULL | Human label: Approved, Rejected, Suspended, Deactivated, Reactivated |
+| `note` | TEXT | NULLABLE | Admin reason or explanation |
+| `changed_by` | UUID | NULLABLE | Admin user ID |
+| `changed_by_name` | VARCHAR(255) | NULLABLE | Admin display name (denormalized) |
+| `changed_at` | TIMESTAMPTZ | DEFAULT NOW() | Exact timestamp of the action |
+
+**Migration file:** `database/delivery-partner-status-history.sql`
+
+**Index:** `idx_dp_status_history_partner` on `(delivery_partner_id, changed_at DESC)` for fast per-partner history lookups.
+
+---
+
 ### Table: `spf_users` (Additional Columns)
 
 | Column | Type | Description |
@@ -458,6 +539,15 @@ CHECK (status IN ('active', 'inactive', 'suspended', 'pending_approval', 'reject
      - Reactivation capability
      - Real-time status updates
 
+4. **Admin Partner Detail Page**
+   - **Path:** `/app/(admin)/admin/delivery-partners/[id]/page.tsx`
+   - **Features:**
+     - Full partner information, documents, address, service areas
+     - Status + availability badges
+     - Approve/Reject modals (Reject requires reason)
+     - Suspend/Deactivate/Reactivate modals with optional note field
+     - **Status History timeline** — vertical audit log showing all status changes with action badges, from→to arrows, admin notes, timestamps, and admin name
+
 #### Components
 
 **Status Badges:**
@@ -492,8 +582,14 @@ const statusColors = {
    - **Methods:** GET, PUT, DELETE
    - **Logic:**
      - GET: Fetch partner details
-     - PUT: Update status, profile, rejection reason
-     - DELETE: Soft delete (set to inactive)
+     - PUT: Update status, profile, rejection reason; auto-inserts history row when status changes
+     - DELETE: Soft delete (set to inactive); auto-inserts history row
+
+3. **Status History**
+   - **Path:** `/app/api/delivery-partners/[id]/status-history/route.ts`
+   - **Methods:** GET
+   - **Logic:** Returns all history entries for the partner, newest first
+   - **History is inserted by:** PUT handler (any status change) and DELETE handler (deactivation)
 
 ### Business Logic
 
@@ -604,7 +700,21 @@ async function reactivate(partnerId: string) {
 8. Partner regains dashboard access
 ```
 
-### Flow 5: Rejected Partner Re-registration
+### Flow 5: Discipline Review Using Status History
+```
+1. Admin suspects a partner has repeated issues
+2. Admin opens partner detail page
+3. Admin scrolls to "Status History" section
+4. Timeline shows all past actions — e.g.:
+   Suspended (2026-01-10) → "Late deliveries", by Admin A
+   Reactivated (2026-01-20) → "Warned and reinstated", by Admin B
+   Suspended (2026-03-01) → "Customer complaints", by Admin A
+5. Admin decides to Deactivate based on repeated suspensions
+6. Admin clicks "Deactivate", enters reason in modal
+7. New "Deactivated" entry appears at the top of the history
+```
+
+### Flow 6: Rejected Partner Re-registration
 ```
 1. Partner sees rejection reason
 2. Partner navigates to registration page
@@ -696,7 +806,14 @@ For issues or questions:
 
 ## Version History
 
-- **v1.0.0** (Current)
+- **v1.1.0** (March 8, 2026) — Current
+  - **Status history audit trail** — new `spf_delivery_partner_status_history` table
+  - PUT and DELETE API routes now auto-insert history on every status change
+  - New `GET /api/delivery-partners/{id}/status-history` endpoint
+  - Admin detail page: Suspend/Deactivate/Reactivate now use proper modals with optional reason field (replaces `window.confirm()`)
+  - Admin detail page: new **Status History timeline** section showing full audit log
+
+- **v1.0.0** (February 13, 2026)
   - Initial delivery partner system
   - Registration with mandatory fields
   - Admin approval workflow
@@ -707,5 +824,5 @@ For issues or questions:
 
 ---
 
-**Last Updated:** February 13, 2026
+**Last Updated:** March 8, 2026
 **Maintained By:** Development Team

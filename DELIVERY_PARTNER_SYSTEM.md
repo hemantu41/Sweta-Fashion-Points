@@ -11,7 +11,8 @@ Complete system to link orders with delivery partners, track deliveries, and man
 ### Tables Created:
 1. **`spf_delivery_partners`** - Stores delivery partner information
 2. **`spf_order_deliveries`** - Links orders to delivery partners with tracking
-3. **`spf_delivery_status_history`** - Audit trail of status changes
+3. **`spf_delivery_status_history`** - Audit trail of order delivery status changes
+4. **`spf_delivery_partner_status_history`** ✅ — Audit trail of **partner** status changes (Approved, Rejected, Suspended, Deactivated, Reactivated) with timestamp, admin name, and optional reason. Migration: `database/delivery-partner-status-history.sql`
 
 ### Order Status Flow:
 ```
@@ -400,7 +401,7 @@ Rate your delivery: [URL]
 - ✅ Partners can view and update order status
 - ✅ Customers can track their orders
 - ✅ Automatic tracking number generation
-- ✅ Status history maintained
+- ✅ Partner status history maintained (Approved/Rejected/Suspended/Deactivated/Reactivated with timestamps, admin name, and notes)
 - ✅ SMS notifications sent at key stages
 
 ---
