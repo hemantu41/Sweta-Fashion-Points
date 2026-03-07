@@ -31,18 +31,43 @@ interface DeliveryPartner {
   rejection_reason?: string | null;
 }
 
+interface StatusHistoryEntry {
+  id: string;
+  delivery_partner_id: string;
+  from_status: string | null;
+  to_status: string;
+  action: string;
+  note: string | null;
+  changed_by: string | null;
+  changed_by_name: string | null;
+  changed_at: string;
+}
+
 export default function DeliveryPartnerDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+
   const [partner, setPartner] = useState<DeliveryPartner | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Approve / Reject modals
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [modalError, setModalError] = useState('');
+
+  // Suspend / Deactivate / Reactivate modal
+  const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [statusChangeNote, setStatusChangeNote] = useState('');
+  const [statusChangeError, setStatusChangeError] = useState('');
+
+  // Status history
+  const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -50,31 +75,47 @@ export default function DeliveryPartnerDetailPage() {
       return;
     }
     fetchPartner();
+    fetchStatusHistory();
   }, [user, params.id]);
 
   const fetchPartner = async () => {
     try {
       const response = await fetch(`/api/delivery-partners/${params.id}`);
       const data = await response.json();
-
       if (response.ok) {
         setPartner(data.partner);
       } else {
         setError(data.error || 'Failed to fetch delivery partner');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred while fetching delivery partner details');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchStatusHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(`/api/delivery-partners/${params.id}/status-history`);
+      const data = await response.json();
+      if (response.ok) {
+        setStatusHistory(data.history || []);
+      }
+    } catch {
+      // Non-critical — history section just shows empty
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const getAdminName = () =>
+    (user as any)?.name || (user as any)?.email || 'Admin';
+
   const handleApprove = async () => {
     if (!partner) return;
-
     setIsProcessing(true);
     setModalError('');
-
     try {
       const response = await fetch(`/api/delivery-partners/${partner.id}`, {
         method: 'PUT',
@@ -82,18 +123,18 @@ export default function DeliveryPartnerDetailPage() {
         body: JSON.stringify({
           status: 'active',
           updatedBy: user?.id,
+          updatedByName: getAdminName(),
         }),
       });
-
       if (response.ok) {
         setShowApproveModal(false);
         fetchPartner();
+        fetchStatusHistory();
       } else {
         const data = await response.json();
-        const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error;
-        setModalError(errorMsg || 'Failed to approve delivery partner');
+        setModalError(data.details ? `${data.error}: ${data.details}` : data.error || 'Failed to approve');
       }
-    } catch (error) {
+    } catch {
       setModalError('Error approving delivery partner');
     } finally {
       setIsProcessing(false);
@@ -105,10 +146,8 @@ export default function DeliveryPartnerDetailPage() {
       setModalError('Please provide a rejection reason');
       return;
     }
-
     setIsProcessing(true);
     setModalError('');
-
     try {
       const response = await fetch(`/api/delivery-partners/${partner.id}`, {
         method: 'PUT',
@@ -116,78 +155,67 @@ export default function DeliveryPartnerDetailPage() {
         body: JSON.stringify({
           status: 'rejected',
           rejectionReason: rejectionReason,
+          note: rejectionReason,
           updatedBy: user?.id,
+          updatedByName: getAdminName(),
         }),
       });
-
       if (response.ok) {
         setShowRejectModal(false);
         setRejectionReason('');
         fetchPartner();
+        fetchStatusHistory();
       } else {
         const data = await response.json();
-        const errorMsg = data.details ? `${data.error}: ${data.details}` : data.error;
-        setModalError(errorMsg || 'Failed to reject delivery partner');
+        setModalError(data.details ? `${data.error}: ${data.details}` : data.error || 'Failed to reject');
       }
-    } catch (error) {
+    } catch {
       setModalError('Error rejecting delivery partner');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    if (!partner) return;
-    if (!confirm(`Are you sure you want to change the status to ${newStatus}?`)) return;
-
-    try {
-      const response = await fetch(`/api/delivery-partners/${partner.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: newStatus,
-          updatedBy: user?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Status updated successfully!');
-        fetchPartner();
-      } else {
-        alert(data.error || 'Failed to update status');
-      }
-    } catch (error) {
-      alert('Error updating status');
-    }
+  const openStatusChangeModal = (newStatus: string) => {
+    setPendingStatus(newStatus);
+    setStatusChangeNote('');
+    setStatusChangeError('');
+    setShowStatusChangeModal(true);
   };
 
-  const handleReactivate = async () => {
-    if (!partner) return;
-    if (!confirm('Are you sure you want to reactivate this delivery partner?')) return;
-
+  const handleConfirmStatusChange = async () => {
+    if (!partner || !pendingStatus) return;
+    setIsProcessing(true);
+    setStatusChangeError('');
     try {
+      const body: any = {
+        status: pendingStatus,
+        note: statusChangeNote.trim() || undefined,
+        updatedBy: user?.id,
+        updatedByName: getAdminName(),
+      };
+      if (pendingStatus === 'active') {
+        body.availabilityStatus = 'offline';
+      }
       const response = await fetch(`/api/delivery-partners/${partner.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'active',
-          availabilityStatus: 'offline',
-          updatedBy: user?.id,
-        }),
+        body: JSON.stringify(body),
       });
-
-      const data = await response.json();
-
       if (response.ok) {
-        alert('Delivery partner reactivated successfully!');
+        setShowStatusChangeModal(false);
+        setPendingStatus(null);
+        setStatusChangeNote('');
         fetchPartner();
+        fetchStatusHistory();
       } else {
-        alert(data.error || 'Failed to reactivate delivery partner');
+        const data = await response.json();
+        setStatusChangeError(data.error || 'Failed to update status');
       }
-    } catch (error) {
-      alert('Error reactivating delivery partner');
+    } catch {
+      setStatusChangeError('Error updating status');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -209,6 +237,68 @@ export default function DeliveryPartnerDetailPage() {
       busy: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     };
     return colors[availability] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getActionBadgeStyle = (action: string) => {
+    const map: Record<string, string> = {
+      'Approved':    'bg-green-100 text-green-700 border-green-200',
+      'Reactivated': 'bg-green-100 text-green-700 border-green-200',
+      'Rejected':    'bg-red-100 text-red-700 border-red-200',
+      'Suspended':   'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Deactivated': 'bg-gray-100 text-gray-600 border-gray-200',
+    };
+    return map[action] || 'bg-blue-100 text-blue-700 border-blue-200';
+  };
+
+  const getTimelineDotColor = (action: string) => {
+    const map: Record<string, string> = {
+      'Approved':    'bg-green-500',
+      'Reactivated': 'bg-green-500',
+      'Rejected':    'bg-red-500',
+      'Suspended':   'bg-yellow-500',
+      'Deactivated': 'bg-gray-400',
+    };
+    return map[action] || 'bg-blue-500';
+  };
+
+  const getStatusLabel = (status: string) =>
+    status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const getModalTitle = () => {
+    if (pendingStatus === 'suspended') return 'Suspend Delivery Partner';
+    if (pendingStatus === 'inactive') return 'Deactivate Delivery Partner';
+    if (pendingStatus === 'active') return 'Reactivate Delivery Partner';
+    return 'Change Status';
+  };
+
+  const getModalDescription = () => {
+    if (pendingStatus === 'suspended')
+      return 'This partner will be temporarily blocked from receiving new delivery assignments.';
+    if (pendingStatus === 'inactive')
+      return 'This partner will be permanently deactivated and lose access to the delivery dashboard.';
+    if (pendingStatus === 'active')
+      return 'This partner will be reactivated and can receive delivery assignments again.';
+    return '';
+  };
+
+  const getConfirmButtonStyle = () => {
+    if (pendingStatus === 'suspended') return 'bg-yellow-600 hover:bg-yellow-700';
+    if (pendingStatus === 'inactive') return 'bg-gray-600 hover:bg-gray-700';
+    if (pendingStatus === 'active') return 'bg-green-600 hover:bg-green-700';
+    return 'bg-[#722F37] hover:bg-[#5a252c]';
+  };
+
+  const getConfirmButtonLabel = () => {
+    if (isProcessing) {
+      if (pendingStatus === 'suspended') return 'Suspending...';
+      if (pendingStatus === 'inactive') return 'Deactivating...';
+      if (pendingStatus === 'active') return 'Reactivating...';
+      return 'Processing...';
+    }
+    if (pendingStatus === 'suspended') return 'Yes, Suspend';
+    if (pendingStatus === 'inactive') return 'Yes, Deactivate';
+    if (pendingStatus === 'active') return 'Yes, Reactivate';
+    return 'Confirm';
   };
 
   if (loading) {
@@ -297,13 +387,13 @@ export default function DeliveryPartnerDetailPage() {
               {partner.status === 'active' && (
                 <>
                   <button
-                    onClick={() => handleStatusChange('suspended')}
+                    onClick={() => openStatusChangeModal('suspended')}
                     className="bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-700 transition-colors"
                   >
                     Suspend
                   </button>
                   <button
-                    onClick={() => handleStatusChange('inactive')}
+                    onClick={() => openStatusChangeModal('inactive')}
                     className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 transition-colors"
                   >
                     Deactivate
@@ -312,7 +402,7 @@ export default function DeliveryPartnerDetailPage() {
               )}
               {(partner.status === 'inactive' || partner.status === 'suspended') && (
                 <button
-                  onClick={handleReactivate}
+                  onClick={() => openStatusChangeModal('active')}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
                 >
                   ↻ Reactivate
@@ -459,6 +549,107 @@ export default function DeliveryPartnerDetailPage() {
                 <p className="text-red-800">{partner.rejection_reason}</p>
               </div>
             )}
+
+            {/* Status History */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-[#E8E2D9]">
+              <h2 className="text-xl font-bold text-[#2D2D2D] mb-5 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Status History
+                {statusHistory.length > 0 && (
+                  <span className="ml-2 text-sm font-normal text-[#6B6B6B] bg-[#F5F0E8] px-2 py-0.5 rounded-full">
+                    {statusHistory.length} event{statusHistory.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </h2>
+
+              {historyLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="w-6 h-6 border-2 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : statusHistory.length === 0 ? (
+                <div className="text-center py-6">
+                  <svg className="w-10 h-10 text-[#E8E2D9] mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-[#6B6B6B]">No status changes recorded yet.</p>
+                </div>
+              ) : (
+                <div className="relative">
+                  {/* Vertical timeline line */}
+                  <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-[#E8E2D9]" />
+
+                  <div className="space-y-5">
+                    {statusHistory.map((entry) => (
+                      <div key={entry.id} className="relative flex gap-4 pl-9">
+                        {/* Timeline dot */}
+                        <div className={`absolute left-0 top-1 w-7 h-7 rounded-full ${getTimelineDotColor(entry.action)} flex items-center justify-center z-10 shadow-sm`}>
+                          {(entry.action === 'Approved' || entry.action === 'Reactivated') && (
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                          {entry.action === 'Suspended' && (
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 9v6m4-6v6" />
+                            </svg>
+                          )}
+                          {(entry.action === 'Rejected' || entry.action === 'Deactivated') && (
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                          {!['Approved','Reactivated','Suspended','Rejected','Deactivated'].includes(entry.action) && (
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* Entry content */}
+                        <div className="flex-1 min-w-0 pb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${getActionBadgeStyle(entry.action)}`}>
+                              {entry.action}
+                            </span>
+                            {entry.from_status && (
+                              <span className="text-xs text-[#6B6B6B]">
+                                {getStatusLabel(entry.from_status)}
+                                <span className="mx-1">→</span>
+                                {getStatusLabel(entry.to_status)}
+                              </span>
+                            )}
+                          </div>
+
+                          {entry.note && (
+                            <p className="text-sm text-[#2D2D2D] bg-[#F5F0E8] rounded-lg px-3 py-2 mt-2 border-l-2 border-[#722F37]">
+                              {entry.note}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap gap-x-3 mt-1.5 text-xs text-[#6B6B6B]">
+                            <span>
+                              {new Date(entry.changed_at).toLocaleString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}
+                            </span>
+                            {entry.changed_by_name && (
+                              <span>· by {entry.changed_by_name}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Column - Stats */}
@@ -515,7 +706,7 @@ export default function DeliveryPartnerDetailPage() {
         </div>
       </div>
 
-      {/* Approve Modal */}
+      {/* ── Approve Modal ─────────────────────────────────────── */}
       {showApproveModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
@@ -535,10 +726,7 @@ export default function DeliveryPartnerDetailPage() {
             )}
             <div className="flex gap-4">
               <button
-                onClick={() => {
-                  setShowApproveModal(false);
-                  setModalError('');
-                }}
+                onClick={() => { setShowApproveModal(false); setModalError(''); }}
                 disabled={isProcessing}
                 className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -556,7 +744,7 @@ export default function DeliveryPartnerDetailPage() {
         </div>
       )}
 
-      {/* Reject Modal */}
+      {/* ── Reject Modal ──────────────────────────────────────── */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
@@ -569,10 +757,7 @@ export default function DeliveryPartnerDetailPage() {
               </label>
               <textarea
                 value={rejectionReason}
-                onChange={(e) => {
-                  setRejectionReason(e.target.value);
-                  setModalError('');
-                }}
+                onChange={(e) => { setRejectionReason(e.target.value); setModalError(''); }}
                 rows={4}
                 disabled={isProcessing}
                 className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -586,11 +771,7 @@ export default function DeliveryPartnerDetailPage() {
             </div>
             <div className="flex gap-4">
               <button
-                onClick={() => {
-                  setShowRejectModal(false);
-                  setRejectionReason('');
-                  setModalError('');
-                }}
+                onClick={() => { setShowRejectModal(false); setRejectionReason(''); setModalError(''); }}
                 disabled={isProcessing}
                 className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -602,6 +783,60 @@ export default function DeliveryPartnerDetailPage() {
                 className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? 'Rejecting...' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Suspend / Deactivate / Reactivate Modal ───────────── */}
+      {showStatusChangeModal && pendingStatus && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-[#2D2D2D] mb-2">{getModalTitle()}?</h3>
+            <p className="text-[#6B6B6B] text-sm mb-4">{getModalDescription()}</p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                Reason / Note{' '}
+                <span className="text-[#6B6B6B] font-normal">(optional — stored in history)</span>
+              </label>
+              <textarea
+                value={statusChangeNote}
+                onChange={(e) => { setStatusChangeNote(e.target.value); setStatusChangeError(''); }}
+                rows={3}
+                disabled={isProcessing}
+                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+                placeholder={
+                  pendingStatus === 'suspended'
+                    ? 'e.g. Multiple complaints from customers...'
+                    : pendingStatus === 'inactive'
+                    ? 'e.g. Partner requested permanent deactivation...'
+                    : 'e.g. Issue resolved, partner reinstated...'
+                }
+              />
+            </div>
+
+            {statusChangeError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-red-700 text-sm">{statusChangeError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowStatusChangeModal(false); setPendingStatus(null); }}
+                disabled={isProcessing}
+                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmStatusChange}
+                disabled={isProcessing}
+                className={`flex-1 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${getConfirmButtonStyle()}`}
+              >
+                {getConfirmButtonLabel()}
               </button>
             </div>
           </div>

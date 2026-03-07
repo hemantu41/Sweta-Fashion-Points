@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+// Maps a status transition to a human-readable action label
+function getActionLabel(from: string | null, to: string): string {
+  if (to === 'active' && from === 'pending_approval') return 'Approved';
+  if (to === 'active') return 'Reactivated';
+  if (to === 'rejected') return 'Rejected';
+  if (to === 'suspended') return 'Suspended';
+  if (to === 'inactive') return 'Deactivated';
+  return 'Status Changed';
+}
+
+async function insertStatusHistory(
+  deliveryPartnerId: string,
+  fromStatus: string | null,
+  toStatus: string,
+  note: string | null,
+  changedBy: string | null,
+  changedByName: string | null
+) {
+  const action = getActionLabel(fromStatus, toStatus);
+  await supabase.from('spf_delivery_partner_status_history').insert({
+    delivery_partner_id: deliveryPartnerId,
+    from_status: fromStatus,
+    to_status: toStatus,
+    action,
+    note: note || null,
+    changed_by: changedBy || null,
+    changed_by_name: changedByName || null,
+  });
+}
+
 // GET - Get single delivery partner details
 export async function GET(
   request: NextRequest,
@@ -72,13 +102,15 @@ export async function PUT(
       status,
       availabilityStatus,
       rejectionReason, // Rejection reason when status is rejected
-      updatedBy, // Admin user ID
+      note,            // Admin note stored in status history
+      updatedBy,       // Admin user ID
+      updatedByName,   // Admin display name for history
     } = body;
 
-    // Check if partner exists
+    // Fetch existing partner — include status so we know the previous value
     const { data: existingPartner } = await supabase
       .from('spf_delivery_partners')
-      .select('id')
+      .select('id, status')
       .eq('id', id)
       .maybeSingle();
 
@@ -167,6 +199,12 @@ export async function PUT(
       );
     }
 
+    // Insert status history if status changed
+    if (status !== undefined && status !== existingPartner.status) {
+      const historyNote = note || rejectionReason || null;
+      await insertStatusHistory(id, existingPartner.status, status, historyNote, updatedBy || null, updatedByName || null);
+    }
+
     return NextResponse.json({
       success: true,
       partner: updatedPartner,
@@ -184,7 +222,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Deactivate/suspend delivery partner (Admin Only)
+// DELETE - Deactivate delivery partner (Admin Only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -192,7 +230,20 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Check if partner exists
+    // Try to read optional body for audit info
+    let updatedBy: string | null = null;
+    let updatedByName: string | null = null;
+    let note: string | null = null;
+    try {
+      const body = await request.json();
+      updatedBy = body.updatedBy || null;
+      updatedByName = body.updatedByName || null;
+      note = body.note || null;
+    } catch {
+      // Body is optional for DELETE
+    }
+
+    // Check if partner exists and get current status
     const { data: existingPartner } = await supabase
       .from('spf_delivery_partners')
       .select('id, status')
@@ -223,6 +274,9 @@ export async function DELETE(
         { status: 500 }
       );
     }
+
+    // Insert status history
+    await insertStatusHistory(id, existingPartner.status, 'inactive', note, updatedBy, updatedByName);
 
     return NextResponse.json({
       success: true,
