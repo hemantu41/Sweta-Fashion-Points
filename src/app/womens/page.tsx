@@ -5,9 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CldImage } from 'next-cloudinary';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
+import PincodeBanner from '@/components/PincodeBanner';
 
 export default function WomensPage() {
   const { language } = useLanguage();
+  const { user, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const categoryFromUrl = searchParams.get('category');
   const [activeCategory, setActiveCategory] = useState<string | null>(categoryFromUrl);
@@ -21,8 +24,9 @@ export default function WomensPage() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
 
   useEffect(() => {
+    if (authLoading) return;
     fetchProducts();
-  }, []);
+  }, [authLoading]);
 
   // Update active category when URL changes
   useEffect(() => {
@@ -33,7 +37,7 @@ export default function WomensPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products?category=womens', { cache: 'no-store' });
+      const response = await fetch(`/api/products?category=womens${user?.pincode ? `&userPincode=${user.pincode}` : ''}`, { cache: 'no-store' });
       const data = await response.json();
       setAllProducts(data.products || []);
     } catch (error) {
@@ -139,6 +143,7 @@ export default function WomensPage() {
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <PincodeBanner />
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm mb-6">
           <Link href="/" className="text-[#6B6B6B] hover:text-[#722F37] transition-colors">

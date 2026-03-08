@@ -4,10 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import PincodeBanner from '@/components/PincodeBanner';
 
 export default function FootwearPage() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get('category');
+  const { user, isLoading: authLoading } = useAuth();
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,8 +50,9 @@ export default function FootwearPage() {
   ];
 
   useEffect(() => {
+    if (authLoading) return;
     fetchProducts();
-  }, [activeCategory]);
+  }, [activeCategory, authLoading]);
 
   useEffect(() => {
     if (categoryParam) {
@@ -62,6 +66,7 @@ export default function FootwearPage() {
       const params = new URLSearchParams({
         category: 'footwear',
         ...(activeCategory !== 'all' && { subCategory: activeCategory }),
+        ...(user?.pincode && { userPincode: user.pincode }),
       });
 
       const response = await fetch(`/api/products?${params}`);
@@ -113,6 +118,9 @@ export default function FootwearPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
+      <div className="max-w-7xl mx-auto px-4 pt-4">
+        <PincodeBanner />
+      </div>
       {/* Breadcrumb */}
       <div className="bg-white border-b border-[#E8E2D9]">
         <div className="max-w-7xl mx-auto px-4 py-4">

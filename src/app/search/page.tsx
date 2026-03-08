@@ -4,26 +4,30 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ProductCard } from '@/components';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import PincodeBanner from '@/components/PincodeBanner';
 
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
+  const { user, isLoading: authLoading } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
 
   useEffect(() => {
+    if (authLoading) return;
     if (query) {
       searchProducts();
     } else {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, authLoading]);
 
   const searchProducts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/products?search=${encodeURIComponent(query)}`, {
+      const response = await fetch(`/api/products?search=${encodeURIComponent(query)}${user?.pincode ? `&userPincode=${user.pincode}` : ''}`, {
         cache: 'no-store',
       });
       const data = await response.json();
@@ -77,6 +81,7 @@ function SearchResults() {
   return (
     <div className="min-h-screen bg-[#FAF7F2] py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <PincodeBanner />
         {/* Search Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>

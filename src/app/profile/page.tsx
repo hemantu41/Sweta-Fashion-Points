@@ -16,6 +16,7 @@ export default function ProfilePage() {
     email: '',
     mobile: '',
     location: '',
+    pincode: '',
     gender: '',
     date_of_birth: '',
     citizenship: 'Indian',
@@ -57,6 +58,7 @@ export default function ProfilePage() {
           email: data.profile.email || user?.email || '',
           mobile: data.profile.mobile || user?.mobile || '',
           location: data.profile.location || '',
+          pincode: data.profile.pincode || '',
           gender: data.profile.gender || '',
           date_of_birth: formattedDate,
           citizenship: data.profile.citizenship || 'Indian',
@@ -68,6 +70,7 @@ export default function ProfilePage() {
           email: user?.email || '',
           mobile: user?.mobile || '',
           location: '',
+          pincode: '',
           gender: '',
           date_of_birth: '',
           citizenship: 'Indian',
@@ -179,6 +182,7 @@ export default function ProfilePage() {
             name: data.profile.name,
             mobile: data.profile.mobile,
             location: data.profile.location,
+            pincode: data.profile.pincode || undefined,
           });
         }
 
@@ -364,6 +368,30 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{formData.location || '-'}</p>
+                  )}
+                </div>
+
+                {/* Pincode */}
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                    Pincode
+                    <span className="ml-1 text-xs text-[#6B6B6B] font-normal">(for nearby products)</span>
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={formData.pincode}
+                      onChange={handleChange}
+                      maxLength={6}
+                      pattern="[0-9]{6}"
+                      placeholder="e.g. 823001"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    />
+                  ) : (
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">
+                      {formData.pincode || <span className="text-[#6B6B6B] text-sm">Not set — add to see nearby products</span>}
+                    </p>
                   )}
                 </div>
               </div>

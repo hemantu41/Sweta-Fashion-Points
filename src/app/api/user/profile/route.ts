@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Fetch profile from spf_users table
     const { data: profile, error } = await supabase
       .from('spf_users')
-      .select('id, name, email, mobile, location, gender, date_of_birth, citizenship, profile_photo')
+      .select('id, name, email, mobile, location, pincode, gender, date_of_birth, citizenship, profile_photo')
       .eq('id', userId)
       .single();
 
@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       name,
       mobile,
       location,
+      pincode,
       gender,
       date_of_birth,
       citizenship,
@@ -66,6 +67,13 @@ export async function POST(request: NextRequest) {
     if (name) updateData.name = name;
     if (mobile) updateData.mobile = mobile;
     if (location !== undefined) updateData.location = location;
+    if (pincode !== undefined) {
+      // Validate: 6 digits or empty string (to clear)
+      if (pincode && !/^\d{6}$/.test(pincode)) {
+        return NextResponse.json({ error: 'Pincode must be 6 digits' }, { status: 400 });
+      }
+      updateData.pincode = pincode || null;
+    }
     if (gender !== undefined) updateData.gender = gender || null;
     if (date_of_birth !== undefined) updateData.date_of_birth = date_of_birth || null;
     if (citizenship) updateData.citizenship = citizenship;
