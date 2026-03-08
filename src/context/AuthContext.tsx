@@ -8,7 +8,8 @@ interface User {
   email: string;
   mobile: string;
   location?: string;
-  pincode?: string;
+  latitude?: number;
+  longitude?: number;
   isAdmin?: boolean;
   // Seller fields
   isSeller?: boolean;

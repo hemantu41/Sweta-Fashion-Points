@@ -21,8 +21,9 @@ export default function PincodeBanner() {
     setDismissed(true);
   };
 
-  // Don't show if: auth still loading, user not logged in, pincode already set, or dismissed
-  if (isLoading || !isAuthenticated || user?.pincode || dismissed) return null;
+  // Don't show if: auth still loading, user not logged in, location already set, or dismissed
+  const hasLocation = !!(user?.latitude && user?.longitude);
+  if (isLoading || !isAuthenticated || hasLocation || dismissed) return null;
 
   return (
     <div className="flex items-center justify-between gap-3 bg-[#FFF8F0] border border-[#E8C99A] rounded-xl px-4 py-3 mb-4 text-sm">
@@ -32,9 +33,9 @@ export default function PincodeBanner() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <span>
-          Set your pincode to discover products from sellers near you.{' '}
+          Enable your location to discover products from sellers near you.{' '}
           <Link href="/profile" className="text-[#722F37] font-semibold hover:underline">
-            Add in Profile →
+            Set in Profile →
           </Link>
         </span>
       </div>

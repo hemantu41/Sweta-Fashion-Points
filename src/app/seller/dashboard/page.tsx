@@ -11,6 +11,8 @@ interface Seller {
   businessName: string;
   status: string;
   commissionPercentage: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface Product {
@@ -57,6 +59,7 @@ export default function SellerDashboardPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [deletionHistory, setDeletionHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [sellerGeoStatus, setSellerGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
@@ -195,6 +198,38 @@ export default function SellerDashboardPage() {
     }
   };
 
+  const handleSetSellerLocation = () => {
+    if (!navigator.geolocation) {
+      setSellerGeoStatus('error');
+      return;
+    }
+    setSellerGeoStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch('/api/sellers/me', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user?.id,
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            }),
+          });
+          if (res.ok) {
+            setSeller(prev => prev ? { ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude } : prev);
+            setSellerGeoStatus('success');
+          } else {
+            setSellerGeoStatus('error');
+          }
+        } catch {
+          setSellerGeoStatus('error');
+        }
+      },
+      () => setSellerGeoStatus('error')
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#FAF7F2] via-white to-[#F5F0E8] p-8">
@@ -327,6 +362,42 @@ export default function SellerDashboardPage() {
             <p className="text-sm text-red-700 mb-1">Low Stock</p>
             <p className="text-3xl font-bold text-red-800">{stats.lowStock}</p>
           </div>
+        </div>
+
+        {/* Shop Location Card */}
+        <div className="bg-white rounded-xl border border-[#E8E2D9] p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-[#722F37] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <div>
+              <p className="font-semibold text-[#2D2D2D]">Shop Location</p>
+              {seller.latitude && seller.longitude ? (
+                <p className="text-sm text-green-600 mt-0.5">
+                  Location set ({Number(seller.latitude).toFixed(4)}, {Number(seller.longitude).toFixed(4)}) — your products appear in nearby customer searches
+                </p>
+              ) : (
+                <p className="text-sm text-[#6B6B6B] mt-0.5">
+                  Not set — add your shop location so customers nearby can discover your products
+                </p>
+              )}
+              {sellerGeoStatus === 'error' && (
+                <p className="text-xs text-red-500 mt-1">Could not get location. Please allow browser location access and try again.</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={handleSetSellerLocation}
+            disabled={sellerGeoStatus === 'loading'}
+            className="shrink-0 px-4 py-2 bg-[#722F37] text-white text-sm rounded-lg hover:bg-[#5a252c] transition-colors disabled:opacity-50"
+          >
+            {sellerGeoStatus === 'loading'
+              ? 'Detecting...'
+              : seller.latitude && seller.longitude
+              ? 'Update Location'
+              : 'Set Shop Location'}
+          </button>
         </div>
 
         {/* Action Bar */}

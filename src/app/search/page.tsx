@@ -27,7 +27,7 @@ function SearchResults() {
   const searchProducts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/products?search=${encodeURIComponent(query)}${user?.pincode ? `&userPincode=${user.pincode}` : ''}`, {
+      const response = await fetch(`/api/products?search=${encodeURIComponent(query)}${user?.latitude && user?.longitude ? `&userLat=${user.latitude}&userLng=${user.longitude}` : ''}`, {
         cache: 'no-store',
       });
       const data = await response.json();

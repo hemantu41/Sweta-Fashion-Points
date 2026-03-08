@@ -16,12 +16,14 @@ export default function ProfilePage() {
     email: '',
     mobile: '',
     location: '',
-    pincode: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     gender: '',
     date_of_birth: '',
     citizenship: 'Indian',
     profile_photo: '',
   });
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -58,19 +60,24 @@ export default function ProfilePage() {
           email: data.profile.email || user?.email || '',
           mobile: data.profile.mobile || user?.mobile || '',
           location: data.profile.location || '',
-          pincode: data.profile.pincode || '',
+          latitude: data.profile.latitude != null ? Number(data.profile.latitude) : null,
+          longitude: data.profile.longitude != null ? Number(data.profile.longitude) : null,
           gender: data.profile.gender || '',
           date_of_birth: formattedDate,
           citizenship: data.profile.citizenship || 'Indian',
           profile_photo: data.profile.profile_photo || '',
         });
+        if (data.profile.latitude != null && data.profile.longitude != null) {
+          setGeoStatus('success');
+        }
       } else {
         setFormData({
           name: user?.name || '',
           email: user?.email || '',
           mobile: user?.mobile || '',
           location: '',
-          pincode: '',
+          latitude: null,
+          longitude: null,
           gender: '',
           date_of_birth: '',
           citizenship: 'Indian',
@@ -182,7 +189,8 @@ export default function ProfilePage() {
             name: data.profile.name,
             mobile: data.profile.mobile,
             location: data.profile.location,
-            pincode: data.profile.pincode || undefined,
+            latitude: data.profile.latitude != null ? Number(data.profile.latitude) : undefined,
+            longitude: data.profile.longitude != null ? Number(data.profile.longitude) : undefined,
           });
         }
 
@@ -371,27 +379,72 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {/* Pincode */}
-                <div>
+                {/* Location (GPS) */}
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    Pincode
+                    My Location
                     <span className="ml-1 text-xs text-[#6B6B6B] font-normal">(for nearby products)</span>
                   </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      name="pincode"
-                      value={formData.pincode}
-                      onChange={handleChange}
-                      maxLength={6}
-                      pattern="[0-9]{6}"
-                      placeholder="e.g. 823001"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                    />
+                  {formData.latitude && formData.longitude ? (
+                    <div className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
+                      <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="text-sm text-green-700 font-medium">Location saved ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})</span>
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGeoStatus('loading');
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => {
+                                setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                                setGeoStatus('success');
+                              },
+                              () => setGeoStatus('error')
+                            );
+                          }}
+                          className="ml-auto text-xs text-[#722F37] hover:underline"
+                        >
+                          Update
+                        </button>
+                      )}
+                    </div>
                   ) : (
-                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">
-                      {formData.pincode || <span className="text-[#6B6B6B] text-sm">Not set — add to see nearby products</span>}
-                    </p>
+                    <div className="flex items-center gap-3 px-4 py-3 bg-[#F5F0E8] rounded-lg">
+                      <svg className="w-4 h-4 text-[#6B6B6B] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="text-sm text-[#6B6B6B]">Not set — enable to see nearby products</span>
+                      {isEditing && (
+                        <button
+                          type="button"
+                          disabled={geoStatus === 'loading'}
+                          onClick={() => {
+                            if (!navigator.geolocation) {
+                              setGeoStatus('error');
+                              return;
+                            }
+                            setGeoStatus('loading');
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => {
+                                setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                                setGeoStatus('success');
+                              },
+                              () => setGeoStatus('error')
+                            );
+                          }}
+                          className="ml-auto px-3 py-1.5 bg-[#722F37] text-white text-xs rounded-lg hover:bg-[#5a252c] transition-colors disabled:opacity-50"
+                        >
+                          {geoStatus === 'loading' ? 'Detecting...' : 'Use My Location'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {geoStatus === 'error' && (
+                    <p className="text-xs text-red-500 mt-1">Could not get location. Please allow browser location access and try again.</p>
                   )}
                 </div>
               </div>

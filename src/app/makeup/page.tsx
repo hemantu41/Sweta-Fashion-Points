@@ -37,7 +37,7 @@ export default function MakeupPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`/api/products?category=beauty${user?.pincode ? `&userPincode=${user.pincode}` : ''}`, { cache: 'no-store' });
+      const response = await fetch(`/api/products?category=beauty${user?.latitude && user?.longitude ? `&userLat=${user.latitude}&userLng=${user.longitude}` : ''}`, { cache: 'no-store' });
       const data = await response.json();
       setAllProducts(data.products || []);
     } catch (error) {

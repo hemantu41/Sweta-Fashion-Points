@@ -2,8 +2,8 @@
 
 ## Overview
 
-Users only see products from sellers within **35 km** of their location (based on pincode).
-If a user has not set their pincode, all products are shown along with a dismissible banner prompting them to add it.
+Users only see products from sellers within **35 km** of their location (based on GPS coordinates captured from the browser).
+If a user has not set their location, all products are shown along with a dismissible banner prompting them to add it in their profile.
 
 ---
 
@@ -12,83 +12,80 @@ If a user has not set their pincode, all products are shown along with a dismiss
 ```
 User visits /mens (or any category page)
     ↓
-AuthContext loads → user.pincode read from localStorage
+AuthContext loads → user.latitude / user.longitude read from localStorage
     ↓
-Category page appends &userPincode=XXXXXX to API request
+Category page appends &userLat=XX.XXXX&userLng=YY.YYYY to API request
     ↓
-/api/products receives userPincode param
+/api/products receives userLat + userLng params
     ↓
-For each product: geocode seller's pincode (DB cache first, then Google Maps)
+For each product: read seller.latitude and seller.longitude (stored in DB)
     ↓
-Haversine distance calculated between user & seller
+Haversine distance calculated between user & seller (synchronous, no API call)
     ↓
 Only products ≤ 35 km returned
     ↓
-Page renders filtered results + PincodeBanner (if no pincode set)
+Page renders filtered results + Location Banner (if no location set)
 ```
+
+No external APIs required — all distance calculations happen in-process using the Haversine formula.
 
 ---
 
 ## Database Setup (Run Once in Supabase)
 
-### 1. Add pincode to users table
-File: `database/add-user-pincode.sql`
+### 1. Add coordinates to users table
+File: `database/add-user-coordinates.sql`
 ```sql
-ALTER TABLE spf_users ADD COLUMN IF NOT EXISTS pincode VARCHAR(10);
+ALTER TABLE spf_users
+  ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10, 7),
+  ADD COLUMN IF NOT EXISTS longitude DECIMAL(10, 7);
 ```
 
-### 2. Create geocoding cache table
-File: `database/pincode-coordinates-cache.sql`
+### 2. Add coordinates to sellers table
+File: `database/add-seller-coordinates.sql`
 ```sql
-CREATE TABLE IF NOT EXISTS spf_pincode_coordinates (
-  pincode    VARCHAR(10)    PRIMARY KEY,
-  latitude   DECIMAL(10, 7) NOT NULL,
-  longitude  DECIMAL(10, 7) NOT NULL,
-  cached_at  TIMESTAMPTZ    DEFAULT NOW()
-);
+ALTER TABLE spf_sellers
+  ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10, 7),
+  ADD COLUMN IF NOT EXISTS longitude DECIMAL(10, 7);
 ```
 
-Each Indian pincode is geocoded **once** via Google Maps and stored here. All future lookups read from this cache — no repeat API calls.
+Run both SQL files in the Supabase SQL Editor. No other database setup required.
 
 ---
 
-## Environment Variable Required
+## No Environment Variable Required
 
-Add to `.env.local` (server-side only — no `NEXT_PUBLIC_` prefix):
-```
-GOOGLE_MAPS_API_KEY=AIzaSy...your-key-here
-```
-
-**How to get the key:**
-1. Go to [https://console.cloud.google.com](https://console.cloud.google.com)
-2. APIs & Services → Library → Enable **Geocoding API**
-3. APIs & Services → Credentials → Create API Key
-4. Restrict the key to "Geocoding API" only
-
-**Cost:** $200 free credit/month (~40,000 geocoding calls). Since each pincode is geocoded only once ever, actual usage is minimal.
+Unlike the previous pincode-based approach, **no Google Maps API key is needed**. The browser's built-in `navigator.geolocation` API is used to capture coordinates directly — completely free and accurate.
 
 ---
 
 ## Files Changed / Created
 
-### New Files
+### New SQL Migrations
 
 | File | Purpose |
 |---|---|
-| `database/add-user-pincode.sql` | SQL migration — adds pincode column to spf_users |
-| `database/pincode-coordinates-cache.sql` | SQL migration — creates geocoding cache table |
-| `src/lib/pincode-distance.ts` | Core utility: geocoding + Haversine distance + filtering |
-| `src/components/PincodeBanner.tsx` | Dismissible banner shown when user has no pincode |
+| `database/add-user-coordinates.sql` | Adds latitude/longitude columns to spf_users |
+| `database/add-seller-coordinates.sql` | Adds latitude/longitude columns to spf_sellers |
+
+### Core Utility
+
+| File | Purpose |
+|---|---|
+| `src/lib/pincode-distance.ts` | Haversine distance + synchronous product filtering |
+| `src/components/PincodeBanner.tsx` | Dismissible banner shown when user has no location set |
 
 ### Modified Files
 
 | File | What Changed |
 |---|---|
-| `src/app/api/products/route.ts` | Accepts `userPincode` param; bypasses cache; calls distance filter |
-| `src/app/api/user/profile/route.ts` | GET/POST now include `pincode` field with 6-digit validation |
-| `src/context/AuthContext.tsx` | Added `pincode?: string` to User interface |
-| `src/app/profile/page.tsx` | Added Pincode input field |
-| `src/app/sarees/page.tsx` | useAuth + wait for auth + userPincode in fetch + PincodeBanner |
+| `src/app/api/products/route.ts` | Accepts `userLat`/`userLng` params; seller join uses `latitude`/`longitude`; calls synchronous filter |
+| `src/app/api/user/profile/route.ts` | GET/POST now include `latitude`/`longitude` fields |
+| `src/app/api/sellers/me/route.ts` | GET returns seller `latitude`/`longitude`; PATCH endpoint saves seller location |
+| `src/context/AuthContext.tsx` | Added `latitude?: number; longitude?: number` to User interface |
+| `src/app/profile/page.tsx` | "Use My Location" geolocation button replaces pincode input |
+| `src/app/seller/dashboard/page.tsx` | "Set Shop Location" card with geolocation button |
+| `src/app/sarees/page.tsx` | Sends `userLat`/`userLng` in fetch URL |
 | `src/app/mens/page.tsx` | Same as above |
 | `src/app/womens/page.tsx` | Same as above |
 | `src/app/kids/page.tsx` | Same as above |
@@ -100,49 +97,43 @@ GOOGLE_MAPS_API_KEY=AIzaSy...your-key-here
 
 ## Core Utility: `src/lib/pincode-distance.ts`
 
-### `geocodePincode(pincode)`
-```typescript
-geocodePincode(pincode: string): Promise<{ lat: number; lng: number } | null>
-```
-- Checks `spf_pincode_coordinates` table first (cache hit → no API call)
-- On cache miss: calls Google Maps Geocoding API with `components=postal_code:${pincode}|country:IN`
-- Stores result in cache for future use
-- Returns `null` on failure (safe — products are not hidden if geocoding fails)
-
 ### `haversineDistance(lat1, lng1, lat2, lng2)`
 ```typescript
 haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number
 ```
 - Returns distance in kilometers using the great-circle formula
 
-### `filterProductsByDistance(products, userPincode, maxKm = 35)`
+### `filterProductsByDistance(products, userLat, userLng, maxKm = 35)`
 ```typescript
-filterProductsByDistance(products: any[], userPincode: string, maxKm?: number): Promise<any[]>
+filterProductsByDistance(products: any[], userLat: number, userLng: number, maxKm?: number): any[]
 ```
-- Geocodes user pincode + all unique seller pincodes in parallel (`Promise.all`)
+- **Synchronous** — no async, no DB calls, no external APIs
 - Filters products where seller distance ≤ maxKm
 - **Safe fallbacks:**
-  - User pincode geocoding fails → returns all products unchanged
-  - Seller has no pincode → product is always included
-  - Seller pincode geocoding fails → product is always included
+  - Seller has no lat/lng stored → product is always included
 
 ---
 
 ## Products API Changes (`src/app/api/products/route.ts`)
 
 ```typescript
-// New param
-const userPincode = searchParams.get('userPincode');
+// New params
+const userLat = searchParams.get('userLat');
+const userLng = searchParams.get('userLng');
 
-// Cache bypassed when userPincode is present (results are user-specific)
-const useCache = !search && !userPincode;
+// Cache bypassed when user coords are present (results are user-specific)
+const useCache = !search && !(userLat && userLng);
 
-// Seller join now includes pincode
-seller:spf_sellers!...(id, business_name, ..., pincode)
+// Seller join now includes latitude/longitude
+seller:spf_sellers!...(id, business_name, ..., latitude, longitude)
 
-// After fetch, apply distance filter
-if (userPincode) {
-  products = await filterProductsByDistance(products, userPincode);
+// After fetch, apply synchronous distance filter
+if (userLat && userLng) {
+  const lat = parseFloat(userLat);
+  const lng = parseFloat(userLng);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    products = filterProductsByDistance(products, lat, lng);
+  }
 }
 ```
 
@@ -160,21 +151,23 @@ import PincodeBanner from '@/components/PincodeBanner';
 export default function CategoryPage() {
   const { user, isLoading: authLoading } = useAuth();
 
-  // Wait for auth to load before fetching (so pincode is available)
+  // Wait for auth to load before fetching (so coordinates are available)
   useEffect(() => {
     if (authLoading) return;
     fetchProducts();
   }, [authLoading]);
 
   const fetchProducts = async () => {
-    const url = `/api/products?category=X${user?.pincode ? `&userPincode=${user.pincode}` : ''}`;
-    const response = await fetch(url, { cache: 'no-store' });
+    const coords = user?.latitude && user?.longitude
+      ? `&userLat=${user.latitude}&userLng=${user.longitude}`
+      : '';
+    const response = await fetch(`/api/products?category=X${coords}`, { cache: 'no-store' });
     // ...
   };
 
   return (
     <div>
-      <PincodeBanner />  {/* Shows only if logged in + no pincode set */}
+      <PincodeBanner />  {/* Shows only if logged in + no location set */}
       {/* rest of page */}
     </div>
   );
@@ -188,60 +181,50 @@ export default function CategoryPage() {
 Renders **null** (hidden) when any of these are true:
 - Auth is still loading
 - User is not logged in
-- `user.pincode` is already set
+- `user.latitude` **and** `user.longitude` are both set
 - Banner was dismissed this session (stored in `sessionStorage` key: `pincodeBannerDismissed`)
 
 Shows when:
-- User is logged in but has no pincode set
+- User is logged in but has no location set
 
 ---
 
 ## User Flow
 
-### First Visit (No Pincode)
+### First Visit (No Location Set)
 1. User visits `/mens`
-2. Auth loads → no pincode → fetch runs without `userPincode`
+2. Auth loads → no coordinates → fetch runs without `userLat`/`userLng`
 3. All products shown
-4. PincodeBanner appears: *"Set your pincode to discover products from sellers near you → Add in Profile"*
+4. Location Banner appears: *"Enable your location to discover products from sellers near you → Set in Profile"*
 
-### After Setting Pincode
-1. User goes to `/profile` → enters 6-digit pincode → Save
-2. Visits `/mens` again
-3. Auth loads → pincode present → fetch runs with `&userPincode=110001`
-4. API geocodes user pincode + seller pincodes → filters to ≤ 35 km
-5. Only nearby products shown, no banner
+### Setting Location (Customer)
+1. User goes to `/profile` → clicks **"Use My Location"** button → browser asks for permission → allow
+2. Coordinates captured and saved to profile → AuthContext updated
+3. Visits `/mens` again
+4. Auth loads → coordinates present → fetch runs with `&userLat=XX.XXXX&userLng=YY.YYYY`
+5. API filters products to ≤ 35 km — only nearby products shown, no banner
+
+### Setting Location (Seller)
+1. Seller goes to `/seller/dashboard`
+2. Sees "Shop Location" card → clicks **"Set Shop Location"** button → browser asks for permission → allow
+3. Coordinates saved to `spf_sellers.latitude` / `spf_sellers.longitude` via PATCH `/api/sellers/me`
+4. Their products now appear in nearby customer searches
 
 ### Dismissing the Banner
 - User clicks **✕** → banner hidden for current browser session
-- On next session (new tab/browser restart) → banner appears again until pincode is set
-
----
-
-## Seller Pincode Requirement
-
-For the filter to work, sellers must have a pincode saved in `spf_sellers.pincode`.
-
-**Products with no seller pincode are always shown** (safe fallback — they are never hidden).
-
-To check which sellers have pincodes set:
-```sql
-SELECT id, business_name, pincode
-FROM spf_sellers
-WHERE status = 'active'
-ORDER BY pincode NULLS LAST;
-```
+- On next session (new tab/browser restart) → banner appears again until location is set
 
 ---
 
 ## Testing Checklist
 
-- [ ] Run SQL migrations in Supabase SQL Editor
-- [ ] Add `GOOGLE_MAPS_API_KEY` to `.env.local`
-- [ ] Log in → go to `/profile` → set a valid 6-digit pincode → Save
-- [ ] Visit `/mens` → check DevTools Network → confirm `userPincode=XXXXXX` in API call
-- [ ] Check terminal logs: `[Products API] Distance filter: X products → Y products`
-- [ ] Check Supabase: `SELECT * FROM spf_pincode_coordinates;` — rows should appear
-- [ ] Clear pincode in profile → revisit `/mens` → all products shown + banner visible
+- [ ] Run both SQL migrations in Supabase SQL Editor
+- [ ] Log in → go to `/profile` → click "Use My Location" → allow browser permission → Save profile
+- [ ] Visit `/mens` → check DevTools Network → confirm `userLat=XX&userLng=YY` in API request URL
+- [ ] Check terminal logs: `[Products API] Location filter (XX,YY): X → Y products`
+- [ ] Go to `/seller/dashboard` → click "Set Shop Location" → allow permission → confirm success
+- [ ] Visit `/mens` again — only products from sellers within 35 km should appear
+- [ ] Remove location: set `latitude`/`longitude` to NULL in Supabase for test user → banner reappears
 - [ ] Dismiss banner → navigate away → come back → banner stays hidden (same session)
 - [ ] Open new tab → banner reappears (new session)
 
@@ -251,11 +234,10 @@ ORDER BY pincode NULLS LAST;
 
 | Symptom | Likely Cause | Fix |
 |---|---|---|
-| `userPincode` missing from API URL | Auth not loading or pincode not saved | Check profile save, check AuthContext pincode field |
-| All products still show after setting pincode | Sellers have no pincode in DB | Sellers need to update their pincode in seller profile |
-| Google Maps error in server logs | Wrong API key or Geocoding API not enabled | Verify key in Google Cloud Console → enable Geocoding API |
-| `spf_pincode_coordinates` table doesn't exist | SQL migration not run | Run `database/pincode-coordinates-cache.sql` in Supabase |
-| Banner not showing | User is not logged in, or pincode is already set, or dismissed | Check all three conditions |
+| `userLat`/`userLng` missing from API URL | Auth not loaded or location not saved | Check that profile page "Use My Location" saved successfully |
+| All products still show after setting location | Sellers have no lat/lng in DB | Sellers need to click "Set Shop Location" in their dashboard |
+| Geolocation button shows error | Browser location access denied | Allow location in browser settings for this site |
+| Banner not showing | User not logged in, location already set, or dismissed | Check all three conditions |
 | Banner keeps reappearing on same session | sessionStorage not persisting | Check browser settings (private mode clears sessionStorage) |
 
 ---
@@ -265,16 +247,16 @@ ORDER BY pincode NULLS LAST;
 | Setting | Value | Location |
 |---|---|---|
 | Max distance | 35 km | `src/lib/pincode-distance.ts` → `filterProductsByDistance` default param |
-| Geocoding country | India (IN) | `src/lib/pincode-distance.ts` → `geocodePincode` |
-| Cache table | `spf_pincode_coordinates` | Supabase DB |
 | Banner dismiss storage | `sessionStorage['pincodeBannerDismissed']` | `src/components/PincodeBanner.tsx` |
-| Pincode validation | 6 digits (`/^\d{6}$/`) | `src/app/api/user/profile/route.ts` |
+| Seller location API | `PATCH /api/sellers/me` | `src/app/api/sellers/me/route.ts` |
+| User location API | `POST /api/user/profile` | `src/app/api/user/profile/route.ts` |
 
 To change the distance limit (e.g., to 50 km), update `filterProductsByDistance` in `src/lib/pincode-distance.ts`:
 ```typescript
-export async function filterProductsByDistance(
+export function filterProductsByDistance(
   products: any[],
-  userPincode: string,
+  userLat: number,
+  userLng: number,
   maxKm: number = 50  // ← change here
 )
 ```
@@ -285,4 +267,5 @@ export async function filterProductsByDistance(
 
 | Version | Date | Change |
 |---|---|---|
-| v1.0.0 | March 2026 | Initial implementation — 35 km filter, Google Maps geocoding, DB cache, PincodeBanner, 6 category pages + search |
+| v1.0.0 | March 2026 | Initial implementation — 35 km filter, Google Maps geocoding (pincode-based), DB cache, PincodeBanner |
+| v2.0.0 | March 2026 | Replaced pincode geocoding with direct browser GPS coordinates — no API key needed, synchronous, more accurate |

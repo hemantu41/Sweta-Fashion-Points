@@ -25,11 +25,12 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive');
     const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
     const search = searchParams.get('search'); // NEW: Search query
-    const userPincode = searchParams.get('userPincode'); // NEW: Location-based filter
+    const userLat = searchParams.get('userLat');   // Location-based filter
+    const userLng = searchParams.get('userLng');   // Location-based filter
     // Note: _t parameter is ignored for cache key (used only for browser cache busting)
 
-    // Bypass cache for search and user-pincode (location) queries — results are real-time / user-specific
-    const useCache = !search && !userPincode;
+    // Bypass cache for search and location queries — results are real-time / user-specific
+    const useCache = !search && !(userLat && userLng);
     const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}:${search || 'none'}`;
 
     // Function to fetch products
@@ -44,7 +45,8 @@ export async function GET(request: NextRequest) {
           city,
           state,
           business_phone,
-          pincode
+          latitude,
+          longitude
         )
       `);
 
@@ -134,7 +136,8 @@ export async function GET(request: NextRequest) {
           city: p.seller.city,
           state: p.seller.state,
           businessPhone: p.seller.business_phone,
-          pincode: p.seller.pincode || null,
+          latitude: p.seller.latitude != null ? Number(p.seller.latitude) : null,
+          longitude: p.seller.longitude != null ? Number(p.seller.longitude) : null,
         } : null,
       })) || [];
     };
@@ -144,11 +147,15 @@ export async function GET(request: NextRequest) {
       ? await getCachedData(cacheKey, fetchProducts, productCache, 600)
       : await fetchProducts();
 
-    // Apply 35 km distance filter when user pincode is provided
-    if (userPincode) {
-      const before = transformedProducts.length;
-      transformedProducts = await filterProductsByDistance(transformedProducts, userPincode);
-      console.log(`[Products API] Location filter (${userPincode}): ${before} → ${transformedProducts.length} products`);
+    // Apply 35 km distance filter when user coordinates are provided
+    if (userLat && userLng) {
+      const lat = parseFloat(userLat);
+      const lng = parseFloat(userLng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const before = transformedProducts.length;
+        transformedProducts = filterProductsByDistance(transformedProducts, lat, lng);
+        console.log(`[Products API] Location filter (${lat},${lng}): ${before} → ${transformedProducts.length} products`);
+      }
     }
 
     console.log(`[Products API] Returning ${transformedProducts.length} products${search ? ` for search: "${search}"` : category ? ` for category: ${category}` : ''}`);

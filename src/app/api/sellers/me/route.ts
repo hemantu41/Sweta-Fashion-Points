@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { supabase } from '@/lib/supabase';
 
 // GET /api/sellers/me - Get current user's seller profile
 export async function GET(request: NextRequest) {
@@ -74,6 +75,8 @@ export async function GET(request: NextRequest) {
       rejectionReason: seller.rejection_reason,
       commissionPercentage: seller.commission_percentage,
       isActive: seller.is_active,
+      latitude: seller.latitude != null ? Number(seller.latitude) : null,
+      longitude: seller.longitude != null ? Number(seller.longitude) : null,
       documents: seller.documents,
       notes: seller.notes,
       createdAt: seller.created_at,
@@ -91,5 +94,35 @@ export async function GET(request: NextRequest) {
       { error: 'Something went wrong' },
       { status: 500 }
     );
+  }
+}
+
+// PATCH /api/sellers/me - Update seller location (lat/lng)
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { userId, latitude, longitude } = body;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    }
+    if (latitude == null || longitude == null) {
+      return NextResponse.json({ error: 'latitude and longitude are required' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('spf_sellers')
+      .update({ latitude: Number(latitude), longitude: Number(longitude) })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('[Sellers Me API] Location update error:', error);
+      return NextResponse.json({ error: 'Failed to update location' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Seller location update error:', error);
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

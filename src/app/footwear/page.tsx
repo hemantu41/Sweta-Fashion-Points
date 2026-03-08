@@ -66,7 +66,7 @@ export default function FootwearPage() {
       const params = new URLSearchParams({
         category: 'footwear',
         ...(activeCategory !== 'all' && { subCategory: activeCategory }),
-        ...(user?.pincode && { userPincode: user.pincode }),
+        ...(user?.latitude && user?.longitude && { userLat: String(user.latitude), userLng: String(user.longitude) }),
       });
 
       const response = await fetch(`/api/products?${params}`);
