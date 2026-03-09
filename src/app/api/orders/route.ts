@@ -13,25 +13,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = supabase
-      .from('spf_payment_orders')
-      .select('id, order_number, status, delivery_address, items, packing_deadline, sla_deadline, packed_at, created_at, payment_completed_at')
-      .order('created_at', { ascending: false });
+    // Fetch orders — split query by path to avoid selecting columns
+    // (packing_deadline, sla_deadline, packed_at) that may not yet exist
+    // if the fast-delivery SQL migration hasn't been applied.
+    let data: any[] | null = null;
+    let error: any = null;
 
     if (sellerId) {
-      // Seller wants to see their orders to pack:
-      // captured payment, not yet packed, items contain this seller_id
-      query = query
+      // Seller packing queue: captured + unpacked + items contain this seller
+      ({ data, error } = await supabase
+        .from('spf_payment_orders')
+        .select('id, order_number, status, delivery_address, items, packing_deadline, sla_deadline, packed_at, created_at, payment_completed_at')
         .eq('status', 'captured')
         .is('packed_at', null)
-        .contains('items', [{ seller_id: sellerId }]);
+        .contains('items', [{ seller_id: sellerId }])
+        .order('created_at', { ascending: false }));
     } else {
-      // Buyer order history
-      query = query.eq('user_id', userId!);
+      // Buyer order history — use * to avoid hard-coding column names
+      ({ data, error } = await supabase
+        .from('spf_payment_orders')
+        .select('*')
+        .eq('user_id', userId!)
+        .order('created_at', { ascending: false }));
     }
 
-    // Fetch orders for the specific user only
-    const { data: orders, error } = await query;
+    const orders = data;
 
     if (error) {
       console.error('[Orders API] Database error:', error);
