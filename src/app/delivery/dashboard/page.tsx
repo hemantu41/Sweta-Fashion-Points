@@ -33,6 +33,19 @@ interface Partner {
   average_rating: number;
 }
 
+interface SellerInfo {
+  businessName: string;
+  businessPhone: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  user: { name: string; mobile: string } | null;
+}
+
 export default function DeliveryDashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,6 +56,11 @@ export default function DeliveryDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [error, setError] = useState('');
+
+  // Seller Info modal state
+  const [showSellerInfo, setShowSellerInfo] = useState(false);
+  const [sellerInfoData, setSellerInfoData] = useState<SellerInfo | null>(null);
+  const [loadingSellerInfo, setLoadingSellerInfo] = useState(false);
 
   // Not-Accepted modal state
   const [showNotAcceptedModal, setShowNotAcceptedModal] = useState(false);
@@ -121,6 +139,33 @@ export default function DeliveryDashboardPage() {
       }
     } catch (error) {
       alert('Error updating availability');
+    }
+  };
+
+  const handleViewSellerInfo = async (items: any[]) => {
+    const sellerId = Array.isArray(items) && items.length > 0 ? items[0]?.seller_id : null;
+    if (!sellerId) {
+      alert('Seller information not available for this order.');
+      return;
+    }
+    setSellerInfoData(null);
+    setShowSellerInfo(true);
+    setLoadingSellerInfo(true);
+    try {
+      const res = await fetch(`/api/sellers/me?sellerId=${sellerId}`);
+      const data = await res.json();
+      if (res.ok && data.seller) {
+        setSellerInfoData(data.seller);
+      } else {
+        setSellerInfoData(null);
+        alert(data.error || 'Could not load seller info.');
+        setShowSellerInfo(false);
+      }
+    } catch {
+      alert('Error loading seller info.');
+      setShowSellerInfo(false);
+    } finally {
+      setLoadingSellerInfo(false);
     }
   };
 
@@ -410,6 +455,19 @@ export default function DeliveryDashboardPage() {
                         Mark as {nextStatus.replace('_', ' ')}
                       </button>
                     ))}
+                    {/* Seller Info — visible once accepted until picked up */}
+                    {['accepted', 'picked_up'].includes(delivery.status) && (
+                      <button
+                        onClick={() => handleViewSellerInfo(delivery.order.items)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm flex items-center gap-1.5"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Seller Info
+                      </button>
+                    )}
                     {/* Not Accepted — only visible on assigned orders */}
                     {delivery.status === 'assigned' && (
                       <button
@@ -438,6 +496,140 @@ export default function DeliveryDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Seller Info Modal */}
+      {showSellerInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-[#2D2D2D]">Seller / Pickup Info</h3>
+              <button
+                onClick={() => { setShowSellerInfo(false); setSellerInfoData(null); }}
+                className="text-[#6B6B6B] hover:text-[#2D2D2D]"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {loadingSellerInfo ? (
+              <div className="py-10 text-center">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-[#6B6B6B] text-sm">Loading seller info…</p>
+              </div>
+            ) : sellerInfoData ? (
+              <div className="space-y-4">
+                {/* Name */}
+                <div className="flex items-start gap-3 p-3 bg-[#FAF7F2] rounded-lg">
+                  <svg className="w-5 h-5 text-[#722F37] mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <div>
+                    <p className="text-xs text-[#6B6B6B] mb-0.5">Business / Seller Name</p>
+                    <p className="font-semibold text-[#2D2D2D]">{sellerInfoData.businessName}</p>
+                    {sellerInfoData.user?.name && sellerInfoData.user.name !== sellerInfoData.businessName && (
+                      <p className="text-sm text-[#6B6B6B]">{sellerInfoData.user.name}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Phone */}
+                {(sellerInfoData.businessPhone || sellerInfoData.user?.mobile) && (
+                  <div className="flex items-center gap-3 p-3 bg-[#FAF7F2] rounded-lg">
+                    <svg className="w-5 h-5 text-[#722F37] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-xs text-[#6B6B6B] mb-0.5">Phone</p>
+                      <p className="font-semibold text-[#2D2D2D]">
+                        {sellerInfoData.businessPhone || sellerInfoData.user?.mobile}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={`tel:${sellerInfoData.businessPhone || sellerInfoData.user?.mobile}`}
+                        className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-600 transition-colors"
+                      >
+                        Call
+                      </a>
+                      <a
+                        href={`https://wa.me/91${(sellerInfoData.businessPhone || sellerInfoData.user?.mobile || '').replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-[#25D366] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#1DA851] transition-colors"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Address */}
+                {(sellerInfoData.addressLine1 || sellerInfoData.city) && (
+                  <div className="flex items-start gap-3 p-3 bg-[#FAF7F2] rounded-lg">
+                    <svg className="w-5 h-5 text-[#722F37] mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <div>
+                      <p className="text-xs text-[#6B6B6B] mb-0.5">Pickup Address</p>
+                      {sellerInfoData.addressLine1 && (
+                        <p className="text-sm text-[#2D2D2D]">{sellerInfoData.addressLine1}</p>
+                      )}
+                      {sellerInfoData.addressLine2 && (
+                        <p className="text-sm text-[#2D2D2D]">{sellerInfoData.addressLine2}</p>
+                      )}
+                      {(sellerInfoData.city || sellerInfoData.state || sellerInfoData.pincode) && (
+                        <p className="text-sm text-[#2D2D2D]">
+                          {[sellerInfoData.city, sellerInfoData.state, sellerInfoData.pincode]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Map Link */}
+                {sellerInfoData.latitude != null && sellerInfoData.longitude != null ? (
+                  <a
+                    href={`https://maps.google.com/?q=${sellerInfoData.latitude},${sellerInfoData.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Open in Google Maps
+                  </a>
+                ) : (sellerInfoData.addressLine1 || sellerInfoData.city) ? (
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(
+                      [sellerInfoData.addressLine1, sellerInfoData.city, sellerInfoData.state, sellerInfoData.pincode]
+                        .filter(Boolean).join(', ')
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Search on Google Maps
+                  </a>
+                ) : (
+                  <p className="text-center text-sm text-[#6B6B6B] py-2">
+                    No map location set by the seller yet.
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       {/* Not Accepted Modal */}
       {showNotAcceptedModal && (
