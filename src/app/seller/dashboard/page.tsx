@@ -15,6 +15,16 @@ interface Seller {
   longitude?: number | null;
 }
 
+interface OrderToPack {
+  id: string;
+  order_number: string;
+  delivery_address: any;
+  items: any[];
+  packing_deadline?: string;
+  sla_deadline?: string;
+  created_at: string;
+}
+
 interface Product {
   id: string;
   productId: string;
@@ -60,6 +70,10 @@ export default function SellerDashboardPage() {
   const [deletionHistory, setDeletionHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [sellerGeoStatus, setSellerGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [ordersToPack, setOrdersToPack] = useState<OrderToPack[]>([]);
+  const [loadingOrdersToPack, setLoadingOrdersToPack] = useState(false);
+  const [packingOrderId, setPackingOrderId] = useState<string | null>(null);
+  const [packNow, setPackNow] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
@@ -71,6 +85,8 @@ export default function SellerDashboardPage() {
       return;
     }
     fetchSellerData();
+    const interval = setInterval(() => setPackNow(new Date()), 60_000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const fetchSellerData = async () => {
@@ -99,6 +115,9 @@ export default function SellerDashboardPage() {
       // Set seller data immediately so UI can start rendering
       setSeller(sellerData.seller);
 
+      // Fetch orders to pack (in background, non-blocking)
+      fetchOrdersToPack(sellerData.seller.id);
+
       // Fetch products - this will be faster now
       // Add timestamp to bust both browser and server cache
       const timestamp = Date.now();
@@ -116,6 +135,56 @@ export default function SellerDashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchOrdersToPack = async (sellerId: string) => {
+    try {
+      setLoadingOrdersToPack(true);
+      const res = await fetch(`/api/orders?sellerId=${sellerId}`);
+      const data = await res.json();
+      if (res.ok) {
+        setOrdersToPack(data.orders || []);
+      }
+    } catch (error) {
+      console.error('Fetch orders-to-pack error:', error);
+    } finally {
+      setLoadingOrdersToPack(false);
+    }
+  };
+
+  const handleMarkPacked = async (orderId: string) => {
+    if (!seller) return;
+    try {
+      setPackingOrderId(orderId);
+      const res = await fetch(`/api/orders/${orderId}/packing-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: seller.id }),
+      });
+      if (res.ok) {
+        setOrdersToPack((prev) => prev.filter((o) => o.id !== orderId));
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to mark as packed');
+      }
+    } catch {
+      alert('Error marking order as packed');
+    } finally {
+      setPackingOrderId(null);
+    }
+  };
+
+  const packingCountdown = (deadline: string | undefined): { label: string; color: string } => {
+    if (!deadline) return { label: 'No deadline', color: 'text-gray-500' };
+    const diff = new Date(deadline).getTime() - packNow.getTime();
+    if (diff <= 0) {
+      const over = Math.floor(-diff / 60_000);
+      return { label: `OVERDUE by ${over}m`, color: 'text-red-600 font-semibold' };
+    }
+    const mins = Math.floor(diff / 60_000);
+    if (mins <= 10) return { label: `${mins}m left`, color: 'text-red-600 font-semibold' };
+    if (mins <= 20) return { label: `${mins}m left`, color: 'text-yellow-600 font-semibold' };
+    return { label: `${mins}m left`, color: 'text-green-600' };
   };
 
   const handleDelete = (productId: string) => {
@@ -399,6 +468,57 @@ export default function SellerDashboardPage() {
               : 'Set Shop Location'}
           </button>
         </div>
+
+        {/* Orders to Pack */}
+        {(loadingOrdersToPack || ordersToPack.length > 0) && (
+          <div className="bg-orange-50 border border-orange-300 rounded-xl mb-8 overflow-hidden">
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-orange-200">
+              <svg className="w-5 h-5 text-orange-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+              </svg>
+              <h3 className="font-semibold text-orange-900">
+                {loadingOrdersToPack
+                  ? 'Loading orders to pack…'
+                  : `${ordersToPack.length} order${ordersToPack.length !== 1 ? 's' : ''} to pack`}
+              </h3>
+              <span className="text-xs text-orange-700 ml-auto">Pack within 30 min of payment</span>
+            </div>
+
+            {!loadingOrdersToPack && ordersToPack.length > 0 && (
+              <div className="divide-y divide-orange-100">
+                {ordersToPack.map((order) => {
+                  const cd = packingCountdown(order.packing_deadline);
+                  const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+                  return (
+                    <div key={order.id} className="flex items-center justify-between px-5 py-4 gap-4 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-orange-900">#{order.order_number}</p>
+                        <p className="text-sm text-orange-700 mt-0.5">
+                          {order.delivery_address?.name || 'Customer'} · {itemCount} item{itemCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`text-sm ${cd.color}`}>{cd.label}</p>
+                        {order.sla_deadline && (
+                          <p className="text-xs text-orange-500 mt-0.5">
+                            SLA by {new Date(order.sla_deadline).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleMarkPacked(order.id)}
+                        disabled={packingOrderId === order.id}
+                        className="shrink-0 px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors font-medium"
+                      >
+                        {packingOrderId === order.id ? 'Marking…' : 'Mark as Packed'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Action Bar */}
         <div className="flex justify-between items-center mb-6">

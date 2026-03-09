@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
       state,
       pincode,
       servicePincodes, // Array of pincodes
+      latitude,        // GPS coordinates (optional, captured via browser)
+      longitude,
     } = body;
 
     // Validate required fields
@@ -127,6 +129,8 @@ export async function POST(request: NextRequest) {
           state,
           pincode,
           service_pincodes: servicePincodes || [],
+          latitude: latitude != null ? Number(latitude) : null,
+          longitude: longitude != null ? Number(longitude) : null,
           status: 'pending_approval', // Requires admin approval
           availability_status: 'offline', // Initially offline
           created_by: userId,

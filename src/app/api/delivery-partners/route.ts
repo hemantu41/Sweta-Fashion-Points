@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { haversineDistance } from '@/lib/delivery-batch';
 
 // GET - List all delivery partners (with filters)
 export async function GET(request: NextRequest) {
@@ -9,6 +10,9 @@ export async function GET(request: NextRequest) {
     const availabilityStatus = searchParams.get('availabilityStatus');
     const city = searchParams.get('city');
     const pincode = searchParams.get('pincode');
+    // Optional: sort by distance from seller
+    const sellerLat = searchParams.get('sellerLat');
+    const sellerLng = searchParams.get('sellerLng');
 
     let query = supabase
       .from('spf_delivery_partners')
@@ -40,9 +44,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    let result = partners || [];
+
+    // If seller coordinates provided: compute distance and sort nearest-first
+    if (sellerLat && sellerLng) {
+      const lat = parseFloat(sellerLat);
+      const lng = parseFloat(sellerLng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        result = result
+          .map((p) => ({
+            ...p,
+            distance_km:
+              p.latitude != null && p.longitude != null
+                ? Math.round(haversineDistance(lat, lng, Number(p.latitude), Number(p.longitude)) * 10) / 10
+                : null,
+          }))
+          .sort((a, b) => {
+            if (a.distance_km == null) return 1;
+            if (b.distance_km == null) return -1;
+            return a.distance_km - b.distance_km;
+          });
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      partners: partners || [],
+      partners: result,
     });
   } catch (error: any) {
     console.error('[Delivery Partners API] Error:', error);

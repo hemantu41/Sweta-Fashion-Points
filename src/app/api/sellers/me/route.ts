@@ -3,22 +3,22 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { supabase } from '@/lib/supabase';
 
 // GET /api/sellers/me - Get current user's seller profile
+// Supports ?userId=<uid> OR ?sellerId=<sid> (admin use-case)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const sellerId = searchParams.get('sellerId');
 
-    if (!userId) {
-      console.error('[Sellers Me API] No userId provided');
+    if (!userId && !sellerId) {
+      console.error('[Sellers Me API] No userId or sellerId provided');
       return NextResponse.json(
-        { error: 'User ID required' },
+        { error: 'User ID or Seller ID required' },
         { status: 400 }
       );
     }
 
-    console.log('[Sellers Me API] Fetching seller for userId:', userId);
-
-    const { data: seller, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('spf_sellers')
       .select(`
         *,
@@ -28,9 +28,17 @@ export async function GET(request: NextRequest) {
           email,
           mobile
         )
-      `)
-      .eq('user_id', userId)
-      .single();
+      `);
+
+    if (sellerId) {
+      query = query.eq('id', sellerId);
+    } else {
+      query = query.eq('user_id', userId!);
+    }
+
+    console.log('[Sellers Me API] Fetching seller:', sellerId ? `sellerId=${sellerId}` : `userId=${userId}`);
+
+    const { data: seller, error } = await query.single();
 
     if (error) {
       console.error('[Sellers Me API] Supabase error:', error);

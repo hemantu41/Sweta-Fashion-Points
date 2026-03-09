@@ -25,6 +25,10 @@ interface Order {
   items: any[];
   created_at: string;
   payment_completed_at?: string;
+  packing_deadline?: string;
+  sla_deadline?: string;
+  packed_at?: string;
+  batch_id?: string;
 }
 
 interface DeliveryPartner {
@@ -35,6 +39,20 @@ interface DeliveryPartner {
   status: string;
   availability_status: string;
   service_pincodes: string[];
+  distance_km?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+interface EscalationOrder {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  packingDeadline: string;
+  slaDeadline: string;
+  minutesOverdue: number | null;
+  itemCount: number;
 }
 
 export default function AdminOrdersPage() {
@@ -60,6 +78,14 @@ export default function AdminOrdersPage() {
   const [courierNotes, setCourierNotes] = useState('');
   const [assigning, setAssigning] = useState(false);
 
+  // Escalations + SLA countdown
+  const [escalations, setEscalations] = useState<EscalationOrder[]>([]);
+  const [loadingEscalations, setLoadingEscalations] = useState(false);
+  const [escalationsExpanded, setEscalationsExpanded] = useState(true);
+  const [now, setNow] = useState(new Date());
+  const [markingPacked, setMarkingPacked] = useState<string | null>(null);
+  const [sellerCoords, setSellerCoords] = useState<{ lat: number; lng: number } | null>(null);
+
   // Shiprocket states
   const [showShiprocketModal, setShowShiprocketModal] = useState(false);
   const [loadingRates, setLoadingRates] = useState(false);
@@ -74,6 +100,9 @@ export default function AdminOrdersPage() {
     }
     fetchOrders();
     fetchPartners();
+    fetchEscalations();
+    const countdownInterval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(countdownInterval);
   }, [user, statusFilter, deliveryStatusFilter, page]);
 
   const fetchOrders = async () => {
@@ -115,9 +144,15 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const fetchPartners = async () => {
+  const fetchPartners = async (coords?: { lat: number; lng: number }) => {
     try {
-      const response = await fetch('/api/delivery-partners?status=active');
+      const url = new URL('/api/delivery-partners', window.location.origin);
+      url.searchParams.set('status', 'active');
+      if (coords) {
+        url.searchParams.set('sellerLat', String(coords.lat));
+        url.searchParams.set('sellerLng', String(coords.lng));
+      }
+      const response = await fetch(url.toString());
       const data = await response.json();
 
       if (response.ok) {
@@ -128,7 +163,70 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const openAssignModal = (order: Order) => {
+  const fetchEscalations = async () => {
+    try {
+      setLoadingEscalations(true);
+      const response = await fetch('/api/admin/orders/escalations');
+      const data = await response.json();
+      if (response.ok) {
+        setEscalations(data.escalations || []);
+      }
+    } catch (error) {
+      console.error('Fetch escalations error:', error);
+    } finally {
+      setLoadingEscalations(false);
+    }
+  };
+
+  const markOrderPacked = async (orderId: string) => {
+    try {
+      setMarkingPacked(orderId);
+      const response = await fetch(`/api/orders/${orderId}/packing-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: 'admin' }),
+      });
+      if (response.ok) {
+        setEscalations((prev) => prev.filter((e) => e.id !== orderId));
+        fetchOrders();
+      }
+    } catch (error) {
+      console.error('Mark packed error:', error);
+    } finally {
+      setMarkingPacked(null);
+    }
+  };
+
+  const formatCountdown = (deadline: string | undefined): { label: string; color: string } => {
+    if (!deadline) return { label: '', color: '' };
+    const diff = new Date(deadline).getTime() - now.getTime();
+    if (diff <= 0) {
+      const over = Math.floor(-diff / 60_000);
+      return { label: `OVERDUE ${over}m`, color: 'bg-red-100 text-red-700 border-red-200' };
+    }
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 60) {
+      const color = mins <= 30 ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      return { label: `Pack: ${mins}m left`, color };
+    }
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return { label: `Pack: ${hrs}h ${rem}m left`, color: 'bg-green-100 text-green-700 border-green-200' };
+  };
+
+  const formatSlaCountdown = (deadline: string | undefined): { label: string; color: string } => {
+    if (!deadline) return { label: '', color: '' };
+    const diff = new Date(deadline).getTime() - now.getTime();
+    if (diff <= 0) return { label: 'SLA BREACHED', color: 'bg-red-100 text-red-700 border-red-200' };
+    const mins = Math.floor(diff / 60_000);
+    if (mins <= 30) return { label: `SLA: ${mins}m`, color: 'bg-red-100 text-red-700 border-red-200' };
+    if (mins <= 60) return { label: `SLA: ${mins}m`, color: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return { label: `SLA: ${hrs}h ${rem}m`, color: 'bg-green-100 text-green-700 border-green-200' };
+  };
+
+  const openAssignModal = async (order: Order) => {
     setSelectedOrder(order);
     setShowAssignModal(true);
     setDeliveryType('partner');
@@ -138,6 +236,30 @@ export default function AdminOrdersPage() {
     setCourierTrackingNumber('');
     setCourierExpectedDeliveryDate('');
     setCourierNotes('');
+    setSellerCoords(null);
+
+    // Try to fetch seller GPS for distance-sorted partner list
+    const firstSellerId =
+      Array.isArray(order.items) && order.items.length > 0
+        ? order.items[0]?.seller_id
+        : null;
+    if (firstSellerId) {
+      try {
+        const res = await fetch(`/api/sellers/me?sellerId=${firstSellerId}`);
+        const data = await res.json();
+        const lat = data.seller?.latitude;
+        const lng = data.seller?.longitude;
+        if (lat != null && lng != null) {
+          const coords = { lat: Number(lat), lng: Number(lng) };
+          setSellerCoords(coords);
+          fetchPartners(coords);
+          return;
+        }
+      } catch {
+        // fallthrough
+      }
+    }
+    fetchPartners();
   };
 
   const handleAssignPartner = async () => {
@@ -369,15 +491,15 @@ export default function AdminOrdersPage() {
 
   const getAvailablePartners = () => {
     if (!selectedOrder) return partners;
+    // Partners are already distance-sorted when sellerCoords were provided.
+    // Fallback: filter by pincode if no GPS
+    if (sellerCoords) return partners;
 
     const orderPincode = selectedOrder.delivery_address?.pincode;
     if (!orderPincode) return partners;
 
-    // Filter partners who service this pincode
     return partners.filter((partner) => {
-      if (!partner.service_pincodes || partner.service_pincodes.length === 0) {
-        return true; // Include partners with no pincode restrictions
-      }
+      if (!partner.service_pincodes || partner.service_pincodes.length === 0) return true;
       return partner.service_pincodes.includes(orderPincode);
     });
   };
@@ -398,6 +520,63 @@ export default function AdminOrdersPage() {
           </h1>
           <p className="text-[#6B6B6B] mt-2">View and assign orders to delivery partners</p>
         </div>
+
+        {/* Escalation Banner */}
+        {(loadingEscalations || escalations.length > 0) && (
+          <div className="bg-red-50 border border-red-300 rounded-xl mb-6 overflow-hidden">
+            <button
+              onClick={() => setEscalationsExpanded((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-3 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-red-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                </span>
+                <span className="font-semibold text-red-800">
+                  {loadingEscalations
+                    ? 'Checking escalations…'
+                    : `${escalations.length} order${escalations.length !== 1 ? 's' : ''} overdue for packing`}
+                </span>
+              </div>
+              <svg
+                className={`w-4 h-4 text-red-600 transition-transform ${escalationsExpanded ? 'rotate-180' : ''}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {escalationsExpanded && !loadingEscalations && escalations.length > 0 && (
+              <div className="border-t border-red-200 divide-y divide-red-100">
+                {escalations.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between px-5 py-3 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-red-900">#{e.orderNumber}</span>
+                      <span className="text-red-700 text-sm ml-3">{e.customerName}</span>
+                      {e.customerPhone && (
+                        <span className="text-red-500 text-xs ml-2">{e.customerPhone}</span>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-semibold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+                        {e.minutesOverdue}m overdue · {e.itemCount} item{e.itemCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => markOrderPacked(e.id)}
+                      disabled={markingPacked === e.id}
+                      className="shrink-0 px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      {markingPacked === e.id ? '…' : 'Mark Packed'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
@@ -556,6 +735,31 @@ export default function AdminOrdersPage() {
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getDeliveryStatusBadge(order.delivery_status)}`}>
                             {order.delivery_status?.replace('_', ' ') || 'Pending'}
                           </span>
+                          {/* Batch badge */}
+                          {order.batch_id && (
+                            <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 ml-1">
+                              Batch
+                            </span>
+                          )}
+                          {/* SLA / packing countdown for captured+unpacked orders */}
+                          {order.status === 'captured' && !order.packed_at && order.packing_deadline && (() => {
+                            const pack = formatCountdown(order.packing_deadline);
+                            const sla = formatSlaCountdown(order.sla_deadline);
+                            return (
+                              <div className="flex flex-col gap-0.5 mt-1">
+                                {pack.label && (
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${pack.color}`}>
+                                    {pack.label}
+                                  </span>
+                                )}
+                                {sla.label && (
+                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${sla.color}`}>
+                                    {sla.label}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {order.delivery_type && (
                             <p className="text-xs text-[#6B6B6B] flex items-center gap-1">
                               {order.delivery_type === 'courier' ? (
@@ -705,13 +909,39 @@ export default function AdminOrdersPage() {
             {/* Local Partner Form */}
             {deliveryType === 'partner' && (
               <>
+                {/* Auto-Assign Nearest button */}
+                <div className="mb-4 flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (selectedOrder) {
+                        setShowAssignModal(false);
+                        handleAutoAssign(selectedOrder.id);
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                    Auto-Assign Nearest
+                  </button>
+                  {sellerCoords && (
+                    <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded">
+                      Sorted by distance
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex-1 border-t border-[#E8E2D9]"></div>
+                  <span className="text-xs text-[#6B6B6B] font-medium">OR PICK MANUALLY</span>
+                  <div className="flex-1 border-t border-[#E8E2D9]"></div>
+                </div>
+
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
                     Select Delivery Partner
-                    {getAvailablePartners().length < partners.length && (
-                      <span className="text-xs text-[#6B6B6B] ml-2">
-                        (Filtered by service area)
-                      </span>
+                    {!sellerCoords && getAvailablePartners().length < partners.length && (
+                      <span className="text-xs text-[#6B6B6B] ml-2">(Filtered by service area)</span>
                     )}
                   </label>
                   <select
@@ -722,7 +952,8 @@ export default function AdminOrdersPage() {
                     <option value="">Choose a partner...</option>
                     {getAvailablePartners().map((partner) => (
                       <option key={partner.id} value={partner.id}>
-                        {partner.name} - {partner.mobile} ({partner.vehicle_type || 'N/A'}) - {partner.availability_status}
+                        {partner.distance_km != null ? `[${partner.distance_km} km] ` : ''}
+                        {partner.name} — {partner.mobile} ({partner.vehicle_type || 'N/A'}) · {partner.availability_status}
                       </option>
                     ))}
                   </select>

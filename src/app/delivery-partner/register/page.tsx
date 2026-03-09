@@ -34,7 +34,12 @@ export default function DeliveryPartnerRegisterPage() {
 
     // Service Areas (comma-separated pincodes)
     servicePincodes: '',
+
+    // GPS coordinates (captured via browser geolocation)
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -445,6 +450,74 @@ export default function DeliveryPartnerRegisterPage() {
                 Enter the pincodes where you want to deliver. Leave empty if you can deliver to all areas.
               </p>
             </div>
+          </div>
+
+          {/* Shop / Base Location (GPS) */}
+          <div className="bg-white rounded-xl shadow-sm border border-[#E8E2D9] p-6 mb-6">
+            <h2 className="text-lg font-bold text-[#722F37] mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Your Base Location
+            </h2>
+            <p className="text-sm text-[#6B6B6B] mb-4">
+              Share your current location so the system can assign you orders nearest to you first.
+            </p>
+            {formData.latitude && formData.longitude ? (
+              <div className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
+                <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-sm text-green-700 font-medium">
+                  Location captured ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGeoStatus('loading');
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                        setGeoStatus('success');
+                      },
+                      () => setGeoStatus('error')
+                    );
+                  }}
+                  className="ml-auto text-xs text-[#722F37] hover:underline"
+                >
+                  Update
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={geoStatus === 'loading'}
+                onClick={() => {
+                  if (!navigator.geolocation) { setGeoStatus('error'); return; }
+                  setGeoStatus('loading');
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                      setGeoStatus('success');
+                    },
+                    () => setGeoStatus('error')
+                  );
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-[#722F37] text-[#722F37] rounded-lg font-medium hover:bg-[#FAF7F2] transition-colors disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {geoStatus === 'loading' ? 'Detecting...' : 'Use My Current Location'}
+              </button>
+            )}
+            {geoStatus === 'error' && (
+              <p className="text-xs text-red-500 mt-2">
+                Could not get location. Please allow browser location access and try again.
+              </p>
+            )}
           </div>
 
           {/* Terms */}

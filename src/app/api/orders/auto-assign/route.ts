@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { haversineDistance, distanceScore, optimizeRoute, canMeetSla } from '@/lib/delivery-batch';
 
-// POST - Auto-assign order to best available delivery partner
+// POST - Auto-assign order to best available delivery partner (GPS-distance scoring + batch logic)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -14,10 +15,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get order details
+    // 1. Get order details (include items for seller_id lookup)
     const { data: order, error: orderError } = await supabase
       .from('spf_payment_orders')
-      .select('id, order_number, status, delivery_address')
+      .select('id, order_number, status, delivery_address, items, sla_deadline')
       .eq('id', orderId)
       .single();
 
@@ -28,7 +29,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if payment is captured
     if (order.status !== 'captured') {
       return NextResponse.json(
         { error: 'Can only auto-assign paid orders' },
@@ -36,23 +36,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deliveryPincode = order.delivery_address?.pincode;
+    // 2. Get seller lat/lng from the first item's seller_id
+    let sellerLat: number | null = null;
+    let sellerLng: number | null = null;
 
-    if (!deliveryPincode) {
-      return NextResponse.json(
-        { error: 'Order does not have a delivery pincode' },
-        { status: 400 }
-      );
+    const firstSellerId =
+      Array.isArray(order.items) && order.items.length > 0
+        ? order.items[0]?.seller_id
+        : null;
+
+    if (firstSellerId) {
+      const { data: seller } = await supabase
+        .from('spf_sellers')
+        .select('latitude, longitude')
+        .eq('id', firstSellerId)
+        .single();
+
+      if (seller?.latitude != null && seller?.longitude != null) {
+        sellerLat = Number(seller.latitude);
+        sellerLng = Number(seller.longitude);
+      }
     }
 
-    // Find best available delivery partner
-    // Criteria:
-    // 1. Active status
-    // 2. Available (not busy or offline)
-    // 3. Services the delivery pincode
-    // 4. Highest success rate / rating
-    // 5. Lowest number of pending deliveries
+    // 3. Get customer delivery lat/lng (if stored in delivery_address)
+    const customerLat =
+      order.delivery_address?.latitude != null
+        ? Number(order.delivery_address.latitude)
+        : null;
+    const customerLng =
+      order.delivery_address?.longitude != null
+        ? Number(order.delivery_address.longitude)
+        : null;
 
+    // 4. Fetch all active available partners
     const { data: allPartners, error: partnersError } = await supabase
       .from('spf_delivery_partners')
       .select('*')
@@ -66,20 +82,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Filter partners who service this pincode
-    let eligiblePartners = allPartners.filter((partner) => {
-      if (!partner.service_pincodes || partner.service_pincodes.length === 0) {
-        return true; // Partners with no pincode restrictions can deliver anywhere
-      }
-      return partner.service_pincodes.includes(deliveryPincode);
-    });
+    // 5. Eligibility filter — GPS-within-35-km if seller coords known; else pincode fallback
+    const deliveryPincode = order.delivery_address?.pincode;
+    let eligiblePartners = allPartners;
 
-    if (eligiblePartners.length === 0) {
-      // If no one specifically services this pincode, use all available partners
-      eligiblePartners = allPartners;
+    if (sellerLat != null && sellerLng != null) {
+      // GPS mode: prefer partners within 35 km of the seller
+      const nearby = allPartners.filter((p) => {
+        if (p.latitude == null || p.longitude == null) return true; // include partners without GPS
+        const dist = haversineDistance(sellerLat!, sellerLng!, Number(p.latitude), Number(p.longitude));
+        return dist <= 35;
+      });
+      eligiblePartners = nearby.length > 0 ? nearby : allPartners;
+    } else if (deliveryPincode) {
+      // Pincode fallback
+      const pinFiltered = allPartners.filter((partner) => {
+        if (!partner.service_pincodes || partner.service_pincodes.length === 0) return true;
+        return partner.service_pincodes.includes(deliveryPincode);
+      });
+      eligiblePartners = pinFiltered.length > 0 ? pinFiltered : allPartners;
     }
 
-    // Get pending deliveries count for each partner
+    // 6. Get pending deliveries count for each eligible partner
     const partnerIds = eligiblePartners.map((p) => p.id);
     const { data: pendingDeliveries } = await supabase
       .from('spf_order_deliveries')
@@ -89,55 +113,185 @@ export async function POST(request: NextRequest) {
 
     const pendingCounts: { [key: string]: number } = {};
     if (pendingDeliveries) {
-      pendingDeliveries.forEach((delivery) => {
-        const partnerId = delivery.delivery_partner_id;
-        pendingCounts[partnerId] = (pendingCounts[partnerId] || 0) + 1;
+      pendingDeliveries.forEach((d) => {
+        pendingCounts[d.delivery_partner_id] = (pendingCounts[d.delivery_partner_id] || 0) + 1;
       });
     }
 
-    // Score each partner
+    // 7. Score each partner (100 pts total)
+    //    Distance to seller  0–30 pts
+    //    Success rate        0–40 pts
+    //    Average rating      0–20 pts
+    //    Pending deliveries  0–10 pts (inverse)
     const scoredPartners = eligiblePartners.map((partner) => {
       let score = 0;
 
-      // Success rate (0-40 points)
+      // Distance to seller (0–30 pts)
+      if (
+        sellerLat != null &&
+        sellerLng != null &&
+        partner.latitude != null &&
+        partner.longitude != null
+      ) {
+        const dist = haversineDistance(
+          sellerLat,
+          sellerLng,
+          Number(partner.latitude),
+          Number(partner.longitude)
+        );
+        score += distanceScore(dist);
+      } else {
+        score += 15; // Neutral when GPS unavailable
+      }
+
+      // Success rate (0–40 pts)
       const successRate =
         partner.total_deliveries > 0
           ? (partner.successful_deliveries / partner.total_deliveries) * 40
-          : 20; // Default 20 for new partners
+          : 20; // Default for new partners
       score += successRate;
 
-      // Average rating (0-30 points)
-      score += (partner.average_rating || 0) * 6; // Max 5 * 6 = 30
+      // Average rating (0–20 pts)
+      score += (partner.average_rating || 0) * 4; // max 5 × 4 = 20
 
-      // Pending deliveries (0-30 points, inverse)
+      // Pending deliveries (0–10 pts, inverse)
       const pendingCount = pendingCounts[partner.id] || 0;
-      const pendingPenalty = Math.min(pendingCount * 5, 30); // -5 points per pending, max -30
-      score += 30 - pendingPenalty;
+      score += Math.max(0, 10 - pendingCount * 2);
 
-      return {
-        partner,
-        score,
-        pendingCount,
-      };
+      return { partner, score, pendingCount };
     });
 
-    // Sort by score (highest first)
+    // Sort by score descending
     scoredPartners.sort((a, b) => b.score - a.score);
-
     const bestPartner = scoredPartners[0].partner;
 
-    // Assign the order
+    // 8. Batch grouping (only when customer lat/lng is available)
+    let batchId: string | null = null;
+    let routeOrder: string[] = [];
+
+    if (customerLat != null && customerLng != null) {
+      // Find the most recent active batch for this partner
+      const { data: activeBatch } = await supabase
+        .from('spf_delivery_batches')
+        .select('id, order_ids, route_order')
+        .eq('partner_id', bestPartner.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (activeBatch) {
+        const batchOrderIds: string[] = activeBatch.order_ids || [];
+
+        if (batchOrderIds.length < 5) {
+          // Fetch delivery addresses for orders in the current batch
+          const { data: batchOrders } = await supabase
+            .from('spf_payment_orders')
+            .select('id, delivery_address, sla_deadline')
+            .in('id', batchOrderIds);
+
+          const batchStops = (batchOrders || [])
+            .filter(
+              (o) =>
+                o.delivery_address?.latitude != null &&
+                o.delivery_address?.longitude != null
+            )
+            .map((o) => ({
+              id: o.id,
+              lat: Number(o.delivery_address.latitude),
+              lng: Number(o.delivery_address.longitude),
+              slaDeadline: o.sla_deadline
+                ? new Date(o.sla_deadline)
+                : new Date(Date.now() + 4 * 3_600_000),
+            }));
+
+          if (batchStops.length > 0) {
+            // All existing batch stops must be within 3 km of the new customer
+            const allNearby = batchStops.every((stop) => {
+              const dist = haversineDistance(customerLat, customerLng, stop.lat, stop.lng);
+              return dist <= 3;
+            });
+
+            const newStop = {
+              id: orderId,
+              lat: customerLat,
+              lng: customerLng,
+              slaDeadline: order.sla_deadline
+                ? new Date(order.sla_deadline)
+                : new Date(Date.now() + 4 * 3_600_000),
+            };
+            const allStops = [...batchStops, newStop];
+
+            const slaOk =
+              bestPartner.latitude != null && bestPartner.longitude != null
+                ? canMeetSla(
+                    Number(bestPartner.latitude),
+                    Number(bestPartner.longitude),
+                    allStops
+                  )
+                : true;
+
+            if (allNearby && slaOk) {
+              // Add to existing batch
+              const updatedOrderIds = [...batchOrderIds, orderId];
+              const pickupLat =
+                bestPartner.latitude != null ? Number(bestPartner.latitude) : customerLat;
+              const pickupLng =
+                bestPartner.longitude != null ? Number(bestPartner.longitude) : customerLng;
+              const updatedRoute = optimizeRoute(pickupLat, pickupLng, allStops);
+
+              await supabase
+                .from('spf_delivery_batches')
+                .update({
+                  order_ids: updatedOrderIds,
+                  route_order: updatedRoute,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', activeBatch.id);
+
+              batchId = activeBatch.id;
+              routeOrder = updatedRoute;
+            }
+          }
+        }
+      }
+
+      // No suitable existing batch — create a new one
+      if (!batchId) {
+        const { data: newBatch } = await supabase
+          .from('spf_delivery_batches')
+          .insert([
+            {
+              partner_id: bestPartner.id,
+              status: 'active',
+              order_ids: [orderId],
+              route_order: [orderId],
+            },
+          ])
+          .select()
+          .single();
+
+        if (newBatch) {
+          batchId = newBatch.id;
+          routeOrder = [orderId];
+        }
+      }
+    }
+
+    // 9. Create delivery record
+    const insertData: Record<string, unknown> = {
+      order_id: orderId,
+      delivery_partner_id: bestPartner.id,
+      assigned_by: assignedBy || null,
+      status: 'assigned',
+      assigned_at: new Date().toISOString(),
+      last_status_update_at: new Date().toISOString(),
+    };
+    if (batchId) insertData.batch_id = batchId;
+
     const { data: delivery, error: assignError } = await supabase
       .from('spf_order_deliveries')
-      .insert([
-        {
-          order_id: orderId,
-          delivery_partner_id: bestPartner.id,
-          assigned_by: assignedBy || null,
-          status: 'assigned',
-          assigned_at: new Date().toISOString(),
-        },
-      ])
+      .insert([insertData])
       .select()
       .single();
 
@@ -149,39 +303,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Record in history
+    // 10. History log + order status update
     await supabase.from('spf_delivery_status_history').insert([
       {
         order_delivery_id: delivery.id,
         previous_status: null,
         new_status: 'assigned',
         changed_by: assignedBy || null,
-        notes: 'Auto-assigned based on availability and performance',
+        notes: `Auto-assigned by GPS proximity${batchId ? ' (batched delivery)' : ''}`,
       },
     ]);
 
-    // Update order delivery status
     await supabase
       .from('spf_payment_orders')
       .update({ delivery_status: 'assigned' })
       .eq('id', orderId);
 
-    return NextResponse.json({
-      success: true,
-      delivery,
-      partner: {
-        id: bestPartner.id,
-        name: bestPartner.name,
-        mobile: bestPartner.mobile,
-        vehicle_type: bestPartner.vehicle_type,
+    return NextResponse.json(
+      {
+        success: true,
+        delivery,
+        partner: {
+          id: bestPartner.id,
+          name: bestPartner.name,
+          mobile: bestPartner.mobile,
+          vehicle_type: bestPartner.vehicle_type,
+        },
+        message: `Order auto-assigned to ${bestPartner.name}`,
+        autoAssignDetails: {
+          totalEligible: eligiblePartners.length,
+          selectedScore: scoredPartners[0].score,
+          pendingDeliveries: scoredPartners[0].pendingCount,
+          sellerGpsUsed: sellerLat != null,
+          batchId,
+          routeOrder,
+        },
       },
-      message: `Order auto-assigned to ${bestPartner.name}`,
-      autoAssignDetails: {
-        totalEligible: eligiblePartners.length,
-        selectedScore: scoredPartners[0].score,
-        pendingDeliveries: scoredPartners[0].pendingCount,
-      },
-    }, { status: 201 });
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error('[Auto-Assign API] Error:', error);
     return NextResponse.json(
