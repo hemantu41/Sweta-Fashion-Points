@@ -47,6 +47,7 @@ export async function PUT(
       'failed',
       'returned',
       'cancelled',
+      'not_accepted', // Partner declined the assignment
     ];
 
     if (!validStatuses.includes(status)) {
@@ -161,10 +162,13 @@ export async function PUT(
       },
     ]);
 
-    // Update order delivery status
+    // Update order delivery status.
+    // When partner marks as not_accepted, put the order back to pending_assignment
+    // so admin can reassign to another partner.
+    const orderDeliveryStatus = status === 'not_accepted' ? 'pending_assignment' : status;
     await supabaseAdmin
       .from('spf_payment_orders')
-      .update({ delivery_status: status })
+      .update({ delivery_status: orderDeliveryStatus })
       .eq('id', orderId);
 
     // Update delivery partner statistics if delivered

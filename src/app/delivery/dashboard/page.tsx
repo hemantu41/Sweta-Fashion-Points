@@ -44,6 +44,12 @@ export default function DeliveryDashboardPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [error, setError] = useState('');
 
+  // Not-Accepted modal state
+  const [showNotAcceptedModal, setShowNotAcceptedModal] = useState(false);
+  const [notAcceptedDelivery, setNotAcceptedDelivery] = useState<{ deliveryId: string; orderId: string } | null>(null);
+  const [notAcceptedReason, setNotAcceptedReason] = useState('');
+  const [submittingNotAccepted, setSubmittingNotAccepted] = useState(false);
+
   useEffect(() => {
     if (!partnerId) {
       setError('Partner ID is required. Please login.');
@@ -115,6 +121,48 @@ export default function DeliveryDashboardPage() {
       }
     } catch (error) {
       alert('Error updating availability');
+    }
+  };
+
+  const openNotAcceptedModal = (deliveryId: string, orderId: string) => {
+    setNotAcceptedDelivery({ deliveryId, orderId });
+    setNotAcceptedReason('');
+    setShowNotAcceptedModal(true);
+  };
+
+  const handleNotAccepted = async () => {
+    if (!notAcceptedDelivery) return;
+    if (!notAcceptedReason.trim()) {
+      alert('Please provide a reason for not accepting this order.');
+      return;
+    }
+
+    try {
+      setSubmittingNotAccepted(true);
+      const response = await fetch(`/api/orders/${notAcceptedDelivery.orderId}/delivery-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'not_accepted',
+          deliveryNotes: notAcceptedReason.trim(),
+          changedByPartner: partnerId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowNotAcceptedModal(false);
+        setNotAcceptedDelivery(null);
+        setNotAcceptedReason('');
+        fetchOrders();
+      } else {
+        alert(data.error || 'Failed to submit. Please try again.');
+      }
+    } catch {
+      alert('Error submitting. Please try again.');
+    } finally {
+      setSubmittingNotAccepted(false);
     }
   };
 
@@ -362,6 +410,15 @@ export default function DeliveryDashboardPage() {
                         Mark as {nextStatus.replace('_', ' ')}
                       </button>
                     ))}
+                    {/* Not Accepted — only visible on assigned orders */}
+                    {delivery.status === 'assigned' && (
+                      <button
+                        onClick={() => openNotAcceptedModal(delivery.id, delivery.order_id)}
+                        className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors text-sm"
+                      >
+                        Not Accepted
+                      </button>
+                    )}
                     <a
                       href={`tel:${delivery.order.delivery_address.phone}`}
                       className="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition-colors text-sm"
@@ -381,6 +438,60 @@ export default function DeliveryDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Not Accepted Modal */}
+      {showNotAcceptedModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#2D2D2D]">Not Accepting this Order</h3>
+                <p className="text-sm text-[#6B6B6B]">The order will go back to admin for reassignment.</p>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                Reason for not accepting <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={notAcceptedReason}
+                onChange={(e) => setNotAcceptedReason(e.target.value)}
+                placeholder="e.g. Out of range, vehicle issue, already at capacity..."
+                rows={4}
+                className="w-full px-4 py-3 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none text-sm"
+              />
+              <p className="text-xs text-[#6B6B6B] mt-1">{notAcceptedReason.trim().length}/300 characters</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowNotAcceptedModal(false);
+                  setNotAcceptedDelivery(null);
+                  setNotAcceptedReason('');
+                }}
+                disabled={submittingNotAccepted}
+                className="flex-1 bg-gray-100 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleNotAccepted}
+                disabled={submittingNotAccepted || !notAcceptedReason.trim()}
+                className="flex-1 bg-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingNotAccepted ? 'Submitting…' : 'Confirm Not Accepted'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
