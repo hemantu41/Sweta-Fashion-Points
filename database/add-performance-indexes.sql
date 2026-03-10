@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_created_at  ON spf_payment_orders(created_
 CREATE INDEX IF NOT EXISTS idx_orders_user_id     ON spf_payment_orders(user_id);
 
 -- Delivery table
-CREATE INDEX IF NOT EXISTS idx_deliveries_partner_id  ON spf_order_deliveries(partner_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_partner_id  ON spf_order_deliveries(delivery_partner_id);
 CREATE INDEX IF NOT EXISTS idx_deliveries_status      ON spf_order_deliveries(status);
 CREATE INDEX IF NOT EXISTS idx_deliveries_order_id    ON spf_order_deliveries(order_id);
 
