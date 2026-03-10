@@ -128,6 +128,8 @@ export async function GET(
       approvedAt: seller.approved_at,
       rejectionReason: seller.rejection_reason,
       suspensionReason: seller.suspension_reason,
+      reactivationRequest: seller.reactivation_request,
+      reactivationRequestedAt: seller.reactivation_requested_at,
       commissionPercentage: seller.commission_percentage,
       isActive: seller.is_active,
       documents: seller.documents,
@@ -246,6 +248,8 @@ export async function PUT(
             status: 'approved',
             is_active: true,
             suspension_reason: null,
+            reactivation_request: null,
+            reactivation_requested_at: null,
           })
           .eq('id', sellerId);
 

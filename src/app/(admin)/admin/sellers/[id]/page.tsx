@@ -37,6 +37,8 @@ interface Seller {
   approvedAt?: string;
   rejectionReason?: string;
   suspensionReason?: string;
+  reactivationRequest?: string;
+  reactivationRequestedAt?: string;
   commissionPercentage: number;
   isActive: boolean;
   documents: any[];
@@ -212,12 +214,44 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
 
         {/* Suspension Notice */}
         {seller.status === 'suspended' && (
-          <div className="bg-orange-50 rounded-xl p-5 mb-6 border border-orange-200">
+          <div className="bg-orange-50 rounded-xl p-5 mb-4 border border-orange-200">
             <h2 className="text-base font-bold text-orange-800 mb-1">Account Suspended</h2>
             <p className="text-sm text-orange-700">
               <span className="font-semibold">Reason: </span>
               {seller.suspensionReason || 'No reason provided'}
             </p>
+          </div>
+        )}
+
+        {/* Reactivation Request (highlighted when pending) */}
+        {seller.status === 'suspended' && seller.reactivationRequest && (
+          <div className="bg-blue-50 rounded-xl p-5 mb-6 border-2 border-blue-300">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <h2 className="text-base font-bold text-blue-800">Reactivation Request from Seller</h2>
+                </div>
+                <p className="text-sm text-blue-900 mb-1">{seller.reactivationRequest}</p>
+                {seller.reactivationRequestedAt && (
+                  <p className="text-xs text-blue-600">
+                    Submitted: {new Date(seller.reactivationRequestedAt).toLocaleString('en-IN', {
+                      day: '2-digit', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleReactivate}
+                disabled={actioning}
+                className="shrink-0 px-5 py-2 bg-green-600 text-white text-sm rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                {actioning ? 'Reactivating...' : '✓ Reactivate Now'}
+              </button>
+            </div>
           </div>
         )}
 
