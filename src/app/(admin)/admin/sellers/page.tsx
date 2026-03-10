@@ -19,6 +19,8 @@ interface Seller {
   isActive: boolean;
   createdAt: string;
   suspensionReason?: string;
+  reactivationRequest?: string;
+  reactivationRequestedAt?: string;
   user: {
     name: string;
     email: string;
@@ -194,6 +196,7 @@ export default function AdminSellersPage() {
     approved: sellers.filter(s => s.status === 'approved').length,
     rejected: sellers.filter(s => s.status === 'rejected').length,
     suspended: sellers.filter(s => s.status === 'suspended').length,
+    reactivationPending: sellers.filter(s => s.status === 'suspended' && !!s.reactivationRequest).length,
   };
 
   const getStatusColor = (status: string) => {
@@ -246,6 +249,11 @@ export default function AdminSellersPage() {
           <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
             <p className="text-sm text-orange-700 mb-1">Suspended</p>
             <p className="text-3xl font-bold text-orange-800">{stats.suspended}</p>
+            {stats.reactivationPending > 0 && (
+              <p className="text-xs text-blue-700 font-semibold mt-1">
+                {stats.reactivationPending} reactivation request{stats.reactivationPending > 1 ? 's' : ''} pending
+              </p>
+            )}
           </div>
         </div>
 
@@ -264,13 +272,18 @@ export default function AdminSellersPage() {
                 <button
                   key={status}
                   onClick={() => setFilter(status as any)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`relative px-4 py-2 rounded-lg font-medium transition-all ${
                     filter === status
                       ? 'bg-[#722F37] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === 'suspended' && stats.reactivationPending > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {stats.reactivationPending}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -334,6 +347,14 @@ export default function AdminSellersPage() {
                           {seller.status === 'suspended' && seller.suspensionReason && (
                             <span className="text-xs text-orange-600 max-w-[140px] truncate" title={seller.suspensionReason}>
                               {seller.suspensionReason}
+                            </span>
+                          )}
+                          {seller.status === 'suspended' && seller.reactivationRequest && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full border border-blue-300">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                              </svg>
+                              Reactivation Requested
                             </span>
                           )}
                         </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { sellerCache } from '@/lib/cache';
 
 // POST /api/sellers/reactivation-request
 // Seller submits a reactivation request explaining why they should be reinstated.
@@ -46,6 +47,9 @@ export async function POST(request: NextRequest) {
       console.error('[Reactivation Request] Update error:', updateError);
       return NextResponse.json({ error: 'Failed to submit request' }, { status: 500 });
     }
+
+    // Clear seller list cache so admin sees the request immediately
+    sellerCache.clear();
 
     return NextResponse.json({
       success: true,
