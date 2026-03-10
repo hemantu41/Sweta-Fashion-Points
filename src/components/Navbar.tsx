@@ -12,7 +12,7 @@ export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { t } = useLanguage();
-  const { user, logout, isAuthenticated, isAdmin, isApprovedSeller, isActiveDeliveryPartner, deliveryPartnerId } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isApprovedSeller, isSeller, sellerStatus, isActiveDeliveryPartner, deliveryPartnerId } = useAuth();
   const { totalItems } = useCart();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -172,19 +172,35 @@ export default function Navbar() {
                         </Link>
                       ))}
 
-                      {/* Seller Dashboard - Only for approved sellers */}
-                      {isApprovedSeller && (
+                      {/* Seller links */}
+                      {isSeller && (
                         <div className="border-t border-[#E8E2D9] pt-2 mt-2">
-                          <Link
-                            href="/seller/dashboard"
-                            onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center space-x-3 px-4 py-2.5 text-[#2D2D2D] hover:bg-[#F5F0E8] transition-colors"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <span>Seller Dashboard</span>
-                          </Link>
+                          {isApprovedSeller ? (
+                            <Link
+                              href="/seller/dashboard"
+                              onClick={() => setIsUserMenuOpen(false)}
+                              className="flex items-center space-x-3 px-4 py-2.5 text-[#2D2D2D] hover:bg-[#F5F0E8] transition-colors"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              <span>Seller Dashboard</span>
+                            </Link>
+                          ) : (
+                            <Link
+                              href="/seller/pending"
+                              onClick={() => setIsUserMenuOpen(false)}
+                              className="flex items-center space-x-3 px-4 py-2.5 hover:bg-[#F5F0E8] transition-colors"
+                            >
+                              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <div>
+                                <span className="block text-sm text-orange-700 font-medium">Seller Account</span>
+                                <span className="block text-xs text-orange-500 capitalize">{sellerStatus || 'pending'}</span>
+                              </div>
+                            </Link>
+                          )}
                         </div>
                       )}
 
@@ -338,19 +354,35 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {/* Seller Dashboard - Only for approved sellers */}
-              {isApprovedSeller && (
+              {/* Seller links - mobile */}
+              {isSeller && (
                 <div className="pt-2 mt-2 border-t border-[#E8E2D9]">
-                  <Link
-                    href="/seller/dashboard"
-                    onClick={() => setIsUserMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 text-[#2D2D2D] hover:bg-[#F5F0E8] rounded-lg transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span>Seller Dashboard</span>
-                  </Link>
+                  {isApprovedSeller ? (
+                    <Link
+                      href="/seller/dashboard"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-3 text-[#2D2D2D] hover:bg-[#F5F0E8] rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <span>Seller Dashboard</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/seller/pending"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-3 hover:bg-[#F5F0E8] rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <span className="block text-sm text-orange-700 font-medium">Seller Account</span>
+                        <span className="block text-xs text-orange-500 capitalize">{sellerStatus || 'pending'}</span>
+                      </div>
+                    </Link>
+                  )}
                 </div>
               )}
 
