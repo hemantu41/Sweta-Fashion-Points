@@ -224,22 +224,34 @@ export default function AdminProductsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
+          <button
+            onClick={() => { setSearch(''); setCategoryFilter(''); setApprovalStatusFilter(''); setActiveStatusFilter(''); setSellerFilter(''); setStockFilter(''); }}
+            className={`bg-white rounded-xl border p-6 text-left transition-all hover:shadow-md ${!search && !categoryFilter && !approvalStatusFilter && !activeStatusFilter && !sellerFilter && !stockFilter ? 'border-[#722F37] ring-2 ring-[#722F37]' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-[#6B6B6B] text-sm">Total Products</p>
             <p className="text-3xl font-bold text-[#722F37] mt-2">{stats.total}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
+          </button>
+          <button
+            onClick={() => { setApprovalStatusFilter(''); setStockFilter(''); setActiveStatusFilter('active'); }}
+            className={`bg-white rounded-xl border p-6 text-left transition-all hover:shadow-md ${activeStatusFilter === 'active' ? 'border-green-500 ring-2 ring-green-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-[#6B6B6B] text-sm">Active Products</p>
             <p className="text-3xl font-bold text-green-600 mt-2">{stats.active}</p>
-          </div>
-          <div className="bg-orange-50 rounded-xl border border-orange-200 p-6 cursor-pointer hover:shadow-md transition-shadow" onClick={() => window.location.href = '/admin/products/review'}>
+          </button>
+          <button
+            onClick={() => { setActiveStatusFilter(''); setStockFilter(''); setApprovalStatusFilter('pending'); }}
+            className={`bg-orange-50 rounded-xl border p-6 text-left transition-all hover:shadow-md ${approvalStatusFilter === 'pending' ? 'border-orange-500 ring-2 ring-orange-400' : 'border-orange-200'}`}
+          >
             <p className="text-orange-700 text-sm font-semibold">Pending Approval</p>
             <p className="text-3xl font-bold text-orange-600 mt-2">{stats.pending}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-[#E8E2D9] p-6">
+          </button>
+          <button
+            onClick={() => { setApprovalStatusFilter(''); setActiveStatusFilter(''); setStockFilter('out-of-stock'); }}
+            className={`bg-white rounded-xl border p-6 text-left transition-all hover:shadow-md ${stockFilter === 'out-of-stock' ? 'border-red-500 ring-2 ring-red-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-[#6B6B6B] text-sm">Out of Stock</p>
             <p className="text-3xl font-bold text-red-600 mt-2">{stats.outOfStock}</p>
-          </div>
+          </button>
         </div>
 
         {/* Filters */}
