@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Loaded client-side only — Leaflet doesn't support SSR
+const LocationPickerMap = dynamic(() => import('@/components/LocationPickerMap'), { ssr: false });
 
 export default function SellerRegisterPage() {
   const { user, isSeller, sellerStatus, isApprovedSeller, login } = useAuth();
@@ -23,11 +27,14 @@ export default function SellerRegisterPage() {
     city: '',
     state: '',
     pincode: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     bankAccountName: '',
     bankAccountNumber: '',
     bankIfsc: '',
     bankName: '',
   });
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Fetch latest seller status from database on mount
   useEffect(() => {
@@ -738,6 +745,115 @@ export default function SellerRegisterPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Shop / Warehouse Location */}
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-[#722F37] mb-1">Shop / Warehouse Location</h2>
+            <p className="text-sm text-[#6B6B6B] mb-4">
+              Pin your exact shop or warehouse location so customers and delivery partners can find you.
+              If you are not physically there right now, use the map to pin the correct spot.
+            </p>
+
+            {/* Location status */}
+            {formData.latitude != null && formData.longitude != null ? (
+              <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                <svg className="w-5 h-5 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-800">Location set</p>
+                  <p className="text-xs text-green-600">
+                    {formData.latitude.toFixed(5)}, {formData.longitude.toFixed(5)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, latitude: null, longitude: null }))}
+                  className="text-xs text-green-700 underline hover:text-green-900"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                <svg className="w-4 h-4 text-yellow-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-yellow-800">Location not set yet — your products won't appear in nearby customer searches until you add it.</p>
+              </div>
+            )}
+
+            {/* Two-option buttons */}
+            {!showMapPicker && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMapPicker(true)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 border-[#722F37] text-[#722F37] rounded-xl font-medium hover:bg-[#722F37] hover:text-white transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  Pin Location on Map
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => setFormData(prev => ({
+                        ...prev,
+                        latitude: Math.round(pos.coords.latitude * 1e7) / 1e7,
+                        longitude: Math.round(pos.coords.longitude * 1e7) / 1e7,
+                      })),
+                      () => alert('Could not get location. Please allow browser location access or pin manually on the map.'),
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 border-blue-600 text-blue-600 rounded-xl font-medium hover:bg-blue-600 hover:text-white transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06z" />
+                  </svg>
+                  Use My Current Location
+                </button>
+              </div>
+            )}
+
+            {/* Inline map picker */}
+            {showMapPicker && (
+              <div className="border border-[#E8E2D9] rounded-xl p-4 bg-[#FAF7F2]">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-[#2D2D2D]">Pin your exact location</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(false)}
+                    className="text-xs text-[#6B6B6B] hover:text-[#2D2D2D] underline"
+                  >
+                    Close map
+                  </button>
+                </div>
+                <LocationPickerMap
+                  initialLat={formData.latitude}
+                  initialLng={formData.longitude}
+                  onLocationSelect={(lat, lng) =>
+                    setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))
+                  }
+                />
+                {formData.latitude != null && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(false)}
+                    className="w-full mt-3 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#5a252c] transition-colors text-sm"
+                  >
+                    Confirm Location
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Bank Details */}

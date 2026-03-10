@@ -5,6 +5,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+const LocationPickerMap = dynamic(() => import('@/components/LocationPickerMap'), { ssr: false });
 
 interface Seller {
   id: string;
@@ -70,6 +73,9 @@ export default function SellerDashboardPage() {
   const [deletionHistory, setDeletionHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [sellerGeoStatus, setSellerGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [pendingCoords, setPendingCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [savingLocation, setSavingLocation] = useState(false);
   const [ordersToPack, setOrdersToPack] = useState<OrderToPack[]>([]);
   const [loadingOrdersToPack, setLoadingOrdersToPack] = useState(false);
   const [packingOrderId, setPackingOrderId] = useState<string | null>(null);
@@ -267,6 +273,29 @@ export default function SellerDashboardPage() {
     }
   };
 
+  const saveSellerLocation = async (lat: number, lng: number) => {
+    setSavingLocation(true);
+    try {
+      const res = await fetch('/api/sellers/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, latitude: lat, longitude: lng }),
+      });
+      if (res.ok) {
+        setSeller(prev => prev ? { ...prev, latitude: lat, longitude: lng } : prev);
+        setSellerGeoStatus('success');
+        setShowLocationModal(false);
+        setPendingCoords(null);
+      } else {
+        setSellerGeoStatus('error');
+      }
+    } catch {
+      setSellerGeoStatus('error');
+    } finally {
+      setSavingLocation(false);
+    }
+  };
+
   const handleSetSellerLocation = () => {
     if (!navigator.geolocation) {
       setSellerGeoStatus('error');
@@ -274,28 +303,12 @@ export default function SellerDashboardPage() {
     }
     setSellerGeoStatus('loading');
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await fetch('/api/sellers/me', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user?.id,
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-            }),
-          });
-          if (res.ok) {
-            setSeller(prev => prev ? { ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude } : prev);
-            setSellerGeoStatus('success');
-          } else {
-            setSellerGeoStatus('error');
-          }
-        } catch {
-          setSellerGeoStatus('error');
-        }
-      },
-      () => setSellerGeoStatus('error')
+      (pos) => saveSellerLocation(
+        Math.round(pos.coords.latitude * 1e7) / 1e7,
+        Math.round(pos.coords.longitude * 1e7) / 1e7
+      ),
+      () => setSellerGeoStatus('error'),
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
@@ -434,8 +447,8 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Shop Location Card */}
-        <div className="bg-white rounded-xl border border-[#E8E2D9] p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-3">
+        <div className="bg-white rounded-xl border border-[#E8E2D9] p-5 mb-8">
+          <div className="flex items-start gap-3 mb-4">
             <svg className="w-5 h-5 text-[#722F37] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -448,26 +461,89 @@ export default function SellerDashboardPage() {
                 </p>
               ) : (
                 <p className="text-sm text-[#6B6B6B] mt-0.5">
-                  Not set — add your shop location so customers nearby can discover your products
+                  Not set — add your exact shop/warehouse location so customers nearby can discover your products
                 </p>
               )}
               {sellerGeoStatus === 'error' && (
-                <p className="text-xs text-red-500 mt-1">Could not get location. Please allow browser location access and try again.</p>
+                <p className="text-xs text-red-500 mt-1">Could not get location. Please allow browser access or pin manually on the map.</p>
+              )}
+              {sellerGeoStatus === 'success' && (
+                <p className="text-xs text-green-600 mt-1">Location updated successfully!</p>
               )}
             </div>
           </div>
-          <button
-            onClick={handleSetSellerLocation}
-            disabled={sellerGeoStatus === 'loading'}
-            className="shrink-0 px-4 py-2 bg-[#722F37] text-white text-sm rounded-lg hover:bg-[#5a252c] transition-colors disabled:opacity-50"
-          >
-            {sellerGeoStatus === 'loading'
-              ? 'Detecting...'
-              : seller.latitude && seller.longitude
-              ? 'Update Location'
-              : 'Set Shop Location'}
-          </button>
+
+          {/* Two options */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() => { setPendingCoords(seller.latitude && seller.longitude ? { lat: Number(seller.latitude), lng: Number(seller.longitude) } : null); setShowLocationModal(true); }}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 border-2 border-[#722F37] text-[#722F37] rounded-lg font-medium hover:bg-[#722F37] hover:text-white transition-all text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              Pin on Map
+            </button>
+            <button
+              onClick={handleSetSellerLocation}
+              disabled={sellerGeoStatus === 'loading'}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 border-2 border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-600 hover:text-white transition-all text-sm disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06z" />
+              </svg>
+              {sellerGeoStatus === 'loading' ? 'Detecting…' : 'Use Current Location'}
+            </button>
+          </div>
         </div>
+
+        {/* Location Picker Modal */}
+        {showLocationModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[#2D2D2D]">Pin Your Shop / Warehouse Location</h3>
+                  <p className="text-sm text-[#6B6B6B] mt-0.5">Click or drag the pin to mark the exact spot.</p>
+                </div>
+                <button onClick={() => { setShowLocationModal(false); setPendingCoords(null); }} className="text-[#6B6B6B] hover:text-[#2D2D2D]">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <LocationPickerMap
+                initialLat={pendingCoords?.lat ?? (seller.latitude ? Number(seller.latitude) : null)}
+                initialLng={pendingCoords?.lng ?? (seller.longitude ? Number(seller.longitude) : null)}
+                onLocationSelect={(lat, lng) => setPendingCoords({ lat, lng })}
+              />
+
+              {pendingCoords && (
+                <p className="text-xs text-[#6B6B6B] mt-2 text-center">
+                  Selected: {pendingCoords.lat.toFixed(5)}, {pendingCoords.lng.toFixed(5)}
+                </p>
+              )}
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => { setShowLocationModal(false); setPendingCoords(null); }}
+                  className="flex-1 py-2.5 bg-gray-100 text-[#2D2D2D] rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => pendingCoords && saveSellerLocation(pendingCoords.lat, pendingCoords.lng)}
+                  disabled={!pendingCoords || savingLocation}
+                  className="flex-1 py-2.5 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#5a252c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingLocation ? 'Saving…' : 'Confirm Location'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Orders to Pack */}
         {(loadingOrdersToPack || ordersToPack.length > 0) && (
