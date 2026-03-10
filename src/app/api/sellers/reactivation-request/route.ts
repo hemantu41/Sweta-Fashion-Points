@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Clear seller list cache so admin sees the request immediately
-    sellerCache.clear();
+    await sellerCache.clear();
 
     return NextResponse.json({
       success: true,

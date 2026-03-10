@@ -27,10 +27,16 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search'); // NEW: Search query
     const userLat = searchParams.get('userLat');   // Location-based filter
     const userLng = searchParams.get('userLng');   // Location-based filter
+    // Pagination
+    const pageParam = searchParams.get('page');
+    const limitParam = searchParams.get('limit');
+    const page = pageParam ? Math.max(1, parseInt(pageParam)) : null;
+    const limit = limitParam ? Math.min(100, Math.max(1, parseInt(limitParam))) : null;
+    const usePagination = page !== null && limit !== null;
     // Note: _t parameter is ignored for cache key (used only for browser cache busting)
 
-    // Bypass cache for search and location queries — results are real-time / user-specific
-    const useCache = !search && !(userLat && userLng);
+    // Bypass cache for search, location, and paginated queries — results are context-specific
+    const useCache = !search && !(userLat && userLng) && !usePagination;
     const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}:${search || 'none'}`;
 
     // Function to fetch products
@@ -90,7 +96,15 @@ export async function GET(request: NextRequest) {
         query = query.is('deleted_at', null);
       }
 
-      const { data: products, error } = await query.order('created_at', { ascending: false });
+      // Apply pagination at DB level when requested
+      if (usePagination) {
+        const from = (page! - 1) * limit!;
+        const to = from + limit! - 1;
+        query = query.range(from, to);
+      }
+
+      const { data: products, error, count } = await query
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('[Products API] Database error:', error);
@@ -160,7 +174,22 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Products API] Returning ${transformedProducts.length} products${search ? ` for search: "${search}"` : category ? ` for category: ${category}` : ''}`);
 
-    return NextResponse.json({ products: transformedProducts });
+    const responseBody: Record<string, unknown> = { products: transformedProducts };
+    if (usePagination) {
+      responseBody.page = page;
+      responseBody.limit = limit;
+      responseBody.hasMore = transformedProducts.length === limit;
+    }
+
+    // CDN/browser cache headers:
+    // - Customer-facing (no search, no user context): cache 5 min, serve stale up to 1 min while revalidating
+    // - Admin / seller / search queries: no cache
+    const isPublicQuery = !search && !sellerId && !userLat && searchParams.get('includeAllStatuses') !== 'true';
+    const cacheHeaders = isPublicQuery
+      ? { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' }
+      : { 'Cache-Control': 'no-store' };
+
+    return NextResponse.json(responseBody, { headers: cacheHeaders });
   } catch (error) {
     console.error('Products API error:', error);
     return NextResponse.json(
@@ -283,7 +312,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Clear product cache when new product is created
-    productCache.clear();
+    await productCache.clear();
 
     return NextResponse.json({
       message: 'Product created successfully',

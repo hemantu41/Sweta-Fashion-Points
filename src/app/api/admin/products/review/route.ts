@@ -103,7 +103,7 @@ export async function PUT(request: NextRequest) {
     if (error) throw error;
 
     // Clear product cache after approval/rejection
-    productCache.clear();
+    await productCache.clear();
     console.log('[Admin Product Review API] Cache cleared after product approval/rejection');
 
     return NextResponse.json({
