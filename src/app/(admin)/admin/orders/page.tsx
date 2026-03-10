@@ -580,34 +580,49 @@ export default function AdminOrdersPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          <button
+            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter(''); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${!statusFilter && !deliveryStatusFilter ? 'border-[#722F37] ring-2 ring-[#722F37]' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Total Orders</p>
             <p className="text-2xl font-bold text-[#722F37]">{orders.length}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter('pending_assignment'); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${deliveryStatusFilter === 'pending_assignment' ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Pending Assignment</p>
             <p className="text-2xl font-bold text-yellow-600">
               {orders.filter((o) => !o.delivery_status || o.delivery_status === 'pending_assignment').length}
             </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter('in_transit'); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${deliveryStatusFilter === 'in_transit' ? 'border-blue-500 ring-2 ring-blue-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">In Transit</p>
             <p className="text-2xl font-bold text-blue-600">
               {orders.filter((o) => o.delivery_status === 'in_transit' || o.delivery_status === 'out_for_delivery').length}
             </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter('delivered'); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${deliveryStatusFilter === 'delivered' ? 'border-green-500 ring-2 ring-green-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Delivered</p>
             <p className="text-2xl font-bold text-green-600">
               {orders.filter((o) => o.delivery_status === 'delivered').length}
             </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => { setDeliveryStatusFilter(''); setStatusFilter('captured'); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${statusFilter === 'captured' ? 'border-green-500 ring-2 ring-green-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Payment Success</p>
             <p className="text-2xl font-bold text-green-600">
               {orders.filter((o) => o.status === 'captured').length}
             </p>
-          </div>
+          </button>
         </div>
 
         {/* Filters */}
