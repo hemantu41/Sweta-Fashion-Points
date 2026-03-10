@@ -51,7 +51,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+
+        // Re-verify seller + delivery partner status from DB in the background.
+        // This ensures that if admin deletes/changes a seller/partner account,
+        // the UI reflects the correct state without requiring a manual logout.
+        if (parsed?.id) {
+          fetch(`/api/auth/me?userId=${parsed.id}`)
+            .then((res) => res.json())
+            .then((fresh) => {
+              if (fresh.error) return;
+              const updated = {
+                ...parsed,
+                isSeller: fresh.isSeller,
+                sellerId: fresh.sellerId,
+                sellerStatus: fresh.sellerStatus,
+                isDeliveryPartner: fresh.isDeliveryPartner,
+                deliveryPartnerId: fresh.deliveryPartnerId,
+                deliveryPartnerStatus: fresh.deliveryPartnerStatus,
+              };
+              setUser(updated);
+              localStorage.setItem('user', JSON.stringify(updated));
+            })
+            .catch(() => {
+              // Silently fail — keep existing localStorage data
+            });
+        }
       } catch {
         localStorage.removeItem('user');
       }
