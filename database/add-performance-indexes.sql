@@ -33,4 +33,4 @@ CREATE INDEX IF NOT EXISTS idx_sellers_user_id  ON spf_sellers(user_id);
 -- Delivery partners table
 CREATE INDEX IF NOT EXISTS idx_delivery_partners_status              ON spf_delivery_partners(status);
 CREATE INDEX IF NOT EXISTS idx_delivery_partners_availability_status ON spf_delivery_partners(availability_status);
-CREATE INDEX IF NOT EXISTS idx_delivery_partners_user_id             ON spf_delivery_partners(user_id);
+CREATE INDEX IF NOT EXISTS idx_delivery_partners_created_by          ON spf_delivery_partners(created_by);
