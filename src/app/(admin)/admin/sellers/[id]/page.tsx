@@ -5,6 +5,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+interface StatusHistoryEntry {
+  id: string;
+  from_status: string | null;
+  to_status: string;
+  reason: string | null;
+  created_at: string;
+  changed_by: string | null;
+}
+
 interface Seller {
   id: string;
   userId: string;
@@ -27,12 +36,14 @@ interface Seller {
   approvedBy?: string;
   approvedAt?: string;
   rejectionReason?: string;
+  suspensionReason?: string;
   commissionPercentage: number;
   isActive: boolean;
   documents: any[];
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  statusHistory: StatusHistoryEntry[];
   user: {
     name: string;
     email: string;
@@ -48,6 +59,7 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
   const [sellerId, setSellerId] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [commission, setCommission] = useState('10.00');
+  const [actioning, setActioning] = useState(false);
 
   useEffect(() => {
     params.then(p => {
@@ -71,7 +83,6 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
         router.push('/admin/sellers');
       }
     } catch (error) {
-      console.error('Fetch seller error:', error);
       alert('Error loading seller details');
       router.push('/admin/sellers');
     } finally {
@@ -90,17 +101,37 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
           commissionPercentage: parseFloat(commission),
         }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         alert('Settings saved successfully!');
         fetchSeller(sellerId);
       } else {
         alert(data.error || 'Failed to save settings');
       }
-    } catch (error) {
+    } catch {
       alert('Error saving settings');
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!confirm('Reactivate this seller? They will regain full access to their seller dashboard.')) return;
+    setActioning(true);
+    try {
+      const response = await fetch(`/api/sellers/${sellerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, action: 'reactivate' }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        fetchSeller(sellerId);
+      } else {
+        alert(data.error || 'Failed to reactivate seller');
+      }
+    } catch {
+      alert('Error reactivating seller');
+    } finally {
+      setActioning(false);
     }
   };
 
@@ -129,8 +160,18 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
       case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
       case 'approved': return 'bg-green-100 text-green-700 border-green-300';
       case 'rejected': return 'bg-red-100 text-red-700 border-red-300';
-      case 'suspended': return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'suspended': return 'bg-orange-100 text-orange-700 border-orange-300';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStatusBadgeColor = (status: string | null) => {
+    switch (status) {
+      case 'approved': return 'bg-green-100 text-green-700';
+      case 'pending': return 'bg-yellow-100 text-yellow-700';
+      case 'rejected': return 'bg-red-100 text-red-700';
+      case 'suspended': return 'bg-orange-100 text-orange-700';
+      default: return 'bg-gray-100 text-gray-600';
     }
   };
 
@@ -153,12 +194,32 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
           </Link>
         </div>
 
-        {/* Status Badge */}
-        <div className="mb-6">
+        {/* Status Badge + Reactivate */}
+        <div className="flex items-center gap-4 mb-6 flex-wrap">
           <span className={`px-4 py-2 rounded-full text-sm font-semibold border ${getStatusColor(seller.status)}`}>
             Status: {seller.status.toUpperCase()}
           </span>
+          {seller.status === 'suspended' && (
+            <button
+              onClick={handleReactivate}
+              disabled={actioning}
+              className="px-5 py-2 bg-green-600 text-white text-sm rounded-full font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              {actioning ? 'Reactivating...' : '✓ Reactivate Seller'}
+            </button>
+          )}
         </div>
+
+        {/* Suspension Notice */}
+        {seller.status === 'suspended' && (
+          <div className="bg-orange-50 rounded-xl p-5 mb-6 border border-orange-200">
+            <h2 className="text-base font-bold text-orange-800 mb-1">Account Suspended</h2>
+            <p className="text-sm text-orange-700">
+              <span className="font-semibold">Reason: </span>
+              {seller.suspensionReason || 'No reason provided'}
+            </p>
+          </div>
+        )}
 
         {/* Business Information */}
         <div className="bg-white rounded-xl p-6 mb-6 border border-[#E8E2D9]">
@@ -283,8 +344,8 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
         {/* Approval Info */}
         {seller.status === 'approved' && seller.approvedAt && (
           <div className="bg-green-50 rounded-xl p-6 mb-6 border border-green-200">
-            <h2 className="text-xl font-bold text-green-800 mb-2">Approved</h2>
-            <p className="text-green-700">
+            <h2 className="text-base font-bold text-green-800 mb-1">Approved</h2>
+            <p className="text-green-700 text-sm">
               Approved on: {new Date(seller.approvedAt).toLocaleString()}
             </p>
           </div>
@@ -292,13 +353,13 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
 
         {seller.status === 'rejected' && seller.rejectionReason && (
           <div className="bg-red-50 rounded-xl p-6 mb-6 border border-red-200">
-            <h2 className="text-xl font-bold text-red-800 mb-2">Rejected</h2>
-            <p className="text-red-700">Reason: {seller.rejectionReason}</p>
+            <h2 className="text-base font-bold text-red-800 mb-1">Rejected</h2>
+            <p className="text-red-700 text-sm">Reason: {seller.rejectionReason}</p>
           </div>
         )}
 
         {/* Timestamps */}
-        <div className="bg-white rounded-xl p-6 border border-[#E8E2D9]">
+        <div className="bg-white rounded-xl p-6 mb-6 border border-[#E8E2D9]">
           <h2 className="text-xl font-bold text-[#722F37] mb-4">Timeline</h2>
           <div className="space-y-2 text-sm">
             <p className="text-[#6B6B6B]">
@@ -309,6 +370,43 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
             </p>
           </div>
         </div>
+
+        {/* Status History */}
+        {seller.statusHistory && seller.statusHistory.length > 0 && (
+          <div className="bg-white rounded-xl p-6 border border-[#E8E2D9]">
+            <h2 className="text-xl font-bold text-[#722F37] mb-4">Status Change History</h2>
+            <div className="space-y-3">
+              {seller.statusHistory.map((entry) => (
+                <div key={entry.id} className="flex items-start gap-4 p-4 rounded-xl bg-[#FAF7F2] border border-[#E8E2D9]">
+                  <div className="flex items-center gap-2 shrink-0">
+                    {entry.from_status && (
+                      <>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeColor(entry.from_status)}`}>
+                          {entry.from_status}
+                        </span>
+                        <span className="text-[#6B6B6B] text-xs">→</span>
+                      </>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeColor(entry.to_status)}`}>
+                      {entry.to_status}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {entry.reason && (
+                      <p className="text-sm text-[#2D2D2D]">{entry.reason}</p>
+                    )}
+                    <p className="text-xs text-[#6B6B6B] mt-0.5">
+                      {new Date(entry.created_at).toLocaleString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

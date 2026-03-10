@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+// Log a seller status change to history
+async function logStatusHistory(
+  sellerId: string,
+  fromStatus: string | null,
+  toStatus: string,
+  changedBy: string,
+  reason?: string
+) {
+  await supabaseAdmin.from('spf_seller_status_history').insert({
+    seller_id: sellerId,
+    changed_by: changedBy,
+    from_status: fromStatus,
+    to_status: toStatus,
+    reason: reason || null,
+  });
+}
 
 // Helper to check if user is admin
 async function isAdmin(userId: string): Promise<boolean> {
@@ -75,6 +93,17 @@ export async function GET(
       );
     }
 
+    // Fetch status history (admin only)
+    let statusHistory: any[] = [];
+    if (await isAdmin(userId)) {
+      const { data: history } = await supabaseAdmin
+        .from('spf_seller_status_history')
+        .select('id, from_status, to_status, reason, created_at, changed_by')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false });
+      statusHistory = history || [];
+    }
+
     // Transform to camelCase
     const transformedSeller = {
       id: seller.id,
@@ -98,6 +127,7 @@ export async function GET(
       approvedBy: seller.approved_by,
       approvedAt: seller.approved_at,
       rejectionReason: seller.rejection_reason,
+      suspensionReason: seller.suspension_reason,
       commissionPercentage: seller.commission_percentage,
       isActive: seller.is_active,
       documents: seller.documents,
@@ -105,6 +135,7 @@ export async function GET(
       createdAt: seller.created_at,
       updatedAt: seller.updated_at,
       user: seller.user,
+      statusHistory,
     };
 
     return NextResponse.json({
@@ -139,74 +170,91 @@ export async function PUT(
 
     const isAdminUser = await isAdmin(userId);
 
-    // Handle admin actions (approve/reject/suspend)
+    // Handle admin actions (approve/reject/suspend/reactivate)
     if (action && isAdminUser) {
+      // Get current status for history logging
+      const { data: currentSeller } = await supabase
+        .from('spf_sellers')
+        .select('status')
+        .eq('id', sellerId)
+        .single();
+      const fromStatus = currentSeller?.status || null;
+
       if (action === 'approve') {
         const { error } = await supabase
           .from('spf_sellers')
           .update({
             status: 'approved',
+            is_active: true,
             approved_by: userId,
             approved_at: new Date().toISOString(),
             rejection_reason: null,
+            suspension_reason: null,
           })
           .eq('id', sellerId);
 
         if (error) {
-          return NextResponse.json(
-            { error: 'Failed to approve seller' },
-            { status: 500 }
-          );
+          return NextResponse.json({ error: 'Failed to approve seller' }, { status: 500 });
         }
 
-        return NextResponse.json({
-          success: true,
-          message: 'Seller approved successfully',
-        });
+        await logStatusHistory(sellerId, fromStatus, 'approved', userId, updateData.reason);
+        return NextResponse.json({ success: true, message: 'Seller approved successfully' });
       }
 
       if (action === 'reject') {
+        const reason = updateData.rejectionReason || 'Not specified';
         const { error } = await supabase
           .from('spf_sellers')
           .update({
             status: 'rejected',
-            rejection_reason: updateData.rejectionReason || 'Not specified',
+            is_active: false,
+            rejection_reason: reason,
           })
           .eq('id', sellerId);
 
         if (error) {
-          return NextResponse.json(
-            { error: 'Failed to reject seller' },
-            { status: 500 }
-          );
+          return NextResponse.json({ error: 'Failed to reject seller' }, { status: 500 });
         }
 
-        return NextResponse.json({
-          success: true,
-          message: 'Seller rejected',
-        });
+        await logStatusHistory(sellerId, fromStatus, 'rejected', userId, reason);
+        return NextResponse.json({ success: true, message: 'Seller rejected' });
       }
 
       if (action === 'suspend') {
+        const reason = updateData.suspensionReason || 'Not specified';
         const { error } = await supabase
           .from('spf_sellers')
           .update({
             status: 'suspended',
             is_active: false,
+            suspension_reason: reason,
           })
           .eq('id', sellerId);
 
         if (error) {
-          return NextResponse.json(
-            { error: 'Failed to suspend seller' },
-            { status: 500 }
-          );
+          return NextResponse.json({ error: 'Failed to suspend seller' }, { status: 500 });
         }
 
-        return NextResponse.json({
-          success: true,
-          message: 'Seller suspended',
-        });
+        await logStatusHistory(sellerId, fromStatus, 'suspended', userId, reason);
+        return NextResponse.json({ success: true, message: 'Seller suspended' });
+      }
+
+      if (action === 'reactivate') {
+        const { error } = await supabase
+          .from('spf_sellers')
+          .update({
+            status: 'approved',
+            is_active: true,
+            suspension_reason: null,
+          })
+          .eq('id', sellerId);
+
+        if (error) {
+          return NextResponse.json({ error: 'Failed to reactivate seller' }, { status: 500 });
+        }
+
+        await logStatusHistory(sellerId, fromStatus, 'approved', userId, 'Reactivated by admin');
+        return NextResponse.json({ success: true, message: 'Seller reactivated successfully' });
       }
     }
 

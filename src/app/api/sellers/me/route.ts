@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
       approvedBy: seller.approved_by,
       approvedAt: seller.approved_at,
       rejectionReason: seller.rejection_reason,
+      suspensionReason: seller.suspension_reason,
       commissionPercentage: seller.commission_percentage,
       isActive: seller.is_active,
       latitude: seller.latitude != null ? Number(seller.latitude) : null,

@@ -18,6 +18,7 @@ interface Seller {
   commissionPercentage: number;
   isActive: boolean;
   createdAt: string;
+  suspensionReason?: string;
   user: {
     name: string;
     email: string;
@@ -33,6 +34,16 @@ export default function AdminSellersPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'suspended'>('all');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Suspend modal state
+  const [suspendModal, setSuspendModal] = useState<{ open: boolean; sellerId: string; businessName: string }>({
+    open: false, sellerId: '', businessName: '',
+  });
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspending, setSuspending] = useState(false);
+
+  // Reactivate state
+  const [reactivating, setReactivating] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -53,11 +64,9 @@ export default function AdminSellersPage() {
       if (response.ok) {
         setSellers(data.sellers || []);
       } else {
-        console.error('Failed to fetch sellers:', data.error);
         setError(data.error || 'Failed to fetch sellers');
       }
     } catch (error) {
-      console.error('Fetch sellers error:', error);
       setError('An error occurred while fetching sellers');
     } finally {
       setLoading(false);
@@ -71,21 +80,15 @@ export default function AdminSellersPage() {
       const response = await fetch(`/api/sellers/${sellerId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          action: 'approve',
-        }),
+        body: JSON.stringify({ userId: user?.id, action: 'approve' }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        alert('Seller approved successfully!');
         fetchSellers();
       } else {
         alert(data.error || 'Failed to approve seller');
       }
-    } catch (error) {
+    } catch {
       alert('Error approving seller');
     }
   };
@@ -98,49 +101,84 @@ export default function AdminSellersPage() {
       const response = await fetch(`/api/sellers/${sellerId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          action: 'reject',
-          rejectionReason: reason,
-        }),
+        body: JSON.stringify({ userId: user?.id, action: 'reject', rejectionReason: reason }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        alert('Seller rejected');
         fetchSellers();
       } else {
         alert(data.error || 'Failed to reject seller');
       }
-    } catch (error) {
+    } catch {
       alert('Error rejecting seller');
     }
   };
 
-  const handleSuspend = async (sellerId: string) => {
-    if (!confirm('Are you sure you want to suspend this seller? They will not be able to add/edit products.')) return;
+  const openSuspendModal = (seller: Seller) => {
+    setSuspendReason('');
+    setSuspendModal({ open: true, sellerId: seller.id, businessName: seller.businessName });
+  };
 
+  const handleSuspend = async () => {
+    if (!suspendReason.trim()) {
+      alert('Please enter a reason for suspension.');
+      return;
+    }
+    setSuspending(true);
     try {
-      const response = await fetch(`/api/sellers/${sellerId}`, {
+      const response = await fetch(`/api/sellers/${suspendModal.sellerId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          action: 'suspend',
-        }),
+        body: JSON.stringify({ userId: user?.id, action: 'suspend', suspensionReason: suspendReason.trim() }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        alert('Seller suspended');
+        setSuspendModal({ open: false, sellerId: '', businessName: '' });
+        setSuspendReason('');
+        // Update list in-place immediately, then re-fetch from server
+        setSellers(prev =>
+          prev.map(s =>
+            s.id === suspendModal.sellerId
+              ? { ...s, status: 'suspended', isActive: false, suspensionReason: suspendReason.trim() }
+              : s
+          )
+        );
         fetchSellers();
       } else {
         alert(data.error || 'Failed to suspend seller');
       }
-    } catch (error) {
+    } catch {
       alert('Error suspending seller');
+    } finally {
+      setSuspending(false);
+    }
+  };
+
+  const handleReactivate = async (sellerId: string, businessName: string) => {
+    if (!confirm(`Reactivate "${businessName}"? They will be able to access their seller dashboard again.`)) return;
+    setReactivating(sellerId);
+    try {
+      const response = await fetch(`/api/sellers/${sellerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, action: 'reactivate' }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // Update in-place then re-fetch
+        setSellers(prev =>
+          prev.map(s =>
+            s.id === sellerId ? { ...s, status: 'approved', isActive: true, suspensionReason: undefined } : s
+          )
+        );
+        fetchSellers();
+      } else {
+        alert(data.error || 'Failed to reactivate seller');
+      }
+    } catch {
+      alert('Error reactivating seller');
+    } finally {
+      setReactivating(null);
     }
   };
 
@@ -163,7 +201,7 @@ export default function AdminSellersPage() {
       case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
       case 'approved': return 'bg-green-100 text-green-700 border-green-300';
       case 'rejected': return 'bg-red-100 text-red-700 border-red-300';
-      case 'suspended': return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'suspended': return 'bg-orange-100 text-orange-700 border-orange-300';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -205,16 +243,15 @@ export default function AdminSellersPage() {
             <p className="text-sm text-red-700 mb-1">Rejected</p>
             <p className="text-3xl font-bold text-red-800">{stats.rejected}</p>
           </div>
-          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-            <p className="text-sm text-gray-700 mb-1">Suspended</p>
-            <p className="text-3xl font-bold text-gray-800">{stats.suspended}</p>
+          <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+            <p className="text-sm text-orange-700 mb-1">Suspended</p>
+            <p className="text-3xl font-bold text-orange-800">{stats.suspended}</p>
           </div>
         </div>
 
         {/* Filters & Search */}
         <div className="bg-white rounded-xl p-6 mb-6 border border-[#E8E2D9]">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
             <input
               type="text"
               placeholder="Search by business name, email..."
@@ -222,9 +259,7 @@ export default function AdminSellersPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 px-4 py-2 border border-[#E8E2D9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37]"
             />
-
-            {/* Status Filter */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {['all', 'pending', 'approved', 'rejected', 'suspended'].map((status) => (
                 <button
                   key={status}
@@ -242,16 +277,11 @@ export default function AdminSellersPage() {
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="text-red-600 text-xl">⚠️</div>
-              <div>
-                <p className="text-red-800 font-semibold">Error Loading Sellers</p>
-                <p className="text-red-600 text-sm mt-1">{error}</p>
-              </div>
-            </div>
+            <p className="text-red-800 font-semibold">Error Loading Sellers</p>
+            <p className="text-red-600 text-sm mt-1">{error}</p>
           </div>
         )}
 
@@ -261,7 +291,7 @@ export default function AdminSellersPage() {
             <div className="p-12 text-center text-[#6B6B6B]">Loading sellers...</div>
           ) : filteredSellers.length === 0 ? (
             <div className="p-12 text-center text-[#6B6B6B]">
-              {error ? 'Unable to load sellers. Please refresh the page.' : 'No sellers found matching your criteria.'}
+              {error ? 'Unable to load sellers.' : 'No sellers found matching your criteria.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -297,25 +327,30 @@ export default function AdminSellersPage() {
                         {seller.gstin || '-'}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(seller.status)}`}>
-                          {seller.status.toUpperCase()}
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(seller.status)}`}>
+                            {seller.status.toUpperCase()}
+                          </span>
+                          {seller.status === 'suspended' && seller.suspensionReason && (
+                            <span className="text-xs text-orange-600 max-w-[140px] truncate" title={seller.suspensionReason}>
+                              {seller.suspensionReason}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           {seller.status === 'pending' && (
                             <>
                               <button
                                 onClick={() => handleApprove(seller.id)}
                                 className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700"
-                                title="Approve"
                               >
                                 ✓ Approve
                               </button>
                               <button
                                 onClick={() => handleReject(seller.id)}
                                 className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700"
-                                title="Reject"
                               >
                                 ✗ Reject
                               </button>
@@ -323,11 +358,19 @@ export default function AdminSellersPage() {
                           )}
                           {seller.status === 'approved' && (
                             <button
-                              onClick={() => handleSuspend(seller.id)}
+                              onClick={() => openSuspendModal(seller)}
                               className="px-3 py-1 bg-orange-600 text-white text-xs rounded-lg hover:bg-orange-700"
-                              title="Suspend"
                             >
                               Suspend
+                            </button>
+                          )}
+                          {seller.status === 'suspended' && (
+                            <button
+                              onClick={() => handleReactivate(seller.id, seller.businessName)}
+                              disabled={reactivating === seller.id}
+                              className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 disabled:opacity-50"
+                            >
+                              {reactivating === seller.id ? 'Reactivating...' : 'Reactivate'}
                             </button>
                           )}
                           <Link
@@ -346,6 +389,47 @@ export default function AdminSellersPage() {
           )}
         </div>
       </div>
+
+      {/* Suspend Modal */}
+      {suspendModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-xl font-bold text-[#722F37] mb-1" style={{ fontFamily: 'var(--font-playfair)' }}>
+              Suspend Seller
+            </h2>
+            <p className="text-sm text-[#6B6B6B] mb-4">
+              Suspending <strong>{suspendModal.businessName}</strong>. They will lose access to their seller dashboard immediately.
+            </p>
+
+            <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+              Reason for Suspension <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              rows={4}
+              placeholder="Explain why this seller is being suspended. This reason will be visible to the seller."
+              className="w-full px-4 py-3 border border-[#E8E2D9] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm resize-none"
+            />
+
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setSuspendModal({ open: false, sellerId: '', businessName: '' })}
+                className="flex-1 py-2.5 border border-[#E8E2D9] text-[#6B6B6B] rounded-xl font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSuspend}
+                disabled={suspending || !suspendReason.trim()}
+                className="flex-1 py-2.5 bg-orange-600 text-white rounded-xl font-medium hover:bg-orange-700 disabled:opacity-50"
+              >
+                {suspending ? 'Suspending...' : 'Confirm Suspend'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
