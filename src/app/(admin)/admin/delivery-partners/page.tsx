@@ -283,28 +283,40 @@ export default function DeliveryPartnersPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          <button
+            onClick={() => { setStatusFilter(''); setAvailabilityFilter(''); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${!statusFilter && !availabilityFilter ? 'border-[#722F37] ring-2 ring-[#722F37]' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Total Partners</p>
             <p className="text-2xl font-bold text-[#722F37]">{partners.length}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => { setStatusFilter('active'); setAvailabilityFilter(''); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${statusFilter === 'active' ? 'border-green-500 ring-2 ring-green-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Active</p>
             <p className="text-2xl font-bold text-green-600">
               {partners.filter((p) => p.status === 'active').length}
             </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => { setAvailabilityFilter('available'); setStatusFilter(''); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${availabilityFilter === 'available' ? 'border-blue-500 ring-2 ring-blue-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Available Now</p>
             <p className="text-2xl font-bold text-blue-600">
               {partners.filter((p) => p.availability_status === 'available').length}
             </p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => { setStatusFilter('pending_approval'); setAvailabilityFilter(''); }}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${statusFilter === 'pending_approval' ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Pending Approval</p>
             <p className="text-2xl font-bold text-yellow-600">
               {partners.filter((p) => p.status === 'pending_approval').length}
             </p>
-          </div>
+          </button>
         </div>
 
         {/* Pending Approvals Banner */}
