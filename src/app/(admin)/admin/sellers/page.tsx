@@ -230,23 +230,38 @@ export default function AdminSellersPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-6 border border-[#E8E2D9]">
+          <button
+            onClick={() => setFilter('all')}
+            className={`bg-white rounded-xl p-6 border text-left transition-all hover:shadow-md ${filter === 'all' ? 'border-[#722F37] ring-2 ring-[#722F37]' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Total Sellers</p>
             <p className="text-3xl font-bold text-[#722F37]">{stats.total}</p>
-          </div>
-          <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200">
+          </button>
+          <button
+            onClick={() => setFilter('pending')}
+            className={`bg-yellow-50 rounded-xl p-6 border text-left transition-all hover:shadow-md ${filter === 'pending' ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-yellow-200'}`}
+          >
             <p className="text-sm text-yellow-700 mb-1">Pending</p>
             <p className="text-3xl font-bold text-yellow-800">{stats.pending}</p>
-          </div>
-          <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+          </button>
+          <button
+            onClick={() => setFilter('approved')}
+            className={`bg-green-50 rounded-xl p-6 border text-left transition-all hover:shadow-md ${filter === 'approved' ? 'border-green-500 ring-2 ring-green-400' : 'border-green-200'}`}
+          >
             <p className="text-sm text-green-700 mb-1">Approved</p>
             <p className="text-3xl font-bold text-green-800">{stats.approved}</p>
-          </div>
-          <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+          </button>
+          <button
+            onClick={() => setFilter('rejected')}
+            className={`bg-red-50 rounded-xl p-6 border text-left transition-all hover:shadow-md ${filter === 'rejected' ? 'border-red-500 ring-2 ring-red-400' : 'border-red-200'}`}
+          >
             <p className="text-sm text-red-700 mb-1">Rejected</p>
             <p className="text-3xl font-bold text-red-800">{stats.rejected}</p>
-          </div>
-          <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+          </button>
+          <button
+            onClick={() => setFilter('suspended')}
+            className={`bg-orange-50 rounded-xl p-6 border text-left transition-all hover:shadow-md ${filter === 'suspended' ? 'border-orange-500 ring-2 ring-orange-400' : 'border-orange-200'}`}
+          >
             <p className="text-sm text-orange-700 mb-1">Suspended</p>
             <p className="text-3xl font-bold text-orange-800">{stats.suspended}</p>
             {stats.reactivationPending > 0 && (
@@ -254,7 +269,7 @@ export default function AdminSellersPage() {
                 {stats.reactivationPending} reactivation request{stats.reactivationPending > 1 ? 's' : ''} pending
               </p>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Filters & Search */}
