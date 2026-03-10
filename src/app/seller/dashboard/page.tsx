@@ -428,22 +428,34 @@ export default function SellerDashboardPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-6 border border-[#E8E2D9]">
+          <button
+            onClick={() => { setSearch(''); setCategoryFilter(''); setApprovalStatusFilter(''); setActiveStatusFilter(''); setStockFilter(''); }}
+            className={`bg-white rounded-xl p-6 border text-left transition-all hover:shadow-md ${!search && !categoryFilter && !approvalStatusFilter && !activeStatusFilter && !stockFilter ? 'border-[#722F37] ring-2 ring-[#722F37]' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Total Products</p>
             <p className="text-3xl font-bold text-[#722F37]">{stats.total}</p>
-          </div>
-          <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+          </button>
+          <button
+            onClick={() => { setStockFilter(''); setActiveStatusFilter(''); setApprovalStatusFilter('approved'); }}
+            className={`bg-green-50 rounded-xl p-6 border text-left transition-all hover:shadow-md ${approvalStatusFilter === 'approved' ? 'border-green-500 ring-2 ring-green-400' : 'border-green-200'}`}
+          >
             <p className="text-sm text-green-700 mb-1">Approved</p>
             <p className="text-3xl font-bold text-green-800">{stats.approved}</p>
-          </div>
-          <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+          </button>
+          <button
+            onClick={() => { setStockFilter(''); setActiveStatusFilter(''); setApprovalStatusFilter('pending'); }}
+            className={`bg-orange-50 rounded-xl p-6 border text-left transition-all hover:shadow-md ${approvalStatusFilter === 'pending' ? 'border-orange-500 ring-2 ring-orange-400' : 'border-orange-200'}`}
+          >
             <p className="text-sm text-orange-700 mb-1">Pending Approval</p>
             <p className="text-3xl font-bold text-orange-800">{stats.pending}</p>
-          </div>
-          <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+          </button>
+          <button
+            onClick={() => { setApprovalStatusFilter(''); setActiveStatusFilter(''); setStockFilter('low-stock'); }}
+            className={`bg-red-50 rounded-xl p-6 border text-left transition-all hover:shadow-md ${stockFilter === 'low-stock' ? 'border-red-500 ring-2 ring-red-400' : 'border-red-200'}`}
+          >
             <p className="text-sm text-red-700 mb-1">Low Stock</p>
             <p className="text-3xl font-bold text-red-800">{stats.lowStock}</p>
-          </div>
+          </button>
         </div>
 
         {/* Shop Location Card */}

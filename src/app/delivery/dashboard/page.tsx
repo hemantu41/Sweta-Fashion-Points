@@ -361,18 +361,27 @@ export default function DeliveryDashboardPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          <button
+            onClick={() => setStatusFilter('assigned')}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${statusFilter === 'assigned' ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Pending Deliveries</p>
             <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => setStatusFilter('delivered')}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${statusFilter === 'delivered' ? 'border-green-500 ring-2 ring-green-400' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Delivered Today</p>
             <p className="text-2xl font-bold text-green-600">{deliveredToday}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
+          </button>
+          <button
+            onClick={() => setStatusFilter('')}
+            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${!statusFilter ? 'border-[#722F37] ring-2 ring-[#722F37]' : 'border-[#E8E2D9]'}`}
+          >
             <p className="text-sm text-[#6B6B6B] mb-1">Total Deliveries</p>
             <p className="text-2xl font-bold text-[#722F37]">{partner?.total_deliveries || 0}</p>
-          </div>
+          </button>
           <div className="bg-white rounded-xl shadow-md p-4 border border-[#E8E2D9]">
             <p className="text-sm text-[#6B6B6B] mb-1">Success Rate</p>
             <p className="text-2xl font-bold text-green-600">
