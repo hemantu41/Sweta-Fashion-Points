@@ -311,28 +311,6 @@ export default function ProductDetailPage() {
               <h1 className="text-2xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
                 {language === 'hi' ? product.nameHi : product.name}
               </h1>
-              {product.fabric && product.category === 'beauty' && (() => {
-                const details = parseBeautyDetails(product.fabric);
-                return (
-                  <p className="text-sm text-[#6B6B6B] mt-1">
-                    {details.brand && `${details.brand}`}
-                    {details.shade && ` • ${details.shade}`}
-                    {details.volume && ` • ${details.volume}`}
-                  </p>
-                );
-              })()}
-              {product.fabric && product.category === 'footwear' && (() => {
-                const details = parseFootwearDetails(product.fabric);
-                return (
-                  <p className="text-sm text-[#6B6B6B] mt-1">
-                    {details.brand && `${details.brand}`}
-                    {details.material && ` • ${details.material}`}
-                  </p>
-                );
-              })()}
-              {product.fabric && !['beauty', 'footwear'].includes(product.category) && (
-                <p className="text-sm text-[#6B6B6B] mt-1">{language === 'hi' ? product.fabricHi : product.fabric}</p>
-              )}
             </div>
 
             {/* Price */}
