@@ -348,7 +348,7 @@ export default function MensPage() {
                       className="bg-white rounded-xl shadow-sm border border-[#E8E2D9] overflow-hidden hover:shadow-lg transition-shadow group"
                     >
                       <Link href={`/product/${product.id}`}>
-                        <div className="relative aspect-[3/4] bg-[#F0EDE8] overflow-hidden">
+                        <div className="relative aspect-[4/3] bg-[#F0EDE8] overflow-hidden">
                           {product.mainImage ? (
                             <CldImage
                               src={product.mainImage}
@@ -367,9 +367,6 @@ export default function MensPage() {
                           <h3 className="font-semibold text-[#2D2D2D] mb-1 line-clamp-1">
                             {product.name}
                           </h3>
-                          <p className="text-sm text-[#6B6B6B] mb-2 line-clamp-2">
-                            {product.description || product.name}
-                          </p>
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-lg font-bold text-[#722F37]">
                               ₹{product.price}
@@ -387,19 +384,6 @@ export default function MensPage() {
                               </>
                             )}
                           </div>
-                          {/* Size Options */}
-                          {product.sizes && (
-                            <div className="flex gap-1 mb-2">
-                              {product.sizes.slice(0, 4).map((size: string) => (
-                                <span
-                                  key={size}
-                                  className="px-2 py-1 border border-[#E8E2D9] rounded text-xs text-[#6B6B6B]"
-                                >
-                                  {size}
-                                </span>
-                              ))}
-                            </div>
-                          )}
                           {/* Rating */}
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold">
