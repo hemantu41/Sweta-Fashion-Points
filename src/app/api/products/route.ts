@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
       // IMPORTANT: Only show approved products for customer-facing queries
       // Sellers querying their own products can see all statuses
       // Admin can use includeAllStatuses=true to see pending/rejected products
-      const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
       if (!sellerId && !includeAllStatuses) {
         query = query.eq('approval_status', 'approved');
         // Customer-facing queries should also exclude deleted products
@@ -156,9 +155,15 @@ export async function GET(request: NextRequest) {
       })) || [];
     };
 
+    // TTL per scenario:
+    //   Admin (includeAllStatuses) → 10 min (600s)
+    //   Seller products / public storefront → 30 min (1800s)
+    const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
+    const cacheTTL = includeAllStatuses ? 600 : 1800;
+
     // Use cache for normal queries; bypass for search or location-filtered queries
     let transformedProducts = useCache
-      ? await getCachedData(cacheKey, fetchProducts, productCache, 600)
+      ? await getCachedData(cacheKey, fetchProducts, productCache, cacheTTL)
       : await fetchProducts();
 
     // Apply 35 km distance filter when user coordinates are provided
@@ -182,11 +187,11 @@ export async function GET(request: NextRequest) {
     }
 
     // CDN/browser cache headers:
-    // - Customer-facing (no search, no user context): cache 5 min, serve stale up to 1 min while revalidating
-    // - Admin / seller / search queries: no cache
-    const isPublicQuery = !search && !sellerId && !userLat && searchParams.get('includeAllStatuses') !== 'true';
+    // - Customer-facing (no search, no user context): cache 30 min, serve stale up to 1 min while revalidating
+    // - Admin / seller / search queries: no CDN cache (handled by Redis per-session)
+    const isPublicQuery = !search && !sellerId && !userLat && !includeAllStatuses;
     const cacheHeaders = isPublicQuery
-      ? { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' }
+      ? { 'Cache-Control': 's-maxage=1800, stale-while-revalidate=60' }
       : { 'Cache-Control': 'no-store' };
 
     return NextResponse.json(responseBody, { headers: cacheHeaders });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { deliveryCache } from '@/lib/cache';
 
 // GET - List delivery partner's assigned orders
 export async function GET(request: NextRequest) {
@@ -12,6 +13,14 @@ export async function GET(request: NextRequest) {
         { error: 'Partner ID is required' },
         { status: 400 }
       );
+    }
+
+    // Cache key per partner + status combination (30 min TTL)
+    const cacheKey = `orders:${partnerId}:${status || 'all'}`;
+    const cached = await deliveryCache.get<any[]>(cacheKey);
+    if (cached !== null) {
+      console.log(`[Delivery Orders API] Cache hit for partner ${partnerId}`);
+      return NextResponse.json({ success: true, deliveries: cached });
     }
 
     let query = supabase
@@ -45,6 +54,9 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Cache result for 30 min
+    await deliveryCache.set(cacheKey, deliveries || []);
 
     return NextResponse.json({
       success: true,

@@ -6,6 +6,7 @@ import {
   notifyOrderDelivered,
   notifyDeliveryFailed,
 } from '@/lib/delivery-notifications';
+import { deliveryCache } from '@/lib/cache';
 
 // PUT - Update delivery status
 export async function PUT(
@@ -147,6 +148,16 @@ export async function PUT(
         { error: 'Failed to update delivery status', details: updateError.message },
         { status: 500 }
       );
+    }
+
+    // Invalidate delivery cache so the partner's dashboard reflects the new status
+    if (delivery.delivery_partner_id) {
+      await deliveryCache.delete(`orders:${delivery.delivery_partner_id}:all`);
+      await deliveryCache.delete(`orders:${delivery.delivery_partner_id}:${status}`);
+      // Also invalidate the previous status bucket if it changed
+      if (delivery.status && delivery.status !== status) {
+        await deliveryCache.delete(`orders:${delivery.delivery_partner_id}:${delivery.status}`);
+      }
     }
 
     // Record status change in history
