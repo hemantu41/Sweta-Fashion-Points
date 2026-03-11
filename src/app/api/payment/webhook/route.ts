@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { adminOrdersCache } from '@/lib/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,6 +100,7 @@ async function handlePaymentCaptured(payment: any, request: NextRequest) {
   }
 
   console.log('[Webhook] Order updated:', paymentOrder.order_number);
+  await adminOrdersCache.clear();
 
   // Calculate seller earnings
   await calculateSellerEarnings(paymentOrder);
@@ -149,6 +151,7 @@ async function handlePaymentFailed(payment: any) {
   }
 
   console.log('[Webhook] Order marked as failed:', paymentOrder.order_number);
+  await adminOrdersCache.clear();
 }
 
 async function handleOrderPaid(order: any, request: NextRequest) {

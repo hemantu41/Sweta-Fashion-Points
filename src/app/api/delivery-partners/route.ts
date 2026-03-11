@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { haversineDistance } from '@/lib/delivery-batch';
+import { partnerCache } from '@/lib/cache';
 
 // GET - List all delivery partners (with filters)
 export async function GET(request: NextRequest) {
@@ -13,6 +14,18 @@ export async function GET(request: NextRequest) {
     // Optional: sort by distance from seller
     const sellerLat = searchParams.get('sellerLat');
     const sellerLng = searchParams.get('sellerLng');
+
+    // Cache key — skip cache when distance sort is requested (session-specific)
+    const useCache = !sellerLat && !sellerLng;
+    const cacheKey = `partners:${status || 'all'}:${availabilityStatus || 'all'}:${city || 'all'}:${pincode || 'all'}`;
+
+    if (useCache) {
+      const cached = await partnerCache.get<any[]>(cacheKey);
+      if (cached !== null) {
+        console.log(`[Delivery Partners API] Cache hit: ${cacheKey}`);
+        return NextResponse.json({ success: true, partners: cached });
+      }
+    }
 
     let query = supabase
       .from('spf_delivery_partners')
@@ -65,6 +78,11 @@ export async function GET(request: NextRequest) {
             return a.distance_km - b.distance_km;
           });
       }
+    }
+
+    // Cache plain (non-distance) results for 30 min
+    if (useCache) {
+      await partnerCache.set(cacheKey, result);
     }
 
     return NextResponse.json({
@@ -190,6 +208,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await partnerCache.clear();
     return NextResponse.json({
       success: true,
       partner: newPartner,

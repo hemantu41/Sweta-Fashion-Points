@@ -155,11 +155,9 @@ export async function GET(request: NextRequest) {
       })) || [];
     };
 
-    // TTL per scenario:
-    //   Admin (includeAllStatuses) → 10 min (600s)
-    //   Seller products / public storefront → 30 min (1800s)
+    // All scenarios use 30 min TTL; cache is invalidated on every mutation
     const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
-    const cacheTTL = includeAllStatuses ? 600 : 1800;
+    const cacheTTL = 1800;
 
     // Use cache for normal queries; bypass for search or location-filtered queries
     let transformedProducts = useCache

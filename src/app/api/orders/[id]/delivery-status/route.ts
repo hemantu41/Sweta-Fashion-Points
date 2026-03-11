@@ -6,7 +6,7 @@ import {
   notifyOrderDelivered,
   notifyDeliveryFailed,
 } from '@/lib/delivery-notifications';
-import { deliveryCache } from '@/lib/cache';
+import { deliveryCache, adminOrdersCache } from '@/lib/cache';
 
 // PUT - Update delivery status
 export async function PUT(
@@ -149,6 +149,9 @@ export async function PUT(
         { status: 500 }
       );
     }
+
+    // Invalidate admin orders cache (delivery_status shown in admin order list)
+    await adminOrdersCache.clear();
 
     // Invalidate delivery cache so the partner's dashboard reflects the new status
     if (delivery.delivery_partner_id) {

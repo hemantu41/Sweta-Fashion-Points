@@ -141,10 +141,12 @@ class Cache {
 // ---------------------------------------------------------------------------
 // Shared cache instances (TTLs preserved from original)
 // ---------------------------------------------------------------------------
-export const apiCache      = new Cache(300,  'api');      // 5 min
-export const productCache  = new Cache(1800, 'product'); // 30 min
-export const sellerCache   = new Cache(600,  'seller');  // 10 min
-export const deliveryCache = new Cache(1800, 'delivery'); // 30 min
+export const apiCache         = new Cache(300,  'api');         // 5 min
+export const productCache     = new Cache(1800, 'product');     // 30 min
+export const sellerCache      = new Cache(1800, 'seller');      // 30 min
+export const deliveryCache    = new Cache(1800, 'delivery');    // 30 min
+export const partnerCache     = new Cache(1800, 'partner');     // 30 min — delivery partners list
+export const adminOrdersCache = new Cache(1800, 'adminorders'); // 30 min — admin orders list
 
 // ---------------------------------------------------------------------------
 // getCachedData — same signature as before, now async-aware

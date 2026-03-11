@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sellerCache } from '@/lib/cache';
 
 // Log a seller status change to history
 async function logStatusHistory(
@@ -200,6 +201,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, updateData.reason);
+        await sellerCache.clear();
         return NextResponse.json({ success: true, message: 'Seller approved successfully' });
       }
 
@@ -219,6 +221,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'rejected', userId, reason);
+        await sellerCache.clear();
         return NextResponse.json({ success: true, message: 'Seller rejected' });
       }
 
@@ -238,6 +241,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'suspended', userId, reason);
+        await sellerCache.clear();
         return NextResponse.json({ success: true, message: 'Seller suspended' });
       }
 
@@ -258,6 +262,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, 'Reactivated by admin');
+        await sellerCache.clear();
         return NextResponse.json({ success: true, message: 'Seller reactivated successfully' });
       }
     }
@@ -312,6 +317,7 @@ export async function PUT(
       );
     }
 
+    await sellerCache.clear();
     return NextResponse.json({
       success: true,
       message: 'Seller updated successfully',
@@ -358,6 +364,7 @@ export async function DELETE(
       );
     }
 
+    await sellerCache.clear();
     return NextResponse.json({
       success: true,
       message: 'Seller deleted successfully',
