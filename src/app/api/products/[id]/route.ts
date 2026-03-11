@@ -166,9 +166,9 @@ export async function PUT(
       );
     }
 
-    // Clear product cache so customers see updated status immediately
+    // Clear product cache in background — don't block the response
     const { productCache } = await import('@/lib/cache');
-    await productCache.clear();
+    productCache.clear().catch(e => console.warn('[Products API] Cache clear failed:', e));
 
     return NextResponse.json({
       message: isAdmin
@@ -319,9 +319,9 @@ export async function DELETE(
       }
     }
 
-    // Clear product cache
+    // Clear product cache in background — don't block the response
     const { productCache } = await import('@/lib/cache');
-    await productCache.clear();
+    productCache.clear().catch(e => console.warn('[Products API] Cache clear failed:', e));
 
     return NextResponse.json({
       message: isFirstDeletion

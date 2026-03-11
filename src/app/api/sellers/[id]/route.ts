@@ -201,7 +201,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, updateData.reason);
-        await sellerCache.clear();
+        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
         return NextResponse.json({ success: true, message: 'Seller approved successfully' });
       }
 
@@ -221,7 +221,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'rejected', userId, reason);
-        await sellerCache.clear();
+        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
         return NextResponse.json({ success: true, message: 'Seller rejected' });
       }
 
@@ -241,7 +241,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'suspended', userId, reason);
-        await sellerCache.clear();
+        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
         return NextResponse.json({ success: true, message: 'Seller suspended' });
       }
 
@@ -262,7 +262,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, 'Reactivated by admin');
-        await sellerCache.clear();
+        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
         return NextResponse.json({ success: true, message: 'Seller reactivated successfully' });
       }
     }
@@ -317,7 +317,7 @@ export async function PUT(
       );
     }
 
-    await sellerCache.clear();
+    sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
     return NextResponse.json({
       success: true,
       message: 'Seller updated successfully',
@@ -364,7 +364,7 @@ export async function DELETE(
       );
     }
 
-    await sellerCache.clear();
+    sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
     return NextResponse.json({
       success: true,
       message: 'Seller deleted successfully',

@@ -100,7 +100,7 @@ async function handlePaymentCaptured(payment: any, request: NextRequest) {
   }
 
   console.log('[Webhook] Order updated:', paymentOrder.order_number);
-  await adminOrdersCache.clear();
+  adminOrdersCache.clear().catch(e => console.warn('[Webhook] Cache clear failed:', e));
 
   // Calculate seller earnings
   await calculateSellerEarnings(paymentOrder);
@@ -151,7 +151,7 @@ async function handlePaymentFailed(payment: any) {
   }
 
   console.log('[Webhook] Order marked as failed:', paymentOrder.order_number);
-  await adminOrdersCache.clear();
+  adminOrdersCache.clear().catch(e => console.warn('[Webhook] Cache clear failed:', e));
 }
 
 async function handleOrderPaid(order: any, request: NextRequest) {

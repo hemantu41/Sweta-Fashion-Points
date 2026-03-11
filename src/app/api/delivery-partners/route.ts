@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await partnerCache.clear();
+    partnerCache.clear().catch(e => console.warn('[Delivery Partners API] Cache clear failed:', e));
     return NextResponse.json({
       success: true,
       partner: newPartner,

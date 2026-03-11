@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Clear seller list cache so admin sees the request immediately
-    await sellerCache.clear();
+    sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
 
     return NextResponse.json({
       success: true,

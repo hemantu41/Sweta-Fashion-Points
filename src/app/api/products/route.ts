@@ -314,8 +314,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Clear product cache when new product is created
-    await productCache.clear();
+    // Clear product cache in background — don't block the response
+    productCache.clear().catch(e => console.warn('[Products API] Cache clear failed:', e));
 
     return NextResponse.json({
       message: 'Product created successfully',

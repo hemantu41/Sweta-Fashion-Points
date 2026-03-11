@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Verify Payment] Payment order updated:', paymentOrder.order_number);
-    await adminOrdersCache.clear();
+    adminOrdersCache.clear().catch(e => console.warn('[Verify Payment] Cache clear failed:', e));
 
     // Send payment notifications
     try {

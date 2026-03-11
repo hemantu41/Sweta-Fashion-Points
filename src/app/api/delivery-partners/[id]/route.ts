@@ -206,7 +206,7 @@ export async function PUT(
       await insertStatusHistory(id, existingPartner.status, status, historyNote, updatedBy || null, updatedByName || null);
     }
 
-    await partnerCache.clear();
+    partnerCache.clear().catch(e => console.warn('[Delivery Partners API] Cache clear failed:', e));
     return NextResponse.json({
       success: true,
       partner: updatedPartner,
@@ -280,7 +280,7 @@ export async function DELETE(
     // Insert status history
     await insertStatusHistory(id, existingPartner.status, 'inactive', note, updatedBy, updatedByName);
 
-    await partnerCache.clear();
+    partnerCache.clear().catch(e => console.warn('[Delivery Partners API] Cache clear failed:', e));
     return NextResponse.json({
       success: true,
       message: 'Delivery partner deactivated successfully',

@@ -150,16 +150,14 @@ export async function PUT(
       );
     }
 
-    // Invalidate admin orders cache (delivery_status shown in admin order list)
-    await adminOrdersCache.clear();
-
-    // Invalidate delivery cache so the partner's dashboard reflects the new status
+    // Invalidate caches in background — don't block the response
+    adminOrdersCache.clear().catch(e => console.warn('[Delivery Status API] Cache clear failed:', e));
     if (delivery.delivery_partner_id) {
-      await deliveryCache.delete(`orders:${delivery.delivery_partner_id}:all`);
-      await deliveryCache.delete(`orders:${delivery.delivery_partner_id}:${status}`);
-      // Also invalidate the previous status bucket if it changed
+      const pid = delivery.delivery_partner_id;
+      deliveryCache.delete(`orders:${pid}:all`).catch(() => {});
+      deliveryCache.delete(`orders:${pid}:${status}`).catch(() => {});
       if (delivery.status && delivery.status !== status) {
-        await deliveryCache.delete(`orders:${delivery.delivery_partner_id}:${delivery.status}`);
+        deliveryCache.delete(`orders:${pid}:${delivery.status}`).catch(() => {});
       }
     }
 
