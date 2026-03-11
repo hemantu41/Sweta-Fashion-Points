@@ -207,19 +207,27 @@ export default function SellerAddProductPage() {
     }
   }, [activeTab, beautyData.category, beautyData.subCategory]);
 
-  // Auto-generate description for clothes (15 words)
+  // Auto-generate description for clothes (bullet points)
   useEffect(() => {
     if (activeTab === 'clothes' && clothesData.name && clothesData.category && clothesData.subCategory) {
       const categoryName = clothesData.category === 'mens' ? "Men's" :
                           clothesData.category === 'womens' ? "Women's" :
                           clothesData.category === 'sarees' ? 'Sarees' : "Kids'";
       const subCategoryName = clothesData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const fabricLine = clothesData.fabric ? `• Crafted from premium ${clothesData.fabric} fabric for superior comfort and breathability` : '• Made with high-quality fabric for superior comfort and breathability';
 
-      const autoDescription = `${clothesData.name} - ${categoryName} ${subCategoryName}. Premium quality fabric with excellent fit and comfort for all-day wear.`;
+      const autoDescription = [
+        `• ${clothesData.name} — ${categoryName} ${subCategoryName}`,
+        fabricLine,
+        '• Stylish design suitable for everyday wear and special occasions',
+        '• Comfortable fit that suits all body types with ease of movement',
+        '• Easy to wash and maintain, retains shape after multiple washes',
+        '• Available in multiple colors and sizes to match your preference',
+      ].join('\n');
 
       setClothesData(prev => ({ ...prev, description: autoDescription }));
     }
-  }, [activeTab, clothesData.name, clothesData.category, clothesData.subCategory]);
+  }, [activeTab, clothesData.name, clothesData.category, clothesData.subCategory, clothesData.fabric]);
 
   // Auto-generate description for footwear (15 words)
   useEffect(() => {
@@ -229,14 +237,24 @@ export default function SellerAddProductPage() {
       const subCategoryName = footwearData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       const brandName = footwearData.brand || 'Premium';
 
-      const autoDescription = `${brandName} ${categoryName} ${subCategoryName}. Comfortable and durable footwear with superior quality material and stylish design perfect for daily use.`;
+      const materialLine = footwearData.material
+        ? `• Crafted from premium ${footwearData.material} material for durability and long-lasting wear`
+        : '• Made with high-quality material for durability and all-day comfort';
+      const autoDescription = [
+        `• ${brandName} ${categoryName} ${subCategoryName} — designed for style and comfort`,
+        materialLine,
+        '• Ergonomic design that provides excellent support and cushioning for your feet',
+        '• Suitable for daily use, casual outings, and a variety of occasions',
+        '• Easy to clean and maintain, retains shape after regular use',
+        '• Available in multiple sizes and colors to suit your personal style',
+      ].join('\n');
 
       // Auto-generate name from brand + category + subcategory
       const autoName = `${brandName} ${categoryName} ${subCategoryName}`;
 
       setFootwearData(prev => ({ ...prev, name: autoName, description: autoDescription }));
     }
-  }, [activeTab, footwearData.brand, footwearData.category, footwearData.subCategory]);
+  }, [activeTab, footwearData.brand, footwearData.category, footwearData.subCategory, footwearData.material]);
 
   // Auto-generate description for beauty (15 words)
   useEffect(() => {
@@ -244,7 +262,14 @@ export default function SellerAddProductPage() {
       const categoryName = beautyData.category.replace(/\b\w/g, l => l.toUpperCase());
       const subCategoryName = beautyData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-      const autoDescription = `${beautyData.name} - ${categoryName} ${subCategoryName}. High-quality beauty product with premium ingredients for best results and satisfaction.`;
+      const autoDescription = [
+        `• ${beautyData.name} — ${categoryName} ${subCategoryName}`,
+        '• Formulated with premium ingredients for effective and visible results',
+        '• Suitable for all skin types, gentle and dermatologically tested',
+        '• Free from harmful chemicals, safe for everyday use',
+        '• Long-lasting formula that delivers consistent performance',
+        '• Thoughtfully packaged for hygiene and convenience',
+      ].join('\n');
 
       setBeautyData(prev => ({ ...prev, description: autoDescription }));
     }
