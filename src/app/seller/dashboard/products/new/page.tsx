@@ -423,6 +423,15 @@ export default function SellerAddProductPage() {
         setTimeout(() => router.push('/seller/dashboard'), 1500);
       } else {
         setMessage(data.error || 'Failed to create product');
+        // Regenerate product ID so the seller can retry without refreshing
+        const newNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
+        if (activeTab === 'clothes' && clothesData.category && clothesData.subCategory) {
+          setClothesData(prev => ({ ...prev, productId: `${prev.category}_${prev.subCategory}_${newNum}` }));
+        } else if (activeTab === 'footwear' && footwearData.category && footwearData.subCategory) {
+          setFootwearData(prev => ({ ...prev, productId: `footwear_${prev.category}_${prev.subCategory}_${newNum}` }));
+        } else if (activeTab === 'beauty' && beautyData.category && beautyData.subCategory) {
+          setBeautyData(prev => ({ ...prev, productId: `beauty_${prev.category}_${prev.subCategory}_${newNum}` }));
+        }
       }
     } catch (error) {
       setMessage('Error creating product');
