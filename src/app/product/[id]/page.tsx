@@ -336,6 +336,42 @@ export default function ProductDetailPage() {
               )}
             </div>
 
+            {/* Colors — placed directly below price */}
+            {product.colors && product.colors.length > 0 && product.category !== 'beauty' && (
+              <div>
+                <p className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-2.5">
+                  {t('product.color')}
+                  {product.colors[selectedColor] && (
+                    <span className="normal-case tracking-normal ml-2 text-[#2D2D2D] font-semibold">
+                      {language === 'hi' ? product.colors[selectedColor]?.nameHi : product.colors[selectedColor]?.name}
+                    </span>
+                  )}
+                </p>
+                <div className="flex gap-2.5">
+                  {product.colors.map((color, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSelectedColor(idx);
+                        if (allImages.length > 0) {
+                          const imagesPerColor = Math.max(1, Math.floor(allImages.length / product.colors.length));
+                          const startIndex = idx * imagesPerColor;
+                          setSelectedImage(startIndex < allImages.length ? startIndex : idx % allImages.length);
+                        }
+                      }}
+                      className={`w-8 h-8 rounded-full transition-all duration-200 ring-offset-2 ${
+                        selectedColor === idx
+                          ? 'ring-2 ring-[#1A1A1A] scale-105'
+                          : 'ring-1 ring-transparent hover:ring-[#BCBCBC]'
+                      }`}
+                      style={{ backgroundColor: color.hex }}
+                      aria-label={color.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Rating */}
             <div className="relative inline-block">
               <div
@@ -382,50 +418,20 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Colors */}
-            {product.colors && product.colors.length > 0 && product.category !== 'beauty' && (
-              <div>
-                <p className="text-xs font-semibold text-[#2D2D2D] mb-2">
-                  {t('product.color')}:{' '}
-                  <span className="font-normal text-[#6B6B6B]">
-                    {language === 'hi' ? product.colors[selectedColor]?.nameHi : product.colors[selectedColor]?.name}
-                  </span>
-                </p>
-                <div className="flex gap-2">
-                  {product.colors.map((color, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setSelectedColor(idx);
-                        // Change image when color changes
-                        if (allImages.length > 0) {
-                          // If multiple images exist, distribute them across colors
-                          // For example: 3 colors with 9 images = 3 images per color
-                          const imagesPerColor = Math.max(1, Math.floor(allImages.length / product.colors.length));
-                          const startIndex = idx * imagesPerColor;
-                          // Show the first image for this color, or cycle if not enough images
-                          setSelectedImage(startIndex < allImages.length ? startIndex : idx % allImages.length);
-                        }
-                      }}
-                      className={`w-8 h-8 rounded-full border-2 transition-all duration-200 ${
-                        selectedColor === idx ? 'border-[#722F37] shadow-md scale-110' : 'border-[#E8E2D9] hover:border-[#C9A962]'
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                      aria-label={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Sizes */}
             {(product.sizes && product.sizes.length > 0) && (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-[#2D2D2D]">{t('product.size')}</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest">{t('product.size')}</p>
                   {!isFreeSize && !['beauty', 'footwear'].includes(product.category) && (
-                    <button onClick={() => setShowSizeChart(true)} className="text-sm text-[#722F37] hover:underline transition-colors">
+                    <button
+                      onClick={() => setShowSizeChart(true)}
+                      className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] transition-colors flex items-center gap-1"
+                    >
                       {t('product.sizeChart')}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v4M13 20h6M16 17l3 3 3-3" />
+                      </svg>
                     </button>
                   )}
                 </div>
@@ -439,10 +445,10 @@ export default function ProductDetailPage() {
                       <button
                         key={size}
                         onClick={() => { setSelectedSize(size); setSizeError(false); }}
-                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                        className={`px-5 py-2.5 rounded border text-sm font-medium transition-all duration-200 ${
                           selectedSize === size
-                            ? 'bg-[#722F37] text-white border-[#722F37]'
-                            : 'border-[#E8E2D9] text-[#2D2D2D] hover:border-[#722F37]'
+                            ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                            : 'border-[#D4D0CB] text-[#3A3A3A] hover:border-[#1A1A1A] bg-white'
                         }`}
                       >
                         {size}
@@ -514,11 +520,8 @@ export default function ProductDetailPage() {
             {/* Add to Cart Button */}
             <button
               onClick={handleAddToCart}
-              className="w-full py-4 rounded-full text-white font-semibold text-base transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-[#722F37] to-[#8B3D47] hover:shadow-lg hover:shadow-[#722F37]/25"
+              className="w-full py-4 rounded-none bg-[#1A1A1A] text-white font-medium text-sm tracking-widest uppercase transition-all duration-300 hover:bg-[#3A3A3A] active:bg-black"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
               {t('product.addToCart')}
             </button>
 
