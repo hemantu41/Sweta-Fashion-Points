@@ -324,6 +324,47 @@ export default function ProductDetailPage() {
               </h1>
             </div>
 
+            {/* Rating — below title, above price */}
+            <div className="relative inline-block">
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onMouseEnter={() => setShowRatingTooltip(true)}
+                onMouseLeave={() => setShowRatingTooltip(false)}
+              >
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg key={star} className={`w-4 h-4 ${star <= 4 ? 'text-[#B8962E]' : 'text-[#D4B86A]'}`} fill={star <= 4 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={star === 5 ? 1.5 : 0} viewBox="0 0 20 20">
+                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                    </svg>
+                  ))}
+                </div>
+                <span className="text-sm font-medium text-[#3A3A3A]">4.5</span>
+                <span className="text-xs text-[#9E9E9E]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
+              </div>
+              {showRatingTooltip && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-[#E8E2D9] rounded-xl shadow-lg p-4 w-64 z-10">
+                  <h4 className="font-semibold text-[#2D2D2D] mb-3 text-sm">{language === 'hi' ? 'रेटिंग विवरण' : 'Rating Breakdown'}</h4>
+                  <div className="space-y-2">
+                    {[
+                      { stars: 5, count: 1520, percentage: 62 },
+                      { stars: 4, count: 618, percentage: 25 },
+                      { stars: 3, count: 221, percentage: 9 },
+                      { stars: 2, count: 73, percentage: 3 },
+                      { stars: 1, count: 24, percentage: 1 },
+                    ].map(({ stars, count, percentage }) => (
+                      <div key={stars} className="flex items-center gap-2">
+                        <span className="text-xs text-[#6B6B6B] w-8">{stars} ⭐</span>
+                        <div className="flex-1 h-2 bg-[#F0EDE8] rounded-full overflow-hidden">
+                          <div className="h-full bg-[#B8962E] transition-all" style={{ width: `${percentage}%` }}></div>
+                        </div>
+                        <span className="text-xs text-[#6B6B6B] w-12 text-right">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Price */}
             <div className="flex items-baseline gap-3 flex-wrap">
               <span className="text-2xl font-bold text-[#1A1A1A]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
@@ -360,10 +401,10 @@ export default function ProductDetailPage() {
                           setSelectedImage(startIndex < allImages.length ? startIndex : idx % allImages.length);
                         }
                       }}
-                      className={`w-8 h-8 rounded-full transition-all duration-200 ring-offset-2 ${
+                      className={`w-8 h-8 rounded-full transition-all duration-200 ring-offset-[3px] ${
                         selectedColor === idx
-                          ? 'ring-2 ring-[#1A1A1A] scale-105'
-                          : 'ring-1 ring-transparent hover:ring-[#BCBCBC]'
+                          ? 'ring-1 ring-[#6B6B6B]'
+                          : 'ring-1 ring-transparent hover:ring-[#BCBCBC] hover:ring-offset-[3px]'
                       }`}
                       style={{ backgroundColor: color.hex }}
                       aria-label={color.name}
@@ -372,52 +413,6 @@ export default function ProductDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* Rating */}
-            <div className="relative inline-block">
-              <div
-                className="flex items-center gap-2 cursor-pointer"
-                onMouseEnter={() => setShowRatingTooltip(true)}
-                onMouseLeave={() => setShowRatingTooltip(false)}
-              >
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className={`w-4 h-4 ${star <= 4 ? 'text-[#B8962E]' : 'text-[#D4B86A]'}`} fill={star <= 4 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={star === 5 ? 1.5 : 0} viewBox="0 0 20 20">
-                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="text-sm font-medium text-[#3A3A3A]">4.5</span>
-                <span className="text-xs text-[#9E9E9E]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
-              </div>
-
-              {/* Rating Tooltip */}
-              {showRatingTooltip && (
-                <div className="absolute top-full left-0 mt-2 bg-white border border-[#E8E2D9] rounded-xl shadow-lg p-4 w-64 z-10">
-                  <h4 className="font-semibold text-[#2D2D2D] mb-3 text-sm">{language === 'hi' ? 'रेटिंग विवरण' : 'Rating Breakdown'}</h4>
-                  <div className="space-y-2">
-                    {[
-                      { stars: 5, count: 1520, percentage: 62 },
-                      { stars: 4, count: 618, percentage: 25 },
-                      { stars: 3, count: 221, percentage: 9 },
-                      { stars: 2, count: 73, percentage: 3 },
-                      { stars: 1, count: 24, percentage: 1 },
-                    ].map(({ stars, count, percentage }) => (
-                      <div key={stars} className="flex items-center gap-2">
-                        <span className="text-xs text-[#6B6B6B] w-8">{stars} ⭐</span>
-                        <div className="flex-1 h-2 bg-[#F0EDE8] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[#B8962E] transition-all"
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs text-[#6B6B6B] w-12 text-right">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Sizes */}
             {(product.sizes && product.sizes.length > 0) && (
@@ -460,54 +455,6 @@ export default function ProductDetailPage() {
                 {sizeError && <p className="text-red-500 text-sm mt-1.5">{t('product.selectSize')}</p>}
               </div>
             )}
-
-            {/* Delivery Info — clean, no heavy box */}
-            <div className="border-t border-[#E8E2D9] pt-3">
-              {isAuthenticated ? (
-                selectedAddress ? (
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs text-[#6B6B6B] leading-relaxed">
-                      <span className="text-[#3A3A3A] font-medium">{t('product.deliverTo')}</span>{' '}
-                      <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span>{' '}
-                      — {selectedAddress.address_line1}{selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
-                    </p>
-                    {addresses.length > 1 && (
-                      <button
-                        onClick={() => setShowAddressDropdown(!showAddressDropdown)}
-                        className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] whitespace-nowrap transition-colors flex-shrink-0"
-                      >
-                        {t('product.changeAddress')}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-[#6B6B6B]">
-                    {t('product.deliverTo')}{' '}
-                    <Link href="/addresses" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.addAddress')}</Link>
-                  </p>
-                )
-              ) : (
-                <p className="text-xs text-[#6B6B6B]">
-                  <Link href="/login" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.loginDelivery')}</Link>
-                </p>
-              )}
-              {showAddressDropdown && addresses.length > 1 && (
-                <div className="mt-2 border border-[#E8E2D9] rounded bg-white overflow-hidden">
-                  {addresses.map((addr) => (
-                    <button
-                      key={addr.id}
-                      onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-xs hover:bg-[#FAF7F2] transition-colors ${
-                        selectedAddress?.id === addr.id ? 'bg-[#FAF7F2] font-medium text-[#1A1A1A]' : 'text-[#3A3A3A]'
-                      }`}
-                    >
-                      <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
-                      {addr.is_default && <span className="ml-2 text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Add to Cart Button */}
             <button
@@ -586,6 +533,57 @@ export default function ProductDetailPage() {
                   label: language === 'hi' ? 'शिपिंग और वापसी' : 'Shipping & Returns',
                   content: (
                     <ul className="space-y-2 text-sm text-[#4A4A4A]">
+                      {/* Delivery address */}
+                      {isAuthenticated && selectedAddress && (
+                        <li className="flex items-start justify-between gap-2 pb-2 mb-1 border-b border-[#F0EDE8]">
+                          <p className="text-xs text-[#6B6B6B] leading-relaxed">
+                            <span className="font-medium text-[#3A3A3A]">{t('product.deliverTo')}</span>{' '}
+                            <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span>{' '}
+                            — {selectedAddress.address_line1}{selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
+                          </p>
+                          {addresses.length > 1 && (
+                            <button
+                              onClick={() => setShowAddressDropdown(!showAddressDropdown)}
+                              className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] whitespace-nowrap transition-colors flex-shrink-0"
+                            >
+                              {t('product.changeAddress')}
+                            </button>
+                          )}
+                        </li>
+                      )}
+                      {isAuthenticated && !selectedAddress && (
+                        <li className="pb-2 mb-1 border-b border-[#F0EDE8]">
+                          <p className="text-xs text-[#6B6B6B]">
+                            {t('product.deliverTo')}{' '}
+                            <Link href="/addresses" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.addAddress')}</Link>
+                          </p>
+                        </li>
+                      )}
+                      {!isAuthenticated && (
+                        <li className="pb-2 mb-1 border-b border-[#F0EDE8]">
+                          <p className="text-xs text-[#6B6B6B]">
+                            <Link href="/login" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.loginDelivery')}</Link>
+                          </p>
+                        </li>
+                      )}
+                      {showAddressDropdown && addresses.length > 1 && (
+                        <li>
+                          <div className="border border-[#E8E2D9] rounded bg-white overflow-hidden mb-1">
+                            {addresses.map((addr) => (
+                              <button
+                                key={addr.id}
+                                onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
+                                className={`w-full text-left px-4 py-2.5 text-xs hover:bg-[#FAF7F2] transition-colors ${
+                                  selectedAddress?.id === addr.id ? 'bg-[#FAF7F2] font-medium text-[#1A1A1A]' : 'text-[#3A3A3A]'
+                                }`}
+                              >
+                                <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
+                                {addr.is_default && <span className="ml-2 text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </li>
+                      )}
                       <li className="flex items-start gap-2">
                         <span className="text-[#9E9E9E] mt-0.5">—</span>
                         <span>{language === 'hi' ? 'सामान्यतः 3–7 कार्यदिवसों में डिलीवरी' : 'Delivery within 3–7 business days'}</span>
@@ -596,11 +594,7 @@ export default function ProductDetailPage() {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>
-                          {language === 'hi'
-                            ? 'डिलीवरी के 7 दिनों के भीतर वापसी की जा सकती है'
-                            : 'Easy returns within 7 days of delivery'}
-                        </span>
+                        <span>{language === 'hi' ? 'डिलीवरी के 7 दिनों के भीतर वापसी की जा सकती है' : 'Easy returns within 7 days of delivery'}</span>
                       </li>
                       {product.seller && (
                         <li className="flex items-start gap-2 pt-1 border-t border-[#F0EDE8] mt-1">
