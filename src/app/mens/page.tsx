@@ -28,7 +28,6 @@ export default function MensPage() {
     fetchProducts();
   }, [authLoading]);
 
-  // Update active category when URL changes
   useEffect(() => {
     if (categoryFromUrl) {
       setActiveCategory(categoryFromUrl);
@@ -47,52 +46,43 @@ export default function MensPage() {
     }
   };
 
-  // Filter data
   const sizes = ['S', 'M', 'L', 'XL', 'XXL', '3XL'];
   const fabrics = ['Cotton', 'Polyester', 'Linen', 'Silk', 'Denim', 'Wool'];
+
+  // Muted, sophisticated color palette
   const colors = [
-    { name: 'Black', hex: '#000000' },
-    { name: 'White', hex: '#FFFFFF' },
-    { name: 'Blue', hex: '#0066CC' },
-    { name: 'Red', hex: '#CC0000' },
-    { name: 'Green', hex: '#00AA00' },
-    { name: 'Yellow', hex: '#FFD700' },
-    { name: 'Pink', hex: '#FF69B4' },
-    { name: 'Purple', hex: '#800080' },
-    { name: 'Orange', hex: '#FF8C00' },
-    { name: 'Brown', hex: '#8B4513' },
+    { name: 'Black', hex: '#1A1A1A' },
+    { name: 'White', hex: '#F0EDE8' },
+    { name: 'Navy', hex: '#2C3E6B' },
+    { name: 'Burgundy', hex: '#7A2535' },
+    { name: 'Olive', hex: '#5C6B3A' },
+    { name: 'Mustard', hex: '#C4A24A' },
+    { name: 'Dusty Rose', hex: '#C48A8A' },
+    { name: 'Charcoal', hex: '#4A4A4A' },
+    { name: 'Camel', hex: '#C49A6A' },
+    { name: 'Brown', hex: '#6B4A2A' },
   ];
 
   const priceRanges = [
     { label: 'Under ₹500', min: 0, max: 500 },
-    { label: '₹500 - ₹1000', min: 500, max: 1000 },
-    { label: '₹1000 - ₹2000', min: 1000, max: 2000 },
-    { label: '₹2000 - ₹5000', min: 2000, max: 5000 },
-    { label: 'Above ₹5000', min: 5000, max: 100000 },
+    { label: '₹500 – ₹1,000', min: 500, max: 1000 },
+    { label: '₹1,000 – ₹2,000', min: 1000, max: 2000 },
+    { label: '₹2,000 – ₹5,000', min: 2000, max: 5000 },
+    { label: 'Above ₹5,000', min: 5000, max: 100000 },
   ];
 
   const handleSizeToggle = (size: string) => {
-    setSelectedSizes(prev =>
-      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
-    );
+    setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
   };
-
   const handleFabricToggle = (fabric: string) => {
-    setSelectedFabrics(prev =>
-      prev.includes(fabric) ? prev.filter(f => f !== fabric) : [...prev, fabric]
-    );
+    setSelectedFabrics(prev => prev.includes(fabric) ? prev.filter(f => f !== fabric) : [...prev, fabric]);
   };
-
   const handleColorToggle = (color: string) => {
-    setSelectedColors(prev =>
-      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
-    );
+    setSelectedColors(prev => prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]);
   };
-
   const handlePriceRangeChange = (min: number, max: number) => {
     setPriceRange([min, max]);
   };
-
   const clearFilters = () => {
     setPriceRange([0, 5000]);
     setSelectedSizes([]);
@@ -100,118 +90,124 @@ export default function MensPage() {
     setSelectedColors([]);
   };
 
-  // Apply filters
   const filteredProducts = allProducts.filter((product) => {
-    // Category filter
     if (activeCategory && product.subCategory !== activeCategory) return false;
-
-    // Price filter
     const price = parseFloat(product.price);
     if (price < priceRange[0] || price > priceRange[1]) return false;
-
-    // Size filter (if product has sizes)
     if (selectedSizes.length > 0 && product.sizes) {
-      const hasSize = selectedSizes.some(size => product.sizes.includes(size));
-      if (!hasSize) return false;
+      if (!selectedSizes.some(size => product.sizes.includes(size))) return false;
     }
-
-    // Fabric filter (if product has fabric)
     if (selectedFabrics.length > 0 && product.fabric) {
       if (!selectedFabrics.includes(product.fabric)) return false;
     }
-
-    // Color filter (if product has color)
     if (selectedColors.length > 0 && product.color) {
       if (!selectedColors.includes(product.color)) return false;
     }
-
     return true;
   });
 
-  // Get category name for breadcrumb
   const getCategoryName = () => {
     if (!activeCategory) return language === 'hi' ? 'सभी उत्पाद' : 'All Products';
     const categoryMap: any = {
       'shirts': language === 'hi' ? 'शर्ट' : 'Shirts',
       'tshirts': language === 'hi' ? 'टी-शर्ट' : 'T-Shirts',
       'jeans': language === 'hi' ? 'जींस' : 'Jeans',
-      'shorts': language === 'hi' ? 'शॉर्ट्स और ट्राउज़र' : 'Shorts & Trousers',
+      'shorts': language === 'hi' ? 'शॉर्ट्स' : 'Shorts',
     };
     return categoryMap[activeCategory] || activeCategory;
   };
+
+  const categories = [
+    { id: null, en: 'All', hi: 'सभी' },
+    { id: 'shirts', en: 'Shirts', hi: 'शर्ट' },
+    { id: 'tshirts', en: 'T-Shirts', hi: 'टी-शर्ट' },
+    { id: 'jeans', en: 'Jeans', hi: 'जींस' },
+    { id: 'shorts', en: 'Shorts', hi: 'शॉर्ट्स' },
+  ];
 
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <PincodeBanner />
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm mb-6">
-          <Link href="/" className="text-[#6B6B6B] hover:text-[#722F37] transition-colors">
+
+        {/* Breadcrumb — soft grey */}
+        <nav className="flex items-center gap-2 text-xs text-[#B0AAA3] mb-6">
+          <Link href="/" className="hover:text-[#7A7A7A] transition-colors">
             {language === 'hi' ? 'होम' : 'Home'}
           </Link>
-          <span className="text-[#6B6B6B]">&gt;&gt;</span>
-          <Link href="/mens" className="text-[#6B6B6B] hover:text-[#722F37] transition-colors">
+          <span>/</span>
+          <Link href="/mens" className="hover:text-[#7A7A7A] transition-colors">
             {language === 'hi' ? 'पुरुषों का कलेक्शन' : "Men's Collection"}
           </Link>
           {activeCategory && (
             <>
-              <span className="text-[#6B6B6B]">&gt;&gt;</span>
-              <span className="text-[#722F37] font-medium">{getCategoryName()}</span>
+              <span>/</span>
+              <span className="text-[#8A8A8A]">{getCategoryName()}</span>
             </>
           )}
-        </div>
+        </nav>
 
-        <div className="flex gap-6">
-          {/* Left Sidebar - Filters */}
-          <div className="hidden lg:block w-64 flex-shrink-0">
-            <div className="bg-white rounded-xl shadow-sm border border-[#E8E2D9] p-6 sticky top-6">
+        <div className="flex gap-8">
+          {/* Left Sidebar — minimal, no card */}
+          <div className="hidden lg:block w-56 flex-shrink-0">
+            <div className="sticky top-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-[#2D2D2D]">
+                <span className="text-xs font-medium text-[#2D2D2D] uppercase tracking-widest">
                   {language === 'hi' ? 'फ़िल्टर' : 'Filters'}
-                </h2>
+                </span>
                 <button
                   onClick={clearFilters}
-                  className="text-xs text-[#722F37] hover:underline"
+                  className="text-xs text-[#9E9E9E] hover:text-[#1A1A1A] underline underline-offset-2 transition-colors"
                 >
                   {language === 'hi' ? 'साफ़ करें' : 'Clear All'}
                 </button>
               </div>
 
-              {/* Price Filter */}
+              {/* Price */}
               <div className="mb-6 pb-6 border-b border-[#E8E2D9]">
-                <h3 className="font-semibold text-[#2D2D2D] mb-3 text-sm uppercase tracking-wide">
+                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
                   {language === 'hi' ? 'कीमत' : 'Price'}
                 </h3>
-                <div className="space-y-2">
-                  {priceRanges.map((range) => (
-                    <label key={range.label} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="priceRange"
-                        checked={priceRange[0] === range.min && priceRange[1] === range.max}
-                        onChange={() => handlePriceRangeChange(range.min, range.max)}
-                        className="w-4 h-4 text-[#722F37] focus:ring-[#722F37]"
-                      />
-                      <span className="text-sm text-[#6B6B6B]">{range.label}</span>
-                    </label>
-                  ))}
+                <div className="space-y-2.5">
+                  {priceRanges.map((range) => {
+                    const checked = priceRange[0] === range.min && priceRange[1] === range.max;
+                    return (
+                      <label key={range.label} className="flex items-center gap-2.5 cursor-pointer group">
+                        {/* Custom radio */}
+                        <span
+                          onClick={() => handlePriceRangeChange(range.min, range.max)}
+                          className={`w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-all ${
+                            checked ? 'border-[#1A1A1A] bg-[#1A1A1A]' : 'border-[#C4C0BB] group-hover:border-[#6B6B6B]'
+                          }`}
+                        >
+                          {checked && <span className="w-1 h-1 rounded-full bg-white block" />}
+                        </span>
+                        <span
+                          onClick={() => handlePriceRangeChange(range.min, range.max)}
+                          className="text-xs text-[#6B6B6B] group-hover:text-[#2D2D2D] transition-colors"
+                        >
+                          {range.label}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Size Filter */}
+              {/* Size */}
               <div className="mb-6 pb-6 border-b border-[#E8E2D9]">
-                <h3 className="font-semibold text-[#2D2D2D] mb-3 text-sm uppercase tracking-wide">
+                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
                   {language === 'hi' ? 'साइज़' : 'Size'}
                 </h3>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {sizes.map((size) => (
                     <button
                       key={size}
                       onClick={() => handleSizeToggle(size)}
-                      className={`py-2 px-3 border rounded-lg text-sm font-medium transition-all ${
+                      className={`py-1.5 border text-xs font-medium transition-all ${
                         selectedSizes.includes(size)
-                          ? 'bg-[#722F37] text-white border-[#722F37]'
-                          : 'bg-white text-[#6B6B6B] border-[#E8E2D9] hover:border-[#722F37]'
+                          ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                          : 'bg-white text-[#6B6B6B] border-[#D4D0CB] hover:border-[#1A1A1A]'
                       }`}
                     >
                       {size}
@@ -220,43 +216,58 @@ export default function MensPage() {
                 </div>
               </div>
 
-              {/* Fabric Filter */}
+              {/* Fabric */}
               <div className="mb-6 pb-6 border-b border-[#E8E2D9]">
-                <h3 className="font-semibold text-[#2D2D2D] mb-3 text-sm uppercase tracking-wide">
+                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
                   {language === 'hi' ? 'फ़ैब्रिक' : 'Fabric'}
                 </h3>
-                <div className="space-y-2">
-                  {fabrics.map((fabric) => (
-                    <label key={fabric} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedFabrics.includes(fabric)}
-                        onChange={() => handleFabricToggle(fabric)}
-                        className="w-4 h-4 text-[#722F37] focus:ring-[#722F37] rounded"
-                      />
-                      <span className="text-sm text-[#6B6B6B]">{fabric}</span>
-                    </label>
-                  ))}
+                <div className="space-y-2.5">
+                  {fabrics.map((fabric) => {
+                    const checked = selectedFabrics.includes(fabric);
+                    return (
+                      <label key={fabric} className="flex items-center gap-2.5 cursor-pointer group">
+                        {/* Custom checkbox */}
+                        <span
+                          onClick={() => handleFabricToggle(fabric)}
+                          className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-all ${
+                            checked ? 'border-[#1A1A1A] bg-[#1A1A1A]' : 'border-[#C4C0BB] group-hover:border-[#6B6B6B]'
+                          }`}
+                        >
+                          {checked && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </span>
+                        <span
+                          onClick={() => handleFabricToggle(fabric)}
+                          className="text-xs text-[#6B6B6B] group-hover:text-[#2D2D2D] transition-colors"
+                        >
+                          {fabric}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Color Filter */}
-              <div className="mb-4">
-                <h3 className="font-semibold text-[#2D2D2D] mb-3 text-sm uppercase tracking-wide">
+              {/* Colour */}
+              <div>
+                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
                   {language === 'hi' ? 'रंग' : 'Colour'}
                 </h3>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {colors.map((color) => (
                     <button
                       key={color.name}
                       onClick={() => handleColorToggle(color.name)}
-                      className={`w-10 h-10 rounded-full border-2 transition-all ${
-                        selectedColors.includes(color.name)
-                          ? 'border-[#722F37] ring-2 ring-[#722F37] ring-offset-2'
-                          : 'border-[#E8E2D9] hover:border-[#722F37]'
-                      }`}
-                      style={{ backgroundColor: color.hex }}
                       title={color.name}
+                      className={`w-6 h-6 rounded-full transition-all ring-offset-[2px] ${
+                        selectedColors.includes(color.name)
+                          ? 'ring-1 ring-[#6B6B6B]'
+                          : 'ring-1 ring-transparent hover:ring-[#BCBCBC]'
+                      } ${color.hex === '#F0EDE8' ? 'border border-[#D4D0CB]' : ''}`}
+                      style={{ backgroundColor: color.hex }}
                     />
                   ))}
                 </div>
@@ -264,160 +275,131 @@ export default function MensPage() {
             </div>
           </div>
 
-          {/* Right Content - Products */}
+          {/* Right Content */}
           <div className="flex-1">
-            {/* Category Tabs */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#E8E2D9] p-4 mb-6">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setActiveCategory(null)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeCategory === null
-                      ? 'bg-[#722F37] text-white'
-                      : 'bg-[#F0EDE8] text-[#6B6B6B] hover:bg-[#E8E2D9]'
-                  }`}
-                >
-                  {language === 'hi' ? 'सभी' : 'All'}
-                </button>
-                <button
-                  onClick={() => setActiveCategory('shirts')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeCategory === 'shirts'
-                      ? 'bg-[#722F37] text-white'
-                      : 'bg-[#F0EDE8] text-[#6B6B6B] hover:bg-[#E8E2D9]'
-                  }`}
-                >
-                  {language === 'hi' ? 'शर्ट' : 'Shirts'}
-                </button>
-                <button
-                  onClick={() => setActiveCategory('tshirts')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeCategory === 'tshirts'
-                      ? 'bg-[#722F37] text-white'
-                      : 'bg-[#F0EDE8] text-[#6B6B6B] hover:bg-[#E8E2D9]'
-                  }`}
-                >
-                  {language === 'hi' ? 'टी-शर्ट' : 'T-Shirts'}
-                </button>
-                <button
-                  onClick={() => setActiveCategory('jeans')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeCategory === 'jeans'
-                      ? 'bg-[#722F37] text-white'
-                      : 'bg-[#F0EDE8] text-[#6B6B6B] hover:bg-[#E8E2D9]'
-                  }`}
-                >
-                  {language === 'hi' ? 'जींस' : 'Jeans'}
-                </button>
-                <button
-                  onClick={() => setActiveCategory('shorts')}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeCategory === 'shorts'
-                      ? 'bg-[#722F37] text-white'
-                      : 'bg-[#F0EDE8] text-[#6B6B6B] hover:bg-[#E8E2D9]'
-                  }`}
-                >
-                  {language === 'hi' ? 'शॉर्ट्स' : 'Shorts'}
-                </button>
-              </div>
+            {/* Category tabs — text with underline, no pill */}
+            <div className="flex flex-wrap gap-6 mb-6 border-b border-[#E8E2D9] pb-0">
+              {categories.map((cat) => {
+                const isActive = activeCategory === cat.id;
+                return (
+                  <button
+                    key={String(cat.id)}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`text-sm pb-3 border-b-2 transition-all -mb-px ${
+                      isActive
+                        ? 'border-[#1A1A1A] text-[#1A1A1A] font-medium'
+                        : 'border-transparent text-[#9E9E9E] hover:text-[#4A4A4A]'
+                    }`}
+                  >
+                    {language === 'hi' ? cat.hi : cat.en}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Results Count */}
-            <div className="mb-4">
-              <p className="text-sm text-[#6B6B6B]">
-                {language === 'hi' ? 'दिखा रहे हैं' : 'Showing'} <span className="font-semibold text-[#2D2D2D]">{filteredProducts.length}</span> {language === 'hi' ? 'उत्पाद' : 'products'}
-              </p>
-            </div>
+            {/* Results count */}
+            <p className="text-xs text-[#B0AAA3] mb-5">
+              {language === 'hi' ? 'दिखा रहे हैं' : 'Showing'}{' '}
+              <span className="text-[#6B6B6B]">{filteredProducts.length}</span>{' '}
+              {language === 'hi' ? 'उत्पाद' : 'products'}
+            </p>
 
             {/* Products Grid */}
             {loading ? (
               <div className="flex justify-center items-center py-16">
-                <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-10 h-10 border-2 border-[#1A1A1A] border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8">
                 {filteredProducts.map((product) => {
-                  // Calculate discount percentage
                   const discountPercent = product.originalPrice && product.price
                     ? Math.round(((parseFloat(product.originalPrice) - parseFloat(product.price)) / parseFloat(product.originalPrice)) * 100)
                     : null;
+                  const rating = parseFloat(product.rating) || 4.0;
+                  const fullStars = Math.floor(rating);
 
                   return (
-                    <div
-                      key={product.id}
-                      className="bg-white rounded-xl shadow-sm border border-[#E8E2D9] overflow-hidden hover:shadow-lg transition-shadow group"
-                    >
-                      <Link href={`/product/${product.id}`}>
-                        <div className="relative aspect-[4/3] bg-[#F0EDE8] overflow-hidden">
-                          {product.mainImage ? (
-                            <CldImage
-                              src={product.mainImage}
-                              alt={product.name}
-                              fill
-                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-6xl">
-                              👔
-                            </div>
+                    <Link key={product.id} href={`/product/${product.id}`} className="group block">
+                      {/* Image — portrait, no border/shadow */}
+                      <div className="relative aspect-[3/4] bg-[#F0EDE8] overflow-hidden mb-3">
+                        {product.mainImage ? (
+                          <CldImage
+                            src={product.mainImage}
+                            alt={product.name}
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">👔</div>
+                        )}
+                        {/* New Arrival / Best Seller badge */}
+                        {product.isNewArrival && (
+                          <span className="absolute top-2 left-2 text-[10px] font-medium bg-white text-[#1A1A1A] px-2 py-0.5 tracking-widest uppercase">
+                            New
+                          </span>
+                        )}
+                        {product.isBestSeller && (
+                          <span className="absolute top-2 left-2 text-[10px] font-medium bg-[#1A1A1A] text-white px-2 py-0.5 tracking-widest uppercase">
+                            Bestseller
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Info — no card, just text */}
+                      <div>
+                        <h3 className="text-sm text-[#2D2D2D] leading-snug mb-1 line-clamp-1">
+                          {product.name}
+                        </h3>
+
+                        {/* Stars */}
+                        <div className="flex items-center gap-1 mb-1.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <svg
+                              key={star}
+                              className={`w-3 h-3 ${star <= fullStars ? 'text-[#B8962E]' : 'text-[#D4D0CB]'}`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                            </svg>
+                          ))}
+                          {product.reviews > 0 && (
+                            <span className="text-[10px] text-[#B0AAA3] ml-0.5">({product.reviews})</span>
                           )}
                         </div>
-                        <div className="p-4">
-                          <h3 className="font-semibold text-[#2D2D2D] mb-1 line-clamp-1">
-                            {product.name}
-                          </h3>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg font-bold text-[#722F37]">
-                              ₹{product.price}
-                            </span>
-                            {product.originalPrice && (
-                              <>
-                                <span className="text-sm text-[#6B6B6B] line-through">
-                                  ₹{product.originalPrice}
-                                </span>
-                                {discountPercent && (
-                                  <span className="text-xs text-green-600 font-semibold">
-                                    ({discountPercent}% off)
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </div>
-                          {/* Rating */}
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                              <span>{(product.rating || 4.0).toFixed(1)}</span>
-                              <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
-                                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                              </svg>
-                            </div>
-                            <span className="text-xs text-[#6B6B6B]">
-                              ({product.reviews || 0} reviews)
-                            </span>
-                          </div>
+
+                        {/* Price */}
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-semibold text-[#1A1A1A]">
+                            ₹{parseFloat(product.price).toLocaleString('en-IN')}
+                          </span>
+                          {product.originalPrice && (
+                            <>
+                              <span className="text-xs text-[#B0AAA3] line-through">
+                                ₹{parseFloat(product.originalPrice).toLocaleString('en-IN')}
+                              </span>
+                              {discountPercent && (
+                                <span className="text-[10px] text-[#7A7A7A]">{discountPercent}% off</span>
+                              )}
+                            </>
+                          )}
                         </div>
-                      </Link>
-                    </div>
+                      </div>
+                    </Link>
                   );
                 })}
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-[#E8E2D9] p-12 text-center">
-                <span className="text-6xl mb-4 block">👔</span>
-                <h3 className="text-xl font-medium text-gray-900 mb-2">
-                  {language === 'hi' ? 'कोई उत्पाद नहीं मिला' : 'No Products Found'}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {language === 'hi'
-                    ? 'फ़िल्टर बदलें या हमारे स्टोर पर आएं'
-                    : 'Try changing filters or visit our store'}
+              <div className="py-20 text-center">
+                <p className="text-sm text-[#9E9E9E] mb-4">
+                  {language === 'hi' ? 'कोई उत्पाद नहीं मिला' : 'No products found'}
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="inline-flex items-center px-6 py-3 bg-[#722F37] text-white font-semibold rounded-full hover:bg-[#5a252c] transition-colors"
+                  className="text-xs underline underline-offset-2 text-[#5A5A5A] hover:text-[#1A1A1A] transition-colors"
                 >
-                  {language === 'hi' ? 'फ़िल्टर साफ़ करें' : 'Clear Filters'}
+                  {language === 'hi' ? 'फ़िल्टर साफ़ करें' : 'Clear filters'}
                 </button>
               </div>
             )}
