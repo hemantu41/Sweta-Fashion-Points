@@ -318,18 +318,20 @@ export default function ProductDetailPage() {
                   <span className="bg-[#C9A962] text-white text-xs font-medium px-2.5 py-0.5 rounded-full">{t('product.bestSeller')}</span>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+              <h1 className="text-3xl font-semibold text-[#1A1A1A] leading-snug tracking-tight" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
                 {language === 'hi' ? product.nameHi : product.name}
               </h1>
             </div>
 
             {/* Price */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xl font-bold text-[#722F37]">₹{product.price.toLocaleString('en-IN')}</span>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="text-2xl font-bold text-[#1A1A1A]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                ₹{product.price.toLocaleString('en-IN')}
+              </span>
               {product.originalPrice && (
                 <>
-                  <span className="text-sm text-[#6B6B6B] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
-                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">{discountPercent}% off</span>
+                  <span className="text-sm text-[#9E9E9E] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+                  <span className="text-xs text-[#7A7A7A] font-medium">{discountPercent}% off</span>
                 </>
               )}
             </div>
@@ -341,13 +343,15 @@ export default function ProductDetailPage() {
                 onMouseEnter={() => setShowRatingTooltip(true)}
                 onMouseLeave={() => setShowRatingTooltip(false)}
               >
-                <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded-md">
-                  <span className="text-xs font-semibold">4.5</span>
-                  <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
-                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                  </svg>
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg key={star} className={`w-4 h-4 ${star <= 4 ? 'text-[#B8962E]' : 'text-[#D4B86A]'}`} fill={star <= 4 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={star === 5 ? 1.5 : 0} viewBox="0 0 20 20">
+                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                    </svg>
+                  ))}
                 </div>
-                <span className="text-xs text-[#6B6B6B]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
+                <span className="text-sm font-medium text-[#3A3A3A]">4.5</span>
+                <span className="text-xs text-[#9E9E9E]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
               </div>
 
               {/* Rating Tooltip */}
@@ -366,7 +370,7 @@ export default function ProductDetailPage() {
                         <span className="text-xs text-[#6B6B6B] w-8">{stars} ⭐</span>
                         <div className="flex-1 h-2 bg-[#F0EDE8] rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-green-600 transition-all"
+                            className="h-full bg-[#B8962E] transition-all"
                             style={{ width: `${percentage}%` }}
                           ></div>
                         </div>
