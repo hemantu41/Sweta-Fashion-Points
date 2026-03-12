@@ -232,17 +232,17 @@ export default function ProductDetailPage() {
     <div className="min-h-screen bg-[#FAF7F2] py-6 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Breadcrumb */}
-        <nav className="text-sm text-[#6B6B6B] mb-6 flex items-center gap-2 flex-wrap">
-          <Link href="/" className="hover:text-[#722F37] transition-colors">{t('nav.home')}</Link>
+        <nav className="text-xs text-[#B0AAA3] mb-6 flex items-center gap-2 flex-wrap">
+          <Link href="/" className="hover:text-[#7A7A7A] transition-colors">{t('nav.home')}</Link>
           <span>/</span>
           <Link
             href={product.category === 'beauty' ? '/makeup' : product.category === 'footwear' ? '/footwear' : `/${product.category}`}
-            className="hover:text-[#722F37] transition-colors"
+            className="hover:text-[#7A7A7A] transition-colors"
           >
             {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
           </Link>
           <span>/</span>
-          <span className="text-[#2D2D2D] font-medium truncate">{language === 'hi' ? product.nameHi : product.name}</span>
+          <span className="text-[#8A8A8A] truncate">{language === 'hi' ? product.nameHi : product.name}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -422,7 +422,7 @@ export default function ProductDetailPage() {
                   {!isFreeSize && !['beauty', 'footwear'].includes(product.category) && (
                     <button
                       onClick={() => setShowSizeChart(true)}
-                      className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] transition-colors flex items-center gap-1"
+                      className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] transition-colors inline-flex items-center gap-1 leading-none"
                     >
                       {t('product.sizeChart')}
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
