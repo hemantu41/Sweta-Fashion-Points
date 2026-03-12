@@ -133,6 +133,7 @@ export default function ProductDetailPage() {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const [showRatingTooltip, setShowRatingTooltip] = useState(false);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   // Fetch product data
   useEffect(() => {
@@ -269,17 +270,22 @@ export default function ProductDetailPage() {
               )}
 
               {/* Main Image - Right Side */}
-              <div className="flex-1 relative aspect-square rounded-xl overflow-hidden bg-[#F5F0E8]">
+              <div
+                className="flex-1 relative aspect-square rounded-xl overflow-hidden bg-[#F5F0E8] cursor-zoom-in group"
+                onMouseEnter={() => allImages.length > 0 ? setZoomImage(allImages[selectedImage]) : null}
+                onMouseLeave={() => setZoomImage(null)}
+                onClick={() => allImages.length > 0 ? setZoomImage(allImages[selectedImage]) : null}
+              >
                 {allImages.length > 0 && isCloudinary(allImages[selectedImage]) ? (
                   <CldImage
                     src={allImages[selectedImage]}
                     alt={product.name}
                     fill
-                    className="object-cover"
+                    className="object-cover transition-transform duration-300 group-hover:scale-110"
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
                 ) : allImages.length > 0 && !isCloudinary(allImages[selectedImage]) ? (
-                  <img src={allImages[selectedImage]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
+                  <img src={allImages[selectedImage]} alt={product.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-8xl opacity-40">
@@ -292,12 +298,16 @@ export default function ProductDetailPage() {
                     </span>
                   </div>
                 )}
+                {/* Zoom hint */}
+                <div className="absolute bottom-2 right-2 bg-black/40 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  🔍 Click to zoom
+                </div>
               </div>
             </div>
           </div>
 
           {/* Right Column - Details */}
-          <div className="space-y-5">
+          <div className="space-y-3">
             {/* Name & Badges */}
             <div>
               <div className="flex gap-2 mb-2">
@@ -314,12 +324,12 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Price */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-3xl font-bold text-[#722F37]">₹{product.price.toLocaleString('en-IN')}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xl font-bold text-[#722F37]">₹{product.price.toLocaleString('en-IN')}</span>
               {product.originalPrice && (
                 <>
-                  <span className="text-lg text-[#6B6B6B] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
-                  <span className="bg-green-100 text-green-700 text-sm font-semibold px-2.5 py-0.5 rounded-full">{discountPercent}% off</span>
+                  <span className="text-sm text-[#6B6B6B] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">{discountPercent}% off</span>
                 </>
               )}
             </div>
@@ -331,13 +341,13 @@ export default function ProductDetailPage() {
                 onMouseEnter={() => setShowRatingTooltip(true)}
                 onMouseLeave={() => setShowRatingTooltip(false)}
               >
-                <div className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg">
-                  <span className="font-semibold">4.5</span>
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-semibold">4.5</span>
+                  <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
                     <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
                   </svg>
                 </div>
-                <span className="text-sm text-[#6B6B6B]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
+                <span className="text-xs text-[#6B6B6B]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
               </div>
 
               {/* Rating Tooltip */}
@@ -371,7 +381,7 @@ export default function ProductDetailPage() {
             {/* Colors */}
             {product.colors && product.colors.length > 0 && product.category !== 'beauty' && (
               <div>
-                <p className="text-sm font-semibold text-[#2D2D2D] mb-2">
+                <p className="text-xs font-semibold text-[#2D2D2D] mb-2">
                   {t('product.color')}:{' '}
                   <span className="font-normal text-[#6B6B6B]">
                     {language === 'hi' ? product.colors[selectedColor]?.nameHi : product.colors[selectedColor]?.name}
@@ -487,6 +497,15 @@ export default function ProductDetailPage() {
                 </p>
               )}
             </div>
+
+            {/* Product Description Bullets */}
+            {product.description && (
+              <div className="text-sm text-[#4A4A4A] space-y-1">
+                {product.description.split('\n').filter((line: string) => line.trim()).map((line: string, i: number) => (
+                  <p key={i} className="leading-snug">{line.trim()}</p>
+                ))}
+              </div>
+            )}
 
             {/* Add to Cart Button */}
             <button
@@ -653,6 +672,34 @@ export default function ProductDetailPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Image Zoom Lightbox */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setZoomImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            {isCloudinary(zoomImage) ? (
+              <CldImage
+                src={zoomImage}
+                alt="Zoomed product"
+                width={900}
+                height={900}
+                className="object-contain max-h-[85vh] rounded-xl shadow-2xl"
+              />
+            ) : (
+              <img src={zoomImage} alt="Zoomed product" className="object-contain max-h-[85vh] max-w-full rounded-xl shadow-2xl" />
+            )}
+            <button
+              onClick={() => setZoomImage(null)}
+              className="absolute top-2 right-2 bg-white/90 hover:bg-white text-[#2D2D2D] rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shadow"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
