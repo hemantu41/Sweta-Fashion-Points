@@ -134,6 +134,7 @@ export default function ProductDetailPage() {
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const [showRatingTooltip, setShowRatingTooltip] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [openAccordion, setOpenAccordion] = useState<string | null>('description');
 
   // Fetch product data
   useEffect(() => {
@@ -460,62 +461,53 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Delivery Address */}
-            <div className="bg-[#F5F0E8] rounded-lg p-4">
+            {/* Delivery Info — clean, no heavy box */}
+            <div className="border-t border-[#E8E2D9] pt-3">
               {isAuthenticated ? (
                 selectedAddress ? (
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-[#2D2D2D]">{t('product.deliverTo')}</p>
-                      {addresses.length > 1 && (
-                        <button onClick={() => setShowAddressDropdown(!showAddressDropdown)} className="text-sm text-[#722F37] hover:underline transition-colors">
-                          {t('product.changeAddress')}
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-sm text-[#6B6B6B] mt-1">
-                      <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span> —{' '}
-                      {selectedAddress.address_line1}
-                      {selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs text-[#6B6B6B] leading-relaxed">
+                      <span className="text-[#3A3A3A] font-medium">{t('product.deliverTo')}</span>{' '}
+                      <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span>{' '}
+                      — {selectedAddress.address_line1}{selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
                     </p>
-                    {showAddressDropdown && (
-                      <div className="mt-2 border border-[#E8E2D9] rounded-lg bg-white overflow-hidden">
-                        {addresses.map((addr) => (
-                          <button
-                            key={addr.id}
-                            onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
-                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#F5F0E8] transition-colors ${
-                              selectedAddress?.id === addr.id ? 'bg-[#F5F0E8] font-medium text-[#722F37]' : 'text-[#2D2D2D]'
-                            }`}
-                          >
-                            <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
-                            {addr.is_default && <span className="ml-2 text-xs text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
-                          </button>
-                        ))}
-                      </div>
+                    {addresses.length > 1 && (
+                      <button
+                        onClick={() => setShowAddressDropdown(!showAddressDropdown)}
+                        className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] whitespace-nowrap transition-colors flex-shrink-0"
+                      >
+                        {t('product.changeAddress')}
+                      </button>
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-[#6B6B6B]">
+                  <p className="text-xs text-[#6B6B6B]">
                     {t('product.deliverTo')}{' '}
-                    <Link href="/addresses" className="text-[#722F37] hover:underline">{t('product.addAddress')}</Link>
+                    <Link href="/addresses" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.addAddress')}</Link>
                   </p>
                 )
               ) : (
-                <p className="text-sm text-[#6B6B6B]">
-                  <Link href="/login" className="text-[#722F37] hover:underline">{t('product.loginDelivery')}</Link>
+                <p className="text-xs text-[#6B6B6B]">
+                  <Link href="/login" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.loginDelivery')}</Link>
                 </p>
               )}
+              {showAddressDropdown && addresses.length > 1 && (
+                <div className="mt-2 border border-[#E8E2D9] rounded bg-white overflow-hidden">
+                  {addresses.map((addr) => (
+                    <button
+                      key={addr.id}
+                      onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-xs hover:bg-[#FAF7F2] transition-colors ${
+                        selectedAddress?.id === addr.id ? 'bg-[#FAF7F2] font-medium text-[#1A1A1A]' : 'text-[#3A3A3A]'
+                      }`}
+                    >
+                      <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
+                      {addr.is_default && <span className="ml-2 text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Product Description Bullets */}
-            {product.description && (
-              <div className="text-sm text-[#4A4A4A] space-y-1">
-                {product.description.split('\n').filter((line: string) => line.trim()).map((line: string, i: number) => (
-                  <p key={i} className="leading-snug">{line.trim()}</p>
-                ))}
-              </div>
-            )}
 
             {/* Add to Cart Button */}
             <button
@@ -525,123 +517,127 @@ export default function ProductDetailPage() {
               {t('product.addToCart')}
             </button>
 
-            {/* Product Details Card */}
-            <div className="bg-white rounded-xl border border-[#E8E2D9] p-5">
-              <h3 className="font-semibold text-[#2D2D2D] mb-3" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-                {t('product.productDetails')}
-              </h3>
-              <div className="space-y-0 text-sm">
-                <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                  <span className="text-[#6B6B6B]">{language === 'hi' ? 'श्रेणी' : 'Category'}</span>
-                  <span className="font-medium text-[#2D2D2D]">
-                    {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
-                  </span>
-                </div>
-
-                {/* Beauty Product Details */}
-                {product.category === 'beauty' && product.fabric && (() => {
-                  const details = parseBeautyDetails(product.fabric);
-                  return (
-                    <>
-                      {details.brand && (
-                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'ब्रांड' : 'Brand'}</span>
-                          <span className="font-medium text-[#2D2D2D]">{details.brand}</span>
-                        </div>
-                      )}
-                      {details.shade && (
-                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'शेड' : 'Shade'}</span>
-                          <span className="font-medium text-[#2D2D2D]">{details.shade}</span>
-                        </div>
-                      )}
-                      {details.volume && (
-                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'मात्रा' : 'Volume'}</span>
-                          <span className="font-medium text-[#2D2D2D]">{details.volume}</span>
-                        </div>
-                      )}
-                      {details.expiry && (
-                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'समाप्ति' : 'Expiry'}</span>
-                          <span className="font-medium text-[#2D2D2D]">{details.expiry}</span>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-
-                {/* Footwear Product Details */}
-                {product.category === 'footwear' && product.fabric && (() => {
-                  const details = parseFootwearDetails(product.fabric);
-                  return (
-                    <>
-                      {details.brand && (
-                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'ब्रांड' : 'Brand'}</span>
-                          <span className="font-medium text-[#2D2D2D]">{details.brand}</span>
-                        </div>
-                      )}
-                      {details.material && (
-                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'सामग्री' : 'Material'}</span>
-                          <span className="font-medium text-[#2D2D2D]">{details.material}</span>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-
-                {/* Clothing Product Details */}
-                {!['beauty', 'footwear'].includes(product.category) && product.fabric && (
-                  <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
-                    <span className="text-[#6B6B6B]">{language === 'hi' ? 'कपड़ा' : 'Fabric'}</span>
-                    <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? product.fabricHi : product.fabric}</span>
-                  </div>
-                )}
-
-                <div className="py-2">
-                  <span className="text-[#6B6B6B]">{language === 'hi' ? 'विवरण' : 'Description'}</span>
-                  <p className="text-[#2D2D2D] mt-1 leading-relaxed">
-                    {language === 'hi' ? product.descriptionHi : product.description}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Seller Information Card */}
-            <div className="bg-white rounded-xl border border-[#E8E2D9] p-5">
-              <h3 className="font-semibold text-[#2D2D2D] mb-3 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-                <svg className="w-5 h-5 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                {language === 'hi' ? 'विक्रेता की जानकारी' : 'Sold By'}
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="font-semibold text-[#2D2D2D] text-base">
-                    {product.seller
-                      ? (language === 'hi' && product.seller.businessNameHi ? product.seller.businessNameHi : product.seller.businessName)
-                      : (language === 'hi' ? 'स्वेता फैशन पॉइंट्स' : 'Sweta Fashion Points')}
-                  </p>
-                  {product.seller && (product.seller.city || product.seller.state) && (
-                    <p className="text-[#6B6B6B] mt-1 flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      {product.seller.city}{product.seller.city && product.seller.state ? ', ' : ''}{product.seller.state}
+            {/* Accordion — Description / Details & Care / Shipping & Returns */}
+            <div className="border-t border-[#E8E2D9]">
+              {[
+                {
+                  id: 'description',
+                  label: language === 'hi' ? 'विवरण' : 'Description',
+                  content: (
+                    <p className="text-sm text-[#4A4A4A] leading-relaxed">
+                      {language === 'hi' ? product.descriptionHi : product.description}
                     </p>
+                  ),
+                },
+                {
+                  id: 'details',
+                  label: language === 'hi' ? 'विवरण और देखभाल' : 'Details & Care',
+                  content: (
+                    <ul className="space-y-2 text-sm text-[#4A4A4A]">
+                      <li className="flex items-start gap-2">
+                        <span className="text-[#9E9E9E] mt-0.5">—</span>
+                        <span>
+                          <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'श्रेणी' : 'Category'}:</span>{' '}
+                          {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
+                        </span>
+                      </li>
+                      {!['beauty', 'footwear'].includes(product.category) && product.fabric && (
+                        <li className="flex items-start gap-2">
+                          <span className="text-[#9E9E9E] mt-0.5">—</span>
+                          <span>
+                            <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'कपड़ा' : 'Fabric'}:</span>{' '}
+                            {language === 'hi' ? product.fabricHi : product.fabric}
+                          </span>
+                        </li>
+                      )}
+                      {product.category === 'beauty' && product.fabric && (() => {
+                        const d = parseBeautyDetails(product.fabric);
+                        return (
+                          <>
+                            {d.brand && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'ब्रांड' : 'Brand'}:</span> {d.brand}</span></li>}
+                            {d.shade && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'शेड' : 'Shade'}:</span> {d.shade}</span></li>}
+                            {d.volume && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'मात्रा' : 'Volume'}:</span> {d.volume}</span></li>}
+                            {d.expiry && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'समाप्ति' : 'Expiry'}:</span> {d.expiry}</span></li>}
+                          </>
+                        );
+                      })()}
+                      {product.category === 'footwear' && product.fabric && (() => {
+                        const d = parseFootwearDetails(product.fabric);
+                        return (
+                          <>
+                            {d.brand && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'ब्रांड' : 'Brand'}:</span> {d.brand}</span></li>}
+                            {d.material && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'सामग्री' : 'Material'}:</span> {d.material}</span></li>}
+                          </>
+                        );
+                      })()}
+                      <li className="flex items-start gap-2">
+                        <span className="text-[#9E9E9E] mt-0.5">—</span>
+                        <span>{language === 'hi' ? 'हल्के हाथ से या मशीन में ठंडे पानी से धोएं' : 'Hand wash or machine wash in cold water'}</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-[#9E9E9E] mt-0.5">—</span>
+                        <span>{language === 'hi' ? 'सीधे धूप में न सुखाएं' : 'Do not tumble dry or bleach'}</span>
+                      </li>
+                    </ul>
+                  ),
+                },
+                {
+                  id: 'shipping',
+                  label: language === 'hi' ? 'शिपिंग और वापसी' : 'Shipping & Returns',
+                  content: (
+                    <ul className="space-y-2 text-sm text-[#4A4A4A]">
+                      <li className="flex items-start gap-2">
+                        <span className="text-[#9E9E9E] mt-0.5">—</span>
+                        <span>{language === 'hi' ? 'सामान्यतः 3–7 कार्यदिवसों में डिलीवरी' : 'Delivery within 3–7 business days'}</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-[#9E9E9E] mt-0.5">—</span>
+                        <span>{language === 'hi' ? '₹499 से अधिक के ऑर्डर पर निःशुल्क शिपिंग' : 'Free shipping on orders above ₹499'}</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-[#9E9E9E] mt-0.5">—</span>
+                        <span>
+                          {language === 'hi'
+                            ? 'डिलीवरी के 7 दिनों के भीतर वापसी की जा सकती है'
+                            : 'Easy returns within 7 days of delivery'}
+                        </span>
+                      </li>
+                      {product.seller && (
+                        <li className="flex items-start gap-2 pt-1 border-t border-[#F0EDE8] mt-1">
+                          <span className="text-[#9E9E9E] mt-0.5">—</span>
+                          <span>
+                            {language === 'hi' ? 'विक्रेता: ' : 'Sold by '}
+                            <span className="font-medium text-[#2D2D2D]">
+                              {language === 'hi' && product.seller.businessNameHi ? product.seller.businessNameHi : product.seller.businessName}
+                            </span>
+                            {product.seller.city ? `, ${product.seller.city}` : ''}
+                          </span>
+                        </li>
+                      )}
+                    </ul>
+                  ),
+                },
+              ].map(({ id, label, content }) => (
+                <div key={id} className="border-b border-[#E8E2D9]">
+                  <button
+                    onClick={() => setOpenAccordion(openAccordion === id ? null : id)}
+                    className="w-full flex items-center justify-between py-4 text-left"
+                  >
+                    <span className="text-xs font-medium text-[#2D2D2D] uppercase tracking-widest">{label}</span>
+                    <svg
+                      className={`w-4 h-4 text-[#6B6B6B] transition-transform duration-200 ${openAccordion === id ? 'rotate-180' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {openAccordion === id && (
+                    <div className="pb-4">
+                      {content}
+                    </div>
                   )}
                 </div>
-                <div className="pt-3 border-t border-[#F0EDE8]">
-                  <p className="text-xs text-[#6B6B6B]">
-                    {language === 'hi'
-                      ? '✓ भरोसेमंद विक्रेता द्वारा बेचा गया'
-                      : '✓ Sold by a verified seller'}
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
