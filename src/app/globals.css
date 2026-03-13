@@ -189,21 +189,25 @@ html {
 
 /* Banner Carousel Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+/* Ken Burns — slow cinematic zoom for banner images */
+@keyframes kenBurns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
+/* Banner text entrance — staggered fade up */
+@keyframes bannerTextIn {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
@@ -212,4 +216,20 @@ html {
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+.animate-ken-burns {
+  animation: kenBurns 8s ease-out forwards;
+}
+
+.banner-title {
+  animation: bannerTextIn 0.75s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
+}
+
+.banner-subtitle {
+  animation: bannerTextIn 0.75s cubic-bezier(0.4, 0, 0.2, 1) 0.35s both;
+}
+
+.banner-cta {
+  animation: bannerTextIn 0.75s cubic-bezier(0.4, 0, 0.2, 1) 0.55s both;
 }
