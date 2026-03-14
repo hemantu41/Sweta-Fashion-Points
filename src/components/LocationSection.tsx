@@ -29,13 +29,12 @@ export default function LocationSection() {
         </div>
 
         {/* 2-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
 
           {/* Left — Map */}
-          <div className="group">
+          <div className="group flex flex-col">
             <div
-              className="overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.09)] transition-shadow duration-500 group-hover:shadow-[0_8px_40px_rgba(0,0,0,0.14)]"
-              style={{ height: '420px' }}
+              className="flex-1 overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.09)] transition-shadow duration-500 group-hover:shadow-[0_8px_40px_rgba(0,0,0,0.14)] min-h-[420px]"
             >
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14479.837772685765!2d85.00!3d24.79!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39f32a5d46b9b8c5%3A0x2c1f2c0e0f0f0f0f!2sAmas%2C%20Bihar%20824219!5e0!3m2!1sen!2sin!4v1699999999999!5m2!1sen!2sin"
