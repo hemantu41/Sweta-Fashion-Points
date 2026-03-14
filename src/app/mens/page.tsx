@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CldImage } from 'next-cloudinary';
@@ -8,17 +8,53 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import PincodeBanner from '@/components/PincodeBanner';
 
+const ITEMS_PER_PAGE = 12;
+
+const HERO_IMAGES: Record<string, string> = {
+  default: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&h=700&fit=crop&crop=top&q=90',
+  shirts: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=1600&h=700&fit=crop&crop=top&q=90',
+  tshirts: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=1600&h=700&fit=crop&crop=top&q=90',
+  jeans: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=1600&h=700&fit=crop&crop=top&q=90',
+  shorts: 'https://images.unsplash.com/photo-1591195853828-11db59a44f43?w=1600&h=700&fit=crop&crop=top&q=90',
+};
+
+type SortOption = 'popular' | 'new' | 'price-asc' | 'price-desc';
+
+interface QuickViewProduct {
+  id: string;
+  name: string;
+  price: string;
+  originalPrice?: string;
+  mainImage?: string;
+  rating?: string;
+  reviews?: number;
+  sizes?: string[];
+  fabric?: string;
+  color?: string;
+  description?: string;
+  isNewArrival?: boolean;
+  isBestSeller?: boolean;
+}
+
 export default function MensPage() {
   const { language } = useLanguage();
   const { user, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const categoryFromUrl = searchParams.get('category');
+
   const [activeCategory, setActiveCategory] = useState<string | null>(categoryFromUrl);
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<SortOption>('popular');
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set());
+  const [quickViewProduct, setQuickViewProduct] = useState<QuickViewProduct | null>(null);
+  const [quickViewSize, setQuickViewSize] = useState<string>('');
+  const [sortOpen, setSortOpen] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Filter states
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -29,14 +65,15 @@ export default function MensPage() {
   }, [authLoading]);
 
   useEffect(() => {
-    if (categoryFromUrl) {
-      setActiveCategory(categoryFromUrl);
-    }
+    if (categoryFromUrl !== undefined) setActiveCategory(categoryFromUrl);
   }, [categoryFromUrl]);
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`/api/products?category=mens${user?.latitude && user?.longitude ? `&userLat=${user.latitude}&userLng=${user.longitude}` : ''}`, { cache: 'no-store' });
+      const response = await fetch(
+        `/api/products?category=mens${user?.latitude && user?.longitude ? `&userLat=${user.latitude}&userLng=${user.longitude}` : ''}`,
+        { cache: 'no-store' }
+      );
       const data = await response.json();
       setAllProducts(data.products || []);
     } catch (error) {
@@ -48,8 +85,6 @@ export default function MensPage() {
 
   const sizes = ['S', 'M', 'L', 'XL', 'XXL', '3XL'];
   const fabrics = ['Cotton', 'Polyester', 'Linen', 'Silk', 'Denim', 'Wool'];
-
-  // Muted, sophisticated color palette
   const colors = [
     { name: 'Black', hex: '#1A1A1A' },
     { name: 'White', hex: '#F0EDE8' },
@@ -62,61 +97,14 @@ export default function MensPage() {
     { name: 'Camel', hex: '#C49A6A' },
     { name: 'Brown', hex: '#6B4A2A' },
   ];
-
   const priceRanges = [
+    { label: 'All Prices', min: 0, max: 100000 },
     { label: 'Under ₹500', min: 0, max: 500 },
     { label: '₹500 – ₹1,000', min: 500, max: 1000 },
     { label: '₹1,000 – ₹2,000', min: 1000, max: 2000 },
     { label: '₹2,000 – ₹5,000', min: 2000, max: 5000 },
     { label: 'Above ₹5,000', min: 5000, max: 100000 },
   ];
-
-  const handleSizeToggle = (size: string) => {
-    setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
-  };
-  const handleFabricToggle = (fabric: string) => {
-    setSelectedFabrics(prev => prev.includes(fabric) ? prev.filter(f => f !== fabric) : [...prev, fabric]);
-  };
-  const handleColorToggle = (color: string) => {
-    setSelectedColors(prev => prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]);
-  };
-  const handlePriceRangeChange = (min: number, max: number) => {
-    setPriceRange([min, max]);
-  };
-  const clearFilters = () => {
-    setPriceRange([0, 5000]);
-    setSelectedSizes([]);
-    setSelectedFabrics([]);
-    setSelectedColors([]);
-  };
-
-  const filteredProducts = allProducts.filter((product) => {
-    if (activeCategory && product.subCategory !== activeCategory) return false;
-    const price = parseFloat(product.price);
-    if (price < priceRange[0] || price > priceRange[1]) return false;
-    if (selectedSizes.length > 0 && product.sizes) {
-      if (!selectedSizes.some(size => product.sizes.includes(size))) return false;
-    }
-    if (selectedFabrics.length > 0 && product.fabric) {
-      if (!selectedFabrics.includes(product.fabric)) return false;
-    }
-    if (selectedColors.length > 0 && product.color) {
-      if (!selectedColors.includes(product.color)) return false;
-    }
-    return true;
-  });
-
-  const getCategoryName = () => {
-    if (!activeCategory) return language === 'hi' ? 'सभी उत्पाद' : 'All Products';
-    const categoryMap: any = {
-      'shirts': language === 'hi' ? 'शर्ट' : 'Shirts',
-      'tshirts': language === 'hi' ? 'टी-शर्ट' : 'T-Shirts',
-      'jeans': language === 'hi' ? 'जींस' : 'Jeans',
-      'shorts': language === 'hi' ? 'शॉर्ट्स' : 'Shorts',
-    };
-    return categoryMap[activeCategory] || activeCategory;
-  };
-
   const categories = [
     { id: null, en: 'All', hi: 'सभी' },
     { id: 'shirts', en: 'Shirts', hi: 'शर्ट' },
@@ -124,288 +112,761 @@ export default function MensPage() {
     { id: 'jeans', en: 'Jeans', hi: 'जींस' },
     { id: 'shorts', en: 'Shorts', hi: 'शॉर्ट्स' },
   ];
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'popular', label: language === 'hi' ? 'लोकप्रिय' : 'Most Popular' },
+    { value: 'new', label: language === 'hi' ? 'नए आगमन' : 'New Arrivals' },
+    { value: 'price-asc', label: language === 'hi' ? 'कम कीमत पहले' : 'Price: Low to High' },
+    { value: 'price-desc', label: language === 'hi' ? 'अधिक कीमत पहले' : 'Price: High to Low' },
+  ];
+
+  const toggleWishlist = useCallback((id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setWishlist(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const openQuickView = useCallback((product: QuickViewProduct, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setQuickViewProduct(product);
+    setQuickViewSize('');
+  }, []);
+
+  const clearFilters = () => {
+    setPriceRange([0, 100000]);
+    setSelectedSizes([]);
+    setSelectedFabrics([]);
+    setSelectedColors([]);
+  };
+
+  const filteredProducts = allProducts
+    .filter((product) => {
+      if (activeCategory && product.subCategory !== activeCategory) return false;
+      const price = parseFloat(product.price);
+      if (price < priceRange[0] || price > priceRange[1]) return false;
+      if (selectedSizes.length > 0 && product.sizes) {
+        if (!selectedSizes.some((s: string) => product.sizes.includes(s))) return false;
+      }
+      if (selectedFabrics.length > 0 && product.fabric) {
+        if (!selectedFabrics.includes(product.fabric)) return false;
+      }
+      if (selectedColors.length > 0 && product.color) {
+        if (!selectedColors.includes(product.color)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'price-asc') return parseFloat(a.price) - parseFloat(b.price);
+      if (sortBy === 'price-desc') return parseFloat(b.price) - parseFloat(a.price);
+      if (sortBy === 'new') return (b.isNewArrival ? 1 : 0) - (a.isNewArrival ? 1 : 0);
+      return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0);
+    });
+
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredProducts.length;
+
+  const getCategoryHero = () => {
+    return HERO_IMAGES[activeCategory || 'default'] || HERO_IMAGES.default;
+  };
+  const getCategoryTitle = () => {
+    const map: Record<string, { en: string; hi: string }> = {
+      shirts: { en: "Men's Shirts", hi: 'पुरुषों की शर्ट' },
+      tshirts: { en: "Men's T-Shirts", hi: 'पुरुषों की टी-शर्ट' },
+      jeans: { en: "Men's Jeans", hi: 'पुरुषों की जींस' },
+      shorts: { en: "Men's Shorts", hi: 'पुरुषों के शॉर्ट्स' },
+    };
+    if (activeCategory && map[activeCategory]) {
+      return language === 'hi' ? map[activeCategory].hi : map[activeCategory].en;
+    }
+    return language === 'hi' ? "पुरुषों का कलेक्शन" : "Men's Collection";
+  };
+  const getCategorySubtitle = () => {
+    const map: Record<string, { en: string; hi: string }> = {
+      shirts: { en: 'Smart fits for every occasion', hi: 'हर अवसर के लिए स्मार्ट शर्ट' },
+      tshirts: { en: 'Effortless style, everyday comfort', hi: 'आरामदायक रोजाना का स्टाइल' },
+      jeans: { en: 'The perfect pair for every mood', hi: 'हर मूड के लिए परफेक्ट जींस' },
+      shorts: { en: 'Cool, casual and ready for anything', hi: 'कैजुअल और आरामदायक शॉर्ट्स' },
+    };
+    if (activeCategory && map[activeCategory]) {
+      return language === 'hi' ? map[activeCategory].hi : map[activeCategory].en;
+    }
+    return language === 'hi' ? 'प्रीमियम स्टाइल, बेहतरीन कीमत' : 'Premium style, elevated everyday';
+  };
+
+  const activeFiltersCount = (priceRange[0] > 0 || priceRange[1] < 100000 ? 1 : 0) +
+    selectedSizes.length + selectedFabrics.length + selectedColors.length;
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-[#F8F6F4]">
+
+      {/* ── Hero Banner ── */}
+      <div className="relative w-full h-[340px] sm:h-[420px] md:h-[500px] overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${getCategoryHero()})`, filter: 'brightness(0.72)' }}
+        />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+        {/* Text */}
+        <div className="absolute inset-0 flex flex-col justify-end pb-14 px-8 sm:px-14 lg:px-20">
+          <nav className="flex items-center gap-2 text-[11px] text-white/50 mb-4 tracking-wide">
+            <Link href="/" className="hover:text-white/80 transition-colors">Home</Link>
+            <span>/</span>
+            <Link href="/mens" className="hover:text-white/80 transition-colors">Men's</Link>
+            {activeCategory && (
+              <>
+                <span>/</span>
+                <span className="text-white/70 capitalize">{activeCategory}</span>
+              </>
+            )}
+          </nav>
+          <h1
+            className="text-[2rem] sm:text-[2.8rem] md:text-[3.4rem] font-semibold text-white leading-none tracking-[-0.025em] mb-3"
+            style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
+          >
+            {getCategoryTitle()}
+          </h1>
+          <p className="text-[13px] sm:text-[15px] text-white/65 font-light tracking-wide">
+            {getCategorySubtitle()}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-10 py-6">
         <PincodeBanner />
 
-        {/* Breadcrumb — soft grey */}
-        <nav className="flex items-center gap-2 text-xs text-[#B0AAA3] mb-6">
-          <Link href="/" className="hover:text-[#7A7A7A] transition-colors">
-            {language === 'hi' ? 'होम' : 'Home'}
-          </Link>
-          <span>/</span>
-          <Link href="/mens" className="hover:text-[#7A7A7A] transition-colors">
-            {language === 'hi' ? 'पुरुषों का कलेक्शन' : "Men's Collection"}
-          </Link>
-          {activeCategory && (
-            <>
-              <span>/</span>
-              <span className="text-[#8A8A8A]">{getCategoryName()}</span>
-            </>
-          )}
-        </nav>
-
-        <div className="flex gap-8">
-          {/* Left Sidebar — minimal, no card */}
-          <div className="hidden lg:block w-56 flex-shrink-0">
-            <div className="sticky top-6">
-              <div className="flex items-center justify-between mb-6">
-                <span className="text-xs font-medium text-[#2D2D2D] uppercase tracking-widest">
-                  {language === 'hi' ? 'फ़िल्टर' : 'Filters'}
-                </span>
+        {/* ── Category Tabs ── */}
+        <div className="flex items-center justify-between mt-4 mb-0">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar">
+            {categories.map((cat) => {
+              const isActive = activeCategory === cat.id;
+              return (
                 <button
-                  onClick={clearFilters}
-                  className="text-xs text-[#9E9E9E] hover:text-[#1A1A1A] underline underline-offset-2 transition-colors"
+                  key={String(cat.id)}
+                  onClick={() => { setActiveCategory(cat.id); setVisibleCount(ITEMS_PER_PAGE); }}
+                  className={`flex-shrink-0 px-5 py-3 text-[11.5px] font-semibold tracking-[0.12em] uppercase border-b-2 transition-all duration-200 ${
+                    isActive
+                      ? 'border-[#1A1A1A] text-[#1A1A1A]'
+                      : 'border-transparent text-[#9E9E9E] hover:text-[#4A4A4A] hover:border-[#D0C9C0]'
+                  }`}
                 >
-                  {language === 'hi' ? 'साफ़ करें' : 'Clear All'}
+                  {language === 'hi' ? cat.hi : cat.en}
                 </button>
-              </div>
+              );
+            })}
+          </div>
 
-              {/* Price */}
-              <div className="mb-6 pb-6 border-b border-[#E8E2D9]">
-                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
-                  {language === 'hi' ? 'कीमत' : 'Price'}
-                </h3>
-                <div className="space-y-2.5">
-                  {priceRanges.map((range) => {
-                    const checked = priceRange[0] === range.min && priceRange[1] === range.max;
-                    return (
-                      <label key={range.label} className="flex items-center gap-2.5 cursor-pointer group">
-                        {/* Custom radio */}
-                        <span
-                          onClick={() => handlePriceRangeChange(range.min, range.max)}
-                          className={`w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-all ${
-                            checked ? 'border-[#1A1A1A] bg-[#1A1A1A]' : 'border-[#C4C0BB] group-hover:border-[#6B6B6B]'
-                          }`}
-                        >
-                          {checked && <span className="w-1 h-1 rounded-full bg-white block" />}
-                        </span>
-                        <span
-                          onClick={() => handlePriceRangeChange(range.min, range.max)}
-                          className="text-xs text-[#6B6B6B] group-hover:text-[#2D2D2D] transition-colors"
-                        >
-                          {range.label}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
+          {/* Sort + Mobile Filter */}
+          <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+            {/* Mobile filter toggle */}
+            <button
+              onClick={() => setMobileFilterOpen(true)}
+              className="lg:hidden flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1A1A1A] border border-[#D0C9C0] px-4 py-2.5 hover:border-[#1A1A1A] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 9h10M11 14h2" />
+              </svg>
+              Filters {activeFiltersCount > 0 && <span className="bg-[#722F37] text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">{activeFiltersCount}</span>}
+            </button>
 
-              {/* Size */}
-              <div className="mb-6 pb-6 border-b border-[#E8E2D9]">
-                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
-                  {language === 'hi' ? 'साइज़' : 'Size'}
-                </h3>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {sizes.map((size) => (
+            {/* Sort dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setSortOpen(!sortOpen)}
+                className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] uppercase text-[#1A1A1A] border border-[#D0C9C0] px-4 py-2.5 hover:border-[#1A1A1A] transition-colors bg-white"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M6 12h12M10 17h4" />
+                </svg>
+                {sortOptions.find(o => o.value === sortBy)?.label}
+                <svg className={`w-3 h-3 transition-transform ${sortOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {sortOpen && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-[#E8E2D9] shadow-lg z-20 min-w-[190px]">
+                  {sortOptions.map(opt => (
                     <button
-                      key={size}
-                      onClick={() => handleSizeToggle(size)}
-                      className={`py-1.5 border text-xs font-medium transition-all ${
-                        selectedSizes.includes(size)
-                          ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
-                          : 'bg-white text-[#6B6B6B] border-[#D4D0CB] hover:border-[#1A1A1A]'
+                      key={opt.value}
+                      onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
+                      className={`w-full text-left px-5 py-3 text-[12px] tracking-wide transition-colors ${
+                        sortBy === opt.value ? 'bg-[#F8F6F4] text-[#1A1A1A] font-semibold' : 'text-[#6B6B6B] hover:bg-[#F8F6F4] hover:text-[#1A1A1A]'
                       }`}
                     >
-                      {size}
+                      {opt.label}
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Fabric */}
-              <div className="mb-6 pb-6 border-b border-[#E8E2D9]">
-                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
-                  {language === 'hi' ? 'फ़ैब्रिक' : 'Fabric'}
-                </h3>
-                <div className="space-y-2.5">
-                  {fabrics.map((fabric) => {
-                    const checked = selectedFabrics.includes(fabric);
-                    return (
-                      <label key={fabric} className="flex items-center gap-2.5 cursor-pointer group">
-                        {/* Custom checkbox */}
-                        <span
-                          onClick={() => handleFabricToggle(fabric)}
-                          className={`w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-all ${
-                            checked ? 'border-[#1A1A1A] bg-[#1A1A1A]' : 'border-[#C4C0BB] group-hover:border-[#6B6B6B]'
-                          }`}
-                        >
-                          {checked && (
-                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </span>
-                        <span
-                          onClick={() => handleFabricToggle(fabric)}
-                          className="text-xs text-[#6B6B6B] group-hover:text-[#2D2D2D] transition-colors"
-                        >
-                          {fabric}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Colour */}
-              <div>
-                <h3 className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-3">
-                  {language === 'hi' ? 'रंग' : 'Colour'}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {colors.map((color) => (
-                    <button
-                      key={color.name}
-                      onClick={() => handleColorToggle(color.name)}
-                      title={color.name}
-                      className={`w-6 h-6 rounded-full transition-all ring-offset-[2px] ${
-                        selectedColors.includes(color.name)
-                          ? 'ring-1 ring-[#6B6B6B]'
-                          : 'ring-1 ring-transparent hover:ring-[#BCBCBC]'
-                      } ${color.hex === '#F0EDE8' ? 'border border-[#D4D0CB]' : ''}`}
-                      style={{ backgroundColor: color.hex }}
-                    />
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Right Content */}
-          <div className="flex-1">
-            {/* Category tabs — text with underline, no pill */}
-            <div className="flex flex-wrap gap-6 mb-6 border-b border-[#E8E2D9] pb-0">
-              {categories.map((cat) => {
-                const isActive = activeCategory === cat.id;
-                return (
-                  <button
-                    key={String(cat.id)}
-                    onClick={() => setActiveCategory(cat.id)}
-                    className={`text-sm pb-3 border-b-2 transition-all -mb-px ${
-                      isActive
-                        ? 'border-[#1A1A1A] text-[#1A1A1A] font-medium'
-                        : 'border-transparent text-[#9E9E9E] hover:text-[#4A4A4A]'
-                    }`}
-                  >
-                    {language === 'hi' ? cat.hi : cat.en}
-                  </button>
-                );
-              })}
+        <div className="flex gap-8 mt-6">
+
+          {/* ── Filter Sidebar ── */}
+          <aside className="hidden lg:block w-[220px] flex-shrink-0">
+            <div className="sticky top-6">
+              {/* Glassmorphism panel */}
+              <div className="bg-white/80 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <span className="text-[10px] font-bold text-[#1A1A1A] uppercase tracking-[0.25em]">
+                    {language === 'hi' ? 'फ़िल्टर' : 'Filters'}
+                    {activeFiltersCount > 0 && (
+                      <span className="ml-2 bg-[#722F37] text-white text-[9px] rounded-full px-1.5 py-0.5">{activeFiltersCount}</span>
+                    )}
+                  </span>
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-[10px] text-[#722F37] hover:text-[#5A252C] font-medium transition-colors"
+                    >
+                      {language === 'hi' ? 'साफ़ करें' : 'Clear All'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Price */}
+                <div className="mb-5 pb-5 border-b border-[#F0EDE8]">
+                  <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">
+                    {language === 'hi' ? 'कीमत' : 'Price Range'}
+                  </h3>
+                  <div className="space-y-2">
+                    {priceRanges.map((range) => {
+                      const checked = priceRange[0] === range.min && priceRange[1] === range.max;
+                      return (
+                        <label
+                          key={range.label}
+                          onClick={() => setPriceRange([range.min, range.max])}
+                          className="flex items-center gap-2.5 cursor-pointer group"
+                        >
+                          <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                            checked ? 'border-[#722F37] bg-[#722F37]' : 'border-[#D0C9C0] group-hover:border-[#722F37]'
+                          }`}>
+                            {checked && <span className="w-1 h-1 rounded-full bg-white block" />}
+                          </span>
+                          <span className={`text-[11.5px] transition-colors ${checked ? 'text-[#1A1A1A] font-medium' : 'text-[#8A8A8A] group-hover:text-[#3A3A3A]'}`}>
+                            {range.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Size */}
+                <div className="mb-5 pb-5 border-b border-[#F0EDE8]">
+                  <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">
+                    {language === 'hi' ? 'साइज़' : 'Size'}
+                  </h3>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {sizes.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])}
+                        className={`py-1.5 rounded-lg text-[11px] font-medium border transition-all ${
+                          selectedSizes.includes(size)
+                            ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-sm'
+                            : 'bg-white text-[#6B6B6B] border-[#E0DBD4] hover:border-[#1A1A1A] hover:text-[#1A1A1A]'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fabric */}
+                <div className="mb-5 pb-5 border-b border-[#F0EDE8]">
+                  <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">
+                    {language === 'hi' ? 'फ़ैब्रिक' : 'Fabric'}
+                  </h3>
+                  <div className="space-y-2">
+                    {fabrics.map((fabric) => {
+                      const checked = selectedFabrics.includes(fabric);
+                      return (
+                        <label
+                          key={fabric}
+                          onClick={() => setSelectedFabrics(prev => prev.includes(fabric) ? prev.filter(f => f !== fabric) : [...prev, fabric])}
+                          className="flex items-center gap-2.5 cursor-pointer group"
+                        >
+                          <span className={`w-3.5 h-3.5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                            checked ? 'border-[#722F37] bg-[#722F37]' : 'border-[#D0C9C0] group-hover:border-[#722F37]'
+                          }`}>
+                            {checked && (
+                              <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </span>
+                          <span className={`text-[11.5px] transition-colors ${checked ? 'text-[#1A1A1A] font-medium' : 'text-[#8A8A8A] group-hover:text-[#3A3A3A]'}`}>
+                            {fabric}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Colour */}
+                <div>
+                  <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">
+                    {language === 'hi' ? 'रंग' : 'Colour'}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {colors.map((color) => (
+                      <button
+                        key={color.name}
+                        onClick={() => setSelectedColors(prev => prev.includes(color.name) ? prev.filter(c => c !== color.name) : [...prev, color.name])}
+                        title={color.name}
+                        className={`w-6 h-6 rounded-full transition-all ring-offset-2 ring-offset-white ${
+                          selectedColors.includes(color.name)
+                            ? 'ring-2 ring-[#722F37] scale-110'
+                            : 'ring-1 ring-transparent hover:ring-[#BCBCBC] hover:scale-105'
+                        } ${color.hex === '#F0EDE8' ? 'border border-[#D4D0CB]' : ''}`}
+                        style={{ backgroundColor: color.hex }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
+          </aside>
 
+          {/* ── Product Grid ── */}
+          <div className="flex-1 min-w-0">
             {/* Results count */}
-            <p className="text-xs text-[#B0AAA3] mb-5">
+            <p className="text-[11.5px] text-[#ADADAD] mb-5">
               {language === 'hi' ? 'दिखा रहे हैं' : 'Showing'}{' '}
-              <span className="text-[#6B6B6B]">{filteredProducts.length}</span>{' '}
+              <span className="text-[#6B6B6B] font-medium">{Math.min(visibleCount, filteredProducts.length)}</span>{' '}
+              {language === 'hi' ? 'में से' : 'of'}{' '}
+              <span className="text-[#6B6B6B] font-medium">{filteredProducts.length}</span>{' '}
               {language === 'hi' ? 'उत्पाद' : 'products'}
             </p>
 
-            {/* Products Grid */}
             {loading ? (
-              <div className="flex justify-center items-center py-16">
-                <div className="w-10 h-10 border-2 border-[#1A1A1A] border-t-transparent rounded-full animate-spin"></div>
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="rounded-xl bg-[#F0EDE8] animate-pulse">
+                    <div className="aspect-[3/4] rounded-t-xl bg-[#E8E4DE]" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-3 bg-[#E8E4DE] rounded w-3/4" />
+                      <div className="h-3 bg-[#E8E4DE] rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8">
-                {filteredProducts.map((product) => {
-                  const discountPercent = product.originalPrice && product.price
-                    ? Math.round(((parseFloat(product.originalPrice) - parseFloat(product.price)) / parseFloat(product.originalPrice)) * 100)
-                    : null;
-                  const rating = parseFloat(product.rating) || 4.0;
-                  const fullStars = Math.floor(rating);
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                  {visibleProducts.map((product) => {
+                    const discountPercent = product.originalPrice && product.price
+                      ? Math.round(((parseFloat(product.originalPrice) - parseFloat(product.price)) / parseFloat(product.originalPrice)) * 100)
+                      : null;
+                    const rating = parseFloat(product.rating) || 4.2;
+                    const fullStars = Math.floor(rating);
+                    const inWishlist = wishlist.has(product.id);
 
-                  return (
-                    <Link key={product.id} href={`/product/${product.id}`} className="group block">
-                      {/* Image — portrait, no border/shadow */}
-                      <div className="relative aspect-[3/4] bg-[#F0EDE8] overflow-hidden mb-3">
-                        {product.mainImage ? (
-                          <CldImage
-                            src={product.mainImage}
-                            alt={product.name}
-                            fill
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">👔</div>
-                        )}
-                        {/* New Arrival / Best Seller badge */}
-                        {product.isNewArrival && (
-                          <span className="absolute top-2 left-2 text-[10px] font-medium bg-white text-[#1A1A1A] px-2 py-0.5 tracking-widest uppercase">
-                            New
-                          </span>
-                        )}
-                        {product.isBestSeller && (
-                          <span className="absolute top-2 left-2 text-[10px] font-medium bg-[#1A1A1A] text-white px-2 py-0.5 tracking-widest uppercase">
-                            Bestseller
-                          </span>
-                        )}
-                      </div>
+                    return (
+                      <div key={product.id} className="group relative">
+                        <Link href={`/product/${product.id}`} className="block">
+                          {/* Card */}
+                          <div className="bg-white rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.13)] transition-all duration-400">
 
-                      {/* Info — no card, just text */}
-                      <div>
-                        <h3 className="text-sm text-[#2D2D2D] leading-snug mb-1 line-clamp-1">
-                          {product.name}
-                        </h3>
-
-                        {/* Stars */}
-                        <div className="flex items-center gap-1 mb-1.5">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <svg
-                              key={star}
-                              className={`w-3 h-3 ${star <= fullStars ? 'text-[#B8962E]' : 'text-[#D4D0CB]'}`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                            </svg>
-                          ))}
-                          {product.reviews > 0 && (
-                            <span className="text-[10px] text-[#B0AAA3] ml-0.5">({product.reviews})</span>
-                          )}
-                        </div>
-
-                        {/* Price */}
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-semibold text-[#1A1A1A]">
-                            ₹{parseFloat(product.price).toLocaleString('en-IN')}
-                          </span>
-                          {product.originalPrice && (
-                            <>
-                              <span className="text-xs text-[#B0AAA3] line-through">
-                                ₹{parseFloat(product.originalPrice).toLocaleString('en-IN')}
-                              </span>
-                              {discountPercent && (
-                                <span className="text-[10px] text-[#7A7A7A]">{discountPercent}% off</span>
+                            {/* Image */}
+                            <div className="relative aspect-[3/4] bg-[#F0EDE8] overflow-hidden">
+                              {product.mainImage ? (
+                                <>
+                                  {/* Primary image */}
+                                  <CldImage
+                                    src={product.mainImage}
+                                    alt={product.name}
+                                    fill
+                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                    className="object-cover transition-all duration-700 ease-out group-hover:scale-[1.07]"
+                                  />
+                                  {/* Hover overlay tint */}
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-400" />
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-6xl opacity-20 select-none">
+                                  <svg className="w-16 h-16 text-[#C8C0B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={0.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l2-2m0 0l7-7 7 7m-2-2v5a2 2 0 01-2 2H7a2 2 0 01-2-2V7m5 0v9" />
+                                  </svg>
+                                </div>
                               )}
-                            </>
-                          )}
-                        </div>
+
+                              {/* Tags — top left */}
+                              <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                                {product.isNewArrival && (
+                                  <span className="bg-white text-[#1A1A1A] text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 shadow-sm">
+                                    NEW
+                                  </span>
+                                )}
+                                {product.isBestSeller && !product.isNewArrival && (
+                                  <span className="bg-[#1A1A1A] text-white text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-1">
+                                    BESTSELLER
+                                  </span>
+                                )}
+                                {discountPercent && discountPercent > 0 && (
+                                  <span className="bg-[#722F37] text-white text-[9px] font-bold tracking-[0.15em] uppercase px-2.5 py-1">
+                                    -{discountPercent}%
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Wishlist — top right */}
+                              <button
+                                onClick={(e) => toggleWishlist(product.id, e)}
+                                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 hover:bg-white"
+                              >
+                                <svg
+                                  className={`w-4 h-4 transition-colors ${inWishlist ? 'text-[#722F37] fill-[#722F37]' : 'text-[#6B6B6B] fill-transparent'}`}
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.8}
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                                </svg>
+                              </button>
+
+                              {/* Quick View — slides up from bottom */}
+                              <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+                                <button
+                                  onClick={(e) => openQuickView(product, e)}
+                                  className="w-full bg-[#1A1A1A]/90 backdrop-blur-sm text-white text-[9.5px] font-semibold tracking-[0.22em] uppercase py-3 hover:bg-[#1A1A1A] transition-colors"
+                                >
+                                  {language === 'hi' ? 'त्वरित देखें' : 'Quick View'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Card Body */}
+                            <div className="px-4 pt-4 pb-5">
+                              <h3 className="text-[12.5px] font-medium text-[#1A1A1A] leading-snug mb-2 line-clamp-1">
+                                {product.name}
+                              </h3>
+
+                              {/* Stars */}
+                              <div className="flex items-center gap-1 mb-2.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <svg
+                                    key={star}
+                                    className={`w-3 h-3 ${star <= fullStars ? 'text-[#C9A962] fill-[#C9A962]' : 'text-[#E0DBD4] fill-[#E0DBD4]'}`}
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                                  </svg>
+                                ))}
+                                {product.reviews > 0 && (
+                                  <span className="text-[10px] text-[#ADADAD] ml-0.5">({product.reviews})</span>
+                                )}
+                              </div>
+
+                              {/* Price row */}
+                              <div className="flex items-baseline gap-2 mb-3.5">
+                                <span className="text-[14px] font-semibold text-[#1A1A1A]">
+                                  ₹{parseFloat(product.price).toLocaleString('en-IN')}
+                                </span>
+                                {product.originalPrice && (
+                                  <span className="text-[11px] text-[#ADADAD] line-through">
+                                    ₹{parseFloat(product.originalPrice).toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Add to Cart */}
+                              <Link
+                                href={`/product/${product.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="block w-full text-center bg-[#1A1A1A] text-white text-[10px] font-semibold tracking-[0.18em] uppercase py-2.5 rounded-lg hover:bg-[#722F37] transition-colors duration-250 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300"
+                              >
+                                {language === 'hi' ? 'विवरण देखें' : 'View Details'}
+                              </Link>
+                            </div>
+                          </div>
+                        </Link>
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+
+                {/* Load More */}
+                {hasMore && (
+                  <div className="mt-14 text-center">
+                    <button
+                      onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+                      className="inline-flex items-center gap-3 px-10 py-4 border border-[#1A1A1A] text-[#1A1A1A] text-[10.5px] font-semibold tracking-[0.22em] uppercase hover:bg-[#1A1A1A] hover:text-white transition-all duration-300 group"
+                    >
+                      {language === 'hi' ? 'और लोड करें' : 'Load More'}
+                      <svg className="w-3 h-3 transition-transform group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <p className="mt-3 text-[11px] text-[#ADADAD]">
+                      {filteredProducts.length - visibleCount} {language === 'hi' ? 'और उत्पाद' : 'more products'}
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="py-20 text-center">
-                <p className="text-sm text-[#9E9E9E] mb-4">
+              <div className="py-24 text-center">
+                <div className="w-16 h-16 rounded-full bg-[#F0EDE8] flex items-center justify-center mx-auto mb-5">
+                  <svg className="w-7 h-7 text-[#C8C0B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
+                </div>
+                <p className="text-[14px] text-[#6B6B6B] mb-2">
                   {language === 'hi' ? 'कोई उत्पाद नहीं मिला' : 'No products found'}
+                </p>
+                <p className="text-[12px] text-[#ADADAD] mb-6">
+                  {language === 'hi' ? 'फ़िल्टर बदलकर दोबारा कोशिश करें' : 'Try adjusting your filters'}
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="text-xs underline underline-offset-2 text-[#5A5A5A] hover:text-[#1A1A1A] transition-colors"
+                  className="text-[11px] font-semibold tracking-[0.15em] uppercase underline underline-offset-4 text-[#722F37] hover:text-[#5A252C] transition-colors"
                 >
-                  {language === 'hi' ? 'फ़िल्टर साफ़ करें' : 'Clear filters'}
+                  {language === 'hi' ? 'सभी फ़िल्टर हटाएं' : 'Clear All Filters'}
                 </button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* ── Mobile Filter Drawer ── */}
+      {mobileFilterOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileFilterOpen(false)} />
+          <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-[#F0EDE8]">
+              <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1A1A1A]">Filters</span>
+              <button onClick={() => setMobileFilterOpen(false)}>
+                <svg className="w-5 h-5 text-[#6B6B6B]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-5 space-y-6">
+              {/* Same filter content — price, size, fabric, color */}
+              <div>
+                <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">Price</h3>
+                <div className="space-y-2">
+                  {priceRanges.map((range) => {
+                    const checked = priceRange[0] === range.min && priceRange[1] === range.max;
+                    return (
+                      <label key={range.label} onClick={() => setPriceRange([range.min, range.max])} className="flex items-center gap-2.5 cursor-pointer group">
+                        <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${checked ? 'border-[#722F37] bg-[#722F37]' : 'border-[#D0C9C0]'}`}>
+                          {checked && <span className="w-1 h-1 rounded-full bg-white block" />}
+                        </span>
+                        <span className={`text-[12px] ${checked ? 'text-[#1A1A1A] font-medium' : 'text-[#8A8A8A]'}`}>{range.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">Size</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {sizes.map((size) => (
+                    <button key={size} onClick={() => setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])}
+                      className={`py-2 rounded-lg text-[12px] font-medium border transition-all ${selectedSizes.includes(size) ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]' : 'text-[#6B6B6B] border-[#E0DBD4]'}`}>
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">Fabric</h3>
+                <div className="space-y-2">
+                  {fabrics.map((fabric) => {
+                    const checked = selectedFabrics.includes(fabric);
+                    return (
+                      <label key={fabric} onClick={() => setSelectedFabrics(prev => prev.includes(fabric) ? prev.filter(f => f !== fabric) : [...prev, fabric])} className="flex items-center gap-2.5 cursor-pointer">
+                        <span className={`w-3.5 h-3.5 rounded border-2 flex-shrink-0 flex items-center justify-center ${checked ? 'border-[#722F37] bg-[#722F37]' : 'border-[#D0C9C0]'}`}>
+                          {checked && <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </span>
+                        <span className={`text-[12px] ${checked ? 'text-[#1A1A1A] font-medium' : 'text-[#8A8A8A]'}`}>{fabric}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-[9px] font-bold text-[#ADADAD] uppercase tracking-[0.25em] mb-3">Colour</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  {colors.map((color) => (
+                    <button key={color.name} onClick={() => setSelectedColors(prev => prev.includes(color.name) ? prev.filter(c => c !== color.name) : [...prev, color.name])}
+                      title={color.name}
+                      className={`w-7 h-7 rounded-full transition-all ring-offset-2 ring-offset-white ${selectedColors.includes(color.name) ? 'ring-2 ring-[#722F37] scale-110' : 'ring-1 ring-transparent hover:ring-[#BCBCBC]'} ${color.hex === '#F0EDE8' ? 'border border-[#D4D0CB]' : ''}`}
+                      style={{ backgroundColor: color.hex }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button onClick={clearFilters} className="flex-1 py-3 border border-[#D0C9C0] text-[11px] font-semibold uppercase tracking-widest text-[#6B6B6B] hover:border-[#1A1A1A] hover:text-[#1A1A1A] transition-colors rounded-lg">Clear</button>
+                <button onClick={() => setMobileFilterOpen(false)} className="flex-1 py-3 bg-[#1A1A1A] text-white text-[11px] font-semibold uppercase tracking-widest rounded-lg hover:bg-[#722F37] transition-colors">Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick View Modal ── */}
+      {quickViewProduct && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+          onClick={() => setQuickViewProduct(null)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+          {/* Modal */}
+          <div
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col sm:flex-row"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close */}
+            <button
+              onClick={() => setQuickViewProduct(null)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md hover:bg-white transition-colors"
+            >
+              <svg className="w-4.5 h-4.5 text-[#1A1A1A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Image */}
+            <div className="relative w-full sm:w-[340px] aspect-[3/4] sm:aspect-auto flex-shrink-0 bg-[#F0EDE8]">
+              {quickViewProduct.mainImage ? (
+                <CldImage
+                  src={quickViewProduct.mainImage}
+                  alt={quickViewProduct.name}
+                  fill
+                  sizes="340px"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#C8C0B8]">
+                  <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={0.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l2-2m0 0l7-7 7 7m-2-2v5a2 2 0 01-2 2H7a2 2 0 01-2-2V7" />
+                  </svg>
+                </div>
+              )}
+              {/* Badges */}
+              <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                {quickViewProduct.isNewArrival && <span className="bg-white text-[#1A1A1A] text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 shadow-sm">NEW</span>}
+                {quickViewProduct.isBestSeller && <span className="bg-[#1A1A1A] text-white text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-1">BESTSELLER</span>}
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="flex-1 p-7 sm:p-9 overflow-y-auto flex flex-col">
+              <div className="flex-1">
+                <p className="text-[9.5px] tracking-[0.25em] uppercase text-[#ADADAD] font-semibold mb-2">
+                  Fashion Points · Men's
+                </p>
+                <h2
+                  className="text-[1.4rem] sm:text-[1.6rem] font-semibold text-[#1A1A1A] leading-tight mb-3"
+                  style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
+                >
+                  {quickViewProduct.name}
+                </h2>
+
+                {/* Stars */}
+                <div className="flex items-center gap-1 mb-4">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg key={star} className={`w-3.5 h-3.5 ${star <= Math.floor(parseFloat(quickViewProduct.rating || '4')) ? 'text-[#C9A962] fill-[#C9A962]' : 'text-[#E0DBD4] fill-[#E0DBD4]'}`} viewBox="0 0 20 20">
+                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                    </svg>
+                  ))}
+                  {quickViewProduct.reviews ? <span className="text-[11px] text-[#ADADAD] ml-1">({quickViewProduct.reviews} reviews)</span> : null}
+                </div>
+
+                {/* Price */}
+                <div className="flex items-baseline gap-3 mb-6">
+                  <span className="text-[1.4rem] font-semibold text-[#1A1A1A]">
+                    ₹{parseFloat(quickViewProduct.price).toLocaleString('en-IN')}
+                  </span>
+                  {quickViewProduct.originalPrice && (
+                    <>
+                      <span className="text-[13px] text-[#ADADAD] line-through">
+                        ₹{parseFloat(quickViewProduct.originalPrice).toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[11px] font-semibold text-[#722F37]">
+                        {Math.round(((parseFloat(quickViewProduct.originalPrice) - parseFloat(quickViewProduct.price)) / parseFloat(quickViewProduct.originalPrice)) * 100)}% off
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Meta */}
+                {(quickViewProduct.fabric || quickViewProduct.color) && (
+                  <div className="flex gap-4 mb-5 text-[12px]">
+                    {quickViewProduct.fabric && (
+                      <div>
+                        <span className="text-[#ADADAD]">Fabric: </span>
+                        <span className="text-[#1A1A1A] font-medium">{quickViewProduct.fabric}</span>
+                      </div>
+                    )}
+                    {quickViewProduct.color && (
+                      <div>
+                        <span className="text-[#ADADAD]">Color: </span>
+                        <span className="text-[#1A1A1A] font-medium">{quickViewProduct.color}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sizes */}
+                {quickViewProduct.sizes && quickViewProduct.sizes.length > 0 && (
+                  <div className="mb-6">
+                    <p className="text-[9.5px] tracking-[0.2em] uppercase text-[#ADADAD] font-semibold mb-2.5">Select Size</p>
+                    <div className="flex flex-wrap gap-2">
+                      {quickViewProduct.sizes.map((size: string) => (
+                        <button
+                          key={size}
+                          onClick={() => setQuickViewSize(size)}
+                          className={`px-4 py-2 rounded-lg border text-[12px] font-medium transition-all ${
+                            quickViewSize === size
+                              ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                              : 'text-[#6B6B6B] border-[#E0DBD4] hover:border-[#1A1A1A] hover:text-[#1A1A1A]'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3 mt-4">
+                <Link
+                  href={`/product/${quickViewProduct.id}`}
+                  className="block w-full text-center bg-[#1A1A1A] text-white text-[10.5px] font-semibold tracking-[0.2em] uppercase py-4 rounded-xl hover:bg-[#722F37] transition-colors duration-250"
+                >
+                  {language === 'hi' ? 'पूरा विवरण देखें' : 'View Full Details'}
+                </Link>
+                <p className="text-center text-[10.5px] text-[#ADADAD]">
+                  Free delivery on orders above ₹999
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close sort dropdown on outside click */}
+      {sortOpen && (
+        <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
+      )}
     </div>
   );
 }
