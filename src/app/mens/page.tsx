@@ -11,11 +11,11 @@ import PincodeBanner from '@/components/PincodeBanner';
 const ITEMS_PER_PAGE = 12;
 
 const HERO_IMAGES: Record<string, string> = {
-  default: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1600&h=700&fit=crop&crop=center&q=90',
-  shirts: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=1600&h=700&fit=crop&crop=top&q=90',
-  tshirts: 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=1600&h=700&fit=crop&crop=top&q=90',
-  jeans: 'https://images.unsplash.com/photo-1604176354204-9268737828e4?w=1600&h=700&fit=crop&crop=top&q=90',
-  shorts: 'https://images.unsplash.com/photo-1565084888279-aca607ecce0c?w=1600&h=700&fit=crop&crop=top&q=90',
+  default: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1800&h=800&fit=crop&crop=center&q=95',
+  shirts: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=1800&h=800&fit=crop&crop=top&q=95',
+  tshirts: 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=1800&h=800&fit=crop&crop=top&q=95',
+  jeans: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=1800&h=800&fit=crop&crop=center&q=95',
+  shorts: 'https://images.unsplash.com/photo-1565084888279-aca607ecce0c?w=1800&h=800&fit=crop&crop=top&q=95',
 };
 
 type SortOption = 'popular' | 'new' | 'price-asc' | 'price-desc';
@@ -204,15 +204,18 @@ export default function MensPage() {
     <div className="min-h-screen bg-[#F8F6F4]">
 
       {/* ── Hero Banner ── */}
-      <div className="relative w-full h-[340px] sm:h-[420px] md:h-[500px] overflow-hidden">
+      <div className="relative w-full h-[360px] sm:h-[460px] md:h-[540px] overflow-hidden">
+        {/* Background image — lighter brightness, boosted saturation to preserve fabric detail */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${getCategoryHero()})`, filter: 'brightness(0.55)' }}
+          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
+          style={{ backgroundImage: `url(${getCategoryHero()})`, filter: 'brightness(0.78) saturate(1.18) contrast(1.04)' }}
         />
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20" />
+        {/* Cool-tone colour grade — adds the signature indigo/blue cast */}
+        <div className="absolute inset-0 bg-indigo-950/20" />
+        {/* Directional gradient — heavy on left for text legibility, fully open on right */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/62 via-black/28 to-transparent" />
         {/* Text */}
-        <div className="absolute inset-0 flex flex-col justify-end pb-14 px-8 sm:px-14 lg:px-20">
+        <div className="absolute inset-0 flex flex-col justify-end pb-16 px-12 sm:px-16 lg:px-24">
           <nav className="flex items-center gap-2 text-[11px] text-white/50 mb-4 tracking-wide">
             <Link href="/" className="hover:text-white/80 transition-colors">Home</Link>
             <span>/</span>
@@ -225,12 +228,12 @@ export default function MensPage() {
             )}
           </nav>
           <h1
-            className="text-[2rem] sm:text-[2.8rem] md:text-[3.4rem] font-semibold text-white leading-none tracking-[-0.025em] mb-3"
+            className="text-[2.2rem] sm:text-[3rem] md:text-[3.6rem] font-semibold text-white leading-none tracking-[-0.025em] mb-4"
             style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
           >
             {getCategoryTitle()}
           </h1>
-          <p className="text-[13px] sm:text-[15px] text-white/65 font-light tracking-wide">
+          <p className="text-[13.5px] sm:text-[15.5px] text-white/75 font-light tracking-widest uppercase">
             {getCategorySubtitle()}
           </p>
         </div>
