@@ -205,35 +205,43 @@ export default function MensPage() {
 
       {/* ── Hero Banner ── */}
       <div className="relative w-full h-[360px] sm:h-[460px] md:h-[540px] overflow-hidden">
-        {/* Background image — lighter brightness, boosted saturation to preserve fabric detail */}
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
-          style={{ backgroundImage: `url(${getCategoryHero()})`, filter: 'brightness(0.78) saturate(1.18) contrast(1.04)' }}
+        {/* Sharp <img> tag — renders crisper than CSS background-image */}
+        <img
+          src={getCategoryHero()}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ filter: 'saturate(1.2) contrast(1.06)' }}
         />
-        {/* Cool-tone colour grade — adds the signature indigo/blue cast */}
-        <div className="absolute inset-0 bg-indigo-950/20" />
-        {/* Directional gradient — heavy on left for text legibility, fully open on right */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/62 via-black/28 to-transparent" />
+        {/* Cool-tone colour grade */}
+        <div className="absolute inset-0 bg-indigo-950/15" />
+        {/* Directional gradient — darker on left for text, open on right to show image */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/72 via-black/45 to-black/10" />
         {/* Text */}
         <div className="absolute inset-0 flex flex-col justify-end pb-16 px-12 sm:px-16 lg:px-24">
-          <nav className="flex items-center gap-2 text-[11px] text-white/50 mb-4 tracking-wide">
-            <Link href="/" className="hover:text-white/80 transition-colors">Home</Link>
+          <nav className="flex items-center gap-2 text-[11px] text-white/70 mb-4 tracking-wide" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>
+            <Link href="/" className="hover:text-white transition-colors">Home</Link>
             <span>/</span>
-            <Link href="/mens" className="hover:text-white/80 transition-colors">Men's</Link>
+            <Link href="/mens" className="hover:text-white transition-colors">Men's</Link>
             {activeCategory && (
               <>
                 <span>/</span>
-                <span className="text-white/70 capitalize">{activeCategory}</span>
+                <span className="text-white/90 capitalize">{activeCategory}</span>
               </>
             )}
           </nav>
           <h1
             className="text-[2.2rem] sm:text-[3rem] md:text-[3.6rem] font-semibold text-white leading-none tracking-[-0.025em] mb-4"
-            style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
+            style={{
+              fontFamily: 'var(--font-playfair), Playfair Display, serif',
+              textShadow: '0 2px 24px rgba(0,0,0,0.85), 0 1px 6px rgba(0,0,0,0.95)',
+            }}
           >
             {getCategoryTitle()}
           </h1>
-          <p className="text-[13.5px] sm:text-[15.5px] text-white/75 font-light tracking-widest uppercase">
+          <p
+            className="text-[13.5px] sm:text-[15.5px] text-white/90 font-light tracking-widest uppercase"
+            style={{ textShadow: '0 1px 12px rgba(0,0,0,0.8)' }}
+          >
             {getCategorySubtitle()}
           </p>
         </div>
