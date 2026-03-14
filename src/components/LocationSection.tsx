@@ -17,7 +17,7 @@ export default function LocationSection() {
           >
             {language === 'hi' ? 'संपर्क करें' : 'Contact Us'}
           </h2>
-          <p className="mt-3 text-[13.5px] text-[#ADADAD] font-light tracking-wide max-w-sm mx-auto leading-relaxed">
+          <p className="mt-3 text-[13.5px] text-[#6B6B6B] font-light tracking-wide max-w-sm mx-auto leading-relaxed">
             {language === 'hi'
               ? 'हमारे स्टोर पर आएं या कभी भी सहायता के लिए हमसे संपर्क करें।'
               : 'Visit our store or reach us anytime for assistance.'
