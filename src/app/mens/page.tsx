@@ -310,7 +310,7 @@ export default function MensPage() {
 
           {/* ── Filter Sidebar ── */}
           <aside className="hidden lg:block w-[220px] flex-shrink-0">
-            <div className="sticky top-6">
+            <div className="sticky top-5 max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-thin">
               {/* Glassmorphism panel */}
               <div className="bg-white/80 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -449,11 +449,11 @@ export default function MensPage() {
             </p>
 
             {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {[...Array(6)].map((_, i) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[...Array(8)].map((_, i) => (
                   <div key={i} className="rounded-xl bg-[#F0EDE8] animate-pulse">
                     <div className="aspect-[3/4] rounded-t-xl bg-[#E8E4DE]" />
-                    <div className="p-4 space-y-2">
+                    <div className="p-3 space-y-2">
                       <div className="h-3 bg-[#E8E4DE] rounded w-3/4" />
                       <div className="h-3 bg-[#E8E4DE] rounded w-1/2" />
                     </div>
@@ -462,7 +462,7 @@ export default function MensPage() {
               </div>
             ) : filteredProducts.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   {visibleProducts.map((product) => {
                     const discountPercent = product.originalPrice && product.price
                       ? Math.round(((parseFloat(product.originalPrice) - parseFloat(product.price)) / parseFloat(product.originalPrice)) * 100)
@@ -475,7 +475,7 @@ export default function MensPage() {
                       <div key={product.id} className="group relative">
                         <Link href={`/product/${product.id}`} className="block">
                           {/* Card */}
-                          <div className="bg-white rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.13)] transition-all duration-400">
+                          <div className="bg-white rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.14)] hover:-translate-y-1 transition-all duration-300">
 
                             {/* Image */}
                             <div className="relative aspect-[3/4] bg-[#F0EDE8] overflow-hidden">
@@ -501,92 +501,99 @@ export default function MensPage() {
                               )}
 
                               {/* Tags — top left */}
-                              <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                              <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
                                 {product.isNewArrival && (
-                                  <span className="bg-white text-[#1A1A1A] text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-1 shadow-sm">
+                                  <span className="bg-white text-[#1A1A1A] text-[8.5px] font-bold tracking-[0.2em] uppercase px-2 py-0.5 shadow-sm">
                                     NEW
                                   </span>
                                 )}
                                 {product.isBestSeller && !product.isNewArrival && (
-                                  <span className="bg-[#1A1A1A] text-white text-[9px] font-bold tracking-[0.2em] uppercase px-2.5 py-1">
+                                  <span className="bg-[#1A1A1A] text-white text-[8.5px] font-bold tracking-[0.2em] uppercase px-2 py-0.5">
                                     BESTSELLER
-                                  </span>
-                                )}
-                                {discountPercent && discountPercent > 0 && (
-                                  <span className="bg-[#722F37] text-white text-[9px] font-bold tracking-[0.15em] uppercase px-2.5 py-1">
-                                    -{discountPercent}%
                                   </span>
                                 )}
                               </div>
 
-                              {/* Wishlist — top right */}
-                              <button
-                                onClick={(e) => toggleWishlist(product.id, e)}
-                                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 hover:bg-white"
-                              >
-                                <svg
-                                  className={`w-4 h-4 transition-colors ${inWishlist ? 'text-[#722F37] fill-[#722F37]' : 'text-[#6B6B6B] fill-transparent'}`}
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth={1.8}
+                              {/* Action icons — top right: wishlist + quick view */}
+                              <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <button
+                                  onClick={(e) => toggleWishlist(product.id, e)}
+                                  className="w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 hover:bg-white transition-all duration-200"
                                 >
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-                                </svg>
-                              </button>
-
-                              {/* Quick View — slides up from bottom */}
-                              <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+                                  <svg
+                                    className={`w-3.5 h-3.5 transition-colors ${inWishlist ? 'text-[#722F37] fill-[#722F37]' : 'text-[#6B6B6B] fill-transparent'}`}
+                                    stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                                  </svg>
+                                </button>
                                 <button
                                   onClick={(e) => openQuickView(product, e)}
-                                  className="w-full bg-[#1A1A1A]/90 backdrop-blur-sm text-white text-[9.5px] font-semibold tracking-[0.22em] uppercase py-3 hover:bg-[#1A1A1A] transition-colors"
+                                  className="w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 hover:bg-white transition-all duration-200"
+                                  title="Quick View"
                                 >
-                                  {language === 'hi' ? 'त्वरित देखें' : 'Quick View'}
+                                  <svg className="w-3.5 h-3.5 text-[#6B6B6B]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
                                 </button>
+                              </div>
+
+                              {/* Add to Cart — slides up from image bottom */}
+                              <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+                                <Link
+                                  href={`/product/${product.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center justify-center gap-2 w-full bg-[#1A1A1A]/92 backdrop-blur-sm text-white text-[9px] font-semibold tracking-[0.22em] uppercase py-3 hover:bg-[#1A1A1A] transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                                  </svg>
+                                  {language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart'}
+                                </Link>
                               </div>
                             </div>
 
                             {/* Card Body */}
-                            <div className="px-4 pt-4 pb-5">
-                              <h3 className="text-[12.5px] font-medium text-[#1A1A1A] leading-snug mb-2 line-clamp-1">
+                            <div className="px-3 pt-3 pb-4">
+                              <h3 className="text-[12px] font-medium text-[#1A1A1A] leading-snug mb-1.5 line-clamp-1">
                                 {product.name}
                               </h3>
 
                               {/* Stars */}
-                              <div className="flex items-center gap-1 mb-2.5">
+                              <div className="flex items-center gap-0.5 mb-2">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <svg
                                     key={star}
-                                    className={`w-3 h-3 ${star <= fullStars ? 'text-[#C9A962] fill-[#C9A962]' : 'text-[#E0DBD4] fill-[#E0DBD4]'}`}
+                                    className={`w-2.5 h-2.5 ${star <= fullStars ? 'text-[#C9A962] fill-[#C9A962]' : 'text-[#E0DBD4] fill-[#E0DBD4]'}`}
                                     viewBox="0 0 20 20"
                                   >
                                     <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
                                   </svg>
                                 ))}
                                 {product.reviews > 0 && (
-                                  <span className="text-[10px] text-[#ADADAD] ml-0.5">({product.reviews})</span>
+                                  <span className="text-[9.5px] text-[#ADADAD] ml-0.5">({product.reviews})</span>
                                 )}
                               </div>
 
-                              {/* Price row */}
-                              <div className="flex items-baseline gap-2 mb-3.5">
-                                <span className="text-[14px] font-semibold text-[#1A1A1A]">
+                              {/* Price row — discount inline, no image badge */}
+                              <div className="flex items-baseline flex-wrap gap-x-1.5 gap-y-0.5">
+                                <span className="text-[13px] font-semibold text-[#1A1A1A]">
                                   ₹{parseFloat(product.price).toLocaleString('en-IN')}
                                 </span>
-                                {product.originalPrice && (
-                                  <span className="text-[11px] text-[#ADADAD] line-through">
-                                    ₹{parseFloat(product.originalPrice).toLocaleString('en-IN')}
-                                  </span>
+                                {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price) && (
+                                  <>
+                                    <span className="text-[10.5px] text-[#ADADAD] line-through">
+                                      ₹{parseFloat(product.originalPrice).toLocaleString('en-IN')}
+                                    </span>
+                                    {discountPercent && discountPercent > 0 && (
+                                      <span className="text-[10px] text-[#8A7A6A] font-medium">
+                                        {discountPercent}% off
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                               </div>
-
-                              {/* Add to Cart */}
-                              <Link
-                                href={`/product/${product.id}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="block w-full text-center bg-[#1A1A1A] text-white text-[10px] font-semibold tracking-[0.18em] uppercase py-2.5 rounded-lg hover:bg-[#722F37] transition-colors duration-250 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300"
-                              >
-                                {language === 'hi' ? 'विवरण देखें' : 'View Details'}
-                              </Link>
                             </div>
                           </div>
                         </Link>
