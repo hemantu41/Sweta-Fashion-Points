@@ -477,23 +477,31 @@ export default function MensPage() {
                           {/* Card */}
                           <div className="bg-white rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.14)] hover:-translate-y-1 transition-all duration-300">
 
-                            {/* Image */}
+                            {/* Image — front/back crossfade on hover */}
                             <div className="relative aspect-[3/4] bg-[#F0EDE8] overflow-hidden">
                               {product.mainImage ? (
                                 <>
-                                  {/* Primary image */}
+                                  {/* Front image — visible by default, fades out on hover */}
                                   <CldImage
                                     src={product.mainImage}
                                     alt={product.name}
                                     fill
                                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                                    className="object-cover transition-all duration-700 ease-out group-hover:scale-[1.07]"
+                                    className="object-cover absolute inset-0 transition-opacity duration-500 ease-in-out group-hover:opacity-0"
                                   />
-                                  {/* Hover overlay tint */}
-                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-400" />
+                                  {/* Back image — hidden by default, fades in on hover.
+                                      Uses secondImage if available, else shows front image with a slight zoom
+                                      so there's always a visible transition effect */}
+                                  <CldImage
+                                    src={product.secondImage || product.mainImage}
+                                    alt={`${product.name} — alternate view`}
+                                    fill
+                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                    className="object-cover absolute inset-0 opacity-0 scale-[1.06] transition-all duration-500 ease-in-out group-hover:opacity-100 group-hover:scale-100"
+                                  />
                                 </>
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-6xl opacity-20 select-none">
+                                <div className="w-full h-full flex items-center justify-center select-none">
                                   <svg className="w-16 h-16 text-[#C8C0B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={0.8}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l2-2m0 0l7-7 7 7m-2-2v5a2 2 0 01-2 2H7a2 2 0 01-2-2V7m5 0v9" />
                                   </svg>
@@ -537,20 +545,6 @@ export default function MensPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                   </svg>
                                 </button>
-                              </div>
-
-                              {/* Add to Cart — slides up from image bottom */}
-                              <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
-                                <Link
-                                  href={`/product/${product.id}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center justify-center gap-2 w-full bg-[#1A1A1A]/92 backdrop-blur-sm text-white text-[9px] font-semibold tracking-[0.22em] uppercase py-3 hover:bg-[#1A1A1A] transition-colors"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                                  </svg>
-                                  {language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart'}
-                                </Link>
                               </div>
                             </div>
 
