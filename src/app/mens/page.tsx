@@ -11,11 +11,11 @@ import PincodeBanner from '@/components/PincodeBanner';
 const ITEMS_PER_PAGE = 12;
 
 const HERO_IMAGES: Record<string, string> = {
-  default: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&h=700&fit=crop&crop=top&q=90',
-  shirts: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=1600&h=700&fit=crop&crop=top&q=90',
-  tshirts: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=1600&h=700&fit=crop&crop=top&q=90',
-  jeans: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=1600&h=700&fit=crop&crop=top&q=90',
-  shorts: 'https://images.unsplash.com/photo-1591195853828-11db59a44f43?w=1600&h=700&fit=crop&crop=top&q=90',
+  default: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1600&h=700&fit=crop&crop=center&q=90',
+  shirts: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=1600&h=700&fit=crop&crop=top&q=90',
+  tshirts: 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=1600&h=700&fit=crop&crop=top&q=90',
+  jeans: 'https://images.unsplash.com/photo-1604176354204-9268737828e4?w=1600&h=700&fit=crop&crop=top&q=90',
+  shorts: 'https://images.unsplash.com/photo-1565084888279-aca607ecce0c?w=1600&h=700&fit=crop&crop=top&q=90',
 };
 
 type SortOption = 'popular' | 'new' | 'price-asc' | 'price-desc';
