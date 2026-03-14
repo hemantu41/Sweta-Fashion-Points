@@ -10,116 +10,148 @@ interface BeautyCategory {
   description: string;
   descriptionHi: string;
   link: string;
-  bgGradient: string;
-  bgImage?: string;
+  bgImage: string;
 }
 
+// All images: editorial beauty & skincare — consistent portrait orientation
 const beautyCategories: BeautyCategory[] = [
   {
     id: 'skincare',
     name: 'Skincare',
     nameHi: 'स्किनकेयर',
-    description: 'Glow & Radiance',
-    descriptionHi: 'चमक और निखार',
+    description: 'Glow, radiance & daily rituals',
+    descriptionHi: 'चमक, निखार और दैनिक देखभाल',
     link: '/makeup?category=skincare',
-    bgGradient: 'from-pink-100 via-rose-100 to-pink-200',
-    bgImage: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1600&h=1200&q=90&auto=format&fit=crop',
+    bgImage: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&h=1067&fit=crop&crop=center&q=90',
   },
   {
     id: 'makeup',
     name: 'Makeup',
     nameHi: 'मेकअप',
-    description: 'Beauty Essentials',
-    descriptionHi: 'ब्यूटी एसेंशियल',
+    description: 'Colour, finish & beauty essentials',
+    descriptionHi: 'रंग, फिनिश और ब्यूटी एसेंशियल',
     link: '/makeup?category=makeup',
-    bgGradient: 'from-purple-100 via-fuchsia-100 to-purple-200',
-    bgImage: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=1600&h=1200&q=90&auto=format&fit=crop',
+    bgImage: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=800&h=1067&fit=crop&crop=center&q=90',
   },
   {
     id: 'fragrance',
     name: 'Fragrance',
     nameHi: 'फ्रेगरेंस',
-    description: 'Signature Scents',
-    descriptionHi: 'खास सुगंध',
+    description: 'Signature scents for every mood',
+    descriptionHi: 'हर मूड के लिए खास सुगंध',
     link: '/makeup?category=fragrance',
-    bgGradient: 'from-violet-100 via-indigo-100 to-violet-200',
-    bgImage: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=1600&h=1200&q=90&auto=format&fit=crop',
+    bgImage: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=800&h=1067&fit=crop&crop=center&q=90',
   },
   {
     id: 'haircare',
     name: 'Hair Care',
     nameHi: 'हेयर केयर',
-    description: 'Healthy & Shiny',
-    descriptionHi: 'स्वस्थ और चमकदार',
+    description: 'Nourish, strengthen & shine',
+    descriptionHi: 'पोषण, मजबूती और चमक',
     link: '/makeup?category=haircare',
-    bgGradient: 'from-teal-100 via-cyan-100 to-teal-200',
-    bgImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=1200&q=90&auto=format&fit=crop',
+    bgImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&h=1067&fit=crop&crop=top&q=90',
   },
 ];
+
+// Shared filter — beauty imagery: clean, high contrast, slightly cooler
+const PHOTO_FILTER = 'saturate(0.88) contrast(1.06) brightness(0.96)';
 
 export default function BeautyMakeupCollectionSection() {
   const { language } = useLanguage();
 
   return (
-    <section className="relative py-20 bg-white overflow-hidden">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, #722F37 1px, transparent 0)',
-          backgroundSize: '40px 40px'
-        }}></div>
-      </div>
+    <section className="py-24 md:py-32 bg-[#FAFAFA]">
+      <div className="max-w-[1300px] mx-auto px-6 sm:px-8 lg:px-14">
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-[#2D2D2D] mb-3 tracking-tight" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-            {language === 'hi' ? 'ब्यूटी और मेकअप' : 'Beauty & Makeup'}
-          </h2>
+        {/* Section Header — split: title left, View All right */}
+        <div className="mb-16 md:mb-20 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+          <div>
+            <span className="block text-[10px] tracking-[0.38em] uppercase text-[#ADADAD] font-medium mb-4">
+              {language === 'hi' ? 'सौंदर्य और देखभाल' : 'Beauty & Care'}
+            </span>
+            <h2
+              className="text-[2.2rem] sm:text-[2.8rem] md:text-[3.2rem] font-semibold text-[#1A1A1A] tracking-[-0.025em] leading-none"
+              style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
+            >
+              {language === 'hi' ? 'ब्यूटी और मेकअप' : 'Beauty & Makeup'}
+            </h2>
+            <p className="mt-3 text-[13px] text-[#ADADAD] font-light tracking-wide max-w-xs leading-relaxed">
+              {language === 'hi'
+                ? 'अपनी प्राकृतिक सुंदरता को निखारें।'
+                : 'Enhance your natural beauty, inside and out.'
+              }
+            </p>
+          </div>
 
-          <p className="text-lg text-[#6B6B6B] max-w-2xl mx-auto">
-            {language === 'hi'
-              ? 'अपनी खूबसूरती को निखारें'
-              : 'Enhance your natural beauty'
-            }
-          </p>
+          {/* View All — desktop top-right */}
+          <Link
+            href="/makeup"
+            className="hidden sm:inline-flex items-center gap-2.5 text-[10px] tracking-[0.2em] uppercase text-[#1A1A1A] font-semibold border-b border-[#C8C8C8] pb-0.5 hover:border-[#722F37] hover:text-[#722F37] transition-colors duration-250 self-end mb-1 whitespace-nowrap group"
+          >
+            {language === 'hi' ? 'सभी देखें' : 'View All'}
+            <svg className="w-2.5 h-2.5 stroke-1 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-          {beautyCategories.map((category, index) => (
+        {/* Category Grid — no card containers, wide gutters */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-14 md:gap-x-10 lg:gap-x-12">
+          {beautyCategories.map((category) => (
             <Link
               key={category.id}
               href={category.link}
-              className="group flex flex-col items-center"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="group block"
             >
-              {/* Circular Card Container */}
-              <div className="relative w-48 h-48 md:w-64 md:h-64 mb-4">
-                {/* Gradient Background Circle */}
-                <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${category.bgGradient} transition-all duration-300 group-hover:scale-105`}></div>
+              {/* Image — sharp rectangle, consistent CSS filter */}
+              <div className="relative aspect-[3/4] overflow-hidden bg-[#EDE9E6]">
 
-                {/* Image Container */}
-                <div className="absolute inset-0 rounded-full overflow-hidden p-2">
-                  {category.bgImage && (
-                    <div
-                      className="w-full h-full bg-cover bg-center rounded-full transition-transform duration-300 group-hover:scale-110"
-                      style={{ backgroundImage: `url(${category.bgImage})` }}
-                    ></div>
-                  )}
+                {/* Photo with shared filter */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+                  style={{
+                    backgroundImage: `url(${category.bgImage})`,
+                    filter: PHOTO_FILTER,
+                  }}
+                />
+
+                {/* Subtle dark overlay on hover */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/28 transition-colors duration-400" />
+
+                {/* Ghost button — 1px white border, fades in centered */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-350">
+                  <span className="border border-white/85 text-white text-[9.5px] font-semibold tracking-[0.26em] uppercase px-6 py-3 backdrop-blur-[2px]">
+                    {language === 'hi' ? 'अभी खरीदें' : 'Shop Now'}
+                  </span>
                 </div>
-
-                {/* Hover Ring Effect */}
-                <div className="absolute inset-0 rounded-full border-4 border-transparent group-hover:border-[#722F37] transition-all duration-300"></div>
               </div>
 
-              {/* Category Label */}
-              <h3 className="text-base md:text-lg font-semibold text-[#2D2D2D] text-center transition-colors duration-300 group-hover:text-[#722F37]">
-                {language === 'hi' ? category.nameHi : category.name}
-              </h3>
+              {/* Text — left-flush on page background */}
+              <div className="mt-4">
+                <h3 className="text-[11px] sm:text-[11.5px] font-semibold text-[#1A1A1A] tracking-[0.22em] uppercase leading-snug group-hover:text-[#722F37] transition-colors duration-250">
+                  {language === 'hi' ? category.nameHi : category.name}
+                </h3>
+                <p className="mt-1.5 text-[11px] text-[#B8B8B8] font-light leading-snug tracking-wide">
+                  {language === 'hi' ? category.descriptionHi : category.description}
+                </p>
+              </div>
             </Link>
           ))}
         </div>
+
+        {/* Mobile: bottom CTA — sharp rectangle */}
+        <div className="mt-14 sm:hidden text-center">
+          <Link
+            href="/makeup"
+            className="inline-flex items-center gap-2.5 px-8 py-3.5 border border-[#1A1A1A] text-[#1A1A1A] text-[10px] font-semibold tracking-[0.22em] uppercase hover:bg-[#1A1A1A] hover:text-white transition-all duration-300 group"
+          >
+            {language === 'hi' ? 'पूरा संग्रह देखें' : 'View Full Collection'}
+            <svg className="w-2.5 h-2.5 stroke-1 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+
       </div>
     </section>
   );
