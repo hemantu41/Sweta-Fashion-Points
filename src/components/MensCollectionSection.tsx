@@ -67,9 +67,6 @@ export default function MensCollectionSection() {
         {/* Section Header */}
         <div className="mb-16 md:mb-20 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
           <div>
-            <span className="block text-[10px] tracking-[0.38em] uppercase text-[#ADADAD] font-medium mb-4">
-              {language === 'hi' ? 'पुरुष फैशन' : "Men's Fashion"}
-            </span>
             <h2
               className="text-[2.2rem] sm:text-[2.8rem] md:text-[3.2rem] font-semibold text-[#1A1A1A] tracking-[-0.025em] leading-none"
               style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
