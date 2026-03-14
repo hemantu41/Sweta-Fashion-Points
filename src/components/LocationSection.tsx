@@ -11,14 +11,11 @@ export default function LocationSection() {
 
         {/* Section Header — centered */}
         <div className="text-center mb-14 md:mb-18">
-          <span className="block text-[10px] tracking-[0.38em] uppercase text-[#ADADAD] font-medium mb-4">
-            {language === 'hi' ? 'हमसे मिलें' : 'Find Us'}
-          </span>
           <h2
             className="text-[2rem] sm:text-[2.6rem] md:text-[3rem] font-semibold text-[#1A1A1A] tracking-[-0.025em] leading-tight"
             style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
           >
-            {language === 'hi' ? 'संपर्क करें और स्टोर' : 'Contact & Store Location'}
+            {language === 'hi' ? 'संपर्क करें' : 'Contact Us'}
           </h2>
           <p className="mt-3 text-[13.5px] text-[#ADADAD] font-light tracking-wide max-w-sm mx-auto leading-relaxed">
             {language === 'hi'
