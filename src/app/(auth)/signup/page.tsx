@@ -13,9 +13,9 @@ import Link from 'next/link';
 const GOLD   = '#c9a84c';
 const DARK   = '#0e0b08';
 const PANEL  = '#100d0a';   /* right-panel bg — barely lighter than left */
-const BORDER = 'rgba(201,168,76,0.18)';
-const MUTED  = 'rgba(255,255,255,0.32)';
-const DIM    = 'rgba(255,255,255,0.14)';
+const BORDER = 'rgba(201,168,76,0.45)';
+const MUTED  = 'rgba(255,255,255,0.78)';
+const DIM    = 'rgba(255,255,255,0.52)';
 
 const CORMORANT = '"Cormorant Garamond", "Playfair Display", Georgia, serif';
 const JOST      = '"Jost", "Inter", system-ui, sans-serif';
@@ -144,7 +144,7 @@ export default function SignupPage() {
 
           {/* Brand name */}
           <div className="mb-6">
-            <p className="text-[11px] tracking-[0.35em] uppercase mb-5 font-light" style={{ color: `${GOLD}80`, fontFamily: JOST }}>
+            <p className="text-[11px] tracking-[0.35em] uppercase mb-5 font-light" style={{ color: GOLD, fontFamily: JOST }}>
               Est. Fashion Points
             </p>
             <h1 className="font-light text-white leading-[1.08] mb-6"
@@ -171,7 +171,7 @@ export default function SignupPage() {
                 fontSize: 'clamp(1.25rem, 2vw, 1.55rem)',
                 fontStyle: 'italic',
                 fontWeight: 300,
-                color: 'rgba(255,255,255,0.55)',
+                color: 'rgba(255,255,255,0.88)',
                 letterSpacing: '0.01em',
               }}>
               &ldquo;Where every thread<br />
@@ -191,8 +191,8 @@ export default function SignupPage() {
               <div className="flex-shrink-0 w-[2px] h-auto self-stretch rounded-full mt-1"
                 style={{ background: `linear-gradient(to bottom, ${GOLD}, ${GOLD}30)` }} />
               <div>
-                <p className="text-sm font-medium tracking-wide mb-0.5" style={{ color: 'rgba(255,255,255,0.8)', fontFamily: JOST }}>{b.title}</p>
-                <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.28)', fontFamily: JOST }}>{b.body}</p>
+                <p className="text-sm font-medium tracking-wide mb-0.5" style={{ color: 'rgba(255,255,255,0.95)', fontFamily: JOST }}>{b.title}</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.70)', fontFamily: JOST }}>{b.body}</p>
               </div>
             </div>
           ))}
@@ -216,7 +216,7 @@ export default function SignupPage() {
 
           {/* Desktop heading */}
           <div className="hidden lg:block mb-10">
-            <p className="text-[10px] tracking-[0.32em] uppercase mb-4" style={{ color: `${GOLD}90`, fontFamily: JOST, fontWeight: 300 }}>
+            <p className="text-[10px] tracking-[0.32em] uppercase mb-4" style={{ color: GOLD, fontFamily: JOST, fontWeight: 300 }}>
               New Membership
             </p>
             <h2 className="font-light leading-[1.1] text-white mb-2"
@@ -398,7 +398,7 @@ export default function SignupPage() {
                 },
                 {
                   label: 'Apple',
-                  icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="rgba(255,255,255,0.7)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>,
+                  icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="rgba(255,255,255,0.95)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>,
                 },
               ].map(s => (
                 <button key={s.label} type="button"
@@ -422,7 +422,7 @@ export default function SignupPage() {
 
           {/* ── Footer ── */}
           <div className="mt-10 pt-8" style={{ borderTop: `1px solid ${DIM}` }}>
-            <p className="text-center" style={{ fontFamily: JOST, fontSize: '12px', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.04em' }}>
+            <p className="text-center" style={{ fontFamily: JOST, fontSize: '12px', color: MUTED, letterSpacing: '0.04em' }}>
               Already a member?{' '}
               <Link href="/login"
                 className="transition-colors duration-300"
@@ -434,9 +434,9 @@ export default function SignupPage() {
             </p>
             <p className="text-center mt-3" style={{ fontFamily: JOST, fontSize: '10px', color: DIM, letterSpacing: '0.06em' }}>
               By joining you agree to our{' '}
-              <Link href="/terms-and-conditions" className="underline underline-offset-2" style={{ color: 'rgba(255,255,255,0.22)' }}>Terms</Link>
+              <Link href="/terms-and-conditions" className="underline underline-offset-2" style={{ color: 'rgba(255,255,255,0.55)' }}>Terms</Link>
               {' '}&amp;{' '}
-              <Link href="/return-policy" className="underline underline-offset-2" style={{ color: 'rgba(255,255,255,0.22)' }}>Privacy</Link>
+              <Link href="/return-policy" className="underline underline-offset-2" style={{ color: 'rgba(255,255,255,0.55)' }}>Privacy</Link>
             </p>
           </div>
         </div>
@@ -468,7 +468,7 @@ function DarkField({ label, name, type, value, onChange, required, disabled, ver
           fontSize: raised ? '9px' : '13px',
           letterSpacing: raised ? '0.18em' : '0.04em',
           textTransform: raised ? 'uppercase' : 'none',
-          color: verified ? '#10b981' : focused ? GOLD : 'rgba(255,255,255,0.3)',
+          color: verified ? '#10b981' : focused ? GOLD : 'rgba(255,255,255,0.62)',
           fontFamily: JOST,
           fontWeight: 300,
         }}>
@@ -480,7 +480,7 @@ function DarkField({ label, name, type, value, onChange, required, disabled, ver
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         className="w-full bg-transparent outline-none pr-20 mt-4"
-        style={{ color: 'rgba(255,255,255,0.85)', fontFamily: JOST, fontSize: '14px', fontWeight: 300, letterSpacing: '0.03em', caretColor: GOLD }}
+        style={{ color: 'rgba(255,255,255,0.95)', fontFamily: JOST, fontSize: '14px', fontWeight: 300, letterSpacing: '0.03em', caretColor: GOLD }}
       />
       {suffix && <div className="absolute right-0 bottom-4">{suffix}</div>}
     </div>
@@ -503,18 +503,18 @@ function MobileField({ value, onChange, verified, onSendOTP, sending, otpSent }:
           fontSize: raised ? '9px' : '13px',
           letterSpacing: raised ? '0.18em' : '0.04em',
           textTransform: raised ? 'uppercase' : 'none',
-          color: verified ? '#10b981' : focused ? GOLD : 'rgba(255,255,255,0.3)',
+          color: verified ? '#10b981' : focused ? GOLD : 'rgba(255,255,255,0.62)',
           fontFamily: JOST, fontWeight: 300,
         }}>
-        Mobile Number <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: '11px' }}>(optional)</span>
+        Mobile Number <span style={{ color: 'rgba(255,255,255,0.50)', fontSize: '11px' }}>(optional)</span>
       </label>
       <div className="flex items-center mt-4">
-        <span className="mr-2 flex-shrink-0 text-sm" style={{ color: 'rgba(255,255,255,0.35)', fontFamily: JOST, fontWeight: 300 }}>🇮🇳 +91</span>
+        <span className="mr-2 flex-shrink-0 text-sm" style={{ color: 'rgba(255,255,255,0.72)', fontFamily: JOST, fontWeight: 300 }}>🇮🇳 +91</span>
         <input type="tel" name="mobile" value={value} onChange={onChange}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           disabled={verified} maxLength={10}
           className="flex-1 bg-transparent outline-none min-w-0"
-          style={{ color: 'rgba(255,255,255,0.85)', fontFamily: JOST, fontSize: '14px', fontWeight: 300, letterSpacing: '0.06em', caretColor: GOLD }}
+          style={{ color: 'rgba(255,255,255,0.95)', fontFamily: JOST, fontSize: '14px', fontWeight: 300, letterSpacing: '0.06em', caretColor: GOLD }}
         />
         <div className="flex-shrink-0 ml-2">
           {!verified && value.length === 10 && (
@@ -554,9 +554,9 @@ function VerifiedChip() {
 
 function EyeBtn({ show, onToggle }: { show: boolean; onToggle: () => void }) {
   return (
-    <button type="button" onClick={onToggle} style={{ color: 'rgba(255,255,255,0.2)', transition: 'color 0.2s' }}
-      onMouseEnter={e => ((e.target as HTMLElement).style.color = `${GOLD}80`)}
-      onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.2)')}>
+    <button type="button" onClick={onToggle} style={{ color: 'rgba(255,255,255,0.50)', transition: 'color 0.2s' }}
+      onMouseEnter={e => ((e.target as HTMLElement).style.color = GOLD)}
+      onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.50)')}>
       {show ? (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
       ) : (
@@ -579,14 +579,14 @@ function OTPBox({ hint, otp, loading, onChange, onVerify }: {
         </div>
       )}
       <div className="px-4 py-4">
-        <p className="text-[10px] uppercase tracking-[0.2em] mb-3" style={{ color: `${GOLD}60`, fontFamily: JOST }}>{hint}</p>
+        <p className="text-[10px] uppercase tracking-[0.2em] mb-3" style={{ color: GOLD, fontFamily: JOST }}>{hint}</p>
         <div className="flex items-center gap-3">
           <input type="text" inputMode="numeric" value={otp} maxLength={6}
             onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="— — — — — —"
             className="flex-1 bg-transparent outline-none text-center text-base"
             style={{
-              color: 'rgba(255,255,255,0.8)', fontFamily: JOST, letterSpacing: '0.4em', fontWeight: 300,
+              color: 'rgba(255,255,255,0.92)', fontFamily: JOST, letterSpacing: '0.4em', fontWeight: 300,
               borderBottom: `1px solid rgba(255,255,255,0.12)`, paddingBottom: '6px',
               caretColor: GOLD,
             }}
