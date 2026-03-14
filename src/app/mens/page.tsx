@@ -207,10 +207,10 @@ export default function MensPage() {
       <div className="relative w-full h-[340px] sm:h-[420px] md:h-[500px] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${getCategoryHero()})`, filter: 'brightness(0.72)' }}
+          style={{ backgroundImage: `url(${getCategoryHero()})`, filter: 'brightness(0.55)' }}
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20" />
         {/* Text */}
         <div className="absolute inset-0 flex flex-col justify-end pb-14 px-8 sm:px-14 lg:px-20">
           <nav className="flex items-center gap-2 text-[11px] text-white/50 mb-4 tracking-wide">
