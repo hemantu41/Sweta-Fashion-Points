@@ -25,7 +25,7 @@ export default function SignupPage() {
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    name: '', email: '', mobile: '', location: '', password: '', confirmPassword: '',
+    name: '', email: '', mobile: '', location: '', pincode: '', landmark: '', password: '', confirmPassword: '',
   });
   const [isLoading,   setIsLoading]   = useState(false);
   const [error,       setError]       = useState('');
@@ -39,7 +39,12 @@ export default function SignupPage() {
   /* ─── handlers ─────────────────────────────────────────────────────────── */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(p => ({ ...p, [name]: name === 'mobile' ? value.replace(/\D/g, '').slice(0, 10) : value }));
+    setFormData(p => ({
+      ...p,
+      [name]: name === 'mobile'  ? value.replace(/\D/g, '').slice(0, 10)
+             : name === 'pincode' ? value.replace(/\D/g, '').slice(0, 6)
+             : value,
+    }));
     if (name === 'email'  && emailV.verified)  resetEmailV();
     if (name === 'mobile' && mobileV.verified) resetMobileV();
   };
@@ -96,11 +101,14 @@ export default function SignupPage() {
     e.preventDefault();
     setError(''); setSuccess('');
     if (!emailV.verified)                               { setError('Please verify your email address first'); return; }
+    if (!mobileV.verified)                              { setError('Please verify your mobile number first'); return; }
+    if (!/^\d{6}$/.test(formData.pincode))              { setError('Please enter a valid 6-digit PIN code'); return; }
+    if (!formData.landmark.trim())                      { setError('Please enter a landmark'); return; }
     if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return; }
     if (formData.password.length < 6)                   { setError('Password must be at least 6 characters'); return; }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: formData.name, email: formData.email, mobile: formData.mobile, location: formData.location, password: formData.password }) });
+      const res  = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: formData.name, email: formData.email, mobile: formData.mobile, location: formData.location, pincode: formData.pincode, landmark: formData.landmark, password: formData.password }) });
       const data = await res.json();
       if (res.ok) {
         setSuccess('Welcome. Redirecting you now…');
@@ -166,7 +174,7 @@ export default function SignupPage() {
 
           {/* Body copy */}
           <p className="text-sm leading-relaxed mb-10 font-light"
-            style={{ color: 'rgba(255,255,255,0.65)', fontFamily: JOST, maxWidth: '320px', letterSpacing: '0.01em' }}>
+            style={{ color: 'rgba(255,255,255,0.82)', fontFamily: JOST, maxWidth: '320px', letterSpacing: '0.01em' }}>
             Premium fashion curated from Bharat&apos;s finest collections, delivered to your doorstep.
           </p>
 
@@ -180,7 +188,7 @@ export default function SignupPage() {
               <li key={item} className="flex items-start gap-3">
                 <span className="flex-shrink-0 mt-[5px]" style={{ color: GOLD, fontSize: '6px' }}>◆</span>
                 <span className="text-[13px] font-light leading-snug"
-                  style={{ color: 'rgba(255,255,255,0.72)', fontFamily: JOST, letterSpacing: '0.01em' }}>
+                  style={{ color: 'rgba(255,255,255,0.86)', fontFamily: JOST, letterSpacing: '0.01em' }}>
                   {item}
                 </span>
               </li>
@@ -205,16 +213,16 @@ export default function SignupPage() {
               <span style={{ color: GOLD, fontFamily: CORMORANT, fontSize: '16px', fontStyle: 'italic' }}>F</span>
             </div>
             <p className="text-[9px] tracking-[0.3em] uppercase mb-3 font-light" style={{ color: GOLD, fontFamily: JOST }}>Sweta Fashion Points</p>
-            <h2 className="font-light text-white" style={{ fontFamily: CORMORANT, fontSize: '2rem', letterSpacing: '-0.01em' }}>Create Account</h2>
+            <h2 className="font-light" style={{ fontFamily: CORMORANT, fontSize: '2rem', letterSpacing: '-0.01em', color: '#ffffff' }}>Create Account</h2>
           </div>
 
           {/* Desktop heading */}
           <div className="hidden lg:block mb-8">
-            <p className="text-[9px] tracking-[0.35em] uppercase mb-4 font-light" style={{ color: GOLD, fontFamily: JOST }}>
+            <p className="tracking-[0.32em] uppercase mb-4 font-light" style={{ color: GOLD, fontFamily: JOST, fontSize: '11px' }}>
               Member Access
             </p>
-            <h2 className="font-light text-white"
-              style={{ fontFamily: CORMORANT, fontSize: 'clamp(1.9rem, 3vw, 2.6rem)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            <h2 className="font-light"
+              style={{ fontFamily: CORMORANT, fontSize: 'clamp(1.9rem, 3vw, 2.6rem)', letterSpacing: '-0.02em', lineHeight: 1.1, color: '#ffffff' }}>
               Create Account
             </h2>
           </div>
@@ -265,6 +273,16 @@ export default function SignupPage() {
               value={formData.location} onChange={handleChange}
               placeholder="Your city or town" required />
 
+            {/* Pincode */}
+            <StaticField label="PIN Code" name="pincode" type="text" inputMode="numeric"
+              value={formData.pincode} onChange={handleChange}
+              placeholder="6-digit PIN code" required />
+
+            {/* Landmark */}
+            <StaticField label="Landmark" name="landmark" type="text"
+              value={formData.landmark} onChange={handleChange}
+              placeholder="Nearby landmark" required />
+
             {/* Password */}
             <div>
               <StaticField label="Password" name="password" type={showPass ? 'text' : 'password'}
@@ -297,15 +315,19 @@ export default function SignupPage() {
               )}
             </div>
 
-            {/* ── Email verify notice ── */}
-            {!emailV.verified && (
+            {/* ── Verify notices ── */}
+            {(!emailV.verified || !mobileV.verified) && (
               <div className="flex items-start gap-2.5 py-3 px-3.5"
                 style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
                 <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="#f87171" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(248,113,113,0.90)', fontFamily: JOST, fontWeight: 300 }}>
-                  Please verify your email before creating your account
+                  {!emailV.verified && !mobileV.verified
+                    ? 'Please verify your email and mobile number before creating your account'
+                    : !emailV.verified
+                    ? 'Please verify your email before creating your account'
+                    : 'Please verify your mobile number before creating your account'}
                 </p>
               </div>
             )}
@@ -410,10 +432,11 @@ export default function SignupPage() {
    Sub-components
 ══════════════════════════════════════════════════════════════════════════ */
 
-function StaticField({ label, name, type, value, onChange, placeholder, required, disabled, verified, suffix }: {
+function StaticField({ label, name, type, value, onChange, placeholder, required, disabled, verified, suffix, inputMode }: {
   label: string; name: string; type: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string; required?: boolean; disabled?: boolean; verified?: boolean; suffix?: React.ReactNode;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -436,6 +459,7 @@ function StaticField({ label, name, type, value, onChange, placeholder, required
         <input
           type={type} name={name} value={value} onChange={onChange}
           placeholder={placeholder} required={required} disabled={disabled}
+          inputMode={inputMode}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           className="flex-1 bg-transparent outline-none min-w-0"
           style={{
@@ -463,8 +487,7 @@ function MobileField({ value, onChange, verified, onSendOTP, sending, otpSent }:
           color: verified ? '#10b981' : focused ? GOLD : 'rgba(201,168,76,0.75)',
           transition: 'color 0.2s',
         }}>
-        Mobile{' '}
-        <span style={{ color: DIM, textTransform: 'none', letterSpacing: '0', fontSize: '10px' }}>(optional)</span>
+        Mobile Number
       </label>
       <div className="flex items-center"
         style={{
