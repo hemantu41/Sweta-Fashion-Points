@@ -165,6 +165,14 @@ export default function BannerCarousel() {
                     className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-white leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
                     style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
                   >
+            {/* Content */}
+            <div className="relative h-full flex items-center">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+                <div className="max-w-3xl">
+                  {/* Title */}
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6 animate-fade-in drop-shadow-lg" style={{
+                    fontFamily: 'var(--font-playfair), Playfair Display, serif'
+                  }}>
                     {language === 'hi' ? banner.titleHi : banner.title}
                   </h2>
 
@@ -173,6 +181,9 @@ export default function BannerCarousel() {
                     key={`sub-${slideKey}-${banner.id}`}
                     className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 mb-8 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
                   >
+                  <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed font-medium animate-fade-in drop-shadow-md" style={{
+                    animationDelay: '200ms'
+                  }}>
                     {language === 'hi' ? banner.subtitleHi : banner.subtitle}
                   </p>
 
