@@ -144,14 +144,14 @@ export default function BannerCarousel() {
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                 <div className="max-w-3xl">
                   {/* Title */}
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-[#2D2D2D] leading-tight mb-6 animate-fade-in drop-shadow-lg" style={{
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6 animate-fade-in drop-shadow-lg" style={{
                     fontFamily: 'var(--font-playfair), Playfair Display, serif'
                   }}>
                     {language === 'hi' ? banner.titleHi : banner.title}
                   </h1>
 
                   {/* Subtitle */}
-                  <p className="text-xl md:text-2xl text-[#2D2D2D] mb-10 leading-relaxed font-medium animate-fade-in drop-shadow-md" style={{
+                  <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed font-medium animate-fade-in drop-shadow-md" style={{
                     animationDelay: '200ms'
                   }}>
                     {language === 'hi' ? banner.subtitleHi : banner.subtitle}
