@@ -30,6 +30,15 @@ export default function SignupPage() {
     error: '',
   });
 
+  // Mobile verification (mandatory)
+  const [mobileVerification, setMobileVerification] = useState({
+    otpSent: false,
+    otp: '',
+    verified: false,
+    loading: false,
+    error: '',
+  });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'mobile' || name === 'pincode') {
@@ -41,6 +50,10 @@ export default function SignupPage() {
     // Reset email verification if email changes
     if (name === 'email' && emailVerification.verified) {
       setEmailVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
+    }
+    // Reset mobile verification if mobile changes
+    if (name === 'mobile' && mobileVerification.verified) {
+      setMobileVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
     }
   };
 
@@ -100,6 +113,62 @@ export default function SignupPage() {
     }
   };
 
+  // Send mobile OTP
+  const sendMobileOTP = async () => {
+    if (!formData.mobile || !/^[6-9]\d{9}$/.test(formData.mobile)) {
+      setMobileVerification(prev => ({ ...prev, error: 'Please enter a valid 10-digit mobile number' }));
+      return;
+    }
+
+    setMobileVerification(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/auth/send-signup-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'mobile', value: formData.mobile }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMobileVerification(prev => ({ ...prev, otpSent: true, loading: false }));
+      } else {
+        setMobileVerification(prev => ({ ...prev, error: data.error || 'Failed to send OTP', loading: false }));
+      }
+    } catch {
+      setMobileVerification(prev => ({ ...prev, error: 'Error sending OTP', loading: false }));
+    }
+  };
+
+  // Verify mobile OTP
+  const verifyMobileOTP = async () => {
+    if (!mobileVerification.otp || mobileVerification.otp.length !== 6) {
+      setMobileVerification(prev => ({ ...prev, error: 'Please enter a valid 6-digit OTP' }));
+      return;
+    }
+
+    setMobileVerification(prev => ({ ...prev, loading: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/auth/verify-signup-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'mobile', value: formData.mobile, otp: mobileVerification.otp }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.verified) {
+        setMobileVerification(prev => ({ ...prev, verified: true, loading: false }));
+      } else {
+        setMobileVerification(prev => ({ ...prev, error: data.error || 'Invalid OTP', loading: false }));
+      }
+    } catch {
+      setMobileVerification(prev => ({ ...prev, error: 'Error verifying OTP', loading: false }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -108,6 +177,12 @@ export default function SignupPage() {
     // Validate mobile
     if (!/^[6-9]\d{9}$/.test(formData.mobile)) {
       setError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    // Check mobile is verified
+    if (!mobileVerification.verified) {
+      setError('Please verify your mobile number before signing up');
       return;
     }
 
@@ -202,26 +277,78 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Mobile (Mandatory) */}
+            {/* Mobile (Mandatory + OTP Verification) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mobile Number <span className="text-red-500">*</span>
               </label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-600 text-sm">
-                  +91
-                </span>
-                <input
-                  type="tel"
-                  name="mobile"
-                  value={formData.mobile}
-                  onChange={handleChange}
-                  required
-                  maxLength={10}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
-                  placeholder="10 digit number"
-                />
+              <div className="flex gap-2">
+                <div className="flex flex-1">
+                  <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-600 text-sm">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    name="mobile"
+                    value={formData.mobile}
+                    onChange={handleChange}
+                    required
+                    maxLength={10}
+                    disabled={mobileVerification.verified}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all disabled:bg-gray-50"
+                    placeholder="10 digit number"
+                  />
+                </div>
+                {!mobileVerification.verified && (
+                  <button
+                    type="button"
+                    onClick={sendMobileOTP}
+                    disabled={mobileVerification.loading || formData.mobile.length !== 10}
+                    className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#5a252c] transition-all disabled:opacity-50 whitespace-nowrap text-sm"
+                  >
+                    {mobileVerification.loading ? 'Sending...' : mobileVerification.otpSent ? 'Resend' : 'Send OTP'}
+                  </button>
+                )}
+                {mobileVerification.verified && (
+                  <div className="flex items-center px-3 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
               </div>
+
+              {/* Mobile OTP Input */}
+              {mobileVerification.otpSent && !mobileVerification.verified && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-800 mb-2">Enter 6-digit OTP sent to your mobile</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={mobileVerification.otp}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setMobileVerification(prev => ({ ...prev, otp: value, error: '' }));
+                      }}
+                      maxLength={6}
+                      className="flex-1 px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722F37] text-center text-lg tracking-widest"
+                      placeholder="000000"
+                    />
+                    <button
+                      type="button"
+                      onClick={verifyMobileOTP}
+                      disabled={mobileVerification.loading || mobileVerification.otp.length !== 6}
+                      className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#5a252c] transition-all disabled:opacity-50 text-sm"
+                    >
+                      {mobileVerification.loading ? 'Verifying...' : 'Verify'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {mobileVerification.error && (
+                <p className="text-red-600 text-xs mt-1">{mobileVerification.error}</p>
+              )}
             </div>
 
             {/* Email with optional verification */}
@@ -291,35 +418,33 @@ export default function SignupPage() {
               )}
             </div>
 
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                City / Town <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
-                placeholder="Enter your city or town"
-              />
-            </div>
-
             {/* Address */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address <span className="text-red-500">*</span>
+                Address <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
               <input
                 type="text"
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
                 placeholder="House/Flat No., Street, Area"
+              />
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                City / Town <span className="text-gray-500 text-xs">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
+                placeholder="Enter your city or town"
               />
             </div>
 
@@ -385,10 +510,19 @@ export default function SignupPage() {
               </div>
             )}
 
+            {/* Mobile verification warning */}
+            {!mobileVerification.verified && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>⚠️ Required:</strong> Please verify your mobile number before signing up.
+                </p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !mobileVerification.verified}
               className="w-full bg-[#722F37] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#5a252c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
