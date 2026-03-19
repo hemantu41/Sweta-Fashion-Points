@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, mobile, location, address, pincode, password } = body;
 
-    // Validation
-    if (!name || !email || !mobile || !location || !address || !pincode || !password) {
+    // Validation (location and address are optional)
+    if (!name || !email || !mobile || !pincode || !password) {
       return NextResponse.json(
         { error: 'All required fields must be filled' },
         { status: 400 }
