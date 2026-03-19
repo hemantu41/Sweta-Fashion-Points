@@ -10,81 +10,89 @@ interface Banner {
   titleHi: string;
   subtitle: string;
   subtitleHi: string;
+  tag: string;
+  tagHi: string;
   link: string;
-  bgGradient: string;
-  bgImage: string; // Background image URL
+  bgImage: string;
 }
 
 const banners: Banner[] = [
   {
     id: 'welcome',
-    title: 'Your Style, Your Story',
-    titleHi: 'आपकी शैली, आपकी कहानी',
-    subtitle: 'Amas, Gaya, Bihar | fashionpoints.co.in',
-    subtitleHi: 'अमास, गया, बिहार | fashionpoints.co.in',
+    title: 'Your Style,\nYour Story',
+    titleHi: 'आपकी शैली,\nआपकी कहानी',
+    subtitle: 'Amas, Gaya, Bihar',
+    subtitleHi: 'अमास, गया, बिहार',
+    tag: 'Welcome',
+    tagHi: 'स्वागत',
     link: '/',
-    bgGradient: 'from-purple-50 via-pink-50 to-rose-50',
-    bgImage: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1600&h=600&fit=crop&q=90',
+    bgImage: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1600&h=700&fit=crop&q=90',
   },
   {
     id: 'mens',
-    title: "Men's Collection",
-    titleHi: 'पुरुषों का कलेक्शन',
-    subtitle: 'Redefine your style with premium fashion',
-    subtitleHi: 'प्रीमियम फैशन के साथ अपनी शैली को फिर से परिभाषित करें',
+    title: "Men's\nCollection",
+    titleHi: 'पुरुषों का\nकलेक्शन',
+    subtitle: 'Redefine your style',
+    subtitleHi: 'अपनी शैली को नया रूप दें',
+    tag: "Men's",
+    tagHi: 'पुरुष',
     link: '/mens',
-    bgGradient: 'from-blue-50 via-slate-50 to-blue-50',
-    bgImage: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1600&h=600&fit=crop&q=90',
+    bgImage: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1600&h=700&fit=crop&q=90',
   },
   {
     id: 'womens',
-    title: "Women's Collection",
-    titleHi: 'महिलाओं का कलेक्शन',
+    title: "Women's\nCollection",
+    titleHi: 'महिलाओं का\nकलेक्शन',
     subtitle: 'Elegance that speaks volumes',
     subtitleHi: 'लालित्य जो बहुत कुछ कहता है',
+    tag: "Women's",
+    tagHi: 'महिला',
     link: '/womens',
-    bgGradient: 'from-pink-50 via-rose-50 to-pink-50',
-    bgImage: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&h=600&fit=crop&q=90',
+    bgImage: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&h=700&fit=crop&q=90',
   },
   {
     id: 'sarees',
-    title: 'Exquisite Sarees',
-    titleHi: 'शानदार साड़ियां',
-    subtitle: 'Where tradition meets contemporary grace',
-    subtitleHi: 'जहां परंपरा समकालीन अनुग्रह से मिलती है',
+    title: 'Exquisite\nSarees',
+    titleHi: 'शानदार\nसाड़ियां',
+    subtitle: 'Tradition meets contemporary grace',
+    subtitleHi: 'परंपरा और आधुनिक सौंदर्य का संगम',
+    tag: 'Sarees',
+    tagHi: 'साड़ी',
     link: '/sarees',
-    bgGradient: 'from-purple-50 via-violet-50 to-purple-50',
-    bgImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&h=600&fit=crop&q=90',
+    bgImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&h=700&fit=crop&q=90',
   },
   {
     id: 'kids',
-    title: "Kids Collection",
-    titleHi: 'बच्चों का कलेक्शन',
-    subtitle: 'Playful styles for little fashionistas',
-    subtitleHi: 'छोटे फैशनिस्टा के लिए खिलंडी शैली',
+    title: "Kids\nCollection",
+    titleHi: 'बच्चों का\nकलेक्शन',
+    subtitle: 'Playful styles for little ones',
+    subtitleHi: 'छोटों के लिए खिलंडी शैली',
+    tag: "Kids",
+    tagHi: 'बच्चे',
     link: '/kids',
-    bgGradient: 'from-amber-50 via-orange-50 to-amber-50',
-    bgImage: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=1600&h=600&fit=crop&q=90',
+    bgImage: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=1600&h=700&fit=crop&q=90',
   },
   {
     id: 'beauty',
-    title: 'Beauty & Makeup',
-    titleHi: 'ब्यूटी और मेकअप',
-    subtitle: 'Radiate confidence with premium beauty',
-    subtitleHi: 'प्रीमियम ब्यूटी के साथ आत्मविश्वास बिखेरें',
+    title: 'Beauty &\nMakeup',
+    titleHi: 'ब्यूटी और\nमेकअप',
+    subtitle: 'Radiate confidence',
+    subtitleHi: 'आत्मविश्वास बिखेरें',
+    tag: 'Beauty',
+    tagHi: 'ब्यूटी',
     link: '/makeup',
-    bgGradient: 'from-red-50 via-pink-50 to-red-50',
-    bgImage: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1600&h=600&fit=crop&q=90',
+    bgImage: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1600&h=700&fit=crop&q=90',
   },
   {
     id: 'footwear',
-    title: 'Footwear Collection',
-    titleHi: 'फुटवियर कलेक्शन',
-    subtitle: 'Step into style with premium footwear',
-    subtitleHi: 'प्रीमियम फुटवियर के साथ स्टाइल में कदम रखें',
+    title: 'Footwear\nCollection',
+    titleHi: 'फुटवियर\nकलेक्शन',
+    subtitle: 'Step into style',
+    subtitleHi: 'स्टाइल में कदम रखें',
+    tag: 'Footwear',
+    tagHi: 'जूते',
     link: '/footwear',
-    bgGradient: 'from-gray-50 via-slate-50 to-gray-50',
-    bgImage: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1600&h=600&fit=crop&q=90',
+    bgImage: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1600&h=700&fit=crop&q=90',
   },
 ];
 
@@ -92,19 +100,21 @@ export default function BannerCarousel() {
   const { language } = useLanguage();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  // Key increments each time a slide becomes active — forces animation classes to restart
+  const [slideKey, setSlideKey] = useState(0);
 
   useEffect(() => {
     if (!isAutoPlaying) return;
-
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % banners.length);
+      setSlideKey((k) => k + 1);
     }, 6000);
-
     return () => clearInterval(interval);
   }, [isAutoPlaying]);
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
+    setSlideKey((k) => k + 1);
     setIsAutoPlaying(false);
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
@@ -113,91 +123,109 @@ export default function BannerCarousel() {
   const prevSlide = () => goToSlide((currentSlide - 1 + banners.length) % banners.length);
 
   return (
-    <section className="relative w-full py-12 bg-[#FAF7F2]">
-      <div className="max-w-[95%] mx-auto px-4">
-        <div className="relative h-[450px] md:h-[550px] overflow-hidden rounded-2xl shadow-2xl">
-        {banners.map((banner, index) => (
-          <Link
-            key={banner.id}
-            href={banner.link}
-            className={`absolute inset-0 transition-all duration-1000 ease-in-out cursor-pointer group ${
-              index === currentSlide
-                ? 'opacity-100 z-10'
-                : 'opacity-0 z-0'
-            }`}
-          >
-            {/* Background Image with Overlay */}
-            <div className="absolute inset-0">
-              {/* Background Image */}
-              <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-                style={{ backgroundImage: `url(${banner.bgImage})` }}
-              ></div>
-              {/* Soft Overlay for better text readability - reduced opacity for less contrast */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${banner.bgGradient} opacity-60`}></div>
-              {/* Subtle vignette effect */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
-            </div>
+    <section className="relative w-full">
+      <div className="relative h-[500px] sm:h-[600px] md:h-[700px] overflow-hidden">
 
-            {/* Content */}
-            <div className="relative h-full flex items-center">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-                <div className="max-w-3xl">
-                  {/* Title */}
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6 animate-fade-in drop-shadow-lg" style={{
-                    fontFamily: 'var(--font-playfair), Playfair Display, serif'
-                  }}>
+        {banners.map((banner, index) => {
+          const isActive = index === currentSlide;
+          return (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+            >
+              {/* Background image — Ken Burns zoom only on active slide */}
+              <div
+                key={isActive ? `active-${slideKey}` : `idle-${banner.id}`}
+                className={`absolute inset-0 bg-cover bg-center ${isActive ? 'animate-ken-burns' : ''}`}
+                style={{ backgroundImage: `url(${banner.bgImage})` }}
+              />
+
+              {/* Dark gradient — left-heavy for text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/10 pointer-events-none" />
+              {/* Bottom fade for indicator readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+              {/* Clickable text area */}
+              <Link href={banner.link} className="absolute inset-0">
+                <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
+
+                  {/* Collection tag */}
+                  <span
+                    key={`tag-${slideKey}-${banner.id}`}
+                    className={`banner-cta text-[10px] sm:text-[11px] text-white/65 tracking-[0.3em] uppercase mb-4 font-medium ${isActive ? '' : 'opacity-0'}`}
+                  >
+                    {language === 'hi' ? banner.tagHi : banner.tag}
+                  </span>
+
+                  {/* Heading */}
+                  <h2
+                    key={`title-${slideKey}-${banner.id}`}
+                    className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-white leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
+                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
+                  >
                     {language === 'hi' ? banner.titleHi : banner.title}
-                  </h1>
+                  </h2>
 
                   {/* Subtitle */}
-                  <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed font-medium animate-fade-in drop-shadow-md" style={{
-                    animationDelay: '200ms'
-                  }}>
+                  <p
+                    key={`sub-${slideKey}-${banner.id}`}
+                    className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 mb-8 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
+                  >
                     {language === 'hi' ? banner.subtitleHi : banner.subtitle}
                   </p>
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
 
-        {/* Navigation - Minimal & Premium */}
+                  {/* CTA button — rounded, brand color, hover animation */}
+                  <span
+                    key={`cta-${slideKey}-${banner.id}`}
+                    className={`banner-cta self-start inline-flex items-center gap-2.5 px-8 py-3.5 bg-white text-[#1A1A1A] text-[11px] font-semibold tracking-[0.18em] uppercase rounded-full shadow-lg transition-all duration-300 hover:bg-[#722F37] hover:text-white hover:shadow-xl hover:-translate-y-0.5 ${isActive ? '' : 'opacity-0'}`}
+                  >
+                    {language === 'hi' ? 'अभी खरीदें' : 'Shop Now'}
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </span>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
+
+        {/* Prev arrow — circular glassmorphism */}
         <button
           onClick={prevSlide}
-          className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 z-30 w-12 h-12 bg-white/90 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-lg hover:shadow-xl"
+          className="absolute left-4 md:left-7 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 hover:bg-white/40 hover:scale-110 hover:border-white/60 group"
           aria-label="Previous"
         >
-          <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white transition-transform duration-200 group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
+        {/* Next arrow — circular glassmorphism */}
         <button
           onClick={nextSlide}
-          className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 z-30 w-12 h-12 bg-white/90 backdrop-blur-sm hover:bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center transition-all duration-300 group shadow-lg hover:shadow-xl"
+          className="absolute right-4 md:right-7 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 hover:bg-white/40 hover:scale-110 hover:border-white/60 group"
           aria-label="Next"
         >
-          <svg className="w-6 h-6 text-[#722F37] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
 
-        {/* Dots - Clean & Minimal */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+        {/* Progress indicators — aligned with text left padding */}
+        <div className="absolute bottom-6 left-8 sm:left-14 lg:left-24 z-30 flex gap-2 items-center">
           {banners.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`transition-all duration-300 rounded-full ${
-                index === currentSlide
-                  ? 'w-10 h-2 bg-[#722F37]'
-                  : 'w-2 h-2 bg-[#722F37]/40 hover:bg-[#722F37]/60'
+              className={`h-[2px] transition-all duration-500 rounded-full ${
+                index === currentSlide ? 'w-10 bg-white' : 'w-5 bg-white/35 hover:bg-white/55'
               }`}
               aria-label={`Slide ${index + 1}`}
             />
           ))}
-        </div>
         </div>
       </div>
     </section>
