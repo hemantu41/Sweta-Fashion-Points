@@ -5,12 +5,28 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, mobile, location, password } = body;
+    const { name, email, mobile, location, address, pincode, password } = body;
 
     // Validation
-    if (!name || !email || !mobile || !location || !password) {
+    if (!name || !email || !mobile || !location || !address || !pincode || !password) {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'All required fields must be filled' },
+        { status: 400 }
+      );
+    }
+
+    // Validate pincode (6 digits)
+    if (!/^\d{6}$/.test(pincode)) {
+      return NextResponse.json(
+        { error: 'Pincode must be a 6-digit number' },
+        { status: 400 }
+      );
+    }
+
+    // Validate mobile (10-digit Indian number)
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid 10-digit mobile number' },
         { status: 400 }
       );
     }
@@ -41,12 +57,14 @@ export async function POST(request: NextRequest) {
           email: email.toLowerCase().trim(),
           mobile: mobile.trim(),
           location: location.trim(),
+          address: address.trim(),
+          pincode: pincode.trim(),
           password: hashedPassword,
           citizenship: 'Indian',
           is_verified: true,
         },
       ])
-      .select('id, name, email, mobile, location')
+      .select('id, name, email, mobile, location, address, pincode')
       .single();
 
     if (error) {

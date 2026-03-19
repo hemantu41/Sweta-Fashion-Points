@@ -12,6 +12,8 @@ export default function SignupPage() {
     email: '',
     mobile: '',
     location: '',
+    address: '',
+    pincode: '',
     password: '',
     confirmPassword: '',
   });
@@ -19,7 +21,7 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Verification states
+  // Email verification (optional)
   const [emailVerification, setEmailVerification] = useState({
     otpSent: false,
     otp: '',
@@ -27,33 +29,22 @@ export default function SignupPage() {
     loading: false,
     error: '',
   });
-  const [mobileVerification, setMobileVerification] = useState({
-    otpSent: false,
-    otp: '',
-    verified: false,
-    loading: false,
-    error: '',
-  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === 'mobile') {
-      // Only allow digits and limit to 10
-      setFormData({ ...formData, [name]: value.replace(/\D/g, '').slice(0, 10) });
+    if (name === 'mobile' || name === 'pincode') {
+      setFormData({ ...formData, [name]: value.replace(/\D/g, '').slice(0, name === 'mobile' ? 10 : 6) });
     } else {
       setFormData({ ...formData, [name]: value });
     }
 
-    // Reset verification if email or mobile changes
+    // Reset email verification if email changes
     if (name === 'email' && emailVerification.verified) {
       setEmailVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
     }
-    if (name === 'mobile' && mobileVerification.verified) {
-      setMobileVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
-    }
   };
 
-  // Send email OTP
+  // Send email OTP (optional verification)
   const sendEmailOTP = async () => {
     if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       setEmailVerification(prev => ({ ...prev, error: 'Please enter a valid email address' }));
@@ -66,10 +57,7 @@ export default function SignupPage() {
       const response = await fetch('/api/auth/send-signup-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'email',
-          value: formData.email,
-        }),
+        body: JSON.stringify({ type: 'email', value: formData.email }),
       });
 
       const data = await response.json();
@@ -79,7 +67,7 @@ export default function SignupPage() {
       } else {
         setEmailVerification(prev => ({ ...prev, error: data.error || 'Failed to send OTP', loading: false }));
       }
-    } catch (error) {
+    } catch {
       setEmailVerification(prev => ({ ...prev, error: 'Error sending OTP', loading: false }));
     }
   };
@@ -97,11 +85,7 @@ export default function SignupPage() {
       const response = await fetch('/api/auth/verify-signup-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'email',
-          value: formData.email,
-          otp: emailVerification.otp,
-        }),
+        body: JSON.stringify({ type: 'email', value: formData.email, otp: emailVerification.otp }),
       });
 
       const data = await response.json();
@@ -111,71 +95,8 @@ export default function SignupPage() {
       } else {
         setEmailVerification(prev => ({ ...prev, error: data.error || 'Invalid OTP', loading: false }));
       }
-    } catch (error) {
+    } catch {
       setEmailVerification(prev => ({ ...prev, error: 'Error verifying OTP', loading: false }));
-    }
-  };
-
-  // Send mobile OTP
-  const sendMobileOTP = async () => {
-    if (!formData.mobile || !/^[6-9]\d{9}$/.test(formData.mobile)) {
-      setMobileVerification(prev => ({ ...prev, error: 'Please enter a valid 10-digit mobile number' }));
-      return;
-    }
-
-    setMobileVerification(prev => ({ ...prev, loading: true, error: '' }));
-
-    try {
-      const response = await fetch('/api/auth/send-signup-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'mobile',
-          value: formData.mobile,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMobileVerification(prev => ({ ...prev, otpSent: true, loading: false }));
-      } else {
-        setMobileVerification(prev => ({ ...prev, error: data.error || 'Failed to send OTP', loading: false }));
-      }
-    } catch (error) {
-      setMobileVerification(prev => ({ ...prev, error: 'Error sending OTP', loading: false }));
-    }
-  };
-
-  // Verify mobile OTP
-  const verifyMobileOTP = async () => {
-    if (!mobileVerification.otp || mobileVerification.otp.length !== 6) {
-      setMobileVerification(prev => ({ ...prev, error: 'Please enter a valid 6-digit OTP' }));
-      return;
-    }
-
-    setMobileVerification(prev => ({ ...prev, loading: true, error: '' }));
-
-    try {
-      const response = await fetch('/api/auth/verify-signup-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'mobile',
-          value: formData.mobile,
-          otp: mobileVerification.otp,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.verified) {
-        setMobileVerification(prev => ({ ...prev, verified: true, loading: false }));
-      } else {
-        setMobileVerification(prev => ({ ...prev, error: data.error || 'Invalid OTP', loading: false }));
-      }
-    } catch (error) {
-      setMobileVerification(prev => ({ ...prev, error: 'Error verifying OTP', loading: false }));
     }
   };
 
@@ -184,13 +105,19 @@ export default function SignupPage() {
     setError('');
     setSuccess('');
 
-    // Check if email is verified
-    if (!emailVerification.verified) {
-      setError('Please verify your email address before signing up');
+    // Validate mobile
+    if (!/^[6-9]\d{9}$/.test(formData.mobile)) {
+      setError('Please enter a valid 10-digit mobile number');
       return;
     }
 
-    // Validation
+    // Validate pincode
+    if (!/^\d{6}$/.test(formData.pincode)) {
+      setError('Pincode must be a 6-digit number');
+      return;
+    }
+
+    // Validate passwords
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -212,6 +139,8 @@ export default function SignupPage() {
           email: formData.email,
           mobile: formData.mobile,
           location: formData.location,
+          address: formData.address,
+          pincode: formData.pincode,
           password: formData.password,
         }),
       });
@@ -256,6 +185,7 @@ export default function SignupPage() {
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
+
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -272,10 +202,32 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Email with Verification */}
+            {/* Mobile (Mandatory) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address <span className="text-red-500">*</span>
+                Mobile Number <span className="text-red-500">*</span>
+              </label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-600 text-sm">
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  name="mobile"
+                  value={formData.mobile}
+                  onChange={handleChange}
+                  required
+                  maxLength={10}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
+                  placeholder="10 digit number"
+                />
+              </div>
+            </div>
+
+            {/* Email with optional verification */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address <span className="text-gray-500 text-xs">(Optional — verify for added security)</span>
               </label>
               <div className="flex gap-2">
                 <input
@@ -283,16 +235,15 @@ export default function SignupPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required
                   disabled={emailVerification.verified}
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all disabled:bg-gray-50"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email (optional)"
                 />
-                {!emailVerification.verified && (
+                {!emailVerification.verified && formData.email && (
                   <button
                     type="button"
                     onClick={sendEmailOTP}
-                    disabled={emailVerification.loading || !formData.email}
+                    disabled={emailVerification.loading}
                     className="px-4 py-2 bg-[#722F37] text-white rounded-lg font-medium hover:bg-[#5a252c] transition-all disabled:opacity-50 whitespace-nowrap text-sm"
                   >
                     {emailVerification.loading ? 'Sending...' : emailVerification.otpSent ? 'Resend' : 'Verify'}
@@ -340,31 +291,10 @@ export default function SignupPage() {
               )}
             </div>
 
-            {/* Mobile */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mobile Number <span className="text-gray-500 text-xs">(Optional)</span>
-              </label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-600 text-sm">
-                  +91
-                </span>
-                <input
-                  type="tel"
-                  name="mobile"
-                  value={formData.mobile}
-                  onChange={handleChange}
-                  maxLength={10}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
-                  placeholder="10 digit number"
-                />
-              </div>
-            </div>
-
             {/* Location */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Location <span className="text-red-500">*</span>
+                City / Town <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -373,7 +303,40 @@ export default function SignupPage() {
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
-                placeholder="Enter your city/town"
+                placeholder="Enter your city or town"
+              />
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
+                placeholder="House/Flat No., Street, Area"
+              />
+            </div>
+
+            {/* Pincode (Mandatory) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Pincode <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="pincode"
+                value={formData.pincode}
+                onChange={handleChange}
+                required
+                maxLength={6}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
+                placeholder="6-digit pincode"
               />
             </div>
 
@@ -422,19 +385,10 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Verification Warning */}
-            {!emailVerification.verified && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-xs text-yellow-800">
-                  <strong>⚠️ Verification Required:</strong> Please verify your email before signing up.
-                </p>
-              </div>
-            )}
-
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || !emailVerification.verified}
+              disabled={isLoading}
               className="w-full bg-[#722F37] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#5a252c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
