@@ -69,12 +69,15 @@ export async function POST(request: NextRequest) {
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+    // Map 'mobile' to 'phone' to match DB CHECK constraint (type IN ('email', 'phone'))
+    const dbType = type === 'mobile' ? 'phone' : type;
+
     // Save OTP to database (reuse seller_verification_otps table)
     const { error: otpError } = await supabase
       .from('seller_verification_otps')
       .insert([
         {
-          type,
+          type: dbType,
           value: type === 'email' ? value.toLowerCase() : value,
           otp,
           expires_at: expiresAt.toISOString(),

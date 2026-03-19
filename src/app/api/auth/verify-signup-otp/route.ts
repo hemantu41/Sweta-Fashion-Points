@@ -22,11 +22,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Map 'mobile' to 'phone' to match DB CHECK constraint (type IN ('email', 'phone'))
+    const dbType = type === 'mobile' ? 'phone' : type;
+
     // Find the latest valid OTP for this type and value
     const { data: otpRecord, error: otpError } = await supabase
       .from('seller_verification_otps')
       .select('*')
-      .eq('type', type)
+      .eq('type', dbType)
       .eq('value', type === 'email' ? value.toLowerCase() : value)
       .eq('otp', otp)
       .eq('is_used', false)
