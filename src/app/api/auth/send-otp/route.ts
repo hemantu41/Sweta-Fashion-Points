@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user exists
     const { data: user, error: userError } = await supabase
-      .from('users')
+      .from('spf_users')
       .select('id, name, email')
       .eq('email', email.toLowerCase())
       .single();
