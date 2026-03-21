@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getSession } from '@/lib/session';
+import { migrateSellerDataToCache } from '@/lib/sellerCache';
 
 const IS_DEMO = process.env.NEXT_PUBLIC_MSG91_DEMO_MODE === 'true';
 
@@ -95,6 +96,11 @@ export async function POST(request: NextRequest) {
     session.mobile = mobile;
     session.isLoggedIn = true;
     await session.save();
+
+    // ── Fire-and-forget: warm Redis cache for approved sellers ─────────────
+    if (seller && seller.status === 'approved') {
+      migrateSellerDataToCache(seller.id).catch(() => {});
+    }
 
     const { is_admin, ...userData } = user;
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 // GET /api/products/[id] - Fetch single product by ID
 export async function GET(
@@ -170,6 +171,11 @@ export async function PUT(
     const { productCache } = await import('@/lib/cache');
     productCache.clear();
 
+    // Invalidate seller Redis cache for products + inventory + pricing
+    if (updatedProduct?.seller_id) {
+      invalidateSellerKeys(updatedProduct.seller_id, 'products', 'inventory', 'pricing').catch(() => {});
+    }
+
     return NextResponse.json({
       message: isAdmin
         ? 'Product updated successfully'
@@ -319,9 +325,14 @@ export async function DELETE(
       }
     }
 
-    // Clear product cache
+    // Clear in-memory product cache
     const { productCache } = await import('@/lib/cache');
     productCache.clear();
+
+    // Invalidate seller Redis cache for products + inventory + pricing
+    if (product?.seller_id) {
+      invalidateSellerKeys(product.seller_id, 'products', 'inventory', 'pricing').catch(() => {});
+    }
 
     return NextResponse.json({
       message: isFirstDeletion

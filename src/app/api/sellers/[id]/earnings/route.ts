@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sellerCacheGet, sellerCacheSet } from '@/lib/sellerCache';
 
 // GET /api/sellers/[id]/earnings - Fetch seller earnings with filters
 export async function GET(
@@ -15,6 +16,24 @@ export async function GET(
     const endDate = searchParams.get('endDate');
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
+
+    // ── Cache-first (only for default unfiltered requests) ─────────────────
+    const isDefaultQuery = !paymentStatus && !startDate && !endDate && limit === 100 && offset === 0;
+    if (isDefaultQuery) {
+      const cachedEarnings = await sellerCacheGet<any[]>(sellerId, 'analytics');
+      if (cachedEarnings !== null) {
+        const total   = cachedEarnings.reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
+        const commission = cachedEarnings.reduce((s, e) => s + parseFloat(e.commission_amount?.toString() || '0'), 0);
+        const pending = cachedEarnings.filter(e => e.payment_status === 'pending').reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
+        const paid    = cachedEarnings.filter(e => ['paid', 'settled'].includes(e.payment_status || '')).reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
+        return NextResponse.json({
+          earnings: cachedEarnings.slice(offset, offset + limit),
+          total: cachedEarnings.length,
+          summary: { totalEarnings: total, totalCommission: commission, pendingEarnings: pending, paidEarnings: paid },
+          fromCache: true,
+        }, { headers: { 'X-Cache': 'HIT' } });
+      }
+    }
 
     let query = supabaseAdmin
       .from('spf_seller_earnings')
@@ -53,16 +72,17 @@ export async function GET(
     const paidEarnings = summary?.filter(e => e.payment_status === 'paid')
       .reduce((sum, e) => sum + parseFloat(e.seller_earning.toString()), 0) || 0;
 
+    // Cache the raw earnings for re-use (background)
+    if (isDefaultQuery && earnings) {
+      sellerCacheSet(sellerId, 'analytics', earnings).catch(() => {});
+    }
+
     return NextResponse.json({
       earnings: earnings || [],
       total: count || 0,
-      summary: {
-        totalEarnings,
-        totalCommission,
-        pendingEarnings,
-        paidEarnings,
-      },
-    });
+      summary: { totalEarnings, totalCommission, pendingEarnings, paidEarnings },
+      fromCache: false,
+    }, { headers: { 'X-Cache': 'MISS' } });
   } catch (error: any) {
     console.error('[Seller Earnings API] GET Error:', error);
     return NextResponse.json(

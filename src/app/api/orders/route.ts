@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { sellerCacheGet, sellerCacheSet } from '@/lib/sellerCache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,6 +21,15 @@ export async function GET(request: NextRequest) {
     let error: any = null;
 
     if (sellerId) {
+      // ── Cache-first for seller orders ─────────────────────────────────
+      const cachedOrders = await sellerCacheGet<any[]>(sellerId, 'orders');
+      if (cachedOrders !== null) {
+        return NextResponse.json(
+          { success: true, orders: cachedOrders, fromCache: true },
+          { headers: { 'X-Cache': 'HIT' } }
+        );
+      }
+
       // Seller packing queue: captured + unpacked + items contain this seller
       ({ data, error } = await supabase
         .from('spf_payment_orders')
@@ -47,10 +57,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      orders: orders || [],
-    });
+    // Cache seller orders after DB fetch (background)
+    if (sellerId && orders) {
+      sellerCacheSet(sellerId, 'orders', orders).catch(() => {});
+    }
+
+    return NextResponse.json(
+      { success: true, orders: orders || [], fromCache: false },
+      { headers: { 'X-Cache': 'MISS' } }
+    );
   } catch (error: any) {
     console.error('[Orders API] Error:', error);
     return NextResponse.json(

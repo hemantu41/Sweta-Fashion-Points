@@ -93,8 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    // Also clear the iron-session cookie
-    fetch('/api/logout', { method: 'POST' }).catch(() => {});
+    // Clear iron-session cookie + seller Redis cache
+    const sellerId = user?.sellerId;
+    fetch('/api/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sellerId }),
+    }).catch(() => {});
   };
 
   return (
