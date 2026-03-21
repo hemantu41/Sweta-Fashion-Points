@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin QC Review Panel — Insta Fashion Points</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand:       #8B2020;
+  --brand-light: #B83232;
+  --brand-muted: #F5E8E8;
+  --cream:       #FAF8F5;
+  --cream-dark:  #F0EDE8;
+  --cream-border:#E8E3DC;
+  --amber:       #8B5E0A;
+  --amber-bg:    #FEF3DC;
+  --amber-border:#F0C84A;
+  --green:       #2D4A22;
+  --green-bg:    #EAF2E7;
+  --green-border:#5C9E47;
+  --red-bg:      #FDE8E8;
+  --red-border:  #E57373;
+  --ink:         #1A1209;
+  --ink-mid:     #4A3F35;
+  --ink-light:   #7A6F65;
+  --white:       #FFFFFF;
+  --shadow-sm:   0 1px 3px rgba(26,18,9,.07);
+  --shadow-md:   0 4px 16px rgba(26,18,9,.10);
+  --shadow-lg:   0 12px 40px rgba(26,18,9,.16);
+  --radius:      12px;
+  --radius-sm:   8px;
+}
+
+html { font-size: 15px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════════════════════════════ */
+.navbar {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--white);
+  border-bottom: 1px solid var(--cream-border);
+  padding: 0 28px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem; font-weight: 700;
+  color: var(--brand);
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-brand-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .5; transform: scale(1.4); }
+}
+.nav-right { display: flex; align-items: center; gap: 14px; }
+.nav-badge {
+  font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--brand-muted); color: var(--brand);
+}
+.nav-badge.amber { background: var(--amber-bg); color: var(--amber); }
+.nav-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--brand); color: #fff;
+  font-weight: 700; font-size: .8rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-subtitle {
+  font-size: .72rem; color: var(--ink-light);
+  border-left: 1px solid var(--cream-border);
+  padding-left: 14px; margin-left: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE LAYOUT
+═══════════════════════════════════════════════════════════════ */
+.page-header {
+  padding: 28px 28px 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.page-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem; font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.page-sub {
+  font-size: .82rem; color: var(--ink-light);
+  margin-top: 4px;
+}
+.refresh-info {
+  font-size: .76rem; color: var(--ink-light);
+  display: flex; align-items: center; gap: 6px;
+}
+.refresh-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green-border);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Stats Row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 20px 28px 0;
+}
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--cream-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: transform .15s, box-shadow .15s;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.stat-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.stat-icon.red { background: var(--red-bg); }
+.stat-icon.amber { background: var(--amber-bg); }
+.stat-icon.green { background: var(--green-bg); }
+.stat-icon.brand { background: var(--brand-muted); }
+.stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.9rem; font-weight: 700;
+  line-height: 1; color: var(--ink);
+}
+.stat-label {
+  font-size: .72rem; font-weight: 500;
+  color: var(--ink-light); margin-top: 3px;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.stat-num.red { color: var(--brand); }
+.stat-num.amber { color: var(--amber); }
+.stat-num.green { color: var(--green); }
+
+/* Sort Controls */
+.sort-bar {
+  padding: 16px 28px 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.sort-label {
+  font-size: .76rem; color: var(--ink-light);
+  font-weight: 500; margin-right: 4px;
+}
+.sort-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: .76rem; font-weight: 500;
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--cream-border);
+  background: var(--white); color: var(--ink-mid);
+  cursor: pointer; transition: all .15s;
+}
+.sort-btn:hover { border-color: var(--brand); color: var(--brand); }
+.sort-btn.active {
+  background: var(--brand); color: #fff;
+  border-color: var(--brand);
+}
+
+/* 2-Column Main Layout */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  padding: 18px 28px 40px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRODUCT QUEUE
+═══════════════════════════════════════════════════════════════ */
+.queue-col {}
+.queue-empty {
+  text-align: center; padding: 60px 20px;
+  color: var(--ink-light); font-size: .9rem;
+}
+
+.product-card {
+  background: var(--white);
+  border: 1px solid var(--cream-border);
+  border-left: 4px solid var(--green-border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow .15s, transform .15s;
+  position: relative;
+}
+.product-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.product-card.overdue { border-left-color: var(--brand); }
+.product-card.warning { border-left-color: var(--amber-border); }
+.product-card.ontrack { border-left-color: var(--green-border); }
+
+.card-body {
+  display: flex; gap: 16px;
+  padding: 16px 18px;
+}
+.card-img {
+  width: 80px; height: 96px;
+  border-radius: var(--radius-sm);
+  object-fit: cover; flex-shrink: 0;
+  background: var(--cream-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; color: var(--ink-light);
+  border: 1px solid var(--cream-border);
+  overflow: hidden;
+}
+.card-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-info { flex: 1; min-width: 0; }
+.card-top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 8px;
+}
+.card-name {
+  font-weight: 600; font-size: .93rem;
+  color: var(--ink); line-height: 1.3;
+}
+.card-pid {
+  font-size: .7rem; color: var(--ink-light);
+  margin-top: 2px; font-family: monospace;
+}
+.sla-pill {
+  font-size: .68rem; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0;
+  letter-spacing: .04em;
+}
+.sla-pill.overdue {
+  background: var(--red-bg); color: var(--brand);
+  border: 1px solid #E57373;
+}
+.sla-pill.warning {
+  background: var(--amber-bg); color: var(--amber);
+  border: 1px solid var(--amber-border);
+}
+.sla-pill.ontrack {
+  background: var(--green-bg); color: var(--green);
+  border: 1px solid var(--green-border);
+}
+
+.card-meta {
+  display: flex; flex-wrap: wrap; gap: 8px 16px;
+  margin-top: 8px; font-size: .77rem; color: var(--ink-mid);
+}
+.meta-item { display: flex; align-items: center; gap: 4px; }
+.meta-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--cream-border); display: inline-block;
+}
+.card-seller {
+  font-size: .76rem; margin-top: 8px;
+  display: flex; align-items: center; gap: 6px;
+  color: var(--ink-light);
+}
+.seller-chip {
+  background: var(--cream-dark);
+  border: 1px solid var(--cream-border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: .72rem; color: var(--ink-mid);
+  font-weight: 500;
+}
+.card-actions {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px;
+}
+.btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: .78rem; font-weight: 600;
+  padding: 7px 18px; border-radius: 8px;
+  border: none; cursor: pointer;
+  transition: all .15s;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.btn-approve {
+  background: var(--green); color: #fff;
+}
+.btn-approve:hover { background: #3a5f2b; }
+.btn-reject {
+  background: var(--brand-muted); color: var(--brand);
+  border: 1px solid #ddb8b8;
+}
+.btn-reject:hover { background: var(--brand); color: #fff; }
+.btn-preview {
+  background: var(--cream-dark); color: var(--ink-mid);
+  border: 1px solid var(--cream-border);
+}
+.btn-preview:hover { background: var(--cream-border); }
+
+/* SLA Progress Bar */
+.sla-bar-wrap {
+  height: 4px; background: var(--cream-dark);
+}
+.sla-bar {
+  height: 4px; transition: width .8s ease;
+}
+.sla-bar.overdue { background: var(--brand); }
+.sla-bar.warning { background: var(--amber-border); }
+.sla-bar.ontrack { background: var(--green-border); }
+
+.card-footer {
+  padding: 8px 18px;
+  border-top: 1px solid var(--cream-border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--cream);
+  font-size: .72rem; color: var(--ink-light);
+}
+.submitted-ago { font-weight: 500; }
+.feedback-count {
+  display: flex; align-items: center; gap: 4px;
+  color: var(--ink-light); font-size: .72rem;
+}
+.fc-badge {
+  background: var(--cream-dark);
+  border: 1px solid var(--cream-border);
+  border-radius: 10px;
+  padding: 1px 7px; font-size: .68rem; font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RIGHT COLUMN — NOTIFY LOG
+═══════════════════════════════════════════════════════════════ */
+.right-col { position: sticky; top: 76px; align-self: flex-start; }
+
+.panel {
+  background: var(--white);
+  border: 1px solid var(--cream-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cream-border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--cream);
+}
+.panel-title {
+  font-size: .82rem; font-weight: 700;
+  color: var(--ink); display: flex; align-items: center; gap: 6px;
+}
+.panel-count {
+  font-size: .68rem; font-weight: 700;
+  background: var(--brand); color: #fff;
+  padding: 2px 7px; border-radius: 10px;
+}
+.panel-clear {
+  font-size: .7rem; color: var(--ink-light);
+  background: none; border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  padding: 4px 8px; border-radius: 6px;
+  transition: background .15s;
+}
+.panel-clear:hover { background: var(--cream-dark); }
+
+.event-log {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.event-log::-webkit-scrollbar { width: 4px; }
+.event-log::-webkit-scrollbar-track { background: var(--cream); }
+.event-log::-webkit-scrollbar-thumb { background: var(--cream-border); border-radius: 4px; }
+
+.event-item {
+  border: 1px solid var(--cream-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: var(--cream);
+  animation: slideIn .25s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.event-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 4px;
+}
+.event-name {
+  font-size: .72rem; font-weight: 700;
+  font-family: monospace;
+  color: var(--brand);
+}
+.event-status {
+  font-size: .65rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 10px;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.event-status.sent { background: var(--green-bg); color: var(--green); }
+.event-status.pending { background: var(--amber-bg); color: var(--amber); }
+.event-status.failed { background: var(--red-bg); color: var(--brand); }
+.event-product { font-size: .74rem; color: var(--ink-mid); font-weight: 500; }
+.event-time { font-size: .68rem; color: var(--ink-light); margin-top: 2px; }
+
+.log-empty {
+  text-align: center; padding: 32px 16px;
+  color: var(--ink-light); font-size: .8rem;
+}
+.log-empty-icon { font-size: 1.8rem; margin-bottom: 8px; opacity: .4; }
+
+/* Queue Summary Panel */
+.summary-panel {
+  margin-top: 14px;
+}
+.summary-row {
+  padding: 11px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--cream-border);
+  font-size: .78rem; color: var(--ink-mid);
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-val { font-weight: 700; color: var(--ink); }
+
+/* ═══════════════════════════════════════════════════════════════
+   APPROVE MODAL
+═══════════════════════════════════════════════════════════════ */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(26,18,9,.45);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.modal-backdrop.open {
+  opacity: 1; pointer-events: all;
+}
+.modal {
+  background: var(--white);
+  border-radius: 16px;
+  width: 520px; max-width: calc(100vw - 40px);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: scale(.95) translateY(12px);
+  transition: transform .2s;
+}
+.modal-backdrop.open .modal { transform: scale(1) translateY(0); }
+
+.modal-header {
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--cream-border);
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.modal-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.modal-icon.green { background: var(--green-bg); }
+.modal-icon.red { background: var(--red-bg); }
+.modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem; font-weight: 700; color: var(--ink);
+}
+.modal-sub { font-size: .78rem; color: var(--ink-light); margin-top: 3px; }
+.modal-close {
+  margin-left: auto; background: none; border: none;
+  font-size: 1.2rem; cursor: pointer; color: var(--ink-light);
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.modal-close:hover { background: var(--cream-dark); }
+
+.modal-body { padding: 20px 24px; }
+
+/* Approve checklist */
+.notify-checklist { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.notify-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--cream-border);
+  background: var(--cream);
+}
+.notify-check {
+  width: 20px; height: 20px; border-radius: 6px;
+  background: var(--green-bg); border: 2px solid var(--green-border);
+  flex-shrink: 0; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+}
+.notify-check::after { content: '✓'; font-size: .72rem; color: var(--green); font-weight: 700; }
+.notify-check.pending-check {
+  background: var(--amber-bg); border-color: var(--amber-border);
+}
+.notify-check.pending-check::after { content: '◷'; color: var(--amber); }
+.notify-name {
+  font-size: .78rem; font-weight: 700;
+  font-family: monospace; color: var(--brand);
+}
+.notify-desc { font-size: .74rem; color: var(--ink-light); margin-top: 2px; }
+.notify-badge {
+  margin-left: auto; flex-shrink: 0;
+  font-size: .65rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.notify-badge.will-fire { background: var(--green-bg); color: var(--green); }
+.notify-badge.queued { background: var(--amber-bg); color: var(--amber); }
+
+/* Reject reason tags */
+.reason-grid {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 18px;
+}
+.reason-tag {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  border: 2px solid var(--cream-border);
+  background: var(--cream);
+  cursor: pointer; transition: all .15s;
+  position: relative;
+}
+.reason-tag:hover { border-color: var(--brand); background: var(--brand-muted); }
+.reason-tag.selected { border-color: var(--brand); background: var(--brand-muted); }
+.reason-tag input[type="checkbox"] { display: none; }
+.reason-check-box {
+  width: 18px; height: 18px; border-radius: 5px;
+  border: 2px solid var(--cream-border);
+  background: var(--white);
+  flex-shrink: 0; margin-top: 1px;
+  transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.reason-tag.selected .reason-check-box {
+  background: var(--brand); border-color: var(--brand);
+}
+.reason-tag.selected .reason-check-box::after {
+  content: '✓'; font-size: .68rem; color: #fff; font-weight: 700;
+}
+.reason-tag-body { flex: 1; min-width: 0; }
+.reason-title { font-size: .8rem; font-weight: 600; color: var(--ink); }
+.reason-desc { font-size: .72rem; color: var(--ink-light); margin-top: 2px; }
+.reason-fix {
+  font-size: .68rem; color: var(--brand);
+  margin-top: 4px; font-style: italic;
+  display: none;
+}
+.reason-tag.selected .reason-fix { display: block; }
+.reason-severity-wrap {
+  font-size: .68rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 10px;
+  flex-shrink: 0;
+}
+.reason-severity-wrap.minor { background: var(--green-bg); color: var(--green); }
+.reason-severity-wrap.major { background: var(--amber-bg); color: var(--amber); }
+.reason-severity-wrap.critical { background: var(--red-bg); color: var(--brand); }
+
+/* Severity picker */
+.severity-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 16px;
+}
+.severity-label {
+  font-size: .78rem; font-weight: 600; color: var(--ink);
+  flex-shrink: 0; margin-right: 4px;
+}
+.sev-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: .74rem; font-weight: 600;
+  padding: 6px 14px; border-radius: 20px;
+  border: 2px solid var(--cream-border);
+  background: var(--white); cursor: pointer;
+  transition: all .15s;
+}
+.sev-btn:hover { border-color: var(--brand); }
+.sev-btn.active.minor { background: var(--green-bg); border-color: var(--green-border); color: var(--green); }
+.sev-btn.active.major { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber); }
+.sev-btn.active.critical { background: var(--red-bg); border-color: var(--brand); color: var(--brand); }
+
+/* Note textarea */
+.note-wrap { position: relative; margin-bottom: 16px; }
+.note-label { font-size: .78rem; font-weight: 600; color: var(--ink); margin-bottom: 6px; display: block; }
+.note-optional { font-weight: 400; color: var(--ink-light); font-size: .72rem; }
+.note-ta {
+  width: 100%; min-height: 80px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .8rem; color: var(--ink);
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--cream-border);
+  background: var(--cream);
+  resize: vertical; outline: none;
+  transition: border-color .15s;
+}
+.note-ta:focus { border-color: var(--brand); background: var(--white); }
+.note-counter {
+  text-align: right; font-size: .7rem;
+  color: var(--ink-light); margin-top: 4px;
+}
+.note-counter.warn { color: var(--amber); }
+.note-counter.over { color: var(--brand); }
+
+/* Seller preview strip */
+.seller-preview {
+  background: var(--cream);
+  border: 1px solid var(--cream-border);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  font-size: .76rem;
+}
+.seller-preview-title {
+  font-weight: 700; color: var(--ink); font-size: .8rem;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.seller-preview-row { color: var(--ink-mid); margin-bottom: 4px; }
+.seller-preview-row span { font-weight: 600; color: var(--ink); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tag-chip {
+  font-size: .68rem; font-weight: 600;
+  padding: 3px 9px; border-radius: 10px;
+  background: var(--brand-muted); color: var(--brand);
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--cream-border);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; background: var(--cream);
+}
+.btn-cancel {
+  font-family: 'DM Sans', sans-serif;
+  font-size: .8rem; font-weight: 500;
+  background: none; border: 1.5px solid var(--cream-border);
+  border-radius: var(--radius-sm); padding: 9px 18px;
+  color: var(--ink-mid); cursor: pointer; transition: all .15s;
+}
+.btn-cancel:hover { border-color: var(--ink-light); }
+.btn-confirm {
+  font-family: 'DM Sans', sans-serif;
+  font-size: .82rem; font-weight: 700;
+  padding: 9px 22px; border-radius: var(--radius-sm);
+  border: none; cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-confirm.green { background: var(--green); color: #fff; }
+.btn-confirm.green:hover { background: #3a5f2b; }
+.btn-confirm.red { background: var(--brand); color: #fff; }
+.btn-confirm.red:hover { background: var(--brand-light); }
+.btn-confirm:disabled {
+  background: var(--cream-border); color: var(--ink-light);
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+═══════════════════════════════════════════════════════════════ */
+.toast-area {
+  position: fixed; bottom: 24px; right: 24px;
+  z-index: 200;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  min-width: 300px; max-width: 360px;
+  background: var(--white);
+  border: 1px solid var(--cream-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-lg);
+  display: flex; align-items: flex-start; gap: 10px;
+  pointer-events: all;
+  animation: toastIn .3s ease;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.toast.fade-out {
+  animation: toastOut .3s ease forwards;
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+.toast-icon {
+  width: 36px; height: 36px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.toast-icon.green { background: var(--green-bg); }
+.toast-icon.red { background: var(--red-bg); }
+.toast-icon.amber { background: var(--amber-bg); }
+.toast-title { font-size: .82rem; font-weight: 700; color: var(--ink); }
+.toast-desc { font-size: .74rem; color: var(--ink-light); margin-top: 2px; }
+.toast-close {
+  margin-left: auto; background: none; border: none;
+  font-size: 1rem; cursor: pointer; color: var(--ink-light);
+  padding: 2px; flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRODUCT PREVIEW MODAL (read-only)
+═══════════════════════════════════════════════════════════════ */
+.preview-grid {
+  display: grid; grid-template-columns: 140px 1fr;
+  gap: 18px; margin-bottom: 18px;
+}
+.preview-img-area {
+  background: var(--cream-dark);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--cream-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem; height: 160px;
+}
+.preview-field { margin-bottom: 12px; }
+.preview-field-label {
+  font-size: .68rem; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--ink-light); font-weight: 600;
+  margin-bottom: 3px;
+}
+.preview-field-val { font-size: .85rem; color: var(--ink); font-weight: 500; }
+.preview-desc { font-size: .8rem; color: var(--ink-mid); line-height: 1.55; }
+.preview-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.preview-tag {
+  font-size: .7rem; font-weight: 500;
+  padding: 3px 9px; border-radius: 8px;
+  background: var(--cream-dark); color: var(--ink-mid);
+  border: 1px solid var(--cream-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .main-layout { grid-template-columns: 1fr; }
+  .right-col { position: relative; top: 0; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .page-header { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ NAVBAR ═══════ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-brand-dot"></div>
+    Insta Fashion Points
+    <span class="nav-subtitle">Admin QC Review Panel</span>
+  </div>
+  <div class="nav-right">
+    <span class="nav-badge amber" id="pendingPill">● 7 Pending</span>
+    <span class="nav-badge" id="overduePill">🔴 3 Overdue</span>
+    <div class="nav-avatar">AD</div>
+  </div>
+</nav>
+
+<!-- ═══════ PAGE HEADER ═══════ -->
+<div class="page-header">
+  <div>
+    <div class="page-title">Product QC Review Queue</div>
+    <div class="page-sub">Review pending submissions · Approve, reject with structured feedback, and notify sellers instantly</div>
+  </div>
+  <div class="refresh-info">
+    <div class="refresh-dot"></div>
+    SLA timers refresh every 60s &nbsp;·&nbsp; <span id="lastRefresh">just now</span>
+  </div>
+</div>
+
+<!-- ═══════ STATS ROW ═══════ -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon red">🔴</div>
+    <div>
+      <div class="stat-num red" id="statOverdue">3</div>
+      <div class="stat-label">Overdue (&gt;24h)</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon amber">🟡</div>
+    <div>
+      <div class="stat-num amber" id="statWarning">2</div>
+      <div class="stat-label">Warning (12–24h)</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green">🟢</div>
+    <div>
+      <div class="stat-num green" id="statOnTrack">2</div>
+      <div class="stat-label">On Track (&lt;12h)</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon brand">✅</div>
+    <div>
+      <div class="stat-num" id="statResolved">11</div>
+      <div class="stat-label">Resolved Today</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ SORT BAR ═══════ -->
+<div class="sort-bar">
+  <span class="sort-label">Sort:</span>
+  <button class="sort-btn active" onclick="setSort('oldest')">Oldest First</button>
+  <button class="sort-btn" onclick="setSort('newest')">Newest First</button>
+  <button class="sort-btn" onclick="setSort('price')">Price ↓</button>
+</div>
+
+<!-- ═══════ MAIN 2-COL LAYOUT ═══════ -->
+<div class="main-layout">
+
+  <!-- Queue Column -->
+  <div class="queue-col" id="queueCol">
+    <!-- Cards injected by JS -->
+  </div>
+
+  <!-- Right Column: Event Log + Summary -->
+  <div class="right-col">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          📡 notify.* Event Log
+          <span class="panel-count" id="logCount">0</span>
+        </div>
+        <button class="panel-clear" onclick="clearLog()">Clear</button>
+      </div>
+      <div class="event-log" id="eventLog">
+        <div class="log-empty" id="logEmpty">
+          <div class="log-empty-icon">📭</div>
+          No events yet.<br />Approve or reject a product to see live notify.* events here.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel summary-panel">
+      <div class="panel-header">
+        <div class="panel-title">📊 Queue Summary</div>
+      </div>
+      <div class="summary-row">
+        <span>Total Pending</span>
+        <span class="summary-val" id="sumTotal">7</span>
+      </div>
+      <div class="summary-row">
+        <span>Avg Wait Time</span>
+        <span class="summary-val" id="sumAvg">18.4h</span>
+      </div>
+      <div class="summary-row">
+        <span>Actions Today</span>
+        <span class="summary-val" id="sumActions">0</span>
+      </div>
+      <div class="summary-row">
+        <span>Sellers Waiting</span>
+        <span class="summary-val">5</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APPROVE MODAL
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="approveBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon green">✅</div>
+      <div>
+        <div class="modal-title">Approve Product</div>
+        <div class="modal-sub" id="approveModalSub">The following notify.* events will fire on confirmation</div>
+      </div>
+      <button class="modal-close" onclick="closeApprove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="notify-checklist">
+        <div class="notify-row">
+          <div class="notify-check"></div>
+          <div style="flex:1">
+            <div class="notify-name">notify.product.approved</div>
+            <div class="notify-desc">In-app bell notification sent to seller dashboard</div>
+          </div>
+          <span class="notify-badge will-fire">Will Fire</span>
+        </div>
+        <div class="notify-row">
+          <div class="notify-check"></div>
+          <div style="flex:1">
+            <div class="notify-name">notify.email.seller</div>
+            <div class="notify-desc">Approval email dispatched to seller's registered email</div>
+          </div>
+          <span class="notify-badge will-fire">Will Fire</span>
+        </div>
+        <div class="notify-row">
+          <div class="notify-check"></div>
+          <div style="flex:1">
+            <div class="notify-name">notify.cache.invalidated</div>
+            <div class="notify-desc">Clears productCache + Redis seller:* keys for instant storefront update</div>
+          </div>
+          <span class="notify-badge will-fire">Will Fire</span>
+        </div>
+        <div class="notify-row">
+          <div class="notify-check pending-check"></div>
+          <div style="flex:1">
+            <div class="notify-name">notify.product.live</div>
+            <div class="notify-desc">Marks product as active and visible on storefront</div>
+          </div>
+          <span class="notify-badge queued">Queued</span>
+        </div>
+      </div>
+      <div id="approveProductInfo" style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--radius-sm);padding:12px 14px;font-size:.78rem;color:var(--green);">
+        <strong>Product:</strong> <span id="approveProdName">—</span><br />
+        <strong>Seller:</strong> <span id="approveSeller">—</span><br />
+        <strong>Category:</strong> <span id="approveCategory">—</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeApprove()">Cancel</button>
+      <button class="btn-confirm green" id="approveConfirmBtn" onclick="confirmApprove()">
+        ✓ Approve &amp; Fire Events
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     REJECT MODAL
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="rejectBackdrop">
+  <div class="modal" style="width:580px">
+    <div class="modal-header">
+      <div class="modal-icon red">🚫</div>
+      <div>
+        <div class="modal-title">Reject &amp; Notify Seller</div>
+        <div class="modal-sub" id="rejectModalSub">Select reason tags — sent as structured fix instructions to seller</div>
+      </div>
+      <button class="modal-close" onclick="closeReject()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Reason Tags -->
+      <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:10px;">
+        Select Rejection Reasons <span style="color:var(--brand);font-size:.72rem;font-weight:400;">(at least 1 required)</span>
+      </div>
+      <div class="reason-grid" id="reasonGrid">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- Severity -->
+      <div class="severity-row">
+        <span class="severity-label">Severity:</span>
+        <button class="sev-btn active minor" onclick="setSeverity('minor',this)">Minor</button>
+        <button class="sev-btn" onclick="setSeverity('major',this)">Major</button>
+        <button class="sev-btn" onclick="setSeverity('critical',this)">Critical</button>
+      </div>
+
+      <!-- Optional Note -->
+      <div class="note-wrap">
+        <label class="note-label">
+          Admin Note <span class="note-optional">(optional · max 500 chars)</span>
+        </label>
+        <textarea
+          class="note-ta"
+          id="rejectNote"
+          maxlength="500"
+          placeholder="Add a private note or additional instructions for the seller…"
+          oninput="updateCounter()"
+        ></textarea>
+        <div class="note-counter" id="noteCounter">0 / 500</div>
+      </div>
+
+      <!-- Seller Preview Strip -->
+      <div class="seller-preview">
+        <div class="seller-preview-title">📬 Seller Will Receive</div>
+        <div class="seller-preview-row">Seller: <span id="previewSeller">—</span></div>
+        <div class="seller-preview-row">Product: <span id="previewProduct">—</span></div>
+        <div class="seller-preview-row">Reasons tagged as fix instructions:</div>
+        <div class="tag-list" id="previewTags">
+          <span style="color:var(--ink-light);font-size:.72rem;">No tags selected yet</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeReject()">Cancel</button>
+      <button class="btn-confirm red" id="rejectConfirmBtn" disabled onclick="confirmReject()">
+        🚫 Reject &amp; Notify Seller
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PREVIEW MODAL
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="previewBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:var(--cream-dark)">👁</div>
+      <div>
+        <div class="modal-title" id="previewTitle">Product Preview</div>
+        <div class="modal-sub" id="previewSub">Read-only product detail view</div>
+      </div>
+      <button class="modal-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="modal-body" id="previewBody">
+      <!-- Injected by JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closePreview()">Close</button>
+      <button class="btn-confirm green" onclick="closePreviewAndApprove()">✓ Approve</button>
+      <button class="btn-confirm red" onclick="closePreviewAndReject()">🚫 Reject</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ TOAST AREA ═══════ -->
+<div class="toast-area" id="toastArea"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+/* ─── Data ─────────────────────────────────────────────────────── */
+const PRODUCTS = [
+  {
+    id: 'p001', name: 'Banarasi Silk Saree — Royal Blue', category: 'Sarees',
+    subCategory: 'Silk Sarees', price: 4850, mrp: 6200,
+    sellerId: 's01', seller: 'Varanasi Weaves Co.', sellerEmail: 'seller1@example.com',
+    submittedHoursAgo: 31.5, feedbackCount: 2,
+    emoji: '🥻', fabric: 'Pure Silk', sizes: ['Free Size'], colors: ['Royal Blue', 'Gold'],
+    description: 'Handwoven Banarasi silk saree with intricate zari work. Traditional weave from Varanasi artisans.',
+    approvalStatus: 'pending'
+  },
+  {
+    id: 'p002', name: 'Anarkali Suit — Ombre Rose', category: 'Salwar Suits',
+    subCategory: 'Anarkali', price: 2299, mrp: 3100,
+    sellerId: 's02', seller: 'Ethnic Threads Pvt. Ltd.', sellerEmail: 'seller2@example.com',
+    submittedHoursAgo: 27.2, feedbackCount: 0,
+    emoji: '👗', fabric: 'Georgette', sizes: ['S', 'M', 'L', 'XL', 'XXL'], colors: ['Rose', 'Mauve'],
+    description: 'Floor-length Anarkali with ombre dyeing technique. Comes with dupatta and churidar.',
+    approvalStatus: 'pending'
+  },
+  {
+    id: 'p003', name: 'Phulkari Dupatta — Punjabi Bagh', category: 'Dupattas',
+    subCategory: 'Phulkari', price: 890, mrp: 1400,
+    sellerId: 's03', seller: 'Punjab Handloom House', sellerEmail: 'seller3@example.com',
+    submittedHoursAgo: 25.8, feedbackCount: 1,
+    emoji: '🧣', fabric: 'Cotton', sizes: ['2.5m'], colors: ['Red', 'Orange', 'Yellow'],
+    description: 'Traditional Phulkari embroidery on cotton base. Each piece hand-embroidered by artisan women.',
+    approvalStatus: 'pending'
+  },
+  {
+    id: 'p004', name: 'Men\'s Kurta Pajama — Ivory Chikankari', category: 'Men\'s Ethnic',
+    subCategory: 'Kurta Sets', price: 1750, mrp: 2400,
+    sellerId: 's01', seller: 'Varanasi Weaves Co.', sellerEmail: 'seller1@example.com',
+    submittedHoursAgo: 18.5, feedbackCount: 3,
+    emoji: '🧣', fabric: 'Cotton Silk', sizes: ['S', 'M', 'L', 'XL'], colors: ['Ivory', 'White'],
+    description: 'Lucknowi Chikankari kurta set with fine thread work. Machine-washable premium fabric.',
+    approvalStatus: 'pending'
+  },
+  {
+    id: 'p005', name: 'Chaniya Choli — Navratri Special', category: 'Chaniya Choli',
+    subCategory: 'Festival Wear', price: 3200, mrp: 4500,
+    sellerId: 's04', seller: 'Ritu\'s Boutique', sellerEmail: 'seller4@example.com',
+    submittedHoursAgo: 14.0, feedbackCount: 0,
+    emoji: '💃', fabric: 'Bandhani Silk', sizes: ['XS', 'S', 'M', 'L', 'XL'], colors: ['Multicolor', 'Red'],
+    description: 'Vibrant Bandhani chaniya choli with mirror work. Perfect for Navratri and garba nights.',
+    approvalStatus: 'pending'
+  },
+  {
+    id: 'p006', name: 'Lehenga Choli — Bridal Crimson', category: 'Lehengas',
+    subCategory: 'Bridal Lehenga', price: 14500, mrp: 19000,
+    sellerId: 's05', seller: 'Shringaar Bridal House', sellerEmail: 'seller5@example.com',
+    submittedHoursAgo: 7.5, feedbackCount: 1,
+    emoji: '👰', fabric: 'Raw Silk + Net', sizes: ['Custom', 'S', 'M', 'L'], colors: ['Crimson', 'Gold'],
+    description: 'Heavy embroidered bridal lehenga with stonework blouse. Includes dupatta. Custom sizing available.',
+    approvalStatus: 'pending'
+  },
+  {
+    id: 'p007', name: 'Kanjivaram Silk Saree — Temple Border', category: 'Sarees',
+    subCategory: 'Kanjivaram', price: 8200, mrp: 10500,
+    sellerId: 's05', seller: 'Shringaar Bridal House', sellerEmail: 'seller5@example.com',
+    submittedHoursAgo: 3.2, feedbackCount: 0,
+    emoji: '🥻', fabric: 'Kanjivaram Silk', sizes: ['Free Size'], colors: ['Green', 'Red Border'],
+    description: 'Authentic GI-tagged Kanjivaram saree with traditional temple border motif. Gold zari weave.',
+    approvalStatus: 'pending'
+  },
+];
+
+const REJECTION_REASONS = [
+  { id: 'r1', title: 'Bad Image Quality', severity: 'major',
+    desc: 'Images are blurry, pixelated, or poorly lit.',
+    fix: '→ Re-upload images with min 1000×1000px, well-lit, neutral background.' },
+  { id: 'r2', title: 'Wrong Background', severity: 'minor',
+    desc: 'Product photographed against cluttered or colored background.',
+    fix: '→ Use plain white or light grey background per our image guidelines.' },
+  { id: 'r3', title: 'Missing Product Angles', severity: 'minor',
+    desc: 'Insufficient angles — front, back, and detail shot required.',
+    fix: '→ Upload at least 4 images: front, back, close-up detail, and lifestyle.' },
+  { id: 'r4', title: 'Wrong Category', severity: 'major',
+    desc: 'Product listed in incorrect category or sub-category.',
+    fix: '→ Move product to the correct category using the Edit Product page.' },
+  { id: 'r5', title: 'Incomplete Attributes', severity: 'major',
+    desc: 'Key attributes like fabric, sizes, or colors are missing.',
+    fix: '→ Fill all mandatory attribute fields including fabric type, available sizes and colors.' },
+  { id: 'r6', title: 'Price Error', severity: 'critical',
+    desc: 'Listed price or MRP appears incorrect or unrealistic.',
+    fix: '→ Verify selling price ≤ MRP and both match your cost sheet.' },
+  { id: 'r7', title: 'Copyright / IP Issue', severity: 'critical',
+    desc: 'Listing appears to infringe trademark, copyright or design patent.',
+    fix: '→ Provide authorization letter or remove infringing material before resubmitting.' },
+  { id: 'r8', title: 'Description Mismatch', severity: 'minor',
+    desc: 'Product description doesn\'t match images or attributes listed.',
+    fix: '→ Update description to accurately reflect what is shown in product images.' },
+];
+
+/* ─── State ─────────────────────────────────────────────────────── */
+let products = JSON.parse(JSON.stringify(PRODUCTS));
+let currentSort = 'oldest';
+let pendingProductId = null;
+let selectedReasons = new Set();
+let selectedSeverity = 'minor';
+let eventLog = [];
+let actionsToday = 0;
+let resolvedToday = 11;
+let previewForProduct = null;
+
+/* ─── Helpers ───────────────────────────────────────────────────── */
+function getSLAClass(hours) {
+  if (hours > 24) return 'overdue';
+  if (hours >= 12) return 'warning';
+  return 'ontrack';
+}
+function getSLALabel(hours) {
+  if (hours > 24) return `>24h waiting`;
+  if (hours >= 12) return `${Math.round(hours)}h waiting`;
+  return `<12h`;
+}
+function getSLAProgress(hours) {
+  // 0-12h → green 0-40%, 12-24h → amber 40-80%, >24h → red 80-100%
+  if (hours > 48) return 100;
+  return Math.min(100, (hours / 48) * 100);
+}
+function formatHours(h) {
+  if (h < 1) return `${Math.round(h * 60)}m ago`;
+  if (h < 24) return `${h.toFixed(1)}h ago`;
+  const d = Math.floor(h / 24), rem = Math.round(h % 24);
+  return rem > 0 ? `${d}d ${rem}h ago` : `${d}d ago`;
+}
+function rupee(n) {
+  return '₹' + n.toLocaleString('en-IN');
+}
+function pendingProducts() {
+  return products.filter(p => p.approvalStatus === 'pending');
+}
+function sortedProducts() {
+  const list = pendingProducts();
+  if (currentSort === 'oldest') return list.slice().sort((a,b) => b.submittedHoursAgo - a.submittedHoursAgo);
+  if (currentSort === 'newest') return list.slice().sort((a,b) => a.submittedHoursAgo - b.submittedHoursAgo);
+  if (currentSort === 'price') return list.slice().sort((a,b) => b.price - a.price);
+  return list;
+}
+function setSort(s) {
+  currentSort = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderQueue();
+}
+
+/* ─── Render ────────────────────────────────────────────────────── */
+function renderQueue() {
+  const col = document.getElementById('queueCol');
+  const list = sortedProducts();
+  updateStats();
+
+  if (list.length === 0) {
+    col.innerHTML = `<div class="queue-empty">
+      <div style="font-size:2.5rem;margin-bottom:12px">🎉</div>
+      <strong>Queue is clear!</strong><br />All products have been reviewed for today.
+    </div>`;
+    return;
+  }
+
+  col.innerHTML = list.map(p => {
+    const cls = getSLAClass(p.submittedHoursAgo);
+    const pill = getSLALabel(p.submittedHoursAgo);
+    const prog = getSLAProgress(p.submittedHoursAgo);
+    return `
+    <div class="product-card ${cls}" id="card-${p.id}">
+      <div class="card-body">
+        <div class="card-img">${p.emoji}</div>
+        <div class="card-info">
+          <div class="card-top">
+            <div>
+              <div class="card-name">${p.name}</div>
+              <div class="card-pid">${p.id.toUpperCase()}</div>
+            </div>
+            <span class="sla-pill ${cls}">${pill}</span>
+          </div>
+          <div class="card-meta">
+            <span class="meta-item">${p.category}</span>
+            <span class="meta-dot"></span>
+            <span class="meta-item">${p.subCategory}</span>
+            <span class="meta-dot"></span>
+            <span class="meta-item">${p.fabric}</span>
+            <span class="meta-dot"></span>
+            <span class="meta-item" style="font-weight:600">${rupee(p.price)}</span>
+            <span class="meta-item" style="text-decoration:line-through;color:var(--ink-light)">${rupee(p.mrp)}</span>
+          </div>
+          <div class="card-seller">
+            <span>Seller:</span>
+            <span class="seller-chip">${p.seller}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-approve" onclick="openApprove('${p.id}')">✓ Approve</button>
+            <button class="btn btn-reject" onclick="openReject('${p.id}')">✕ Reject</button>
+            <button class="btn btn-preview" onclick="openPreview('${p.id}')">👁 Preview</button>
+            ${p.feedbackCount > 0
+              ? `<span class="feedback-count">💬 <span class="fc-badge">${p.feedbackCount}</span> QC notes</span>`
+              : ''}
+          </div>
+        </div>
+      </div>
+      <div class="sla-bar-wrap">
+        <div class="sla-bar ${cls}" style="width:${prog}%"></div>
+      </div>
+      <div class="card-footer">
+        <span class="submitted-ago">Submitted ${formatHours(p.submittedHoursAgo)}</span>
+        <span>${p.colors.join(' · ')}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  const list = pendingProducts();
+  const over = list.filter(p => p.submittedHoursAgo > 24).length;
+  const warn = list.filter(p => p.submittedHoursAgo >= 12 && p.submittedHoursAgo <= 24).length;
+  const ok   = list.filter(p => p.submittedHoursAgo < 12).length;
+  document.getElementById('statOverdue').textContent = over;
+  document.getElementById('statWarning').textContent = warn;
+  document.getElementById('statOnTrack').textContent = ok;
+  document.getElementById('statResolved').textContent = resolvedToday;
+  document.getElementById('pendingPill').textContent = `● ${list.length} Pending`;
+  document.getElementById('overduePill').textContent = `🔴 ${over} Overdue`;
+  document.getElementById('sumTotal').textContent = list.length;
+  const avgH = list.length ? (list.reduce((a,p)=>a+p.submittedHoursAgo,0)/list.length).toFixed(1) : '0';
+  document.getElementById('sumAvg').textContent = avgH + 'h';
+  document.getElementById('sumActions').textContent = actionsToday;
+}
+
+/* ─── Approve Modal ─────────────────────────────────────────────── */
+function openApprove(id) {
+  pendingProductId = id;
+  const p = products.find(x => x.id === id);
+  document.getElementById('approveProdName').textContent = p.name;
+  document.getElementById('approveSeller').textContent = p.seller;
+  document.getElementById('approveCategory').textContent = p.category + ' · ' + p.subCategory;
+  document.getElementById('approveBackdrop').classList.add('open');
+}
+function closeApprove() {
+  document.getElementById('approveBackdrop').classList.remove('open');
+  pendingProductId = null;
+}
+function confirmApprove() {
+  const p = products.find(x => x.id === pendingProductId);
+  if (!p) return;
+  closeApprove();
+
+  // Fire notify events in sequence
+  const events = [
+    { name: 'notify.product.approved', desc: p.name, status: 'sent' },
+    { name: 'notify.email.seller', desc: p.seller, status: 'sent' },
+    { name: 'notify.cache.invalidated', desc: `seller:${p.sellerId}:*`, status: 'sent' },
+    { name: 'notify.product.live', desc: p.name, status: 'pending' },
+  ];
+
+  // Simulate API calls
+  fireNotifyEvents(events, p);
+
+  // Update product state
+  p.approvalStatus = 'approved';
+  actionsToday++;
+  resolvedToday++;
+  renderQueue();
+
+  showToast('green', '✅', 'Product Approved!', `"${p.name}" is now live on the storefront.`);
+}
+
+/* ─── Reject Modal ──────────────────────────────────────────────── */
+function buildReasonGrid() {
+  const grid = document.getElementById('reasonGrid');
+  grid.innerHTML = REJECTION_REASONS.map(r => `
+    <div class="reason-tag" id="rt-${r.id}" onclick="toggleReason('${r.id}')">
+      <input type="checkbox" id="cb-${r.id}" />
+      <div class="reason-check-box" id="rcb-${r.id}"></div>
+      <div class="reason-tag-body">
+        <div class="reason-title">${r.title}</div>
+        <div class="reason-desc">${r.desc}</div>
+        <div class="reason-fix" id="rf-${r.id}">${r.fix}</div>
+      </div>
+      <span class="reason-severity-wrap ${r.severity}">${r.severity.charAt(0).toUpperCase() + r.severity.slice(1)}</span>
+    </div>
+  `).join('');
+}
+
+function toggleReason(id) {
+  const el = document.getElementById(`rt-${id}`);
+  if (selectedReasons.has(id)) {
+    selectedReasons.delete(id);
+    el.classList.remove('selected');
+  } else {
+    selectedReasons.add(id);
+    el.classList.add('selected');
+  }
+  updateRejectState();
+}
+
+function setSeverity(sev, btn) {
+  selectedSeverity = sev;
+  document.querySelectorAll('.sev-btn').forEach(b => {
+    b.classList.remove('active', 'minor', 'major', 'critical');
+  });
+  btn.classList.add('active', sev);
+}
+
+function updateRejectState() {
+  const btn = document.getElementById('rejectConfirmBtn');
+  btn.disabled = selectedReasons.size === 0;
+
+  // Update preview tags
+  const tagList = document.getElementById('previewTags');
+  if (selectedReasons.size === 0) {
+    tagList.innerHTML = `<span style="color:var(--ink-light);font-size:.72rem;">No tags selected yet</span>`;
+  } else {
+    tagList.innerHTML = Array.from(selectedReasons).map(id => {
+      const r = REJECTION_REASONS.find(x => x.id === id);
+      return `<span class="tag-chip">${r.title}</span>`;
+    }).join('');
+  }
+}
+
+function updateCounter() {
+  const ta = document.getElementById('rejectNote');
+  const ct = document.getElementById('noteCounter');
+  const len = ta.value.length;
+  ct.textContent = `${len} / 500`;
+  ct.className = 'note-counter' + (len > 450 ? (len >= 500 ? ' over' : ' warn') : '');
+}
+
+function openReject(id) {
+  pendingProductId = id;
+  selectedReasons = new Set();
+  selectedSeverity = 'minor';
+  buildReasonGrid();
+  document.getElementById('rejectNote').value = '';
+  updateCounter();
+  updateRejectState();
+
+  const p = products.find(x => x.id === id);
+  document.getElementById('previewSeller').textContent = p.seller;
+  document.getElementById('previewProduct').textContent = p.name;
+  document.getElementById('rejectModalSub').textContent = `Rejecting: "${p.name}"`;
+  document.getElementById('rejectBackdrop').classList.add('open');
+}
+function closeReject() {
+  document.getElementById('rejectBackdrop').classList.remove('open');
+  pendingProductId = null;
+}
+function confirmReject() {
+  const p = products.find(x => x.id === pendingProductId);
+  if (!p || selectedReasons.size === 0) return;
+  closeReject();
+
+  const tagNames = Array.from(selectedReasons).map(id => REJECTION_REASONS.find(r => r.id === id).title);
+  const events = [
+    { name: 'notify.product.rejected', desc: p.name, status: 'sent' },
+    { name: `notify.email.seller [${selectedSeverity}]`, desc: `${tagNames.length} reason tag(s)`, status: 'sent' },
+    { name: 'notify.cache.invalidated', desc: `seller:${p.sellerId}:*`, status: 'sent' },
+    { name: 'notify.qc.feedback.added', desc: p.name, status: 'sent' },
+  ];
+
+  fireNotifyEvents(events, p);
+
+  p.approvalStatus = 'rejected';
+  actionsToday++;
+  resolvedToday++;
+  renderQueue();
+
+  showToast('red', '🚫', 'Product Rejected', `"${p.name}" rejected · ${tagNames.length} reason(s) sent to ${p.seller}.`);
+}
+
+/* ─── Preview Modal ─────────────────────────────────────────────── */
+function openPreview(id) {
+  previewForProduct = id;
+  const p = products.find(x => x.id === id);
+  document.getElementById('previewTitle').textContent = p.name;
+  document.getElementById('previewSub').textContent = `${p.category} · ${p.subCategory} · ${p.seller}`;
+  document.getElementById('previewBody').innerHTML = `
+    <div class="preview-grid">
+      <div class="preview-img-area">${p.emoji}</div>
+      <div>
+        <div class="preview-field">
+          <div class="preview-field-label">Price</div>
+          <div class="preview-field-val">${rupee(p.price)} <span style="text-decoration:line-through;color:var(--ink-light);font-size:.8rem">${rupee(p.mrp)}</span></div>
+        </div>
+        <div class="preview-field">
+          <div class="preview-field-label">Fabric</div>
+          <div class="preview-field-val">${p.fabric}</div>
+        </div>
+        <div class="preview-field">
+          <div class="preview-field-label">Seller</div>
+          <div class="preview-field-val">${p.seller}</div>
+        </div>
+        <div class="preview-field">
+          <div class="preview-field-label">Submitted</div>
+          <div class="preview-field-val">${formatHours(p.submittedHoursAgo)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="preview-field">
+      <div class="preview-field-label">Description</div>
+      <div class="preview-desc">${p.description}</div>
+    </div>
+    <div class="preview-field" style="margin-top:12px">
+      <div class="preview-field-label">Sizes</div>
+      <div class="preview-tags">${p.sizes.map(s=>`<span class="preview-tag">${s}</span>`).join('')}</div>
+    </div>
+    <div class="preview-field" style="margin-top:10px">
+      <div class="preview-field-label">Colors</div>
+      <div class="preview-tags">${p.colors.map(c=>`<span class="preview-tag">${c}</span>`).join('')}</div>
+    </div>
+  `;
+  document.getElementById('previewBackdrop').classList.add('open');
+}
+function closePreview() {
+  document.getElementById('previewBackdrop').classList.remove('open');
+}
+function closePreviewAndApprove() {
+  const id = previewForProduct;
+  closePreview();
+  setTimeout(() => openApprove(id), 80);
+}
+function closePreviewAndReject() {
+  const id = previewForProduct;
+  closePreview();
+  setTimeout(() => openReject(id), 80);
+}
+
+/* ─── Notify Events ─────────────────────────────────────────────── */
+async function fireNotifyEvents(events, product) {
+  const logEl = document.getElementById('eventLog');
+  const logEmpty = document.getElementById('logEmpty');
+  if (logEmpty) logEmpty.style.display = 'none';
+
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+
+    // Simulate API POST /api/notify
+    await simulateNotifyAPI({ event: ev.name, productId: product.id, sellerId: product.sellerId, detail: ev.desc });
+
+    const item = document.createElement('div');
+    item.className = 'event-item';
+    const ts = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    item.innerHTML = `
+      <div class="event-header">
+        <span class="event-name">${ev.name}</span>
+        <span class="event-status ${ev.status}">${ev.status}</span>
+      </div>
+      <div class="event-product">${ev.desc}</div>
+      <div class="event-time">${ts}</div>
+    `;
+    logEl.insertBefore(item, logEl.firstChild);
+    eventLog.unshift(ev);
+    document.getElementById('logCount').textContent = eventLog.length;
+
+    await delay(180);
+  }
+}
+
+async function simulateNotifyAPI(payload) {
+  // In production this would be:
+  // await fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  console.log('[notify API]', payload);
+  await delay(120);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function clearLog() {
+  eventLog = [];
+  const logEl = document.getElementById('eventLog');
+  logEl.innerHTML = `<div class="log-empty" id="logEmpty"><div class="log-empty-icon">📭</div>No events yet.<br />Approve or reject a product to see live notify.* events here.</div>`;
+  document.getElementById('logCount').textContent = '0';
+}
+
+/* ─── Toast ─────────────────────────────────────────────────────── */
+function showToast(type, icon, title, desc) {
+  const area = document.getElementById('toastArea');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `
+    <div class="toast-icon ${type}">${icon}</div>
+    <div style="flex:1">
+      <div class="toast-title">${title}</div>
+      <div class="toast-desc">${desc}</div>
+    </div>
+    <button class="toast-close" onclick="this.closest('.toast').remove()">✕</button>
+  `;
+  area.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('fade-out');
+    setTimeout(() => t.remove(), 320);
+  }, 4500);
+}
+
+/* ─── SLA Auto-refresh ──────────────────────────────────────────── */
+let secondsUntilRefresh = 60;
+function tickSLA() {
+  secondsUntilRefresh--;
+  if (secondsUntilRefresh <= 0) {
+    // Advance time by 1 minute (1/60 of an hour)
+    products.forEach(p => {
+      if (p.approvalStatus === 'pending') p.submittedHoursAgo += (1/60);
+    });
+    renderQueue();
+    secondsUntilRefresh = 60;
+    document.getElementById('lastRefresh').textContent = 'just now';
+  } else {
+    document.getElementById('lastRefresh').textContent = `${secondsUntilRefresh}s ago`;
+  }
+}
+setInterval(tickSLA, 1000);
+
+/* ─── Close on backdrop click ───────────────────────────────────── */
+['approveBackdrop','rejectBackdrop','previewBackdrop'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.remove('open');
+      pendingProductId = null;
+    }
+  });
+});
+
+/* ─── Init ──────────────────────────────────────────────────────── */
+renderQueue();
+</script>
+</body>
+</html>
