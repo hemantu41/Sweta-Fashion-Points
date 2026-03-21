@@ -38,6 +38,12 @@ interface PaymentNotificationParams {
  *   3. After approval, add the template to MSG91 and get the Template ID
  */
 export async function sendSMS(params: SMSParams): Promise<{ success: boolean; error?: string }> {
+  // ── Demo mode: skip MSG91 entirely ──────────────────────────────────────
+  if (process.env.NEXT_PUBLIC_MSG91_DEMO_MODE === 'true') {
+    console.log(`[DEMO] OTP sent to ${params.phone}`);
+    return { success: true };
+  }
+
   const authKey    = process.env.MSG91_AUTH_KEY;
   const senderId   = process.env.MSG91_SENDER_ID   || 'SWEFPT';
   const templateId = process.env.MSG91_TEMPLATE_ID;

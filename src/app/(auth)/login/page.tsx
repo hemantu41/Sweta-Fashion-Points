@@ -240,6 +240,15 @@ function LoginForm() {
         {tab === 'otp' && (
           <form onSubmit={handleOtpLogin} className="space-y-5">
 
+            {/* Demo mode banner */}
+            {process.env.NEXT_PUBLIC_MSG91_DEMO_MODE === 'true' && (
+              <div className="border border-dashed border-amber-400 bg-amber-50 rounded px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold mb-0.5">Demo Mode Active</p>
+                <p className="text-base font-bold tracking-[0.4em] text-amber-800">123456</p>
+                <p className="text-[10px] text-amber-500">Use OTP 123456 for any mobile number</p>
+              </div>
+            )}
+
             <div>
               <label className={labelClass}>Mobile Number</label>
               <div className="flex items-end gap-3">

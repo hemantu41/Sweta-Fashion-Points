@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { sendSMS } from '@/lib/notifications';
 
+const IS_DEMO = process.env.NEXT_PUBLIC_MSG91_DEMO_MODE === 'true';
+
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -29,6 +31,16 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'No account found with this mobile number' }, { status: 404 });
+    }
+
+    // ── Demo mode: skip SMS entirely, return fixed OTP ─────────────────────
+    if (IS_DEMO) {
+      console.log(`[DEMO] OTP sent to ${mobile}`);
+      return NextResponse.json({
+        message: 'OTP sent successfully',
+        devOtp: '123456',
+        devNote: 'Demo mode active — use OTP 123456',
+      }, { status: 200 });
     }
 
     const otp = generateOTP();
