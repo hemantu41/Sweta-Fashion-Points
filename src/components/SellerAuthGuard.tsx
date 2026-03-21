@@ -43,7 +43,7 @@ export default function SellerAuthGuard({ children }: { children: React.ReactNod
     if (!isLoading && isSeller !== null) {
       if (!user) {
         // Not logged in - redirect to login
-        router.push('/login');
+        router.replace('/login');
       } else if (!isSeller) {
         // Logged in but not a seller - redirect to home
         router.push('/?error=unauthorized');

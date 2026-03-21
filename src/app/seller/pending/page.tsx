@@ -32,7 +32,7 @@ export default function SellerPendingPage() {
   useEffect(() => {
     if (isLoading) return;
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
 

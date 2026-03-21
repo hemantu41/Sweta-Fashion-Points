@@ -31,9 +31,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     if (!isAuthenticated && isProtected(pathname)) {
-      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+      router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
     } else if (isAuthenticated && AUTH_ONLY_PATHS.includes(pathname)) {
-      router.push('/');
+      router.replace('/');
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 

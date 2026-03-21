@@ -95,7 +95,7 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
     fetchOrders();

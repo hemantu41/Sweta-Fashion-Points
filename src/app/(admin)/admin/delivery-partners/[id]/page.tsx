@@ -71,7 +71,7 @@ export default function DeliveryPartnerDetailPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
     fetchPartner();

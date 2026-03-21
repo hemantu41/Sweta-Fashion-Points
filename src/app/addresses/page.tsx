@@ -36,7 +36,7 @@ export default function AddressesPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login?callbackUrl=/addresses');
+      router.replace('/login?callbackUrl=/addresses');
       return;
     }
     if (user?.id) {

@@ -38,7 +38,7 @@ export default function OrderDetailsPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
     fetchOrderDetails();

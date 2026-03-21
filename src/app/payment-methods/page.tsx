@@ -20,7 +20,7 @@ export default function PaymentMethodsPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.replace('/login?callbackUrl=/payment-methods');
     }
   }, [isAuthenticated, isLoading, router]);
 

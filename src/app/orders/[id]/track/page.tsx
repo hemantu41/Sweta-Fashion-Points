@@ -42,7 +42,7 @@ export default function TrackOrderPage({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.replace(`/login?callbackUrl=/orders/${orderId}/track`);
     }
   }, [isAuthenticated, isLoading, router]);
 

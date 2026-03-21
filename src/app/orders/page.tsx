@@ -51,7 +51,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login?callbackUrl=/orders');
+      router.replace('/login?callbackUrl=/orders');
     }
   }, [isAuthenticated, isLoading, router]);
 
