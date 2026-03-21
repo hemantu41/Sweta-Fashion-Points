@@ -239,7 +239,7 @@ MSG91_AUTH_KEY=your_msg91_key
 MSG91_SENDER_ID=SWEFPT
 RESEND_API_KEY=your_resend_key
 GUPSHUP_API_KEY=your_gupshup_key
-GUPSHUP_APP_NAME=SwetaFashion
+GUPSHUP_APP_NAME=InstaFashion
 ```
 
 ---

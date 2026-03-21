@@ -1,4 +1,4 @@
-# Seller Flow Guide - Sweta Fashion Points
+# Seller Flow Guide - Insta Fashion Points
 
 Complete documentation for the seller registration, approval, and product management workflow.
 
@@ -292,7 +292,7 @@ Content-Type: application/json
     "mainImage": "cloudinary-url-1",
     "images": ["cloudinary-url-1", "cloudinary-url-2"],
     "stockQuantity": 50,
-    "shopName": "Sweta Fashion Store",
+    "shopName": "Insta Fashion Store",
     "shopMobile": "9876543210",
     "shopLocation": "Sector 15, Noida"
   }
@@ -1378,5 +1378,5 @@ Admin reviews and approves → product goes live again
 
 **Last Updated:** March 7, 2026
 **Current Version:** 1.5
-**Project:** Sweta Fashion Points
+**Project:** Insta Fashion Points
 **Framework:** Next.js 14 (App Router) + Supabase + Vercel

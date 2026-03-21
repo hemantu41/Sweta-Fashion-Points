@@ -47,7 +47,7 @@ const translations: Record<Language, Record<string, string>> = {
     'cat.kidsDesc': 'Comfortable & Stylish',
 
     // Why Choose Us
-    'why.title': 'Why Choose Fashion Points?',
+    'why.title': 'Why Choose Insta Fashion Points?',
     'why.quality': 'Premium Quality',
     'why.qualityDesc': 'Handpicked fabrics and materials for lasting comfort',
     'why.price': 'Affordable Prices',
@@ -166,7 +166,7 @@ const translations: Record<Language, Record<string, string>> = {
     'cat.kidsDesc': 'आरामदायक और स्टाइलिश',
 
     // Why Choose Us
-    'why.title': 'स्वेता फैशन पॉइंट्स क्यों चुनें?',
+    'why.title': 'इंस्टा फैशन पॉइंट्स क्यों चुनें?',
     'why.quality': 'प्रीमियम क्वालिटी',
     'why.qualityDesc': 'लंबे समय तक आराम के लिए चुने हुए कपड़े',
     'why.price': 'किफायती कीमतें',

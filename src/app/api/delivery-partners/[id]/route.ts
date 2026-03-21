@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { partnerCache } from '@/lib/cache';
 
 // Maps a status transition to a human-readable action label
 function getActionLabel(from: string | null, to: string): string {
@@ -206,7 +205,6 @@ export async function PUT(
       await insertStatusHistory(id, existingPartner.status, status, historyNote, updatedBy || null, updatedByName || null);
     }
 
-    partnerCache.clear().catch(e => console.warn('[Delivery Partners API] Cache clear failed:', e));
     return NextResponse.json({
       success: true,
       partner: updatedPartner,
@@ -280,7 +278,6 @@ export async function DELETE(
     // Insert status history
     await insertStatusHistory(id, existingPartner.status, 'inactive', note, updatedBy, updatedByName);
 
-    partnerCache.clear().catch(e => console.warn('[Delivery Partners API] Cache clear failed:', e));
     return NextResponse.json({
       success: true,
       message: 'Delivery partner deactivated successfully',

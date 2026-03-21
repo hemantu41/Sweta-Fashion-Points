@@ -133,8 +133,6 @@ export default function ProductDetailPage() {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const [showRatingTooltip, setShowRatingTooltip] = useState(false);
-  const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [openAccordion, setOpenAccordion] = useState<string | null>('description');
 
   // Fetch product data
   useEffect(() => {
@@ -232,17 +230,17 @@ export default function ProductDetailPage() {
     <div className="min-h-screen bg-[#FAF7F2] py-6 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Breadcrumb */}
-        <nav className="text-xs text-[#B0AAA3] mb-6 flex items-center gap-2 flex-wrap">
-          <Link href="/" className="hover:text-[#7A7A7A] transition-colors">{t('nav.home')}</Link>
+        <nav className="text-sm text-[#6B6B6B] mb-6 flex items-center gap-2 flex-wrap">
+          <Link href="/" className="hover:text-[#722F37] transition-colors">{t('nav.home')}</Link>
           <span>/</span>
           <Link
             href={product.category === 'beauty' ? '/makeup' : product.category === 'footwear' ? '/footwear' : `/${product.category}`}
-            className="hover:text-[#7A7A7A] transition-colors"
+            className="hover:text-[#722F37] transition-colors"
           >
             {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
           </Link>
           <span>/</span>
-          <span className="text-[#8A8A8A] truncate">{language === 'hi' ? product.nameHi : product.name}</span>
+          <span className="text-[#2D2D2D] font-medium truncate">{language === 'hi' ? product.nameHi : product.name}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -271,22 +269,17 @@ export default function ProductDetailPage() {
               )}
 
               {/* Main Image - Right Side */}
-              <div
-                className="flex-1 relative aspect-square rounded-xl overflow-hidden bg-[#F5F0E8] cursor-zoom-in group"
-                onMouseEnter={() => allImages.length > 0 ? setZoomImage(allImages[selectedImage]) : null}
-                onMouseLeave={() => setZoomImage(null)}
-                onClick={() => allImages.length > 0 ? setZoomImage(allImages[selectedImage]) : null}
-              >
+              <div className="flex-1 relative aspect-square rounded-xl overflow-hidden bg-[#F5F0E8]">
                 {allImages.length > 0 && isCloudinary(allImages[selectedImage]) ? (
                   <CldImage
                     src={allImages[selectedImage]}
                     alt={product.name}
                     fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                    className="object-cover"
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
                 ) : allImages.length > 0 && !isCloudinary(allImages[selectedImage]) ? (
-                  <img src={allImages[selectedImage]} alt={product.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                  <img src={allImages[selectedImage]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-8xl opacity-40">
@@ -299,16 +292,12 @@ export default function ProductDetailPage() {
                     </span>
                   </div>
                 )}
-                {/* Zoom hint */}
-                <div className="absolute bottom-2 right-2 bg-black/40 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  🔍 Click to zoom
-                </div>
               </div>
             </div>
           </div>
 
           {/* Right Column - Details */}
-          <div className="space-y-3">
+          <div className="space-y-5">
             {/* Name & Badges */}
             <div>
               <div className="flex gap-2 mb-2">
@@ -319,28 +308,61 @@ export default function ProductDetailPage() {
                   <span className="bg-[#C9A962] text-white text-xs font-medium px-2.5 py-0.5 rounded-full">{t('product.bestSeller')}</span>
                 )}
               </div>
-              <h1 className="text-3xl font-semibold text-[#1A1A1A] leading-snug tracking-tight" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+              <h1 className="text-2xl font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
                 {language === 'hi' ? product.nameHi : product.name}
               </h1>
+              {product.fabric && product.category === 'beauty' && (() => {
+                const details = parseBeautyDetails(product.fabric);
+                return (
+                  <p className="text-sm text-[#6B6B6B] mt-1">
+                    {details.brand && `${details.brand}`}
+                    {details.shade && ` • ${details.shade}`}
+                    {details.volume && ` • ${details.volume}`}
+                  </p>
+                );
+              })()}
+              {product.fabric && product.category === 'footwear' && (() => {
+                const details = parseFootwearDetails(product.fabric);
+                return (
+                  <p className="text-sm text-[#6B6B6B] mt-1">
+                    {details.brand && `${details.brand}`}
+                    {details.material && ` • ${details.material}`}
+                  </p>
+                );
+              })()}
+              {product.fabric && !['beauty', 'footwear'].includes(product.category) && (
+                <p className="text-sm text-[#6B6B6B] mt-1">{language === 'hi' ? product.fabricHi : product.fabric}</p>
+              )}
             </div>
 
-            {/* Rating — below title, above price */}
+            {/* Price */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-3xl font-bold text-[#722F37]">₹{product.price.toLocaleString('en-IN')}</span>
+              {product.originalPrice && (
+                <>
+                  <span className="text-lg text-[#6B6B6B] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+                  <span className="bg-green-100 text-green-700 text-sm font-semibold px-2.5 py-0.5 rounded-full">{discountPercent}% off</span>
+                </>
+              )}
+            </div>
+
+            {/* Rating */}
             <div className="relative inline-block">
               <div
                 className="flex items-center gap-2 cursor-pointer"
                 onMouseEnter={() => setShowRatingTooltip(true)}
                 onMouseLeave={() => setShowRatingTooltip(false)}
               >
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className={`w-4 h-4 ${star <= 4 ? 'text-[#B8962E]' : 'text-[#D4B86A]'}`} fill={star <= 4 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={star === 5 ? 1.5 : 0} viewBox="0 0 20 20">
-                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                    </svg>
-                  ))}
+                <div className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg">
+                  <span className="font-semibold">4.5</span>
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                  </svg>
                 </div>
-                <span className="text-sm font-medium text-[#3A3A3A]">4.5</span>
-                <span className="text-xs text-[#9E9E9E]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
+                <span className="text-sm text-[#6B6B6B]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
               </div>
+
+              {/* Rating Tooltip */}
               {showRatingTooltip && (
                 <div className="absolute top-full left-0 mt-2 bg-white border border-[#E8E2D9] rounded-xl shadow-lg p-4 w-64 z-10">
                   <h4 className="font-semibold text-[#2D2D2D] mb-3 text-sm">{language === 'hi' ? 'रेटिंग विवरण' : 'Rating Breakdown'}</h4>
@@ -355,7 +377,10 @@ export default function ProductDetailPage() {
                       <div key={stars} className="flex items-center gap-2">
                         <span className="text-xs text-[#6B6B6B] w-8">{stars} ⭐</span>
                         <div className="flex-1 h-2 bg-[#F0EDE8] rounded-full overflow-hidden">
-                          <div className="h-full bg-[#B8962E] transition-all" style={{ width: `${percentage}%` }}></div>
+                          <div
+                            className="h-full bg-green-600 transition-all"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
                         </div>
                         <span className="text-xs text-[#6B6B6B] w-12 text-right">{count}</span>
                       </div>
@@ -365,46 +390,33 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Price */}
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-2xl font-bold text-[#1A1A1A]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-                ₹{product.price.toLocaleString('en-IN')}
-              </span>
-              {product.originalPrice && (
-                <>
-                  <span className="text-sm text-[#9E9E9E] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
-                  <span className="text-xs text-[#7A7A7A] font-medium">{discountPercent}% off</span>
-                </>
-              )}
-            </div>
-
-            {/* Colors — placed directly below price */}
+            {/* Colors */}
             {product.colors && product.colors.length > 0 && product.category !== 'beauty' && (
               <div>
-                <p className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-2.5">
-                  {t('product.color')}
-                  {product.colors[selectedColor] && (
-                    <span className="normal-case tracking-normal ml-2 text-[#2D2D2D] font-semibold">
-                      {language === 'hi' ? product.colors[selectedColor]?.nameHi : product.colors[selectedColor]?.name}
-                    </span>
-                  )}
+                <p className="text-sm font-semibold text-[#2D2D2D] mb-2">
+                  {t('product.color')}:{' '}
+                  <span className="font-normal text-[#6B6B6B]">
+                    {language === 'hi' ? product.colors[selectedColor]?.nameHi : product.colors[selectedColor]?.name}
+                  </span>
                 </p>
-                <div className="flex gap-2.5">
+                <div className="flex gap-2">
                   {product.colors.map((color, idx) => (
                     <button
                       key={idx}
                       onClick={() => {
                         setSelectedColor(idx);
+                        // Change image when color changes
                         if (allImages.length > 0) {
+                          // If multiple images exist, distribute them across colors
+                          // For example: 3 colors with 9 images = 3 images per color
                           const imagesPerColor = Math.max(1, Math.floor(allImages.length / product.colors.length));
                           const startIndex = idx * imagesPerColor;
+                          // Show the first image for this color, or cycle if not enough images
                           setSelectedImage(startIndex < allImages.length ? startIndex : idx % allImages.length);
                         }
                       }}
-                      className={`w-8 h-8 rounded-full transition-all duration-200 ring-offset-[3px] ${
-                        selectedColor === idx
-                          ? 'ring-1 ring-[#6B6B6B]'
-                          : 'ring-1 ring-transparent hover:ring-[#BCBCBC] hover:ring-offset-[3px]'
+                      className={`w-8 h-8 rounded-full border-2 transition-all duration-200 ${
+                        selectedColor === idx ? 'border-[#722F37] shadow-md scale-110' : 'border-[#E8E2D9] hover:border-[#C9A962]'
                       }`}
                       style={{ backgroundColor: color.hex }}
                       aria-label={color.name}
@@ -417,17 +429,11 @@ export default function ProductDetailPage() {
             {/* Sizes */}
             {(product.sizes && product.sizes.length > 0) && (
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest">{t('product.size')}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-[#2D2D2D]">{t('product.size')}</p>
                   {!isFreeSize && !['beauty', 'footwear'].includes(product.category) && (
-                    <button
-                      onClick={() => setShowSizeChart(true)}
-                      className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] transition-colors inline-flex items-center gap-1 leading-none"
-                    >
+                    <button onClick={() => setShowSizeChart(true)} className="text-sm text-[#722F37] hover:underline transition-colors">
                       {t('product.sizeChart')}
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v4M13 20h6M16 17l3 3 3-3" />
-                      </svg>
                     </button>
                   )}
                 </div>
@@ -441,10 +447,10 @@ export default function ProductDetailPage() {
                       <button
                         key={size}
                         onClick={() => { setSelectedSize(size); setSizeError(false); }}
-                        className={`px-5 py-2.5 rounded border text-sm font-medium transition-all duration-200 ${
+                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
                           selectedSize === size
-                            ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
-                            : 'border-[#D4D0CB] text-[#3A3A3A] hover:border-[#1A1A1A] bg-white'
+                            ? 'bg-[#722F37] text-white border-[#722F37]'
+                            : 'border-[#E8E2D9] text-[#2D2D2D] hover:border-[#722F37]'
                         }`}
                       >
                         {size}
@@ -456,182 +462,182 @@ export default function ProductDetailPage() {
               </div>
             )}
 
+            {/* Delivery Address */}
+            <div className="bg-[#F5F0E8] rounded-lg p-4">
+              {isAuthenticated ? (
+                selectedAddress ? (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-[#2D2D2D]">{t('product.deliverTo')}</p>
+                      {addresses.length > 1 && (
+                        <button onClick={() => setShowAddressDropdown(!showAddressDropdown)} className="text-sm text-[#722F37] hover:underline transition-colors">
+                          {t('product.changeAddress')}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm text-[#6B6B6B] mt-1">
+                      <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span> —{' '}
+                      {selectedAddress.address_line1}
+                      {selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
+                    </p>
+                    {showAddressDropdown && (
+                      <div className="mt-2 border border-[#E8E2D9] rounded-lg bg-white overflow-hidden">
+                        {addresses.map((addr) => (
+                          <button
+                            key={addr.id}
+                            onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
+                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#F5F0E8] transition-colors ${
+                              selectedAddress?.id === addr.id ? 'bg-[#F5F0E8] font-medium text-[#722F37]' : 'text-[#2D2D2D]'
+                            }`}
+                          >
+                            <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
+                            {addr.is_default && <span className="ml-2 text-xs text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#6B6B6B]">
+                    {t('product.deliverTo')}{' '}
+                    <Link href="/addresses" className="text-[#722F37] hover:underline">{t('product.addAddress')}</Link>
+                  </p>
+                )
+              ) : (
+                <p className="text-sm text-[#6B6B6B]">
+                  <Link href="/login" className="text-[#722F37] hover:underline">{t('product.loginDelivery')}</Link>
+                </p>
+              )}
+            </div>
+
             {/* Add to Cart Button */}
             <button
               onClick={handleAddToCart}
-              className="w-full py-4 rounded-none bg-[#1A1A1A] text-white font-medium text-sm tracking-widest uppercase transition-all duration-300 hover:bg-[#3A3A3A] active:bg-black"
+              className="w-full py-4 rounded-full text-white font-semibold text-base transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-[#722F37] to-[#8B3D47] hover:shadow-lg hover:shadow-[#722F37]/25"
             >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
               {t('product.addToCart')}
             </button>
 
-            {/* Accordion — Description / Details & Care / Shipping & Returns */}
-            <div className="border-t border-[#E8E2D9]">
-              {[
-                {
-                  id: 'description',
-                  label: language === 'hi' ? 'विवरण' : 'Description',
-                  content: (
-                    <p className="text-sm text-[#4A4A4A] leading-relaxed">
-                      {language === 'hi' ? product.descriptionHi : product.description}
+            {/* Product Details Card */}
+            <div className="bg-white rounded-xl border border-[#E8E2D9] p-5">
+              <h3 className="font-semibold text-[#2D2D2D] mb-3" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                {t('product.productDetails')}
+              </h3>
+              <div className="space-y-0 text-sm">
+                <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                  <span className="text-[#6B6B6B]">{language === 'hi' ? 'श्रेणी' : 'Category'}</span>
+                  <span className="font-medium text-[#2D2D2D]">
+                    {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
+                  </span>
+                </div>
+
+                {/* Beauty Product Details */}
+                {product.category === 'beauty' && product.fabric && (() => {
+                  const details = parseBeautyDetails(product.fabric);
+                  return (
+                    <>
+                      {details.brand && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'ब्रांड' : 'Brand'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.brand}</span>
+                        </div>
+                      )}
+                      {details.shade && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'शेड' : 'Shade'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.shade}</span>
+                        </div>
+                      )}
+                      {details.volume && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'मात्रा' : 'Volume'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.volume}</span>
+                        </div>
+                      )}
+                      {details.expiry && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'समाप्ति' : 'Expiry'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.expiry}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Footwear Product Details */}
+                {product.category === 'footwear' && product.fabric && (() => {
+                  const details = parseFootwearDetails(product.fabric);
+                  return (
+                    <>
+                      {details.brand && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'ब्रांड' : 'Brand'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.brand}</span>
+                        </div>
+                      )}
+                      {details.material && (
+                        <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                          <span className="text-[#6B6B6B]">{language === 'hi' ? 'सामग्री' : 'Material'}</span>
+                          <span className="font-medium text-[#2D2D2D]">{details.material}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Clothing Product Details */}
+                {!['beauty', 'footwear'].includes(product.category) && product.fabric && (
+                  <div className="flex justify-between py-2 border-b border-[#F0EDE8]">
+                    <span className="text-[#6B6B6B]">{language === 'hi' ? 'कपड़ा' : 'Fabric'}</span>
+                    <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? product.fabricHi : product.fabric}</span>
+                  </div>
+                )}
+
+                <div className="py-2">
+                  <span className="text-[#6B6B6B]">{language === 'hi' ? 'विवरण' : 'Description'}</span>
+                  <p className="text-[#2D2D2D] mt-1 leading-relaxed">
+                    {language === 'hi' ? product.descriptionHi : product.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Seller Information Card */}
+            <div className="bg-white rounded-xl border border-[#E8E2D9] p-5">
+              <h3 className="font-semibold text-[#2D2D2D] mb-3 flex items-center gap-2" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+                <svg className="w-5 h-5 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                {language === 'hi' ? 'विक्रेता की जानकारी' : 'Sold By'}
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="font-semibold text-[#2D2D2D] text-base">
+                    {product.seller
+                      ? (language === 'hi' && product.seller.businessNameHi ? product.seller.businessNameHi : product.seller.businessName)
+                      : (language === 'hi' ? 'इंस्टा फैशन पॉइंट्स' : 'Insta Fashion Points')}
+                  </p>
+                  {product.seller && (product.seller.city || product.seller.state) && (
+                    <p className="text-[#6B6B6B] mt-1 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {product.seller.city}{product.seller.city && product.seller.state ? ', ' : ''}{product.seller.state}
                     </p>
-                  ),
-                },
-                {
-                  id: 'details',
-                  label: language === 'hi' ? 'विवरण और देखभाल' : 'Details & Care',
-                  content: (
-                    <ul className="space-y-2 text-sm text-[#4A4A4A]">
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>
-                          <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'श्रेणी' : 'Category'}:</span>{' '}
-                          {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
-                        </span>
-                      </li>
-                      {!['beauty', 'footwear'].includes(product.category) && product.fabric && (
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#9E9E9E] mt-0.5">—</span>
-                          <span>
-                            <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'कपड़ा' : 'Fabric'}:</span>{' '}
-                            {language === 'hi' ? product.fabricHi : product.fabric}
-                          </span>
-                        </li>
-                      )}
-                      {product.category === 'beauty' && product.fabric && (() => {
-                        const d = parseBeautyDetails(product.fabric);
-                        return (
-                          <>
-                            {d.brand && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'ब्रांड' : 'Brand'}:</span> {d.brand}</span></li>}
-                            {d.shade && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'शेड' : 'Shade'}:</span> {d.shade}</span></li>}
-                            {d.volume && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'मात्रा' : 'Volume'}:</span> {d.volume}</span></li>}
-                            {d.expiry && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'समाप्ति' : 'Expiry'}:</span> {d.expiry}</span></li>}
-                          </>
-                        );
-                      })()}
-                      {product.category === 'footwear' && product.fabric && (() => {
-                        const d = parseFootwearDetails(product.fabric);
-                        return (
-                          <>
-                            {d.brand && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'ब्रांड' : 'Brand'}:</span> {d.brand}</span></li>}
-                            {d.material && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'सामग्री' : 'Material'}:</span> {d.material}</span></li>}
-                          </>
-                        );
-                      })()}
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'हल्के हाथ से या मशीन में ठंडे पानी से धोएं' : 'Hand wash or machine wash in cold water'}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'सीधे धूप में न सुखाएं' : 'Do not tumble dry or bleach'}</span>
-                      </li>
-                    </ul>
-                  ),
-                },
-                {
-                  id: 'shipping',
-                  label: language === 'hi' ? 'शिपिंग और वापसी' : 'Shipping & Returns',
-                  content: (
-                    <ul className="space-y-2 text-sm text-[#4A4A4A]">
-                      {/* Delivery address */}
-                      {isAuthenticated && selectedAddress && (
-                        <li className="flex items-start justify-between gap-2 pb-2 mb-1 border-b border-[#F0EDE8]">
-                          <p className="text-xs text-[#6B6B6B] leading-relaxed">
-                            <span className="font-medium text-[#3A3A3A]">{t('product.deliverTo')}</span>{' '}
-                            <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span>{' '}
-                            — {selectedAddress.address_line1}{selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
-                          </p>
-                          {addresses.length > 1 && (
-                            <button
-                              onClick={() => setShowAddressDropdown(!showAddressDropdown)}
-                              className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] whitespace-nowrap transition-colors flex-shrink-0"
-                            >
-                              {t('product.changeAddress')}
-                            </button>
-                          )}
-                        </li>
-                      )}
-                      {isAuthenticated && !selectedAddress && (
-                        <li className="pb-2 mb-1 border-b border-[#F0EDE8]">
-                          <p className="text-xs text-[#6B6B6B]">
-                            {t('product.deliverTo')}{' '}
-                            <Link href="/addresses" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.addAddress')}</Link>
-                          </p>
-                        </li>
-                      )}
-                      {!isAuthenticated && (
-                        <li className="pb-2 mb-1 border-b border-[#F0EDE8]">
-                          <p className="text-xs text-[#6B6B6B]">
-                            <Link href="/login" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.loginDelivery')}</Link>
-                          </p>
-                        </li>
-                      )}
-                      {showAddressDropdown && addresses.length > 1 && (
-                        <li>
-                          <div className="border border-[#E8E2D9] rounded bg-white overflow-hidden mb-1">
-                            {addresses.map((addr) => (
-                              <button
-                                key={addr.id}
-                                onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
-                                className={`w-full text-left px-4 py-2.5 text-xs hover:bg-[#FAF7F2] transition-colors ${
-                                  selectedAddress?.id === addr.id ? 'bg-[#FAF7F2] font-medium text-[#1A1A1A]' : 'text-[#3A3A3A]'
-                                }`}
-                              >
-                                <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
-                                {addr.is_default && <span className="ml-2 text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
-                              </button>
-                            ))}
-                          </div>
-                        </li>
-                      )}
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'सामान्यतः 3–7 कार्यदिवसों में डिलीवरी' : 'Delivery within 3–7 business days'}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? '₹499 से अधिक के ऑर्डर पर निःशुल्क शिपिंग' : 'Free shipping on orders above ₹499'}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'डिलीवरी के 7 दिनों के भीतर वापसी की जा सकती है' : 'Easy returns within 7 days of delivery'}</span>
-                      </li>
-                      {product.seller && (
-                        <li className="flex items-start gap-2 pt-1 border-t border-[#F0EDE8] mt-1">
-                          <span className="text-[#9E9E9E] mt-0.5">—</span>
-                          <span>
-                            {language === 'hi' ? 'विक्रेता: ' : 'Sold by '}
-                            <span className="font-medium text-[#2D2D2D]">
-                              {language === 'hi' && product.seller.businessNameHi ? product.seller.businessNameHi : product.seller.businessName}
-                            </span>
-                            {product.seller.city ? `, ${product.seller.city}` : ''}
-                          </span>
-                        </li>
-                      )}
-                    </ul>
-                  ),
-                },
-              ].map(({ id, label, content }) => (
-                <div key={id} className="border-b border-[#E8E2D9]">
-                  <button
-                    onClick={() => setOpenAccordion(openAccordion === id ? null : id)}
-                    className="w-full flex items-center justify-between py-4 text-left"
-                  >
-                    <span className="text-xs font-medium text-[#2D2D2D] uppercase tracking-widest">{label}</span>
-                    <svg
-                      className={`w-4 h-4 text-[#6B6B6B] transition-transform duration-200 ${openAccordion === id ? 'rotate-180' : ''}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {openAccordion === id && (
-                    <div className="pb-4">
-                      {content}
-                    </div>
                   )}
                 </div>
-              ))}
+                <div className="pt-3 border-t border-[#F0EDE8]">
+                  <p className="text-xs text-[#6B6B6B]">
+                    {language === 'hi'
+                      ? '✓ भरोसेमंद विक्रेता द्वारा बेचा गया'
+                      : '✓ Sold by a verified seller'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -669,34 +675,6 @@ export default function ProductDetailPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* Image Zoom Lightbox */}
-      {zoomImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setZoomImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
-            {isCloudinary(zoomImage) ? (
-              <CldImage
-                src={zoomImage}
-                alt="Zoomed product"
-                width={900}
-                height={900}
-                className="object-contain max-h-[85vh] rounded-xl shadow-2xl"
-              />
-            ) : (
-              <img src={zoomImage} alt="Zoomed product" className="object-contain max-h-[85vh] max-w-full rounded-xl shadow-2xl" />
-            )}
-            <button
-              onClick={() => setZoomImage(null)}
-              className="absolute top-2 right-2 bg-white/90 hover:bg-white text-[#2D2D2D] rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shadow"
-            >
-              ×
-            </button>
           </div>
         </div>
       )}

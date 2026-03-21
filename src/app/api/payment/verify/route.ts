@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabase } from '@/lib/supabase';
-import { adminOrdersCache } from '@/lib/cache';
 
 interface VerifyPaymentRequest {
   razorpay_order_id: string;
@@ -72,7 +71,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Verify Payment] Payment order updated:', paymentOrder.order_number);
-    adminOrdersCache.clear().catch(e => console.warn('[Verify Payment] Cache clear failed:', e));
 
     // Send payment notifications
     try {

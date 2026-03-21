@@ -29,8 +29,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'Sweta Fashion Points में आपका स्वागत है। fashionpoints.co.in ("वेबसाइट") का उपयोग करके, आप इन नियमों और शर्तों से बाध्य होने के लिए सहमत हैं। कृपया सावधानीपूर्वक पढ़ें।'
-                  : 'Welcome to Sweta Fashion Points. By using fashionpoints.co.in ("Website"), you agree to be bound by these Terms and Conditions. Please read carefully.'}
+                  ? 'Insta Fashion Points में आपका स्वागत है। fashionpoints.co.in ("वेबसाइट") का उपयोग करके, आप इन नियमों और शर्तों से बाध्य होने के लिए सहमत हैं। कृपया सावधानीपूर्वक पढ़ें।'
+                  : 'Welcome to Insta Fashion Points. By using fashionpoints.co.in ("Website"), you agree to be bound by these Terms and Conditions. Please read carefully.'}
               </p>
             </section>
 
@@ -108,8 +108,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'वेबसाइट पर सभी सामग्री, लोगो, डिज़ाइन और ट्रेडमार्क Sweta Fashion Points की संपत्ति हैं। बिना लिखित अनुमति के किसी भी सामग्री का उपयोग, पुनरुत्पादन या वितरण निषिद्ध है।'
-                  : 'All content, logos, designs, and trademarks on the Website are the property of Sweta Fashion Points. Any use, reproduction, or distribution of any content without written permission is prohibited.'}
+                  ? 'वेबसाइट पर सभी सामग्री, लोगो, डिज़ाइन और ट्रेडमार्क Insta Fashion Points की संपत्ति हैं। बिना लिखित अनुमति के किसी भी सामग्री का उपयोग, पुनरुत्पादन या वितरण निषिद्ध है।'
+                  : 'All content, logos, designs, and trademarks on the Website are the property of Insta Fashion Points. Any use, reproduction, or distribution of any content without written permission is prohibited.'}
               </p>
             </section>
 
@@ -130,8 +130,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'Sweta Fashion Points वेबसाइट के उपयोग या उत्पादों की खरीद से उत्पन्न किसी भी प्रत्यक्ष, अप्रत्यक्ष, आकस्मिक या परिणामी क्षति के लिए उत्तरदायी नहीं होगा। हमारा अधिकतम दायित्व खरीद मूल्य तक सीमित है।'
-                  : 'Sweta Fashion Points shall not be liable for any direct, indirect, incidental, or consequential damages arising from the use of the Website or purchase of products. Our maximum liability is limited to the purchase price.'}
+                  ? 'Insta Fashion Points वेबसाइट के उपयोग या उत्पादों की खरीद से उत्पन्न किसी भी प्रत्यक्ष, अप्रत्यक्ष, आकस्मिक या परिणामी क्षति के लिए उत्तरदायी नहीं होगा। हमारा अधिकतम दायित्व खरीद मूल्य तक सीमित है।'
+                  : 'Insta Fashion Points shall not be liable for any direct, indirect, incidental, or consequential damages arising from the use of the Website or purchase of products. Our maximum liability is limited to the purchase price.'}
               </p>
             </section>
 
@@ -180,8 +180,8 @@ export default function TermsAndConditionsPage() {
             <div className="mt-12 p-6 bg-[#722F37] bg-opacity-10 rounded-lg border border-[#722F37]">
               <p className="text-[#722F37] font-semibold text-center">
                 {language === 'hi'
-                  ? 'इन नियमों और शर्तों को स्वीकार करके, आप Sweta Fashion Points के साथ एक कानूनी समझौते में प्रवेश कर रहे हैं।'
-                  : 'By accepting these Terms and Conditions, you are entering into a legally binding agreement with Sweta Fashion Points.'}
+                  ? 'इन नियमों और शर्तों को स्वीकार करके, आप Insta Fashion Points के साथ एक कानूनी समझौते में प्रवेश कर रहे हैं।'
+                  : 'By accepting these Terms and Conditions, you are entering into a legally binding agreement with Insta Fashion Points.'}
               </p>
             </div>
           </div>

@@ -357,7 +357,7 @@ Partner: [NAME], Contact: [PHONE]
 
 **Delivered:**
 ```
-Order #[ORDER_NO] delivered successfully! Thank you for shopping with Sweta Fashion Points.
+Order #[ORDER_NO] delivered successfully! Thank you for shopping with Insta Fashion Points.
 Rate your delivery: [URL]
 ```
 

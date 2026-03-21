@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Send SMS
     const smsResult = await sendSMS({
       phone: mobile,
-      message: `Your OTP for login at Fashion Points is ${otp}. Valid for 10 minutes. Do not share with anyone.`,
+      message: `Your OTP for login at Insta Fashion Points is ${otp}. Valid for 10 minutes. Do not share with anyone.`,
     });
 
     if (!smsResult.success) {

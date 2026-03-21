@@ -114,7 +114,7 @@ curl http://localhost:3000/api/products?sellerId=SELLER_ID
 ## Step 6: Clear Next.js Cache
 
 ```bash
-cd "/Users/hemantkumar/VsCode_ Projects/Sweta Fashion Points/sweta-fashion-points"
+cd "/Users/hemantkumar/VsCode_ Projects/Insta Fashion Points/insta-fashion-points"
 rm -rf .next
 npm run build
 npm run dev

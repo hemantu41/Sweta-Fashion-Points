@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         })) || [];
       },
       sellerCache,
-      1800 // 30 minutes TTL
+      600 // 10 minutes TTL
     );
 
     return NextResponse.json({

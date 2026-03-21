@@ -207,7 +207,7 @@ export default function SignupPage() {
           className="text-3xl font-semibold tracking-[0.06em] text-[#1A1A1A]"
           style={{ fontFamily: "'Cormorant Garamond', serif" }}
         >
-          Sweta Fashion Points
+          Insta Fashion Points
         </p>
       </div>
 
@@ -227,7 +227,7 @@ export default function SignupPage() {
             Create Account
           </h1>
           <p className="text-[10px] tracking-[0.22em] uppercase mt-1.5" style={{ color: gold }}>
-            Join Sweta Fashion Points
+            Join Insta Fashion Points
           </p>
         </div>
 

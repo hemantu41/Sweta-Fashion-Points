@@ -19,27 +19,27 @@ export async function generateMetadata(
 
   if (!product) {
     return {
-      title: 'Product | Fashion Points',
-      description: 'Shop premium clothing at Fashion Points, Amas, Gaya, Bihar.',
+      title: 'Product | Insta Fashion Points',
+      description: 'Shop premium clothing at Insta Fashion Points, Amas, Gaya, Bihar.',
     };
   }
 
   const description = product.description
     ? product.description.slice(0, 160)
-    : `Buy ${product.name} at Fashion Points. Quality fashion at affordable prices in Amas, Gaya, Bihar.`;
+    : `Buy ${product.name} at Insta Fashion Points. Quality fashion at affordable prices in Amas, Gaya, Bihar.`;
 
   const imageUrl = product.main_image
     ? `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/upload/w_800,q_auto,f_auto/${product.main_image}`
     : undefined;
 
   return {
-    title: `${product.name} | Fashion Points`,
+    title: `${product.name} | Insta Fashion Points`,
     description,
     openGraph: {
       title: product.name,
       description,
       url: `${BASE_URL}/product/${id}`,
-      siteName: 'Fashion Points',
+      siteName: 'Insta Fashion Points',
       type: 'website',
       ...(imageUrl && {
         images: [{ url: imageUrl, alt: product.name, width: 800, height: 1067 }],

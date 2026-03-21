@@ -6,7 +6,6 @@ import {
   notifyOrderDelivered,
   notifyDeliveryFailed,
 } from '@/lib/delivery-notifications';
-import { deliveryCache, adminOrdersCache } from '@/lib/cache';
 
 // PUT - Update delivery status
 export async function PUT(
@@ -148,17 +147,6 @@ export async function PUT(
         { error: 'Failed to update delivery status', details: updateError.message },
         { status: 500 }
       );
-    }
-
-    // Invalidate caches in background — don't block the response
-    adminOrdersCache.clear().catch(e => console.warn('[Delivery Status API] Cache clear failed:', e));
-    if (delivery.delivery_partner_id) {
-      const pid = delivery.delivery_partner_id;
-      deliveryCache.delete(`orders:${pid}:all`).catch(() => {});
-      deliveryCache.delete(`orders:${pid}:${status}`).catch(() => {});
-      if (delivery.status && delivery.status !== status) {
-        deliveryCache.delete(`orders:${pid}:${delivery.status}`).catch(() => {});
-      }
     }
 
     // Record status change in history

@@ -403,4 +403,4 @@ A **premium, balanced, and elegant** home page that:
 
 ---
 
-**Designed with ❤️ for Sweta Fashion Points**
+**Designed with ❤️ for Insta Fashion Points**

@@ -1,5 +1,5 @@
 {
-  "name": "sweta-fashion-points",
+  "name": "insta-fashion-points",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",
-    "@upstash/redis": "^1.36.4",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
     "next": "16.1.4",

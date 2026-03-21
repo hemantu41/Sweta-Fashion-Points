@@ -19,20 +19,20 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "Fashion Points | Premium Clothing Store in Amas, Gaya, Bihar",
-  description: "Discover trendy fashion for Men, Women, Kids & exclusive Saree collections at Fashion Points. Your trusted clothing store in Amas, Gaya, Bihar. Shop quality fashion at affordable prices.",
-  keywords: "clothing store Amas, fashion store Gaya, saree shop Bihar, men's fashion, women's fashion, kids clothing, ethnic wear, wedding sarees, party wear, Fashion Points",
+  title: "Insta Fashion Points | Premium Clothing Store in Amas, Gaya, Bihar",
+  description: "Discover trendy fashion for Men, Women, Kids & exclusive Saree collections at Insta Fashion Points. Your trusted clothing store in Amas, Gaya, Bihar. Shop quality fashion at affordable prices.",
+  keywords: "clothing store Amas, fashion store Gaya, saree shop Bihar, men's fashion, women's fashion, kids clothing, ethnic wear, wedding sarees, party wear, Insta Fashion Points",
   openGraph: {
-    title: "Fashion Points | Premium Clothing Store in Amas, Gaya",
+    title: "Insta Fashion Points | Premium Clothing Store in Amas, Gaya",
     description: "Trendy fashion for the whole family. Premium quality at affordable prices. Shop online or visit our store.",
     url: "https://fashionpoints.co.in",
-    siteName: "Fashion Points",
+    siteName: "Insta Fashion Points",
     locale: "en_IN",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fashion Points | Clothing Store in Gaya, Bihar",
+    title: "Insta Fashion Points | Clothing Store in Gaya, Bihar",
     description: "Trendy fashion for Men, Women, Kids & exclusive Sarees. Shop online or visit us in Amas, Gaya.",
   },
   robots: {
@@ -62,7 +62,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "ClothingStore",
-              name: "Fashion Points",
+              name: "Insta Fashion Points",
               image: "https://fashionpoints.co.in/logo.png",
               "@id": "https://fashionpoints.co.in",
               url: "https://fashionpoints.co.in",

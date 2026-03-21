@@ -2,7 +2,7 @@
 
 ## Overview
 
-This multi-vendor seller management system allows multiple sellers to register, get approved by admin, and manage their own products on the Sweta Fashion Points platform.
+This multi-vendor seller management system allows multiple sellers to register, get approved by admin, and manage their own products on the Insta Fashion Points platform.
 
 ## Key Features
 
@@ -372,7 +372,7 @@ http://localhost:3000/admin/sellers
 
 ## License
 
-Part of Sweta Fashion Points platform. Proprietary software.
+Part of Insta Fashion Points platform. Proprietary software.
 
 ---
 

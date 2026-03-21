@@ -51,7 +51,7 @@ https://fashionpoints.co.in/api/payment/webhook
 ### Step 3: Add Webhook Secret to Vercel Environment Variables
 
 1. **Go to Vercel Dashboard**
-   - Navigate to: https://vercel.com/[your-username]/sweta-fashion-points
+   - Navigate to: https://vercel.com/[your-username]/insta-fashion-points
    - Click on **Settings** tab
    - Click on **Environment Variables**
 

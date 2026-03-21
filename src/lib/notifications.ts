@@ -172,13 +172,13 @@ export async function sendPaymentNotification(params: PaymentNotificationParams)
   let whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_SUCCESS || '';
 
   if (status === 'success') {
-    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} was successful! Your order is being processed. Track at: fashionpoints.co.in/orders - Fashion Points`;
+    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} was successful! Your order is being processed. Track at: fashionpoints.co.in/orders - Insta Fashion Points`;
     whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_SUCCESS || 'payment_success';
   } else if (status === 'failed') {
-    message = `Hi ${name}, payment of ₹${formattedAmount} for order ${orderNumber} failed. Please try again or contact support. - Fashion Points`;
+    message = `Hi ${name}, payment of ₹${formattedAmount} for order ${orderNumber} failed. Please try again or contact support. - Insta Fashion Points`;
     whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_FAILED || 'payment_failed';
   } else if (status === 'pending') {
-    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} is pending verification. You'll be notified once confirmed. - Fashion Points`;
+    message = `Hi ${name}, your payment of ₹${formattedAmount} for order ${orderNumber} is pending verification. You'll be notified once confirmed. - Insta Fashion Points`;
     whatsappTemplateId = process.env.GUPSHUP_TEMPLATE_PENDING || 'payment_pending';
   }
 

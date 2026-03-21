@@ -14,7 +14,7 @@
 
 ## Overview
 
-The Delivery Partner System allows individuals to register as delivery partners, get approved by admins, and manage deliveries for Sweta Fashion Points. The system includes:
+The Delivery Partner System allows individuals to register as delivery partners, get approved by admins, and manage deliveries for Insta Fashion Points. The system includes:
 
 - **Self-registration portal** for delivery partners
 - **Admin approval workflow** with rejection reasons

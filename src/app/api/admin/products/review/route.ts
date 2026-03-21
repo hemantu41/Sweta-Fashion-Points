@@ -102,8 +102,9 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error;
 
-    // Clear product cache in background — don't block the response
-    productCache.clear().catch(e => console.warn('[Admin Product Review API] Cache clear failed:', e));
+    // Clear product cache after approval/rejection
+    productCache.clear();
+    console.log('[Admin Product Review API] Cache cleared after product approval/rejection');
 
     return NextResponse.json({
       success: true,

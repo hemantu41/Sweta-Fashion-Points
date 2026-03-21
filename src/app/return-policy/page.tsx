@@ -131,8 +131,8 @@ export default function ReturnPolicyPage() {
               <div className="bg-[#722F37] bg-opacity-10 rounded-lg p-4 mt-4 border border-[#722F37]">
                 <p className="text-[#722F37] font-semibold">
                   {language === 'hi'
-                    ? '📦 रिटर्न पता: Sweta Fashion Points, Amas, Gaya, Bihar - 824219'
-                    : '📦 Return Address: Sweta Fashion Points, Amas, Gaya, Bihar - 824219'}
+                    ? '📦 रिटर्न पता: Insta Fashion Points, Amas, Gaya, Bihar - 824219'
+                    : '📦 Return Address: Insta Fashion Points, Amas, Gaya, Bihar - 824219'}
                 </p>
               </div>
             </section>

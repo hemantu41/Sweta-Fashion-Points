@@ -27,16 +27,10 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search'); // NEW: Search query
     const userLat = searchParams.get('userLat');   // Location-based filter
     const userLng = searchParams.get('userLng');   // Location-based filter
-    // Pagination
-    const pageParam = searchParams.get('page');
-    const limitParam = searchParams.get('limit');
-    const page = pageParam ? Math.max(1, parseInt(pageParam)) : null;
-    const limit = limitParam ? Math.min(100, Math.max(1, parseInt(limitParam))) : null;
-    const usePagination = page !== null && limit !== null;
     // Note: _t parameter is ignored for cache key (used only for browser cache busting)
 
-    // Bypass cache for search, location, and paginated queries — results are context-specific
-    const useCache = !search && !(userLat && userLng) && !usePagination;
+    // Bypass cache for search and location queries — results are real-time / user-specific
+    const useCache = !search && !(userLat && userLng);
     const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}:${search || 'none'}`;
 
     // Function to fetch products
@@ -89,21 +83,14 @@ export async function GET(request: NextRequest) {
       // IMPORTANT: Only show approved products for customer-facing queries
       // Sellers querying their own products can see all statuses
       // Admin can use includeAllStatuses=true to see pending/rejected products
+      const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
       if (!sellerId && !includeAllStatuses) {
         query = query.eq('approval_status', 'approved');
         // Customer-facing queries should also exclude deleted products
         query = query.is('deleted_at', null);
       }
 
-      // Apply pagination at DB level when requested
-      if (usePagination) {
-        const from = (page! - 1) * limit!;
-        const to = from + limit! - 1;
-        query = query.range(from, to);
-      }
-
-      const { data: products, error, count } = await query
-        .order('created_at', { ascending: false });
+      const { data: products, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error('[Products API] Database error:', error);
@@ -155,13 +142,9 @@ export async function GET(request: NextRequest) {
       })) || [];
     };
 
-    // All scenarios use 30 min TTL; cache is invalidated on every mutation
-    const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
-    const cacheTTL = 1800;
-
     // Use cache for normal queries; bypass for search or location-filtered queries
     let transformedProducts = useCache
-      ? await getCachedData(cacheKey, fetchProducts, productCache, cacheTTL)
+      ? await getCachedData(cacheKey, fetchProducts, productCache, 600)
       : await fetchProducts();
 
     // Apply 35 km distance filter when user coordinates are provided
@@ -177,22 +160,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Products API] Returning ${transformedProducts.length} products${search ? ` for search: "${search}"` : category ? ` for category: ${category}` : ''}`);
 
-    const responseBody: Record<string, unknown> = { products: transformedProducts };
-    if (usePagination) {
-      responseBody.page = page;
-      responseBody.limit = limit;
-      responseBody.hasMore = transformedProducts.length === limit;
-    }
-
-    // CDN/browser cache headers:
-    // - Customer-facing (no search, no user context): cache 30 min, serve stale up to 1 min while revalidating
-    // - Admin / seller / search queries: no CDN cache (handled by Redis per-session)
-    const isPublicQuery = !search && !sellerId && !userLat && !includeAllStatuses;
-    const cacheHeaders = isPublicQuery
-      ? { 'Cache-Control': 's-maxage=1800, stale-while-revalidate=60' }
-      : { 'Cache-Control': 'no-store' };
-
-    return NextResponse.json(responseBody, { headers: cacheHeaders });
+    return NextResponse.json({ products: transformedProducts });
   } catch (error) {
     console.error('Products API error:', error);
     return NextResponse.json(
@@ -314,8 +282,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Clear product cache in background — don't block the response
-    productCache.clear().catch(e => console.warn('[Products API] Cache clear failed:', e));
+    // Clear product cache when new product is created
+    productCache.clear();
 
     return NextResponse.json({
       message: 'Product created successfully',
