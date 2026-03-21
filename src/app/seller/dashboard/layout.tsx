@@ -8,6 +8,7 @@ import SellerSidebar from '@/components/seller/SellerSidebar';
 import SellerTopbar from '@/components/seller/SellerTopbar';
 import NotificationsPanel from '@/components/seller/NotificationsPanel';
 import SellerAuthGuard from '@/components/SellerAuthGuard';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans', display: 'swap' });
 
@@ -32,12 +33,6 @@ interface DashboardData {
   qcBadge: number;
 }
 
-const DEMO_NOTIFICATIONS = [
-  { id: '1', type: 'order' as const, text: 'New order #ORD-1042 received. Pack by 5:00 PM today.', time: '10 min ago', read: false },
-  { id: '2', type: 'qc' as const, text: 'Product "Red Silk Saree" approved and is now live.', time: '2 hrs ago', read: false },
-  { id: '3', type: 'payment' as const, text: '₹2,340 credited to your bank account.', time: 'Yesterday', read: true },
-  { id: '4', type: 'alert' as const, text: 'Low stock alert: "Blue Kurta XL" has only 2 units left.', time: '2 days ago', read: true },
-];
 
 export default function SellerDashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -53,7 +48,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
     productBadge: 0,
     qcBadge: 0,
   });
-  const [notifications, setNotifications] = useState(DEMO_NOTIFICATIONS);
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications(data.sellerId || undefined);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -93,7 +88,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
   const { title, subtitle } = PAGE_TITLES[pathKey || '/seller/dashboard'];
 
   const initials = data.sellerName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  const hasUnread = notifications.some(n => !n.read);
+  const hasUnread = unreadCount > 0;
 
   return (
     <SellerAuthGuard>
@@ -131,7 +126,9 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
           isOpen={notifOpen}
           onClose={() => setNotifOpen(false)}
           notifications={notifications}
-          onMarkAllRead={() => setNotifications(ns => ns.map(n => ({ ...n, read: true })))}
+          unreadCount={unreadCount}
+          onMarkAllRead={markAllRead}
+          onMarkRead={markRead}
         />
       </div>
     </SellerAuthGuard>
