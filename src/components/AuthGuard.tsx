@@ -4,7 +4,23 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
-const publicPaths = ['/login', '/signup'];
+// Only these routes require login — everything else is public
+const PROTECTED_PREFIXES = [
+  '/cart',
+  '/checkout',
+  '/orders',
+  '/profile',
+  '/wishlist',
+  '/addresses',
+  '/payment',
+];
+
+// Routes that logged-in users should not see (redirect them home)
+const AUTH_ONLY_PATHS = ['/login', '/signup'];
+
+function isProtected(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+}
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -12,42 +28,26 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading) {
-      const isPublicPath = publicPaths.includes(pathname);
+    if (isLoading) return;
 
-      if (!isAuthenticated && !isPublicPath) {
-        // Redirect to login if not authenticated and trying to access protected route
-        router.push('/login');
-      } else if (isAuthenticated && isPublicPath) {
-        // Redirect to home if authenticated and trying to access login/signup
-        router.push('/');
-      }
+    if (!isAuthenticated && isProtected(pathname)) {
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    } else if (isAuthenticated && AUTH_ONLY_PATHS.includes(pathname)) {
+      router.push('/');
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 
-  // Show loading spinner while checking auth status
-  if (isLoading) {
+  // Only block rendering (show spinner) while redirecting away from a protected route
+  if (isLoading && isProtected(pathname)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cream">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-wine border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-charcoal font-lato">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FAF8F5' }}>
+        <div className="w-10 h-10 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Don't render protected content while redirecting
-  const isPublicPath = publicPaths.includes(pathname);
-  if (!isAuthenticated && !isPublicPath) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-cream">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-wine border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-charcoal font-lato">Redirecting to login...</p>
-        </div>
-      </div>
-    );
+  if (!isLoading && !isAuthenticated && isProtected(pathname)) {
+    return null;
   }
 
   return <>{children}</>;
