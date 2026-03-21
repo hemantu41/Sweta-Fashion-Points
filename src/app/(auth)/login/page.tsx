@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
@@ -39,8 +39,10 @@ const labelClass =
 const inputClass =
   'w-full bg-transparent border-0 border-b border-[#C9A84C]/40 focus:border-[#C9A84C] outline-none py-2.5 text-[#0A0A0A] text-sm transition-colors duration-200 placeholder:text-[#bbb]';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
   const { login } = useAuth();
 
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('password');
@@ -80,7 +82,7 @@ export default function LoginPage() {
     try {
       const res  = await fetch('/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: identifier, otp }) });
       const data = await res.json();
-      if (res.ok) { login(data.user); setSuccess('Login successful! Redirecting…'); setTimeout(() => router.push('/'), 1000); }
+      if (res.ok) { login(data.user); setSuccess('Login successful! Redirecting…'); setTimeout(() => router.push(callbackUrl), 1000); }
       else          setError(data.error || 'Invalid OTP');
     } catch { setError('Network error. Please try again.'); }
     finally  { setIsLoading(false); }
@@ -94,7 +96,7 @@ export default function LoginPage() {
     try {
       const res  = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
       const data = await res.json();
-      if (res.ok) { login(data.user); setSuccess('Login successful! Redirecting…'); setTimeout(() => router.push('/'), 1000); }
+      if (res.ok) { login(data.user); setSuccess('Login successful! Redirecting…'); setTimeout(() => router.push(callbackUrl), 1000); }
       else          setError(data.error || 'Invalid credentials');
     } catch { setError('Network error. Please try again.'); }
     finally  { setIsLoading(false); }
@@ -423,5 +425,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
