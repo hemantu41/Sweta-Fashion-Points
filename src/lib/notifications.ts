@@ -25,47 +25,76 @@ interface PaymentNotificationParams {
 }
 
 /**
- * Send SMS via MSG91
+ * Send OTP SMS via MSG91 OTP API
+ *
+ * Required env vars:
+ *   MSG91_AUTH_KEY   — API key from MSG91 dashboard (Settings → API Keys)
+ *   MSG91_SENDER_ID  — 6-char DLT-registered sender ID (default: SWEFPT)
+ *   MSG91_TEMPLATE_ID — OTP template ID from MSG91 dashboard (after DLT approval)
+ *
+ * DLT registration is mandatory in India:
+ *   1. Register on https://www.trai.gov.in/ or a DLT portal (Airtel, Vodafone, BSNL etc.)
+ *   2. Register your sender ID (e.g. SWEFPT) and OTP message template
+ *   3. After approval, add the template to MSG91 and get the Template ID
  */
 export async function sendSMS(params: SMSParams): Promise<{ success: boolean; error?: string }> {
-  const authKey = process.env.MSG91_AUTH_KEY;
-  const senderId = process.env.MSG91_SENDER_ID || 'SWEFPT';
+  const authKey    = process.env.MSG91_AUTH_KEY;
+  const senderId   = process.env.MSG91_SENDER_ID   || 'SWEFPT';
+  const templateId = process.env.MSG91_TEMPLATE_ID;
 
+  // ── Guard: missing config ──────────────────────────────────────────────────
   if (!authKey) {
-    console.error('[SMS] MSG91_AUTH_KEY not configured');
-    return { success: false, error: 'MSG91 not configured' };
+    console.error('[SMS] MISSING: MSG91_AUTH_KEY is not set in environment variables');
+    console.error('[SMS] Add MSG91_AUTH_KEY to your .env.local (local) or Vercel Environment Variables (production)');
+    return { success: false, error: 'MSG91_AUTH_KEY not configured' };
   }
 
-  // Format phone number: add 91 country code if not present
+  if (!templateId) {
+    console.error('[SMS] MISSING: MSG91_TEMPLATE_ID is not set in environment variables');
+    console.error('[SMS] Get your OTP template ID from MSG91 dashboard → SMS → OTP → Templates');
+    return { success: false, error: 'MSG91_TEMPLATE_ID not configured' };
+  }
+
+  // ── Format phone: must include 91 country code ────────────────────────────
   const formattedPhone = params.phone.startsWith('91')
     ? params.phone
     : `91${params.phone}`;
 
+  console.log(`[SMS] Sending OTP SMS to: ${formattedPhone}`);
+  console.log(`[SMS] Message: ${params.message}`);
+
   try {
-    const response = await fetch('https://api.msg91.com/api/v5/flow/', {
+    // MSG91 OTP API — correct endpoint for OTP delivery
+    const response = await fetch('https://api.msg91.com/api/v5/otp', {
       method: 'POST',
       headers: {
         'authkey': authKey,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        sender: senderId,
-        mobiles: formattedPhone,
-        message: params.message,
+        template_id: templateId,
+        mobile:      formattedPhone,
+        sender:      senderId,
+        otp:         params.message.match(/\b\d{6}\b/)?.[0] ?? '', // extract 6-digit OTP from message
       }),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    console.log(`[SMS] MSG91 raw response (status ${response.status}):`, responseText);
 
-    if (response.ok && data.type === 'success') {
-      console.log('[SMS] Sent successfully to:', formattedPhone);
+    let data: Record<string, unknown>;
+    try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; }
+
+    if (response.ok && (data.type === 'success' || String(data.message).toLowerCase().includes('success'))) {
+      console.log('[SMS] ✅ Sent successfully to:', formattedPhone);
       return { success: true };
     } else {
-      console.error('[SMS] Failed:', data);
-      return { success: false, error: data.message || 'SMS send failed' };
+      console.error('[SMS] ❌ Failed. MSG91 response:', data);
+      console.error('[SMS] Check: 1) auth key valid  2) template approved on DLT  3) sender ID matches DLT  4) account has balance');
+      return { success: false, error: String(data.message ?? data.raw ?? 'SMS send failed') };
     }
   } catch (error) {
-    console.error('[SMS] Error:', error);
+    console.error('[SMS] ❌ Network/fetch error:', error);
     return { success: false, error: String(error) };
   }
 }
