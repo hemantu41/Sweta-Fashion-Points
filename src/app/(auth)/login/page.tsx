@@ -3,7 +3,6 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 
 const gold     = '#C9A84C';
@@ -120,14 +119,8 @@ function LoginForm() {
       className="min-h-screen flex flex-col items-center justify-start py-10 px-4"
       style={{ background: '#FAF8F5', fontFamily: "'Jost', sans-serif" }}
     >
-      {/* ── Logo block ── */}
+      {/* ── Brand name ── */}
       <div className="flex flex-col items-center mb-6">
-        <div
-          className="w-16 h-16 flex items-center justify-center mb-3"
-          style={{ border: `1px solid ${gold}55` }}
-        >
-          <Image src="/images/logo.png" alt="Sweta Fashion Points" width={48} height={48} className="object-contain" />
-        </div>
         <p
           className="text-lg font-light tracking-[0.1em] text-[#1A1A1A]"
           style={{ fontFamily: "'Cormorant Garamond', serif" }}

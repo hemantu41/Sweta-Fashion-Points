@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 
 const gold     = '#C9A84C';
 const burgundy = '#7B1C2E';
@@ -200,22 +199,13 @@ export default function SignupPage() {
       className="min-h-screen flex flex-col items-center justify-start py-10 px-4"
       style={{ background: '#FAF8F5', fontFamily: "'Jost', sans-serif" }}
     >
-      {/* ── Logo block ── */}
+      {/* ── Brand name ── */}
       <div className="flex flex-col items-center mb-6">
-        <div
-          className="w-16 h-16 flex items-center justify-center mb-3"
-          style={{ border: `1px solid ${gold}55` }}
-        >
-          <Image src="/images/logo.png" alt="Sweta Fashion Points" width={48} height={48} className="object-contain" />
-        </div>
         <p
-          className="text-lg font-light tracking-[0.1em] text-[#1A1A1A]"
+          className="text-3xl font-semibold tracking-[0.06em] text-[#1A1A1A]"
           style={{ fontFamily: "'Cormorant Garamond', serif" }}
         >
           Sweta Fashion Points
-        </p>
-        <p className="text-[9px] tracking-[0.25em] uppercase mt-0.5" style={{ color: `${gold}99` }}>
-          Amas · Gaya · Bihar
         </p>
       </div>
 
