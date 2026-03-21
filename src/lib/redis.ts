@@ -1,84 +1,73 @@
 /**
- * Redis client singleton for Insta Fashion Points.
+ * Redis client for Insta Fashion Points — powered by Upstash REST API.
  *
- * Set REDIS_URL in your environment to enable Redis caching.
- * If REDIS_URL is not set, all cache operations are no-ops and the
- * app falls back to direct DB queries — zero breaking changes.
+ * Uses @upstash/redis which communicates over HTTPS (no persistent TCP
+ * connection), making it fully compatible with Vercel serverless functions.
  *
- * Supported Redis providers:
- *   - Local:   redis://localhost:6379
- *   - Upstash: rediss://:password@host:6380   (TLS)
- *   - Redis Cloud / Railway / Render: standard redis:// URL
+ * Required env vars (set in .env.local and Vercel dashboard):
+ *   UPSTASH_REDIS_REST_URL   = https://xxx.upstash.io
+ *   UPSTASH_REDIS_REST_TOKEN = your-token
  *
- * Add to .env.local:
- *   REDIS_URL=redis://localhost:6379
+ * If either variable is missing, all cache calls are silent no-ops and
+ * the app falls back to direct DB queries — zero breaking changes.
  */
 
-import Redis from 'ioredis';
+import { Redis } from '@upstash/redis';
 
-// Global singleton — prevents multiple connections during Next.js hot reload
-declare global {
-  // eslint-disable-next-line no-var
-  var _redisClient: Redis | null | undefined;
-}
+// Singleton — created once per process
+let _redis: Redis | null | undefined;
 
 export function getRedis(): Redis | null {
-  // Redis disabled — no URL configured
-  if (!process.env.REDIS_URL) return null;
-
-  if (global._redisClient) return global._redisClient;
-
-  try {
-    const client = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 3000,
-      commandTimeout: 2000,
-      lazyConnect: true,
-      // Disable auto-reconnect to avoid hanging serverless functions
-      retryStrategy: (times) => (times > 2 ? null : Math.min(times * 100, 500)),
-    });
-
-    client.on('error', (err) => {
-      // Log but never crash — Redis is non-critical
-      console.warn('[Redis] Connection error:', err.message);
-    });
-
-    client.on('connect', () => {
-      console.log('[Redis] Connected successfully');
-    });
-
-    global._redisClient = client;
-    return client;
-  } catch (err) {
-    console.warn('[Redis] Failed to create client:', err);
-    global._redisClient = null;
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
     return null;
   }
+
+  if (_redis) return _redis;
+
+  try {
+    _redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+    console.log('[Redis] Upstash client initialised');
+  } catch (err) {
+    console.warn('[Redis] Failed to initialise Upstash client:', err);
+    _redis = null;
+  }
+
+  return _redis;
 }
 
-/**
- * Safe wrapper — returns null on any error instead of throwing.
- */
+// ─── Safe wrappers ───────────────────────────────────────────────────────────
+// All functions return early (null / void) when Redis is not configured,
+// and swallow errors so Redis is never on the critical path.
+
+/** Get a raw JSON string stored by redisSetex. Returns null on miss/error. */
 export async function redisGet(key: string): Promise<string | null> {
   try {
     const redis = getRedis();
     if (!redis) return null;
-    return await redis.get(key);
+    // @upstash/redis returns the value typed as stored.
+    // We always store JSON strings, so cast accordingly.
+    const val = await redis.get<string>(key);
+    return val ?? null;
   } catch {
     return null;
   }
 }
 
+/** Store a JSON string with a TTL (seconds). */
 export async function redisSetex(key: string, ttlSeconds: number, value: string): Promise<void> {
   try {
     const redis = getRedis();
     if (!redis) return;
-    await redis.setex(key, ttlSeconds, value);
+    await redis.set(key, value, { ex: ttlSeconds });
   } catch (err) {
     console.warn('[Redis] setex failed:', err);
   }
 }
 
+/** Delete one or more keys. */
 export async function redisDel(...keys: string[]): Promise<void> {
   try {
     const redis = getRedis();
@@ -89,23 +78,29 @@ export async function redisDel(...keys: string[]): Promise<void> {
   }
 }
 
-/** Delete all keys matching a pattern using SCAN (safe for large keyspaces). */
+/**
+ * Delete all keys matching a glob pattern using SCAN.
+ * Safe for large keyspaces — never uses KEYS in production.
+ */
 export async function redisDelPattern(pattern: string): Promise<number> {
   try {
     const redis = getRedis();
     if (!redis) return 0;
 
-    let cursor = '0';
+    let cursor = 0;
     let deleted = 0;
 
     do {
-      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      const [nextCursor, keys] = await redis.scan(cursor, {
+        match: pattern,
+        count: 100,
+      });
       cursor = nextCursor;
       if (keys.length > 0) {
         await redis.del(...keys);
         deleted += keys.length;
       }
-    } while (cursor !== '0');
+    } while (cursor !== 0);
 
     return deleted;
   } catch (err) {
