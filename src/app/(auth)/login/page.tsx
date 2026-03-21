@@ -119,18 +119,6 @@ function LoginForm() {
       className="min-h-screen flex flex-col items-center justify-start py-10 px-4"
       style={{ background: '#FAF8F5', fontFamily: "'Jost', sans-serif" }}
     >
-      {/* ── Brand name ── */}
-      <div className="flex flex-col items-center mb-6">
-        <p
-          className="text-lg font-light tracking-[0.1em] text-[#1A1A1A]"
-          style={{ fontFamily: "'Cormorant Garamond', serif" }}
-        >
-          Sweta Fashion Points
-        </p>
-        <p className="text-[9px] tracking-[0.25em] uppercase mt-0.5" style={{ color: `${gold}99` }}>
-          Amas · Gaya · Bihar
-        </p>
-      </div>
 
       {/* ── Card ── */}
       <div
