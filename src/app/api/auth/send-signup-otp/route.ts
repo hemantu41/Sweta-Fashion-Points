@@ -152,10 +152,13 @@ export async function POST(request: NextRequest) {
       });
 
       if (!smsResult.success) {
-        // Log OTP to server console so it can be retrieved from logs during UAT/dev
         console.warn(`[OTP] SMS could not be sent to ${value}. OTP for testing: ${otp}. Error: ${smsResult.error}`);
-        // Still return success — OTP is saved in DB and visible in server logs
-        // When MSG91 is properly configured, SMS will be sent automatically
+        // UAT: return OTP in response so testers can use it without SMS
+        // TODO: remove devOtp field before going live with MSG91
+        return NextResponse.json(
+          { message: 'OTP sent successfully', devOtp: otp, devNote: 'SMS not configured — use this OTP for testing' },
+          { status: 200 }
+        );
       }
     }
 

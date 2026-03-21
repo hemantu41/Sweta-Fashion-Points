@@ -52,6 +52,9 @@ export async function POST(request: NextRequest) {
 
     if (!smsResult.success) {
       console.warn(`[OTP] SMS could not be sent to ${mobile}. OTP for testing: ${otp}. Error: ${smsResult.error}`);
+      // UAT: return OTP in response so testers can use it without SMS
+      // TODO: remove devOtp field before going live with MSG91
+      return NextResponse.json({ message: 'OTP sent successfully', devOtp: otp, devNote: 'SMS not configured — use this OTP for testing' }, { status: 200 });
     }
 
     return NextResponse.json({ message: 'OTP sent successfully' }, { status: 200 });

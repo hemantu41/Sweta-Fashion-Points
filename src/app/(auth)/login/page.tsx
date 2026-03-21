@@ -68,9 +68,10 @@ function LoginForm() {
   const [isLoading,  setIsLoading]  = useState(false);
   const [error,      setError]      = useState('');
   const [success,    setSuccess]    = useState('');
+  const [devOtp,     setDevOtp]     = useState('');
 
   const switchTab = (t: Tab) => {
-    setTab(t); setOtpSent(false); setOtp(''); setMobile(''); setError(''); setSuccess('');
+    setTab(t); setOtpSent(false); setOtp(''); setMobile(''); setError(''); setSuccess(''); setDevOtp('');
   };
 
   /* ── Send OTP (mobile) ── */
@@ -81,8 +82,13 @@ function LoginForm() {
     try {
       const res  = await fetch('/api/auth/send-login-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mobile }) });
       const data = await res.json();
-      if (res.ok) { setOtpSent(true); setSuccess('OTP sent to your mobile number'); }
-      else          setError(data.error || 'Failed to send OTP');
+      if (res.ok) {
+        setOtpSent(true);
+        setSuccess('OTP sent to your mobile number');
+        if (data.devOtp) setDevOtp(data.devOtp); // UAT only — remove when SMS is live
+      } else {
+        setError(data.error || 'Failed to send OTP');
+      }
     } catch { setError('Network error. Please try again.'); }
     finally  { setIsLoading(false); }
   };
@@ -295,8 +301,16 @@ function LoginForm() {
               </div>
             )}
 
+            {devOtp && (
+              <div className="border border-dashed border-amber-400 bg-amber-50 rounded px-3 py-2 text-center">
+                <p className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold mb-1">UAT — SMS not configured</p>
+                <p className="text-lg font-bold tracking-[0.4em] text-amber-800">{devOtp}</p>
+                <p className="text-[10px] text-amber-500 mt-0.5">Use this OTP to complete login</p>
+              </div>
+            )}
+
             {error   && <div className="border-l-2 pl-3 py-2 text-sm" style={{ borderColor: burgundy, color: burgundy, background: '#7b1c2e07' }}>{error}</div>}
-            {success && <div className="border-l-2 pl-3 py-2 text-sm border-emerald-500 text-emerald-700 bg-emerald-50">{success}</div>}
+            {success && !devOtp && <div className="border-l-2 pl-3 py-2 text-sm border-emerald-500 text-emerald-700 bg-emerald-50">{success}</div>}
 
             {!otpSent ? (
               <button

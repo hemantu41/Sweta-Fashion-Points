@@ -103,7 +103,7 @@ export default function SignupPage() {
     otpSent: false, otp: '', verified: false, loading: false, error: '',
   });
   const [mobileVerification, setMobileVerification] = useState({
-    otpSent: false, otp: '', verified: false, loading: false, error: '',
+    otpSent: false, otp: '', verified: false, loading: false, error: '', devOtp: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,7 +116,7 @@ export default function SignupPage() {
     if (name === 'email'  && emailVerification.verified)
       setEmailVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
     if (name === 'mobile' && mobileVerification.verified)
-      setMobileVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
+      setMobileVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '', devOtp: '' });
   };
 
   /* ── Email OTP ── */
@@ -155,9 +155,11 @@ export default function SignupPage() {
     try {
       const res  = await fetch('/api/auth/send-signup-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'mobile', value: formData.mobile }) });
       const data = await res.json();
-      res.ok
-        ? setMobileVerification(p => ({ ...p, otpSent: true, loading: false }))
-        : setMobileVerification(p => ({ ...p, error: data.error || 'Failed to send OTP', loading: false }));
+      if (res.ok) {
+        setMobileVerification(p => ({ ...p, otpSent: true, loading: false, devOtp: data.devOtp || '' }));
+      } else {
+        setMobileVerification(p => ({ ...p, error: data.error || 'Failed to send OTP', loading: false }));
+      }
     } catch { setMobileVerification(p => ({ ...p, error: 'Error sending OTP', loading: false })); }
   };
 
@@ -276,6 +278,13 @@ export default function SignupPage() {
                 onVerify={verifyMobileOTP}
                 loading={mobileVerification.loading}
               />
+            )}
+            {mobileVerification.devOtp && !mobileVerification.verified && (
+              <div className="border border-dashed border-amber-400 bg-amber-50 rounded px-3 py-2 text-center mt-2">
+                <p className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold mb-1">UAT — SMS not configured</p>
+                <p className="text-lg font-bold tracking-[0.4em] text-amber-800">{mobileVerification.devOtp}</p>
+                <p className="text-[10px] text-amber-500 mt-0.5">Use this OTP to verify your mobile</p>
+              </div>
             )}
             {mobileVerification.error && (
               <p className="text-[11px] mt-1.5" style={{ color: burgundy }}>{mobileVerification.error}</p>
