@@ -179,4 +179,5 @@ export type AdminPage =
   | 'growth'
   | 'settings'
   | 'ndr'
-  | 'users';
+  | 'users'
+  | 'returns';

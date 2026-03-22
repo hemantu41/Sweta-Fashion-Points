@@ -304,6 +304,7 @@ const T = {
 
     // User Management
     'nav.users': 'User Management',
+    'nav.returns': 'Return Analytics',
   },
 
   hi: {
@@ -607,6 +608,7 @@ const T = {
 
     // User Management
     'nav.users': 'उपयोगकर्ता प्रबंधन',
+    'nav.returns': 'रिटर्न एनालिटिक्स',
   },
 } as const;
 
