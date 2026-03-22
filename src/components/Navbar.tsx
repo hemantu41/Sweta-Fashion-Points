@@ -266,6 +266,16 @@ export default function Navbar() {
                       {isAdmin && (
                         <div className="border-t border-[#E8E2D9] pt-2 mt-2">
                           <Link
+                            href="/admin/dashboard"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center space-x-3 px-4 py-2.5 text-[#722F37] bg-[#F5F0E8] font-medium hover:bg-[#E8E2D9] transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z" />
+                            </svg>
+                            <span>Admin Dashboard</span>
+                          </Link>
+                          <Link
                             href="/admin/orders"
                             onClick={() => setIsUserMenuOpen(false)}
                             className="flex items-center space-x-3 px-4 py-2.5 text-[#722F37] bg-[#F5F0E8] font-medium hover:bg-[#E8E2D9] transition-colors"
@@ -464,6 +474,16 @@ export default function Navbar() {
               {/* Admin Portal Links - Only for admins */}
               {isAdmin && (
                 <div className="pt-2 mt-2 border-t border-[#E8E2D9]">
+                  <Link
+                    href="/admin/dashboard"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 text-[#722F37] bg-[#F5F0E8] font-medium hover:bg-[#E8E2D9] rounded-lg transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z" />
+                    </svg>
+                    <span>Admin Dashboard</span>
+                  </Link>
                   <Link
                     href="/admin/products"
                     onClick={() => setIsUserMenuOpen(false)}
