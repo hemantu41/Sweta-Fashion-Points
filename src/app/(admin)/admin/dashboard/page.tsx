@@ -13,6 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line,
 } from 'recharts';
+import { useAuth } from '@/context/AuthContext';
 import { AdminLanguageProvider, useAdminLang } from '@/components/dashboard/LanguageContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import TopBar from '@/components/dashboard/TopBar';
@@ -36,9 +37,29 @@ import type { AdminPage, Order } from '@/types/admin';
 
 function DashboardHome() {
   const { t } = useAdminLang();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(MOCK_STATS);
+  const [revenueData, setRevenueData] = useState(MOCK_REVENUE);
+  const [orders, setOrders] = useState(MOCK_ORDERS);
 
-  useEffect(() => { setTimeout(() => setLoading(false), 800); }, []);
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.id) { setLoading(false); return; }
+      try {
+        const [statsRes, ordersRes] = await Promise.all([
+          fetch(`/api/admin/dashboard/stats?adminUserId=${user.id}`).then(r => r.ok ? r.json() : null),
+          fetch(`/api/admin/dashboard/orders?adminUserId=${user.id}`).then(r => r.ok ? r.json() : null),
+        ]);
+        if (statsRes && !statsRes.error) setStats(statsRes);
+        if (ordersRes && Array.isArray(ordersRes) && ordersRes.length > 0) setOrders(ordersRes);
+      } catch {
+        // Fallback to mock data — already set as default
+      }
+      setLoading(false);
+    };
+    loadData();
+  }, [user?.id]);
 
   if (loading) {
     return (
@@ -71,16 +92,16 @@ function DashboardHome() {
 
       {/* Row 1: 4 StatCards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title={t('dash.totalOrders')} value={formatNumber(MOCK_STATS.totalOrders)} change={12} icon={<ShoppingCart size={20} />} color="#059669" />
-        <StatCard title={t('dash.totalRevenue')} value={formatINR(MOCK_STATS.totalRevenue)} change={15} icon={<IndianRupee size={20} />} color="#059669" />
-        <StatCard title={t('dash.pendingApprovals')} value={String(MOCK_STATS.pendingApprovals)} icon={<ClipboardCheck size={20} />} color="#f59e0b" />
-        <StatCard title={t('dash.returnRate')} value={`${MOCK_STATS.returnRate}%`} change={-1.5} icon={<RotateCcw size={20} />} color="#ef4444" />
+        <StatCard title={t('dash.totalOrders')} value={formatNumber(stats.totalOrders)} change={12} icon={<ShoppingCart size={20} />} color="#059669" />
+        <StatCard title={t('dash.totalRevenue')} value={formatINR(stats.totalRevenue)} change={15} icon={<IndianRupee size={20} />} color="#059669" />
+        <StatCard title={t('dash.pendingApprovals')} value={String(stats.pendingApprovals)} icon={<ClipboardCheck size={20} />} color="#f59e0b" />
+        <StatCard title={t('dash.returnRate')} value={`${stats.returnRate}%`} change={-1.5} icon={<RotateCcw size={20} />} color="#ef4444" />
       </div>
 
       {/* Row 2: RevenueChart + GrowthSuggestions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RevenueChart data={MOCK_REVENUE} />
+          <RevenueChart data={revenueData} />
         </div>
         <GrowthSuggestions />
       </div>
@@ -92,7 +113,7 @@ function DashboardHome() {
             <h3 className="text-sm font-semibold text-gray-800">{t('dash.recentOrders')}</h3>
             <button className="text-xs text-emerald-600 font-medium hover:underline">{t('dash.viewAll')}</button>
           </div>
-          <OrdersTable orders={MOCK_ORDERS} compact />
+          <OrdersTable orders={orders} compact />
         </div>
         <DeliveryHeatmap />
       </div>
@@ -110,12 +131,26 @@ function DashboardHome() {
 
 function OrdersPage() {
   const { t } = useAdminLang();
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [orders, setOrders] = useState(MOCK_ORDERS);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (!user?.id) { setLoading(false); return; }
+      try {
+        const res = await fetch(`/api/admin/dashboard/orders?adminUserId=${user.id}`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) setOrders(data);
+      } catch {
+        // Fallback to mock
+      }
+      setLoading(false);
+    };
+    loadOrders();
+  }, [user?.id]);
 
   const statuses = ['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'returned'];
   const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
@@ -898,8 +933,20 @@ function SettingsPage() {
 // ─── Main Dashboard Shell ───────────────────────────────────────────────────
 
 function DashboardContent() {
+  const { user } = useAuth();
   const [activePage, setActivePage] = useState<AdminPage>('dashboard');
   const [sidebarWidth, setSidebarWidth] = useState(240);
+
+  // Trigger Redis cache warmup on admin login (fire-and-forget)
+  useEffect(() => {
+    if (user?.id && user?.isAdmin) {
+      fetch('/api/admin/dashboard/warmup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminUserId: user.id }),
+      }).catch(() => {}); // silent — never block UI
+    }
+  }, [user?.id, user?.isAdmin]);
 
   useEffect(() => {
     const checkSidebar = () => {
