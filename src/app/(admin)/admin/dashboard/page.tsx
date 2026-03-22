@@ -8,6 +8,7 @@ import {
   RotateCcw, ClipboardCheck, Eye, PackageCheck, Truck, MessageCircle,
   Send, Plus, X, Search, CheckCircle, Upload, Clock, MapPin,
   Shield, Smartphone, Mail, Bell as BellIcon, Globe, Save,
+  Printer, FileText, Download, Loader2,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -189,6 +190,46 @@ function OrdersPage() {
     toast.success(`WhatsApp sent to ${order.customer_name}`);
   };
 
+  const printLabel = (orderId: string) => {
+    window.open(`/api/orders/${orderId}/label`, '_blank');
+  };
+
+  const downloadInvoice = (orderId: string) => {
+    window.open(`/api/orders/${orderId}/invoice`, '_blank');
+  };
+
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const bulkPrintLabels = async () => {
+    if (selected.size === 0) return;
+    setBulkDownloading(true);
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const ids = Array.from(selected);
+      for (let i = 0; i < ids.length; i++) {
+        const order = orders.find(o => o.id === ids[i]);
+        const res = await fetch(`/api/orders/${ids[i]}/label`);
+        if (res.ok) {
+          const blob = await res.blob();
+          zip.file(`label-${order?.order_id || ids[i]}.pdf`, blob);
+        }
+        toast.loading(`Generating ${i + 1}/${ids.length}...`, { id: 'bulk-label' });
+      }
+      toast.dismiss('bulk-label');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shipping-labels-${new Date().toISOString().split('T')[0]}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${ids.length} labels downloaded as ZIP`);
+    } catch {
+      toast.error('Failed to generate labels');
+    }
+    setBulkDownloading(false);
+  };
+
   if (loading) return <TableSkeleton rows={8} />;
 
   return (
@@ -215,6 +256,11 @@ function OrdersPage() {
           </button>
           <button onClick={() => bulkUpdate('shipped')} className="px-3 py-1 bg-indigo-500 text-white rounded-md text-xs font-medium hover:bg-indigo-600">
             <Truck size={12} className="inline mr-1" />{t('orders.shipped')}
+          </button>
+          <button onClick={bulkPrintLabels} disabled={bulkDownloading}
+            className="px-3 py-1 bg-amber-500 text-white rounded-md text-xs font-medium hover:bg-amber-600 disabled:opacity-50">
+            {bulkDownloading ? <Loader2 size={12} className="inline mr-1 animate-spin" /> : <Printer size={12} className="inline mr-1" />}
+            {t('orders.printAllLabels')}
           </button>
           <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-gray-500 hover:text-gray-700">Clear</button>
         </div>
@@ -284,6 +330,14 @@ function OrdersPage() {
                         <button onClick={() => sendWA(order)} title="Send WhatsApp"
                           className="p-1.5 rounded-md bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
                           <MessageCircle size={14} />
+                        </button>
+                        <button onClick={() => printLabel(order.id)} title={t('orders.printLabel')}
+                          className="p-1.5 rounded-md bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                          <Printer size={14} />
+                        </button>
+                        <button onClick={() => downloadInvoice(order.id)} title={t('orders.downloadInvoice')}
+                          className="p-1.5 rounded-md bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors">
+                          <FileText size={14} />
                         </button>
                         <button title="View" className="p-1.5 rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors">
                           <Eye size={14} />

@@ -65,6 +65,9 @@ const T = {
     'orders.noOrders': 'No orders found',
     'orders.paymentMode': 'Payment',
     'orders.distance': 'Distance',
+    'orders.printLabel': 'Print Shipping Label',
+    'orders.downloadInvoice': 'Download GST Invoice',
+    'orders.printAllLabels': 'Print All Labels',
 
     // Catalogue
     'cat.title': 'Product Catalogue',
@@ -277,6 +280,9 @@ const T = {
     'orders.noOrders': 'कोई ऑर्डर नहीं मिला',
     'orders.paymentMode': 'भुगतान',
     'orders.distance': 'दूरी',
+    'orders.printLabel': 'शिपिंग लेबल प्रिंट करें',
+    'orders.downloadInvoice': 'GST चालान डाउनलोड करें',
+    'orders.printAllLabels': 'सभी लेबल प्रिंट करें',
 
     // Catalogue
     'cat.title': 'प्रोडक्ट कैटलॉग',
