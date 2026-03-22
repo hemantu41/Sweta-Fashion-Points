@@ -37,6 +37,8 @@ import {
 } from '@/lib/admin/mockData';
 import NDRActionModal from '@/components/ndr/NDRActionModal';
 import CODVerificationBadge from '@/components/ndr/CODVerificationBadge';
+import BulkUploadPanel from '@/components/catalogue/BulkUploadPanel';
+import QCApprovalPanel from '@/components/catalogue/QCApprovalPanel';
 import type { AdminPage, Order, NDRRecord } from '@/types/admin';
 
 // ─── Module 1: Dashboard Home ───────────────────────────────────────────────
@@ -361,6 +363,7 @@ function OrdersPage() {
 
 function CataloguePage() {
   const { t, lang } = useAdminLang();
+  const [catTab, setCatTab] = useState<'products' | 'bulk' | 'qc'>('products');
   const [catFilter, setCatFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -383,102 +386,125 @@ function CataloguePage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-800">{t('cat.title')}</h2>
-        <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
-          <Plus size={16} />{t('cat.addProduct')}
-        </button>
+        {catTab === 'products' && (
+          <button onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+            <Plus size={16} />{t('cat.addProduct')}
+          </button>
+        )}
       </div>
 
-      {/* Category tabs */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {categories.map(c => (
-          <button key={c} onClick={() => setCatFilter(c)}
+      {/* Sub-tabs: Products | Bulk Upload | QC Approval */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {(['products', 'bulk', 'qc'] as const).map(tab => (
+          <button key={tab} onClick={() => setCatTab(tab)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-              ${catFilter === c ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {c === 'all' ? t('cat.all') : c}
+              ${catTab === tab ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {tab === 'products' ? t('cat.products') :
+             tab === 'bulk' ? t('cat.bulkUpload') : t('cat.qcApproval')}
           </button>
         ))}
       </div>
 
-      {/* Product card grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map(p => (
-          <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all">
-            <div className="h-36 bg-gray-100 flex items-center justify-center text-gray-400">
-              <Package size={40} />
-            </div>
-            <div className="p-4">
-              <p className="text-sm font-semibold text-gray-800 line-clamp-1">{lang === 'hi' && p.name_hi ? p.name_hi : p.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{p.category}</p>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-base font-bold text-gray-900">{formatINR(p.price)}</span>
-                {p.original_price && (
-                  <span className="text-xs text-gray-400 line-through">{formatINR(p.original_price)}</span>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-3">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                  ${p.approval_status === 'approved' ? 'bg-green-100 text-green-700' :
-                    p.approval_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-600'}`}>
-                  {p.approval_status}
-                </span>
-                <span className="text-xs text-gray-400">Stock: {p.stock ?? 0}</span>
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">{p.seller_name}</p>
-            </div>
+      {/* Tab content */}
+      {catTab === 'products' && (
+        <>
+          {/* Category tabs */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {categories.map(c => (
+              <button key={c} onClick={() => setCatFilter(c)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                  ${catFilter === c ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {c === 'all' ? t('cat.all') : c}
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Add Product Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">{t('cat.addProduct')}</h3>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
-            </div>
-            <input placeholder="Product Name" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-            <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-              {categories.filter(c => c !== 'all').map(c => <option key={c}>{c}</option>)}
-            </select>
-
-            {/* GST auto-calculator */}
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">MRP (₹)</label>
-                <input type="number" value={mrp} onChange={e => setMrp(e.target.value)} placeholder="999"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">GST Slab</label>
-                <select value={gstSlab} onChange={e => setGstSlab(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                  <option value="5">5%</option>
-                  <option value="12">12%</option>
-                  <option value="18">18%</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Selling Price</label>
-                <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm font-semibold text-emerald-700">
-                  ₹{sellingPrice}
+          {/* Product card grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filtered.map(p => (
+              <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all">
+                <div className="h-36 bg-gray-100 flex items-center justify-center text-gray-400">
+                  <Package size={40} />
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-semibold text-gray-800 line-clamp-1">{lang === 'hi' && p.name_hi ? p.name_hi : p.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{p.category}</p>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-base font-bold text-gray-900">{formatINR(p.price)}</span>
+                    {p.original_price && (
+                      <span className="text-xs text-gray-400 line-through">{formatINR(p.original_price)}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                      ${p.approval_status === 'approved' ? 'bg-green-100 text-green-700' :
+                        p.approval_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-600'}`}>
+                      {p.approval_status}
+                    </span>
+                    <span className="text-xs text-gray-400">Stock: {p.stock ?? 0}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">{p.seller_name}</p>
                 </div>
               </div>
-            </div>
-            <p className="text-[10px] text-gray-400">GST: ₹{gstAmount} ({gstSlab}%)</p>
-
-            <input placeholder="Images (drag & drop)" className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 text-center" />
-            <input placeholder="Deliverable Pincodes (comma separated)" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-
-            <button className="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-              onClick={() => { setShowModal(false); toast.success('Product added!'); }}>
-              {t('cat.addProduct')}
-            </button>
+            ))}
           </div>
-        </div>
+
+          {/* Add Product Modal */}
+          {showModal && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
+              <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-800">{t('cat.addProduct')}</h3>
+                  <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
+                </div>
+                <input placeholder="Product Name" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                  {categories.filter(c => c !== 'all').map(c => <option key={c}>{c}</option>)}
+                </select>
+
+                {/* GST auto-calculator */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">MRP (₹)</label>
+                    <input type="number" value={mrp} onChange={e => setMrp(e.target.value)} placeholder="999"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">GST Slab</label>
+                    <select value={gstSlab} onChange={e => setGstSlab(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                      <option value="5">5%</option>
+                      <option value="12">12%</option>
+                      <option value="18">18%</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Selling Price</label>
+                    <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm font-semibold text-emerald-700">
+                      ₹{sellingPrice}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-400">GST: ₹{gstAmount} ({gstSlab}%)</p>
+
+                <input placeholder="Images (drag & drop)" className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 text-center" />
+                <input placeholder="Deliverable Pincodes (comma separated)" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+
+                <button className="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                  onClick={() => { setShowModal(false); toast.success('Product added!'); }}>
+                  {t('cat.addProduct')}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
+
+      {catTab === 'bulk' && <BulkUploadPanel />}
+
+      {catTab === 'qc' && <QCApprovalPanel />}
     </div>
   );
 }
