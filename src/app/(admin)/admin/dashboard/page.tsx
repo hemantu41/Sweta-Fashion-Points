@@ -26,6 +26,8 @@ import GrowthSuggestions from '@/components/dashboard/GrowthSuggestions';
 import WhatsAppNotifPanel from '@/components/dashboard/WhatsAppNotifPanel';
 import SupportTicketWidget from '@/components/dashboard/SupportTicketWidget';
 import AccountHealthWidget from '@/components/dashboard/AccountHealthWidget';
+import GSTExportPanel from '@/components/payments/GSTExportPanel';
+import ReconciliationTable from '@/components/payments/ReconciliationTable';
 import { StatCardSkeleton, ChartSkeleton, TableSkeleton, CardSkeleton } from '@/components/dashboard/Skeleton';
 import { formatINR, formatNumber, ORDER_STATUS_COLORS, getDistanceBadge } from '@/lib/admin/constants';
 import {
@@ -486,6 +488,7 @@ function CataloguePage() {
 function PaymentsPage() {
   const { t } = useAdminLang();
   const [loading, setLoading] = useState(true);
+  const [payTab, setPayTab] = useState<'settlements' | 'gst' | 'reconciliation'>('settlements');
 
   useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
 
@@ -516,54 +519,81 @@ function PaymentsPage() {
         <StatCard title={t('pay.pendingSettlement')} value={formatINR(pendingAmount)} icon={<Clock size={20} />} color="#f59e0b" />
       </div>
 
-      {/* Settlement table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.date')}</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.orderId')}</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Seller</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Gross</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.commission')}</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Net</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_PAYMENTS.map(p => (
-              <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                <td className="px-4 py-3 text-xs text-gray-500">{new Date(p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
-                <td className="px-4 py-3 font-medium text-gray-800">{p.order_id}</td>
-                <td className="px-4 py-3 text-gray-600">{p.seller_name}</td>
-                <td className="px-4 py-3 font-semibold">{formatINR(p.amount)}</td>
-                <td className="px-4 py-3 text-emerald-600 font-medium">₹0</td>
-                <td className="px-4 py-3 font-semibold text-gray-800">{formatINR(p.seller_payout)}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium
-                    ${p.status === 'settled' ? 'bg-green-100 text-green-700' :
-                      p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-600'}`}>
-                    {t(`pay.${p.status}`)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Sub-tabs: Settlements | GST Export | Reconciliation */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {(['settlements', 'gst', 'reconciliation'] as const).map(tab => (
+          <button key={tab} onClick={() => setPayTab(tab)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+              ${payTab === tab ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {tab === 'settlements' ? t('pay.settlements') :
+             tab === 'gst' ? t('pay.gstExport') : t('pay.reconciliation')}
+          </button>
+        ))}
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-3 mt-4">
-        <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
-          onClick={() => toast.success('Razorpay payout initiated (sandbox)')}>
-          Razorpay Payout (Sandbox)
-        </button>
-        <button className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors"
-          onClick={() => toast('Dispute ticket opened', { icon: '📝' })}>
-          Raise Dispute
-        </button>
-      </div>
+      {/* Tab content */}
+      {payTab === 'settlements' && (
+        <>
+          {/* Settlement table */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.date')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.orderId')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Seller</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Gross</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.commission')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Net</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MOCK_PAYMENTS.map(p => (
+                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <td className="px-4 py-3 text-xs text-gray-500">{new Date(p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800">{p.order_id}</td>
+                    <td className="px-4 py-3 text-gray-600">{p.seller_name}</td>
+                    <td className="px-4 py-3 font-semibold">{formatINR(p.amount)}</td>
+                    <td className="px-4 py-3 text-emerald-600 font-medium">₹0</td>
+                    <td className="px-4 py-3 font-semibold text-gray-800">{formatINR(p.seller_payout)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium
+                        ${p.status === 'settled' ? 'bg-green-100 text-green-700' :
+                          p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-600'}`}>
+                        {t(`pay.${p.status}`)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-3 mt-4">
+            <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+              onClick={() => toast.success('Razorpay payout initiated (sandbox)')}>
+              Razorpay Payout (Sandbox)
+            </button>
+            <button className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors"
+              onClick={() => toast('Dispute ticket opened', { icon: '📝' })}>
+              Raise Dispute
+            </button>
+          </div>
+        </>
+      )}
+
+      {payTab === 'gst' && <GSTExportPanel />}
+
+      {payTab === 'reconciliation' && (
+        <ReconciliationTable
+          onRaiseDispute={(stl) => {
+            toast.success(`Dispute raised for ${stl.order_id} — shortfall ${formatINR(stl.difference)}`);
+          }}
+        />
+      )}
     </div>
   );
 }
