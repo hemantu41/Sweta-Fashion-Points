@@ -5,6 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, CreditCard,
   BarChart3, HeadphonesIcon, TrendingUp, Settings,
   ChevronLeft, ChevronRight, ClipboardCheck, LogOut,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAdminLang } from './LanguageContext';
 import type { AdminPage } from '@/types/admin';
@@ -12,11 +13,13 @@ import type { AdminPage } from '@/types/admin';
 interface SidebarProps {
   activePage: AdminPage;
   onNavigate: (page: AdminPage) => void;
+  ndrCount?: number;
 }
 
-const NAV_ITEMS: { page: AdminPage; icon: typeof LayoutDashboard; labelKey: string }[] = [
+const NAV_ITEMS: { page: AdminPage; icon: typeof LayoutDashboard; labelKey: string; badge?: boolean }[] = [
   { page: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard' },
   { page: 'orders', icon: ShoppingCart, labelKey: 'nav.orders' },
+  { page: 'ndr', icon: AlertTriangle, labelKey: 'nav.ndr', badge: true },
   { page: 'catalogue', icon: Package, labelKey: 'nav.catalogue' },
   { page: 'payments', icon: CreditCard, labelKey: 'nav.payments' },
   { page: 'analytics', icon: BarChart3, labelKey: 'nav.analytics' },
@@ -34,7 +37,7 @@ const MOBILE_NAV: { page: AdminPage; icon: typeof LayoutDashboard; labelKey: str
   { page: 'settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
-export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
+export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useAdminLang();
 
@@ -59,21 +62,38 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
 
         {/* Nav items */}
         <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ page, icon: Icon, labelKey }) => {
+          {NAV_ITEMS.map(({ page, icon: Icon, labelKey, badge }) => {
             const isActive = activePage === page;
+            const showBadge = badge && ndrCount > 0;
             return (
               <button
                 key={page}
                 onClick={() => onNavigate(page)}
                 title={collapsed ? t(labelKey) : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative
                   ${isActive
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
               >
-                <Icon size={20} className="flex-shrink-0" />
-                {!collapsed && <span>{t(labelKey)}</span>}
+                <div className="relative flex-shrink-0">
+                  <Icon size={20} />
+                  {showBadge && collapsed && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {ndrCount > 9 ? '9+' : ndrCount}
+                    </span>
+                  )}
+                </div>
+                {!collapsed && (
+                  <>
+                    <span>{t(labelKey)}</span>
+                    {showBadge && (
+                      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                        {ndrCount > 9 ? '9+' : ndrCount}
+                      </span>
+                    )}
+                  </>
+                )}
               </button>
             );
           })}

@@ -32,7 +32,9 @@ import {
   MOCK_PAYMENTS, MOCK_TICKETS, MOCK_WA_LOGS, MOCK_ANALYTICS,
   MOCK_GROWTH_SUGGESTIONS,
 } from '@/lib/admin/mockData';
-import type { AdminPage, Order } from '@/types/admin';
+import NDRActionModal from '@/components/ndr/NDRActionModal';
+import CODVerificationBadge from '@/components/ndr/CODVerificationBadge';
+import type { AdminPage, Order, NDRRecord } from '@/types/admin';
 
 // ─── Module 1: Dashboard Home ───────────────────────────────────────────────
 
@@ -934,12 +936,177 @@ function SettingsPage() {
   );
 }
 
+// ─── Module 9: NDR Management ────────────────────────────────────────────────
+
+function NDRPage() {
+  const { t, lang } = useAdminLang();
+  const [ndrList, setNdrList] = useState<NDRRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedNDR, setSelectedNDR] = useState<NDRRecord | null>(null);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    fetch('/api/ndr')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setNdrList(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleActionComplete = (ndrId: string, action: string) => {
+    setNdrList(prev => prev.map(n => {
+      if (n.id !== ndrId) return n;
+      if (action === 'rto') return { ...n, status: 'rto_initiated' };
+      if (action === 'fake_order') return { ...n, status: 'fake' };
+      if (action === 'retry' || action === 'update_address') return { ...n, status: 'retry_scheduled' };
+      return n;
+    }));
+  };
+
+  const filtered = filter === 'all' ? ndrList : ndrList.filter(n => n.status === filter);
+  const statusFilters = ['all', 'pending', 'rto_initiated', 'resolved'];
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending': return { bg: 'bg-amber-100', text: 'text-amber-700', label: t('ndr.pending') };
+      case 'rto_initiated': return { bg: 'bg-red-100', text: 'text-red-600', label: t('ndr.rtoInitiated') };
+      case 'resolved': case 'retry_scheduled': return { bg: 'bg-green-100', text: 'text-green-700', label: t('ndr.resolved') };
+      case 'fake': return { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Fake' };
+      default: return { bg: 'bg-gray-100', text: 'text-gray-600', label: status };
+    }
+  };
+
+  if (loading) return <TableSkeleton rows={6} />;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">{t('ndr.title')}</h2>
+        <span className="text-xs text-gray-400">{ndrList.filter(n => n.status === 'pending').length} {t('ndr.pending')}</span>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {statusFilters.map(s => (
+          <button key={s} onClick={() => setFilter(s)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+              ${filter === s ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {s === 'all' ? t('orders.all') : s === 'pending' ? t('ndr.pending') : s === 'rto_initiated' ? t('ndr.rtoInitiated') : t('ndr.resolved')}
+          </button>
+        ))}
+      </div>
+
+      {/* NDR Table */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.orderId')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.customer')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.mobile')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.pincode')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.failureReason')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.attempts')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.lastAttempt')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">COD</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('orders.status')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.action')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400 text-sm">
+                    {t('ndr.noRecords')}
+                  </td>
+                </tr>
+              ) : (
+                filtered.map(ndr => {
+                  const badge = getStatusBadge(ndr.status);
+                  return (
+                    <tr key={ndr.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-gray-800">{ndr.order_id}</td>
+                      <td className="px-4 py-3 text-gray-700">{ndr.customer_name}</td>
+                      <td className="px-4 py-3 text-gray-600 text-xs font-mono">{ndr.mobile}</td>
+                      <td className="px-4 py-3">
+                        <div className="text-gray-800">{ndr.pincode}</div>
+                        <div className="text-[10px] text-gray-400">{ndr.district}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-red-600 max-w-[160px]">
+                        {lang === 'hi' ? ndr.failure_reason_hi : ndr.failure_reason}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex w-6 h-6 items-center justify-center rounded-full text-xs font-bold
+                          ${ndr.attempt_count >= 3 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+                          {ndr.attempt_count}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {new Date(ndr.last_attempt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <CODVerificationBadge
+                          orderId={ndr.order_id}
+                          phone={ndr.mobile}
+                          paymentMode={ndr.payment_mode}
+                          verified={ndr.cod_verified}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setSelectedNDR(ndr)}
+                          disabled={ndr.status !== 'pending'}
+                          className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {t('ndr.action')}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* NDR Action Modal */}
+      {selectedNDR && (
+        <NDRActionModal
+          ndr={selectedNDR}
+          onClose={() => setSelectedNDR(null)}
+          onActionComplete={handleActionComplete}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Main Dashboard Shell ───────────────────────────────────────────────────
 
 function DashboardContent() {
   const { user } = useAuth();
   const [activePage, setActivePage] = useState<AdminPage>('dashboard');
   const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [ndrCount, setNdrCount] = useState(0);
+
+  // Fetch NDR pending count for sidebar badge
+  useEffect(() => {
+    fetch('/api/ndr')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) {
+          setNdrCount(data.filter((n: NDRRecord) => n.status === 'pending').length);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Trigger Redis cache warmup on admin login (fire-and-forget)
   useEffect(() => {
@@ -982,6 +1149,7 @@ function DashboardContent() {
       case 'analytics': return <AnalyticsPage />;
       case 'support': return <SupportPage />;
       case 'growth': return <GrowthPage />;
+      case 'ndr': return <NDRPage />;
       case 'settings': return <SettingsPage />;
       default: return <DashboardHome />;
     }
@@ -989,7 +1157,7 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
-      <Sidebar activePage={activePage} onNavigate={setActivePage} />
+      <Sidebar activePage={activePage} onNavigate={setActivePage} ndrCount={ndrCount} />
       <TopBar sidebarWidth={sidebarWidth} />
       <main
         className="pt-20 pb-20 md:pb-8 px-4 md:px-6 transition-all duration-300"

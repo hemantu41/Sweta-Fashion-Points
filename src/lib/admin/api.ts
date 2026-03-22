@@ -9,6 +9,7 @@ import type {
   PaymentRecord,
   SupportTicket,
   WhatsAppNotification,
+  NDRRecord,
 } from '@/types/admin';
 
 const BASE = '/api/admin';
@@ -89,4 +90,36 @@ export async function sendWhatsAppTemplate(
     method: 'POST',
     body: JSON.stringify({ template, recipient }),
   });
+}
+
+// ─── NDR ───────────────────────────────────────────────────────────────────
+
+export async function fetchNDRList(): Promise<NDRRecord[]> {
+  return apiFetch<NDRRecord[]>('/api/ndr');
+}
+
+export async function updateNDRStatus(
+  ndrId: string,
+  action: string,
+  newAddress?: string
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch('/api/ndr', {
+    method: 'POST',
+    body: JSON.stringify({ ndrId, action, newAddress }),
+  });
+}
+
+export async function triggerCODVerification(
+  orderId: string,
+  phone: string
+): Promise<{ success: boolean; mock?: boolean; message: string }> {
+  return apiFetch('/api/ndr/cod-verify', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, phone }),
+  });
+}
+
+export async function getRTOList(): Promise<NDRRecord[]> {
+  const all = await fetchNDRList();
+  return all.filter(r => r.status === 'rto_initiated');
 }

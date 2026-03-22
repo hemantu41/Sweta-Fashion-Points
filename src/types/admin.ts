@@ -152,6 +152,23 @@ export interface CategorySplit {
   color: string;
 }
 
+export interface NDRRecord {
+  id: string;
+  order_id: string;
+  customer_name: string;
+  mobile: string;
+  pincode: string;
+  district: string;
+  failure_reason: string;
+  failure_reason_hi: string;
+  attempt_count: number;
+  last_attempt: string;
+  status: string;
+  payment_mode: string;
+  total: number;
+  cod_verified: boolean | null;
+}
+
 export type AdminPage =
   | 'dashboard'
   | 'orders'
@@ -160,4 +177,5 @@ export type AdminPage =
   | 'analytics'
   | 'support'
   | 'growth'
-  | 'settings';
+  | 'settings'
+  | 'ndr';
