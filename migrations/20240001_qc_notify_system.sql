@@ -104,8 +104,9 @@ SELECT
   p.created_at,
   p.updated_at,
   p.deleted_at,
-  s.business_name AS seller_name,
-  s.email         AS seller_email,
+  s.business_name   AS seller_name,
+  -- email lives on spf_users, joined through spf_sellers.user_id
+  u.email           AS seller_email,
   -- SLA bucket computed in SQL (for dashboards/reporting)
   CASE
     WHEN EXTRACT(EPOCH FROM (now() - p.created_at)) / 3600 >= 24 THEN 'urgent'
@@ -116,7 +117,8 @@ SELECT
     EXTRACT(EPOCH FROM (now() - p.created_at)) / 3600, 1
   ) AS hours_waiting
 FROM spf_productdetails p
-LEFT JOIN spf_sellers s ON s.id = p.seller_id
+LEFT JOIN spf_sellers   s ON s.id      = p.seller_id
+LEFT JOIN spf_users     u ON u.id      = s.user_id
 WHERE p.deleted_at IS NULL;
 
 -- ═══════════════════════════════════════════════════════════════════════════

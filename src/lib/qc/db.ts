@@ -26,7 +26,7 @@ export async function getProductsByStatus(
       created_at, updated_at, deleted_at,
       spf_sellers!spf_productdetails_seller_id_fkey (
         business_name,
-        email
+        spf_users!spf_sellers_user_id_fkey ( email )
       )
     `)
     .eq('approval_status', status)
@@ -43,7 +43,7 @@ export async function getProductsByStatus(
   const products: QCProduct[] = ((data as any[]) || []).map((row) => ({
     ...row,
     seller_name: row.spf_sellers?.business_name ?? 'Unknown Seller',
-    seller_email: row.spf_sellers?.email ?? '',
+    seller_email: row.spf_sellers?.spf_users?.email ?? '',
     spf_sellers: undefined,
   }));
 
@@ -63,7 +63,7 @@ export async function getProductByIdAdmin(id: string): Promise<QCProduct | null>
       created_at, updated_at, deleted_at,
       spf_sellers!spf_productdetails_seller_id_fkey (
         business_name,
-        email
+        spf_users!spf_sellers_user_id_fkey ( email )
       )
     `)
     .eq('id', id)
@@ -75,7 +75,7 @@ export async function getProductByIdAdmin(id: string): Promise<QCProduct | null>
   return {
     ...row,
     seller_name: row.spf_sellers?.business_name ?? 'Unknown Seller',
-    seller_email: row.spf_sellers?.email ?? '',
+    seller_email: row.spf_sellers?.spf_users?.email ?? '',
     spf_sellers: undefined,
     waitingHours: hoursWaiting(row.created_at),
     slaClass: getSlaClass(row.created_at),
