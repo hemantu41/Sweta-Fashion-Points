@@ -79,7 +79,7 @@ export default function OrdersTable({ orders, compact = false, onView }: OrdersT
                       <td className="px-4 py-3">
                         <button
                           onClick={() => onView?.(order)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-[#722F37] transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-emerald-600 transition-colors"
                         >
                           <Eye size={16} />
                         </button>

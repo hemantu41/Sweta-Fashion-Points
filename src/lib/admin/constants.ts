@@ -24,7 +24,7 @@ export const CATEGORIES = [
 ] as const;
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  'Sarees': '#722F37',
+  'Sarees': '#059669',
   "Men's Wear": '#2563eb',
   "Women's Wear": '#db2777',
   "Kids' Wear": '#f59e0b',
@@ -35,7 +35,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const DEFAULT_CATEGORY_SPLIT: CategorySplit[] = [
-  { name: 'Sarees', value: 35, color: '#722F37' },
+  { name: 'Sarees', value: 35, color: '#059669' },
   { name: "Women's Wear", value: 25, color: '#db2777' },
   { name: "Men's Wear", value: 20, color: '#2563eb' },
   { name: "Kids' Wear", value: 10, color: '#f59e0b' },

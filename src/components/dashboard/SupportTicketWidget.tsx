@@ -52,7 +52,7 @@ export default function SupportTicketWidget() {
           value={subject}
           onChange={e => setSubject(e.target.value)}
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-            focus:outline-none focus:ring-2 focus:ring-[#722F37]/20 focus:border-[#722F37]/40"
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40"
         />
         <textarea
           placeholder={t('support.message')}
@@ -60,14 +60,14 @@ export default function SupportTicketWidget() {
           onChange={e => setMessage(e.target.value)}
           rows={3}
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none
-            focus:outline-none focus:ring-2 focus:ring-[#722F37]/20 focus:border-[#722F37]/40"
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40"
         />
         <div className="flex gap-3">
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
             className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white
-              focus:outline-none focus:ring-2 focus:ring-[#722F37]/20"
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
             {CATEGORIES.map(c => (
               <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -77,7 +77,7 @@ export default function SupportTicketWidget() {
             value={priority}
             onChange={e => setPriority(e.target.value)}
             className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white
-              focus:outline-none focus:ring-2 focus:ring-[#722F37]/20"
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
             {PRIORITIES.map(p => (
               <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -86,8 +86,8 @@ export default function SupportTicketWidget() {
         </div>
         <button
           type="submit"
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#722F37] text-white
-            rounded-lg text-sm font-medium hover:bg-[#5A252C] transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white
+            rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
         >
           <Send size={14} />
           {t('support.submit')}

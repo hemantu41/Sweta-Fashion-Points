@@ -34,27 +34,31 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
 
   return (
     <header
-      className="fixed top-0 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-6 transition-all"
-      style={{ left: sidebarWidth }}
+      className="fixed top-0 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-4 md:px-6 transition-all"
+      style={{ left: typeof window !== 'undefined' && window.innerWidth < 768 ? 0 : sidebarWidth }}
     >
       {/* Left: Greeting + Search */}
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-gray-700 hidden md:block">
+      <div className="flex items-center gap-3">
+        {/* Mobile logo */}
+        <div className="md:hidden w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-bold text-xs">IF</span>
+        </div>
+        <span className="text-sm font-medium text-gray-700 hidden lg:block">
           {getGreeting()} 👋
         </span>
-        <div className="relative">
+        <div className="relative hidden sm:block">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder={t('topbar.search')}
-            className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm w-48 md:w-64
-              focus:outline-none focus:ring-2 focus:ring-[#722F37]/20 focus:border-[#722F37]/40"
+            className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm w-40 md:w-56 lg:w-64
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40"
           />
         </div>
       </div>
 
       {/* Right: Weather, WA, Notif, Lang, Profile */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
         {/* Weather pill */}
         {weather && (
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
@@ -102,14 +106,16 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
         {/* Language toggle */}
         <button
           onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
         >
           <Globe size={14} />
-          {t('topbar.language')}
+          <span className="hidden sm:inline">{lang === 'en' ? 'EN' : 'हिं'}</span>
+          <span className="text-gray-400">|</span>
+          <span className="hidden sm:inline">{t('topbar.language')}</span>
         </button>
 
         {/* Profile avatar */}
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#722F37] to-[#C9A962] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center">
           <User size={16} className="text-white" />
         </div>
       </div>

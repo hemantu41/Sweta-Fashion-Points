@@ -25,8 +25,8 @@ export default function RevenueChart({ data }: RevenueChartProps) {
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#722F37" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#722F37" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#059669" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -37,7 +37,7 @@ export default function RevenueChart({ data }: RevenueChartProps) {
                 formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
                 contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#722F37" strokeWidth={2}
+              <Area type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2}
                 fill="url(#revenueGrad)" />
             </AreaChart>
           </ResponsiveContainer>
