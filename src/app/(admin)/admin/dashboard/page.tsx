@@ -24,6 +24,7 @@ import DeliveryHeatmap from '@/components/dashboard/DeliveryHeatmap';
 import GrowthSuggestions from '@/components/dashboard/GrowthSuggestions';
 import WhatsAppNotifPanel from '@/components/dashboard/WhatsAppNotifPanel';
 import SupportTicketWidget from '@/components/dashboard/SupportTicketWidget';
+import AccountHealthWidget from '@/components/dashboard/AccountHealthWidget';
 import { StatCardSkeleton, ChartSkeleton, TableSkeleton, CardSkeleton } from '@/components/dashboard/Skeleton';
 import { formatINR, formatNumber, ORDER_STATUS_COLORS, getDistanceBadge } from '@/lib/admin/constants';
 import {
@@ -97,6 +98,9 @@ function DashboardHome() {
         <StatCard title={t('dash.pendingApprovals')} value={String(stats.pendingApprovals)} icon={<ClipboardCheck size={20} />} color="#f59e0b" />
         <StatCard title={t('dash.returnRate')} value={`${stats.returnRate}%`} change={-1.5} icon={<RotateCcw size={20} />} color="#ef4444" />
       </div>
+
+      {/* Account Health Score — full width */}
+      <AccountHealthWidget />
 
       {/* Row 2: RevenueChart + GrowthSuggestions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

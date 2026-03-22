@@ -170,6 +170,15 @@ const T = {
     'delivery.notServiceable': 'Not Serviceable',
     'delivery.nearPincodes': 'Nearby Pincodes',
     'delivery.farPincodes': 'Distant Pincodes',
+
+    // Account Health
+    'health.title': 'Account Health Score',
+    'health.score': 'Score',
+    'health.cancellation': 'Cancellation Rate',
+    'health.return': 'Return Rate',
+    'health.lateDispatch': 'Late Dispatch Rate',
+    'health.defect': 'Defect Rate',
+    'health.target': 'Target',
   },
 
   hi: {
@@ -339,6 +348,15 @@ const T = {
     'delivery.notServiceable': 'सेवा अयोग्य',
     'delivery.nearPincodes': 'नज़दीकी पिनकोड',
     'delivery.farPincodes': 'दूर के पिनकोड',
+
+    // Account Health
+    'health.title': 'खाता स्वास्थ्य स्कोर',
+    'health.score': 'स्कोर',
+    'health.cancellation': 'रद्दीकरण दर',
+    'health.return': 'वापसी दर',
+    'health.lateDispatch': 'देर से डिस्पैच दर',
+    'health.defect': 'दोष दर',
+    'health.target': 'लक्ष्य',
   },
 } as const;
 
