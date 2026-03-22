@@ -6,387 +6,525 @@
 <title>Insta Fashion Points — Admin Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
-<!-- Dependencies in correct order: React → ReactDOM → prop-types → Recharts → Babel -->
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js" crossorigin></script>
 <script src="https://unpkg.com/recharts@2.10.4/umd/Recharts.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js" crossorigin></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body,#root{height:100%;font-family:'DM Sans',sans-serif}
-body{background:#F9FAFB;color:#1F2937;overflow:hidden}
-.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden}
-.scroll-area::-webkit-scrollbar{width:4px}
-.scroll-area::-webkit-scrollbar-track{background:#F3F4F6}
-.scroll-area::-webkit-scrollbar-thumb{background:#9CA3AF;border-radius:4px}
-select,textarea,input{font-family:'DM Sans',sans-serif}
-button{font-family:'DM Sans',sans-serif}
-button:hover{opacity:.88}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; font-family: 'DM Sans', sans-serif; }
+  body { background: #F9FAFB; color: #1F2937; overflow: hidden; }
+  button, select, input, textarea { font-family: 'DM Sans', sans-serif; }
+  button { cursor: pointer; outline: none; transition: opacity .15s, transform .1s; }
+  button:hover { opacity: .88; }
+  button:active { transform: scale(.97); }
+  .main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .main-scroll::-webkit-scrollbar { width: 5px; }
+  .main-scroll::-webkit-scrollbar-track { background: #F3F4F6; }
+  .main-scroll::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
+  @keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+  @keyframes pulse    { 0%,100%{opacity:1;} 50%{opacity:.45;} }
+  @keyframes spin     { to { transform: rotate(360deg); } }
+  @keyframes slideIn  { from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);} }
 </style>
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel">
-/* ─────────────────────────────────────────────────────────
-   INSTA FASHION POINTS — ADMIN DASHBOARD
-   Single-file React 18 + Recharts (CDN)
-   Proprietor: Ram Prasad Saw | Amas, Gaya, Bihar
-───────────────────────────────────────────────────────── */
-const {useState,useEffect}=React;
-const RC=window.Recharts||{};
-const {
-  AreaChart,Area,BarChart,Bar,PieChart,Pie,Cell,
-  XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer
-}=RC;
 
-/* ── Palette ─────────────────────────────────────────── */
-const C={
-  teal:'#0D9B76',tealL:'#E6F7F2',tealD:'#0A7A5E',
-  amber:'#F59E0B',amberL:'#FEF3C7',
-  coral:'#F0624A',coralL:'#FEE9E6',
-  blue:'#2563EB',blueL:'#EFF6FF',
+<script type="text/babel">
+/* ═══════════════════════════════════════════════════════════════
+   INSTA FASHION POINTS · ADMIN DASHBOARD
+   Proprietor : Ram Prasad Saw
+   Location   : Amas, Gaya, Bihar, India
+   GST         : Insta Fashion Points
+═══════════════════════════════════════════════════════════════ */
+const { useState, useEffect, useCallback } = React;
+const RC = window.Recharts || {};
+const {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} = RC;
+
+/* ─── Palette ─────────────────────────────────────────────── */
+const P = {
+  teal:'#0D9B76', tealL:'#E6F7F2', tealD:'#0A7A5E',
+  amber:'#F59E0B', amberL:'#FEF3C7',
+  coral:'#F0624A', coralL:'#FEE9E6',
+  blue:'#2563EB',  blueL:'#EFF6FF',
   purple:'#7C3AED',purpleL:'#F5F3FF',
-  pink:'#EC4899',pinkL:'#FDF2F8',
+  pink:'#EC4899',  pinkL:'#FDF2F8',
   gray50:'#F9FAFB',gray100:'#F3F4F6',gray200:'#E5E7EB',
-  gray400:'#9CA3AF',gray600:'#4B5563',gray800:'#1F2937',
-  white:'#FFFFFF',green:'#25D366',greenL:'#E8FFF0',
+  gray300:'#D1D5DB',gray400:'#9CA3AF',gray600:'#4B5563',gray800:'#1F2937',
+  white:'#FFFFFF', green:'#25D366', greenL:'#E8FFF0',
 };
 
-/* ── Translations ────────────────────────────────────── */
-const T={
-  en:{
-    dashboard:'Dashboard',orders:'Orders',catalogue:'Catalogue',
-    payments:'Payments',analytics:'Analytics',support:'Support',
-    growth:'Growth',settings:'Settings',
-    g0:'Good night',g1:'Good morning',g2:'Good afternoon',g3:'Good evening',
-    todayRev:"Today's Revenue",totalOrders:'Total Orders',
-    pending:'Pending',activeList:'Active Listings',settled:'Settled',retRate:'Return Rate',
-    salesTrend:'Sales Trend',catBreak:'Category Breakdown',
-    recentOrders:'Recent Orders',viewAll:'View all →',
-    orderId:'Order ID',customer:'Customer',category:'Category',
-    amount:'Amount',status:'Status',time:'Time',action:'Action',
-    delivZone:'Hyper-Local Delivery Zone',waAlerts:'WhatsApp Alerts',
-    send:'Send',typeMsg:'Type a message…',radius:'Delivery Radius',
-    pincodes:'pincodes',liveApi:'live API ✓',
-    all:'All',packed:'Packed',shipped:'Shipped',delivered:'Delivered',cancelled:'Cancelled',
-    commission:'Commission',gstColl:'GST Collected',ledger:'Settlement Ledger',
-    date:'Date',gross:'Gross',gst:'GST',netPay:'Net Payable',
-    raiseTicket:'Raise a Ticket',myTickets:'My Tickets',
-    desc:'Description',submit:'Submit',sla:'⏱️ SLA: response within 24 hours',
-    ticketOk:'✅ Ticket raised — response in 24hrs',
-    saleTitle:'Eid Collection Sale',daysLeft:'days left',
-    boostList:'Boost Listings',smartSug:'Smart Suggestions',
-    boost:'Boost ↑',fix:'Fix',restock:'Restock',addZone:'Add Zone',
-    comingSoon:'Coming Soon',ordersRev:'Orders & Revenue',topProds:'Top 5 Products',
-    units:'units',view:'View',open:'Open',inProg:'In Progress',resolved:'Resolved',
-    platFee:'0% platform commission',approval:'24hr approval',fastDel:'Fast local delivery',
-    men:'Men',women:'Women',sarees:'Sarees',kids:'Kids',
-    thisWeek:'This week settled',pendPay:'Pending',due:'due in 2 days',
-    autoCalc:'Auto-calculated',zeroFee:'0% platform fee 🎉',
+/* ─── Translations ────────────────────────────────────────── */
+const T = {
+  en: {
+    /* nav */
+    dashboard:'Dashboard', orders:'Orders', catalogue:'Catalogue',
+    payments:'Payments', analytics:'Analytics', support:'Support',
+    growth:'Growth', settings:'Settings',
+    /* greetings */
+    g0:'Good night', g1:'Good morning', g2:'Good afternoon', g3:'Good evening',
+    /* dashboard */
+    todayRev:"Today's Revenue", totalOrders:'Total Orders', pending:'Pending',
+    activeList:'Active Listings', settled:'Settled', retRate:'Return Rate',
+    salesTrend:'Sales Trend (7 days)', catBreak:'Category Breakdown',
+    recentOrders:'Recent Orders', viewAll:'View all →',
+    delivZone:'Hyper-Local Delivery Zone', waAlerts:'WhatsApp Alerts',
+    radius:'Delivery Radius', pincodes:'pincodes', liveApi:'live API ✓',
+    typeMsg:'Type a message…', send:'Send',
+    fastDel:'Fast local delivery · GST registered',
+    /* order statuses */
+    all:'All', packed:'Packed', shipped:'Shipped',
+    delivered:'Delivered', cancelled:'Cancelled',
+    /* table cols */
+    orderId:'Order ID', customer:'Customer', category:'Category',
+    amount:'Amount', status:'Status', time:'Time', action:'Action',
+    view:'View',
+    /* payments */
+    thisWeek:'This week settled', pendPay:'Pending payout',
+    due:'Due in 2 days', commission:'Commission',
+    zeroFee:'0% platform fee 🎉', gstColl:'GST Collected',
+    autoCalc:'Auto-calculated', ledger:'Settlement Ledger',
+    date:'Date', gross:'Gross', gst:'GST', netPay:'Net Payable',
+    /* analytics */
+    ordersRev:'Orders & Revenue', topProds:'Top 5 Products', units:'units',
+    /* support */
+    raiseTicket:'Raise a Ticket', myTickets:'My Tickets',
+    catDrop:'Category', descField:'Description', submit:'Submit',
+    slaBox:'⏱️ Average response time: within 24 hours',
+    tickOk:'✅ Ticket raised — we\'ll respond in 24 hrs',
+    payIssue:'Payment Issue', ordIssue:'Order Issue',
+    listBlocked:'Listing Blocked', retDisp:'Return Dispute', other:'Other',
+    open:'Open', inProg:'In Progress', resolved:'Resolved',
+    /* growth */
+    saleTitle:'Eid Collection Sale', daysLeft:'days left',
     estBoost:'Estimated boost: 5–8× order volume',
-    payIssue:'Payment Issue',ordIssue:'Order Issue',listBlocked:'Listing Blocked',
-    retDisp:'Return Dispute',other:'Other',
+    boostList:'Boost Listings', smartSug:'Smart Suggestions',
+    boost:'Boost ↑', fix:'Fix Now', restock:'Restock', addZone:'Add Zone',
+    /* topbar */
+    platFee:'0% platform commission', approval:'24hr approval',
+    /* coming soon */
+    comingSoon:'Coming Soon',
+    /* men/women/kids/sarees for donut legend */
+    men:'Men', women:'Women', sarees:'Sarees', kids:'Kids',
   },
-  hi:{
-    dashboard:'डैशबोर्ड',orders:'ऑर्डर',catalogue:'कैटलॉग',
-    payments:'भुगतान',analytics:'विश्लेषण',support:'सहायता',
-    growth:'विकास',settings:'सेटिंग्स',
-    g0:'शुभ रात्रि',g1:'शुभ प्रभात',g2:'शुभ दोपहर',g3:'शुभ संध्या',
-    todayRev:'आज की आय',totalOrders:'कुल ऑर्डर',
-    pending:'लंबित',activeList:'सक्रिय लिस्टिंग',settled:'सेटल',retRate:'वापसी दर',
-    salesTrend:'बिक्री ट्रेंड',catBreak:'श्रेणी विश्लेषण',
-    recentOrders:'हाल के ऑर्डर',viewAll:'सभी देखें →',
-    orderId:'ऑर्डर ID',customer:'ग्राहक',category:'श्रेणी',
-    amount:'राशि',status:'स्थिति',time:'समय',action:'कार्य',
-    delivZone:'हाइपर-लोकल डिलीवरी ज़ोन',waAlerts:'WhatsApp अलर्ट',
-    send:'भेजें',typeMsg:'संदेश लिखें…',radius:'डिलीवरी दायरा',
-    pincodes:'पिनकोड',liveApi:'लाइव API ✓',
-    all:'सभी',packed:'पैक',shipped:'भेजा गया',delivered:'डिलीवर',cancelled:'रद्द',
-    commission:'कमीशन',gstColl:'GST संग्रह',ledger:'सेटलमेंट लेजर',
-    date:'दिनांक',gross:'कुल',gst:'GST',netPay:'शुद्ध देय',
-    raiseTicket:'टिकट दर्ज करें',myTickets:'मेरे टिकट',
-    desc:'विवरण',submit:'जमा करें',sla:'⏱️ SLA: 24 घंटे में प्रतिक्रिया',
-    ticketOk:'✅ टिकट दर्ज — 24 घंटे में जवाब',
-    saleTitle:'ईद कलेक्शन सेल',daysLeft:'दिन शेष',
-    boostList:'लिस्टिंग बूस्ट',smartSug:'स्मार्ट सुझाव',
-    boost:'बूस्ट ↑',fix:'ठीक करें',restock:'स्टॉक करें',addZone:'जोड़ें',
-    comingSoon:'जल्द आ रहा है',ordersRev:'ऑर्डर और आय',topProds:'शीर्ष 5 उत्पाद',
-    units:'इकाइयाँ',view:'देखें',open:'खुला',inProg:'प्रगति में',resolved:'हल',
-    platFee:'0% प्लेटफ़ॉर्म कमीशन',approval:'24 घंटे अनुमोदन',fastDel:'तेज़ स्थानीय डिलीवरी',
-    men:'पुरुष',women:'महिला',sarees:'साड़ी',kids:'बच्चे',
-    thisWeek:'इस सप्ताह सेटल',pendPay:'लंबित',due:'2 दिन में देय',
-    autoCalc:'स्वतः गणना',zeroFee:'0% प्लेटफ़ॉर्म शुल्क 🎉',
+  hi: {
+    dashboard:'डैशबोर्ड', orders:'ऑर्डर', catalogue:'कैटलॉग',
+    payments:'भुगतान', analytics:'विश्लेषण', support:'सहायता',
+    growth:'विकास', settings:'सेटिंग्स',
+    g0:'शुभ रात्रि', g1:'शुभ प्रभात', g2:'शुभ दोपहर', g3:'शुभ संध्या',
+    todayRev:'आज की आय', totalOrders:'कुल ऑर्डर', pending:'लंबित',
+    activeList:'सक्रिय लिस्टिंग', settled:'सेटल', retRate:'वापसी दर',
+    salesTrend:'बिक्री ट्रेंड (7 दिन)', catBreak:'श्रेणी विश्लेषण',
+    recentOrders:'हाल के ऑर्डर', viewAll:'सभी देखें →',
+    delivZone:'हाइपर-लोकल डिलीवरी ज़ोन', waAlerts:'WhatsApp अलर्ट',
+    radius:'डिलीवरी दायरा', pincodes:'पिनकोड', liveApi:'लाइव API ✓',
+    typeMsg:'संदेश लिखें…', send:'भेजें',
+    fastDel:'तेज़ स्थानीय डिलीवरी · GST पंजीकृत',
+    all:'सभी', packed:'पैक', shipped:'भेजा गया',
+    delivered:'डिलीवर', cancelled:'रद्द',
+    orderId:'ऑर्डर ID', customer:'ग्राहक', category:'श्रेणी',
+    amount:'राशि', status:'स्थिति', time:'समय', action:'कार्य',
+    view:'देखें',
+    thisWeek:'इस सप्ताह सेटल', pendPay:'लंबित भुगतान',
+    due:'2 दिन में देय', commission:'कमीशन',
+    zeroFee:'0% प्लेटफ़ॉर्म शुल्क 🎉', gstColl:'GST संग्रह',
+    autoCalc:'स्वतः गणना', ledger:'सेटलमेंट लेजर',
+    date:'दिनांक', gross:'कुल', gst:'GST', netPay:'शुद्ध देय',
+    ordersRev:'ऑर्डर और आय', topProds:'शीर्ष 5 उत्पाद', units:'इकाइयाँ',
+    raiseTicket:'टिकट दर्ज करें', myTickets:'मेरे टिकट',
+    catDrop:'श्रेणी', descField:'विवरण', submit:'जमा करें',
+    slaBox:'⏱️ औसत प्रतिक्रिया: 24 घंटे के भीतर',
+    tickOk:'✅ टिकट दर्ज — 24 घंटे में जवाब मिलेगा',
+    payIssue:'भुगतान समस्या', ordIssue:'ऑर्डर समस्या',
+    listBlocked:'लिस्टिंग ब्लॉक', retDisp:'वापसी विवाद', other:'अन्य',
+    open:'खुला', inProg:'प्रगति में', resolved:'हल',
+    saleTitle:'ईद कलेक्शन सेल', daysLeft:'दिन शेष',
     estBoost:'अनुमानित बूस्ट: 5–8× ऑर्डर',
-    payIssue:'भुगतान समस्या',ordIssue:'ऑर्डर समस्या',listBlocked:'लिस्टिंग ब्लॉक',
-    retDisp:'वापसी विवाद',other:'अन्य',
+    boostList:'लिस्टिंग बूस्ट', smartSug:'स्मार्ट सुझाव',
+    boost:'बूस्ट ↑', fix:'ठीक करें', restock:'स्टॉक करें', addZone:'जोड़ें',
+    platFee:'0% प्लेटफ़ॉर्म कमीशन', approval:'24 घंटे अनुमोदन',
+    comingSoon:'जल्द आ रहा है',
+    men:'पुरुष', women:'महिला', sarees:'साड़ी', kids:'बच्चे',
   }
 };
 
-/* ── Helpers ─────────────────────────────────────────── */
+/* ─── Helpers ─────────────────────────────────────────────── */
 const inr = n => '₹' + Number(n).toLocaleString('en-IN');
 const num = n => Number(n).toLocaleString('en-IN');
 const greet = l => {
   const h = new Date().getHours();
-  return h<5?T[l].g0 : h<12?T[l].g1 : h<17?T[l].g2 : T[l].g3;
+  return h < 5 ? T[l].g0 : h < 12 ? T[l].g1 : h < 17 ? T[l].g2 : T[l].g3;
 };
-const wIcon = c => c===0?'☀️':c<=2?'⛅':c<=45?'🌫️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌦️':'⛈️';
+const wIcon = c => c===0?'☀️':c<=2?'⛅':c<=45?'🌫️':c<=67?'🌧️':c<=82?'🌦️':'⛈️';
 
-/* ── Mock data ───────────────────────────────────────── */
-const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const salesData=DAYS.map((d,i)=>({
-  day:d,
-  revenue:[6200,7800,5400,8900,7200,11400,9600][i],
-  orders:[22,28,19,34,26,43,41][i]
+/* ─── Mock data ───────────────────────────────────────────── */
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const SALES = DAYS.map((d,i) => ({
+  day: d,
+  revenue: [6200,7800,5400,8900,7200,11400,9600][i],
+  orders:  [22,  28,  19,  34,  26,  43,   41 ][i],
 }));
 
-const ORDERS=[
-  {id:'IFP-2841',name:'Rajesh Kumar',cat:'Men',amt:1250,status:'delivered',ago:'2h ago',pin:'823001'},
-  {id:'IFP-2840',name:'Sunita Devi',cat:'Sarees',amt:890,status:'shipped',ago:'3h ago',pin:'823002'},
-  {id:'IFP-2839',name:'Amit Singh',cat:'Men',amt:2100,status:'packed',ago:'4h ago',pin:'824101'},
-  {id:'IFP-2838',name:'Priya Sharma',cat:'Women',amt:750,status:'pending',ago:'5h ago',pin:'823001'},
-  {id:'IFP-2837',name:'Ravi Tiwari',cat:'Kids',amt:450,status:'delivered',ago:'6h ago',pin:'823004'},
-  {id:'IFP-2836',name:'Meena Gupta',cat:'Sarees',amt:3200,status:'delivered',ago:'8h ago',pin:'824201'},
-  {id:'IFP-2835',name:'Sanjay Yadav',cat:'Men',amt:680,status:'cancelled',ago:'10h ago',pin:'823003'},
+const ORDERS = [
+  {id:'IFP-2841',name:'Rajesh Kumar', cat:'Men',   amt:1250,status:'delivered',ago:'2h ago', pin:'823001'},
+  {id:'IFP-2840',name:'Sunita Devi',  cat:'Sarees',amt:890, status:'shipped',  ago:'3h ago', pin:'823002'},
+  {id:'IFP-2839',name:'Amit Singh',   cat:'Men',   amt:2100,status:'packed',   ago:'4h ago', pin:'824101'},
+  {id:'IFP-2838',name:'Priya Sharma', cat:'Women', amt:750, status:'pending',  ago:'5h ago', pin:'823001'},
+  {id:'IFP-2837',name:'Ravi Tiwari',  cat:'Kids',  amt:450, status:'delivered',ago:'6h ago', pin:'823004'},
+  {id:'IFP-2836',name:'Meena Gupta',  cat:'Sarees',amt:3200,status:'delivered',ago:'8h ago', pin:'824201'},
+  {id:'IFP-2835',name:'Sanjay Yadav', cat:'Men',   amt:680, status:'cancelled',ago:'10h ago',pin:'823003'},
 ];
 
-const CAT_DATA=[
-  {name:'Men',pct:38,color:C.blue},
-  {name:'Women',pct:28,color:C.pink},
-  {name:'Sarees',pct:22,color:C.amber},
-  {name:'Kids',pct:12,color:C.teal},
+const CAT_PIE = [
+  {name:'men',  pct:38, color:P.blue},
+  {name:'women',pct:28, color:P.pink},
+  {name:'sarees',pct:22,color:P.amber},
+  {name:'kids', pct:12, color:P.teal},
 ];
 
-const TOP_PRODS=[
-  {name:'Silk Banarasi Saree',units:42,rev:63000,trend:'+18%'},
-  {name:"Men's Kurta Set",units:38,rev:28500,trend:'+12%'},
-  {name:"Women's Suit",units:31,rev:24800,trend:'+8%'},
-  {name:'Kids Ethnic Wear',units:27,rev:16200,trend:'+22%'},
-  {name:'Cotton Saree Bundle',units:24,rev:19200,trend:'+5%'},
+const TOP5 = [
+  {name:'Silk Banarasi Saree',  units:42,rev:63000,trend:'+18%'},
+  {name:"Men's Kurta Set",      units:38,rev:28500,trend:'+12%'},
+  {name:"Women's Suit",         units:31,rev:24800,trend:'+8%'},
+  {name:'Kids Ethnic Wear',     units:27,rev:16200,trend:'+22%'},
+  {name:'Cotton Saree Bundle',  units:24,rev:19200,trend:'+5%'},
 ];
 
-const LEDGER=[
-  {date:'23 Mar',orders:41,gross:9600,gst:864,net:8736,status:'pending'},
-  {date:'22 Mar',orders:38,gross:8900,gst:801,net:8099,status:'delivered'},
-  {date:'21 Mar',orders:47,gross:11200,gst:1008,net:10192,status:'delivered'},
-  {date:'20 Mar',orders:31,gross:7200,gst:648,net:6552,status:'delivered'},
+const LEDGER = [
+  {date:'23 Mar',ord:41,gross:9600, gst:864, net:8736, status:'pending'},
+  {date:'22 Mar',ord:38,gross:8900, gst:801, net:8099, status:'delivered'},
+  {date:'21 Mar',ord:47,gross:11200,gst:1008,net:10192,status:'delivered'},
+  {date:'20 Mar',ord:31,gross:7200, gst:648, net:6552, status:'delivered'},
 ];
 
-const TICKETS=[
-  {id:'TKT-201',msg:'Payment not settled for IFP-2801',status:'open',ago:'1h ago'},
-  {id:'TKT-199',msg:'Wrong item delivered — size mismatch',status:'inProg',ago:'3h ago'},
-  {id:'TKT-195',msg:'Listing blocked — requested review',status:'resolved',ago:'1d ago'},
+const TICKETS = [
+  {id:'TKT-201',msg:'Payment not settled for IFP-2801',         st:'open',    ago:'1h ago'},
+  {id:'TKT-199',msg:'Wrong item delivered — size mismatch',     st:'inProg',  ago:'3h ago'},
+  {id:'TKT-195',msg:'Listing blocked — requested review',       st:'resolved',ago:'1d ago'},
 ];
 
-const ALL_PINS=['823001','823002','823003','823004','824101','824201','824301','824120'];
+const ALL_PINS = ['823001','823002','823003','823004','824101','824201','824301','824120'];
+const BOOST_PRODS = ["Silk Banarasi Saree","Men's Kurta Set","Women's Suit"];
 
-/* ── Status badge ────────────────────────────────────── */
-const STATUS={
-  pending:  {bg:C.amberL, color:C.amber},
-  packed:   {bg:C.blueL,  color:C.blue},
-  shipped:  {bg:C.purpleL,color:C.purple},
-  delivered:{bg:C.tealL,  color:C.tealD},
-  cancelled:{bg:C.coralL, color:C.coral},
-  open:     {bg:C.coralL, color:C.coral},
-  inProg:   {bg:C.amberL, color:C.amber},
-  resolved: {bg:C.tealL,  color:C.tealD},
+/* ─── Status config ───────────────────────────────────────── */
+const STATUS_CFG = {
+  pending:  {bg:P.amberL, c:P.amber},
+  packed:   {bg:P.blueL,  c:P.blue},
+  shipped:  {bg:P.purpleL,c:P.purple},
+  delivered:{bg:P.tealL,  c:P.tealD},
+  cancelled:{bg:P.coralL, c:P.coral},
+  open:     {bg:P.coralL, c:P.coral},
+  inProg:   {bg:P.amberL, c:P.amber},
+  resolved: {bg:P.tealL,  c:P.tealD},
 };
-const Badge=({status,l})=>{
-  const s=STATUS[status]||{bg:C.gray100,color:C.gray600};
-  const label={
-    pending:T[l].pending, packed:T[l].packed, shipped:T[l].shipped,
-    delivered:T[l].delivered, cancelled:T[l].cancelled,
-    open:T[l].open, inProg:T[l].inProg, resolved:T[l].resolved,
-  }[status]||status;
-  return <span style={{display:'inline-block',padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:s.bg,color:s.color,whiteSpace:'nowrap'}}>{label}</span>;
+const ST_LABEL = (l, s) => ({
+  pending:T[l].pending, packed:T[l].packed, shipped:T[l].shipped,
+  delivered:T[l].delivered, cancelled:T[l].cancelled,
+  open:T[l].open, inProg:T[l].inProg, resolved:T[l].resolved,
+}[s] || s);
+
+/* ═══════════════════════════════════════════════════════════
+   SHARED UI PRIMITIVES
+═══════════════════════════════════════════════════════════ */
+
+const Badge = ({status, l}) => {
+  const cfg = STATUS_CFG[status] || {bg:P.gray100,c:P.gray600};
+  return (
+    <span style={{
+      display:'inline-block', padding:'3px 11px', borderRadius:20,
+      fontSize:11, fontWeight:700, background:cfg.bg, color:cfg.c, whiteSpace:'nowrap',
+    }}>{ST_LABEL(l,status)}</span>
+  );
 };
 
-/* ── Card wrapper ────────────────────────────────────── */
-const Card=({children,style})=>(
-  <div style={{background:C.white,border:`1px solid ${C.gray200}`,borderRadius:14,padding:'16px 18px',...style}}>
-    {children}
-  </div>
+const Card = ({children, style={}}) => (
+  <div style={{
+    background:P.white, border:`1px solid ${P.gray200}`,
+    borderRadius:14, padding:'18px 20px', ...style,
+  }}>{children}</div>
 );
 
-/* ── Stat card ───────────────────────────────────────── */
-const Stat=({icon,label,value,sub,color,delay=0})=>(
-  <div style={{background:C.white,border:`1px solid ${C.gray200}`,borderRadius:14,padding:'14px 16px',animation:`fadeUp .4s ease ${delay}s both`}}>
-    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
-      <div style={{width:42,height:42,borderRadius:12,background:color+'22',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{icon}</div>
-      <div>
-        <div style={{fontSize:11,color:C.gray400,fontWeight:600,textTransform:'uppercase',letterSpacing:'.04em'}}>{label}</div>
-        <div style={{fontSize:22,fontWeight:800,color:C.gray800,lineHeight:1.1}}>{value}</div>
+const STitle = ({children, style={}}) => (
+  <div style={{fontSize:14,fontWeight:700,color:P.gray800,marginBottom:14,...style}}>{children}</div>
+);
+
+const Pill = ({children, color=P.teal, bg=P.tealL}) => (
+  <span style={{
+    display:'inline-flex', alignItems:'center',
+    padding:'4px 12px', borderRadius:20,
+    fontSize:11, fontWeight:700, background:bg, color,
+  }}>{children}</span>
+);
+
+const Stat = ({icon, label, value, sub, accent, delay=0}) => (
+  <div style={{
+    background:P.white, border:`1px solid ${P.gray200}`, borderRadius:14,
+    padding:'16px 18px', animation:`fadeUp .35s ease ${delay}s both`,
+  }}>
+    <div style={{display:'flex', alignItems:'center', gap:12}}>
+      <div style={{
+        width:44, height:44, borderRadius:12, flexShrink:0,
+        background:accent+'18',
+        display:'flex', alignItems:'center', justifyContent:'center', fontSize:22,
+      }}>{icon}</div>
+      <div style={{flex:1, minWidth:0}}>
+        <div style={{fontSize:11,fontWeight:600,color:P.gray400,textTransform:'uppercase',letterSpacing:'.05em',marginBottom:3}}>{label}</div>
+        <div style={{fontSize:22,fontWeight:800,color:P.gray800,lineHeight:1}}>{value}</div>
       </div>
     </div>
-    <div style={{fontSize:12,color:C.gray400,borderTop:`1px solid ${C.gray100}`,paddingTop:8}}>{sub}</div>
+    <div style={{marginTop:12,paddingTop:10,borderTop:`1px dashed ${P.gray200}`,fontSize:12,color:P.gray400}}>{sub}</div>
   </div>
 );
 
-/* ── Safe chart wrapper ──────────────────────────────── */
-const ChartBox=({height,children})=>{
-  if(!RC.ResponsiveContainer) return <div style={{height,display:'flex',alignItems:'center',justifyContent:'center',color:C.gray400,fontSize:12}}>Chart loading…</div>;
-  return <ResponsiveContainer width="100%" height={height}>{children}</ResponsiveContainer>;
+/* Safe Recharts wrapper */
+const ChartWrap = ({h, children}) => {
+  if (!RC.ResponsiveContainer) return (
+    <div style={{height:h,display:'flex',alignItems:'center',justifyContent:'center',color:P.gray400,fontSize:12}}>
+      Loading chart…
+    </div>
+  );
+  return <ResponsiveContainer width="100%" height={h}>{children}</ResponsiveContainer>;
 };
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    SIDEBAR
-══════════════════════════════════════════════════════ */
-const NAV=[
-  {key:'dashboard',icon:'⊞'},
-  {key:'orders',   icon:'📦'},
-  {key:'catalogue',icon:'🏷️'},
-  {key:'payments', icon:'💰'},
-  {key:'analytics',icon:'📊'},
-  {key:'support',  icon:'🎧'},
-  {key:'growth',   icon:'🚀'},
-  {key:'settings', icon:'⚙️'},
+═══════════════════════════════════════════════════════════ */
+const NAV_ITEMS = [
+  {key:'dashboard', icon:'⊞'},
+  {key:'orders',    icon:'📦'},
+  {key:'catalogue', icon:'🏷️'},
+  {key:'payments',  icon:'💰'},
+  {key:'analytics', icon:'📊'},
+  {key:'support',   icon:'🎧'},
+  {key:'growth',    icon:'🚀'},
+  {key:'settings',  icon:'⚙️'},
 ];
 
-function Sidebar({active,setActive,l}){
+function Sidebar({active, setActive, l}) {
   return (
-    <div style={{width:62,minWidth:62,background:C.gray800,display:'flex',flexDirection:'column',alignItems:'center',padding:'12px 0',gap:4,height:'100vh',flexShrink:0}}>
+    <aside style={{
+      width:64, minWidth:64, height:'100vh',
+      background:P.gray800,
+      display:'flex', flexDirection:'column', alignItems:'center',
+      padding:'14px 0', gap:2, flexShrink:0,
+      boxShadow:'2px 0 12px rgba(0,0,0,.12)',
+    }}>
       {/* Logo */}
-      <div style={{width:36,height:36,borderRadius:10,background:C.teal,color:C.white,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13,marginBottom:10}}>IF</div>
-      {NAV.map(n=>(
-        <button key={n.key} title={T[l][n.key]} onClick={()=>setActive(n.key)}
-          style={{width:44,height:44,borderRadius:10,border:'none',cursor:'pointer',
-            background:active===n.key?C.teal:'transparent',
-            color:active===n.key?C.white:C.gray400,
-            fontSize:20,display:'flex',alignItems:'center',justifyContent:'center',
-            transition:'background .15s,color .15s',outline:'none'}}>
-          {n.icon}
-        </button>
-      ))}
-    </div>
+      <div style={{
+        width:38, height:38, borderRadius:10, marginBottom:12,
+        background:`linear-gradient(135deg,${P.teal},${P.tealD})`,
+        color:P.white, display:'flex', alignItems:'center', justifyContent:'center',
+        fontWeight:800, fontSize:14, letterSpacing:'-.5px', boxShadow:`0 2px 8px ${P.teal}55`,
+      }}>IF</div>
+
+      {NAV_ITEMS.map(n => {
+        const isActive = active === n.key;
+        return (
+          <button key={n.key} title={T[l][n.key]} onClick={() => setActive(n.key)} style={{
+            width:46, height:46, borderRadius:11, border:'none',
+            background: isActive ? P.teal : 'transparent',
+            color: isActive ? P.white : P.gray400,
+            fontSize:20, display:'flex', alignItems:'center', justifyContent:'center',
+            transition:'background .18s, color .18s, transform .1s',
+            boxShadow: isActive ? `0 2px 10px ${P.teal}55` : 'none',
+          }}>{n.icon}</button>
+        );
+      })}
+    </aside>
   );
 }
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    TOP BAR
-══════════════════════════════════════════════════════ */
-function TopBar({lang,setLang,wp,setWp,weather,l}){
+═══════════════════════════════════════════════════════════ */
+function TopBar({lang, setLang, wp, setWp, weather, l}) {
   return (
-    <div style={{height:54,minHeight:54,background:C.white,borderBottom:`1px solid ${C.gray200}`,
-      display:'flex',alignItems:'center',padding:'0 18px',gap:10,flexShrink:0}}>
-      <div style={{display:'flex',gap:6,flex:1}}>
-        <span style={{background:C.tealL,color:C.tealD,fontSize:11,fontWeight:700,padding:'4px 11px',borderRadius:20}}>{T[l].platFee}</span>
-        <span style={{background:C.amberL,color:C.amber,fontSize:11,fontWeight:700,padding:'4px 11px',borderRadius:20}}>{T[l].approval}</span>
+    <header style={{
+      height:56, minHeight:56, background:P.white,
+      borderBottom:`1px solid ${P.gray200}`,
+      display:'flex', alignItems:'center',
+      padding:'0 20px', gap:10, flexShrink:0,
+      boxShadow:'0 1px 4px rgba(0,0,0,.04)',
+    }}>
+      {/* Left pills */}
+      <div style={{display:'flex', gap:8, flex:1, minWidth:0}}>
+        <Pill>{T[l].platFee}</Pill>
+        <Pill color={P.amber} bg={P.amberL}>{T[l].approval}</Pill>
       </div>
-      {/* Weather */}
-      <div style={{display:'flex',alignItems:'center',gap:5,fontSize:13,color:C.gray600,fontWeight:600,flexShrink:0}}>
+
+      {/* Weather widget */}
+      <div style={{
+        display:'flex', alignItems:'center', gap:6,
+        padding:'5px 12px', borderRadius:20,
+        border:`1px solid ${P.gray200}`, background:P.gray50,
+        fontSize:13, fontWeight:600, color:P.gray700, flexShrink:0,
+      }}>
         <span style={{fontSize:18}}>{weather.icon}</span>
-        <span>{weather.temp}°C</span>
-        <span style={{color:C.gray400,fontSize:11}}>Gaya</span>
+        <span style={{color:P.gray800}}>{weather.temp}°C</span>
+        <span style={{color:P.gray400, fontSize:11, fontWeight:500}}>Gaya</span>
       </div>
-      {/* WA */}
-      <button onClick={()=>setWp(!wp)} style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,
-        border:`1.5px solid ${wp?C.green:C.gray200}`,background:wp?C.greenL:C.white,
-        color:wp?C.green:C.gray400,fontWeight:600,fontSize:12,cursor:'pointer',transition:'all .2s',outline:'none'}}>
-        📱 {wp?'ON':'OFF'}
+
+      {/* WhatsApp toggle */}
+      <button onClick={() => setWp(!wp)} style={{
+        display:'flex', alignItems:'center', gap:6,
+        padding:'6px 14px', borderRadius:20, border:'none',
+        background: wp ? P.greenL : P.gray100,
+        color: wp ? P.green : P.gray400,
+        fontWeight:700, fontSize:12, flexShrink:0,
+        boxShadow: wp ? `0 0 0 1.5px ${P.green}55` : `0 0 0 1.5px ${P.gray200}`,
+      }}>
+        {wp ? '●' : '○'} WhatsApp {wp ? 'ON' : 'OFF'}
       </button>
-      {/* Lang */}
-      <button onClick={()=>setLang(lang==='en'?'hi':'en')}
-        style={{padding:'5px 14px',borderRadius:20,border:`1.5px solid ${C.gray200}`,
-          background:C.white,color:C.gray600,fontWeight:600,fontSize:13,cursor:'pointer',outline:'none'}}>
-        {lang==='en'?'हिंदी':'English'}
+
+      {/* Language toggle */}
+      <button onClick={() => setLang(lang === 'en' ? 'hi' : 'en')} style={{
+        padding:'6px 14px', borderRadius:20,
+        border:`1.5px solid ${P.gray200}`, background:P.white,
+        color:P.gray600, fontWeight:700, fontSize:13, flexShrink:0,
+      }}>
+        {lang === 'en' ? 'हिंदी' : 'English'}
       </button>
+
       {/* Avatar */}
-      <div style={{width:34,height:34,borderRadius:'50%',
-        background:`linear-gradient(135deg,${C.teal},${C.tealD})`,
-        color:C.white,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13,flexShrink:0}}>
-        RP
-      </div>
-    </div>
+      <div style={{
+        width:36, height:36, borderRadius:'50%', flexShrink:0,
+        background:`linear-gradient(135deg,${P.teal},${P.tealD})`,
+        color:P.white, display:'flex', alignItems:'center',
+        justifyContent:'center', fontWeight:800, fontSize:13,
+        boxShadow:`0 2px 8px ${P.teal}44`,
+      }}>RP</div>
+    </header>
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   SECTION: DASHBOARD
-══════════════════════════════════════════════════════ */
-function DeliveryZone({pinInfo,l}){
-  const [km,setKm]=useState(30);
-  const count=Math.max(1,Math.ceil((km/100)*ALL_PINS.length));
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD SUB-COMPONENTS
+═══════════════════════════════════════════════════════════ */
+
+function DeliveryZone({pinInfo, l}) {
+  const [km, setKm] = useState(30);
+  const count = Math.max(1, Math.ceil((km / 100) * ALL_PINS.length));
   return (
     <Card>
-      <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].delivZone}</div>
-      <div style={{fontSize:13,color:C.gray600,marginBottom:6}}>{T[l].radius}: <b style={{color:C.teal}}>{km} km</b></div>
-      <input type="range" min={10} max={100} value={km} onChange={e=>setKm(+e.target.value)}
-        style={{width:'100%',accentColor:C.teal,cursor:'pointer',marginBottom:12}}/>
-      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
-        {ALL_PINS.slice(0,count).map(p=>(
-          <span key={p} style={{background:C.tealL,color:C.tealD,fontSize:11,fontWeight:600,padding:'3px 10px',borderRadius:20}}>{p}</span>
+      <STitle>{T[l].delivZone}</STitle>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+        <span style={{fontSize:13,color:P.gray600}}>{T[l].radius}</span>
+        <span style={{fontSize:14,fontWeight:700,color:P.teal}}>{km} km</span>
+      </div>
+      <input type="range" min={10} max={100} value={km}
+        onChange={e => setKm(+e.target.value)}
+        style={{width:'100%', accentColor:P.teal, cursor:'pointer', marginBottom:14, height:4}}/>
+      <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+        {ALL_PINS.slice(0,count).map(p => (
+          <span key={p} style={{
+            background:P.tealL, color:P.tealD, fontSize:11, fontWeight:700,
+            padding:'3px 11px', borderRadius:20,
+          }}>{p}</span>
         ))}
       </div>
-      <div style={{fontSize:12,color:C.gray400}}>
-        {count} {T[l].pincodes} · {pinInfo.district}, {pinInfo.state}
-        <span style={{marginLeft:8,background:C.tealL,color:C.teal,fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:10}}>{T[l].liveApi}</span>
+      <div style={{display:'flex',alignItems:'center',gap:8,fontSize:12,color:P.gray400}}>
+        <span>{count} {T[l].pincodes} · {pinInfo.district}, {pinInfo.state}</span>
+        <span style={{
+          background:P.tealL, color:P.teal, fontSize:10,
+          fontWeight:700, padding:'2px 8px', borderRadius:10,
+        }}>{T[l].liveApi}</span>
       </div>
     </Card>
   );
 }
 
-function WAPanel({l}){
-  const [msg,setMsg]=useState('');
-  const [sent,setSent]=useState(false);
-  const tmpls=[
+function WAPanel({l}) {
+  const [msg, setMsg] = useState('');
+  const [sent, setSent] = useState(false);
+  const TMPLS = [
     '🎉 New arrival! Kurta sets in stock.',
     '🛍️ Weekend sale: 15% off Sarees. Code: SAREE15',
     '📦 Flash deal: Kids wear from ₹299',
   ];
-  const send=()=>{
-    if(!msg.trim())return;
+  const handleSend = () => {
+    if (!msg.trim()) return;
     setSent(true);
-    setTimeout(()=>{setSent(false);setMsg('');},2500);
+    setTimeout(() => { setSent(false); setMsg(''); }, 2500);
   };
   return (
     <Card>
-      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-        <div style={{fontSize:14,fontWeight:700,color:C.gray800}}>{T[l].waAlerts}</div>
-        <span style={{background:C.green,color:C.white,fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:10,animation:'pulse 1.6s ease infinite'}}>LIVE</span>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+        <STitle style={{margin:0}}>{T[l].waAlerts}</STitle>
+        <span style={{
+          background:P.green, color:P.white, fontSize:10, fontWeight:700,
+          padding:'2px 9px', borderRadius:20, animation:'pulse 1.8s ease infinite',
+        }}>LIVE</span>
       </div>
-      <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
-        {tmpls.map((t,i)=>(
-          <button key={i} onClick={()=>setMsg(t)}
-            style={{textAlign:'left',padding:'8px 12px',borderRadius:8,border:`1px solid ${C.gray200}`,
-              background:C.gray50,fontSize:12,color:C.gray600,cursor:'pointer',outline:'none'}}>
-            {t}
-          </button>
+      <div style={{display:'flex',flexDirection:'column',gap:7,marginBottom:14}}>
+        {TMPLS.map((t,i) => (
+          <button key={i} onClick={() => setMsg(t)} style={{
+            textAlign:'left', padding:'9px 13px', borderRadius:9,
+            border:`1.5px solid ${P.gray200}`, background:P.gray50,
+            fontSize:12, color:P.gray600, lineHeight:1.4,
+          }}>{t}</button>
         ))}
       </div>
       <div style={{display:'flex',gap:8}}>
-        <input value={msg} onChange={e=>setMsg(e.target.value)} placeholder={T[l].typeMsg}
-          style={{flex:1,padding:'8px 12px',borderRadius:8,border:`1.5px solid ${C.gray200}`,fontSize:13,outline:'none',color:C.gray800}}/>
-        <button onClick={send}
-          style={{padding:'8px 16px',borderRadius:8,border:'none',
-            background:sent?C.green:C.teal,color:C.white,fontWeight:700,fontSize:13,
-            cursor:'pointer',transition:'background .2s',minWidth:68,outline:'none'}}>
-          {sent?'✓':T[l].send}
-        </button>
+        <input value={msg} onChange={e => setMsg(e.target.value)}
+          placeholder={T[l].typeMsg} style={{
+            flex:1, padding:'9px 13px', borderRadius:9,
+            border:`1.5px solid ${P.gray200}`, fontSize:13,
+            color:P.gray800, outline:'none',
+          }}/>
+        <button onClick={handleSend} style={{
+          padding:'9px 18px', borderRadius:9, border:'none',
+          background: sent ? P.green : P.teal, color:P.white,
+          fontWeight:700, fontSize:13, minWidth:72,
+          transition:'background .25s',
+        }}>{sent ? '✓' : T[l].send}</button>
       </div>
     </Card>
   );
 }
 
-function OrdersTable({data,limit,l}){
-  const rows=limit?data.slice(0,limit):data;
-  const cols=[T[l].orderId,T[l].customer,T[l].category,T[l].amount,T[l].status,T[l].time];
+/* ─── Orders mini-table (shared by Dashboard + Orders section) ── */
+function OTable({rows, showAction, l}) {
+  const cols = [T[l].orderId, T[l].customer, T[l].category,
+                T[l].amount, T[l].status, T[l].time,
+                ...(showAction ? [T[l].action] : [])];
   return (
     <div style={{overflowX:'auto'}}>
       <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
         <thead>
-          <tr>{cols.map(h=><th key={h} style={{textAlign:'left',padding:'7px 10px',color:C.gray400,fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.04em',borderBottom:`1px solid ${C.gray100}`,whiteSpace:'nowrap'}}>{h}</th>)}</tr>
+          <tr>{cols.map(h => (
+            <th key={h} style={{
+              textAlign:'left', padding:'7px 10px',
+              color:P.gray400, fontSize:10.5, fontWeight:700,
+              textTransform:'uppercase', letterSpacing:'.05em',
+              borderBottom:`2px solid ${P.gray100}`, whiteSpace:'nowrap',
+            }}>{h}</th>
+          ))}</tr>
         </thead>
         <tbody>
-          {rows.map(o=>(
-            <tr key={o.id}>
-              <td style={{padding:'10px 10px',borderBottom:`1px solid ${C.gray100}`,color:C.teal,fontWeight:700,whiteSpace:'nowrap'}}>{o.id}</td>
-              <td style={{padding:'10px 10px',borderBottom:`1px solid ${C.gray100}`,whiteSpace:'nowrap'}}>{o.name}</td>
-              <td style={{padding:'10px 10px',borderBottom:`1px solid ${C.gray100}`}}><span style={{background:C.gray100,color:C.gray600,fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:8}}>{o.cat}</span></td>
-              <td style={{padding:'10px 10px',borderBottom:`1px solid ${C.gray100}`,fontWeight:700,whiteSpace:'nowrap'}}>{inr(o.amt)}</td>
-              <td style={{padding:'10px 10px',borderBottom:`1px solid ${C.gray100}`}}><Badge status={o.status} l={l}/></td>
-              <td style={{padding:'10px 10px',borderBottom:`1px solid ${C.gray100}`,color:C.gray400,whiteSpace:'nowrap'}}>{o.ago}</td>
+          {rows.map(o => (
+            <tr key={o.id} style={{transition:'background .1s'}}>
+              <td style={{padding:'11px 10px',borderBottom:`1px solid ${P.gray100}`,color:P.teal,fontWeight:700,whiteSpace:'nowrap'}}>{o.id}</td>
+              <td style={{padding:'11px 10px',borderBottom:`1px solid ${P.gray100}`,whiteSpace:'nowrap'}}>{o.name}</td>
+              <td style={{padding:'11px 10px',borderBottom:`1px solid ${P.gray100}`}}>
+                <span style={{background:P.gray100,color:P.gray600,fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:8}}>{o.cat}</span>
+              </td>
+              <td style={{padding:'11px 10px',borderBottom:`1px solid ${P.gray100}`,fontWeight:700,whiteSpace:'nowrap'}}>{inr(o.amt)}</td>
+              <td style={{padding:'11px 10px',borderBottom:`1px solid ${P.gray100}`}}><Badge status={o.status} l={l}/></td>
+              <td style={{padding:'11px 10px',borderBottom:`1px solid ${P.gray100}`,color:P.gray400,whiteSpace:'nowrap'}}>{o.ago}</td>
+              {showAction && (
+                <td style={{padding:'11px 10px',borderBottom:`1px solid ${P.gray100}`}}>
+                  <button style={{
+                    padding:'5px 14px', borderRadius:8, border:'none',
+                    background:P.tealL, color:P.tealD, fontWeight:700, fontSize:12,
+                  }}>{T[l].view}</button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -395,69 +533,89 @@ function OrdersTable({data,limit,l}){
   );
 }
 
-function Home({pinInfo,l}){
-  const stats=[
-    {icon:'💰',label:T[l].todayRev,  value:inr(9600),  sub:'↑ 14% vs yesterday',color:C.teal},
-    {icon:'📦',label:T[l].totalOrders,value:num(41),    sub:'+7 in last hour',   color:C.blue},
-    {icon:'⏳',label:T[l].pending,   value:num(12),    sub:'Need action',        color:C.amber},
-    {icon:'🏷️',label:T[l].activeList,value:num(186),   sub:'↑ 4 new today',     color:C.purple},
-    {icon:'✅',label:T[l].settled,   value:inr(52400), sub:'This week',          color:C.teal},
-    {icon:'🔁',label:T[l].retRate,   value:'3.2%',     sub:'↓ 0.4% week',       color:C.coral},
+/* ═══════════════════════════════════════════════════════════
+   PAGE SECTIONS
+═══════════════════════════════════════════════════════════ */
+
+/* ─── DASHBOARD ─────────────────────────────────────────── */
+function Dashboard({pinInfo, l}) {
+  const stats = [
+    {icon:'💰',label:T[l].todayRev,  value:inr(9600),  sub:'↑ 14% vs yesterday', accent:P.teal},
+    {icon:'📦',label:T[l].totalOrders,value:num(41),    sub:'+7 in last hour',    accent:P.blue},
+    {icon:'⏳',label:T[l].pending,   value:num(12),    sub:'Needs action',        accent:P.amber},
+    {icon:'🏷️',label:T[l].activeList,value:num(186),   sub:'↑ 4 new today',      accent:P.purple},
+    {icon:'✅',label:T[l].settled,   value:inr(52400), sub:'This week',           accent:P.teal},
+    {icon:'🔁',label:T[l].retRate,   value:'3.2%',     sub:'↓ 0.4% this week',   accent:P.coral},
   ];
   return (
-    <div style={{padding:'22px 20px',display:'flex',flexDirection:'column',gap:20}}>
+    <div style={{padding:'22px 22px 40px', display:'flex', flexDirection:'column', gap:22}}>
+
       {/* Greeting */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
-        <div>
-          <div style={{fontSize:22,fontWeight:800,color:C.gray800}}>{greet(l)}, <span style={{color:C.teal}}>Ram Prasad</span> 👋</div>
-          <div style={{fontSize:13,color:C.gray400,marginTop:2}}>Insta Fashion Points</div>
+        <div style={{animation:'fadeUp .3s ease'}}>
+          <div style={{fontSize:24,fontWeight:800,color:P.gray800,lineHeight:1.2}}>
+            {greet(l)}, <span style={{color:P.teal}}>Ram Prasad</span> 👋
+          </div>
+          <div style={{fontSize:13,color:P.gray400,marginTop:4}}>Insta Fashion Points · GST Registered</div>
         </div>
-        <div style={{background:C.tealL,border:`1px solid ${C.teal}33`,borderRadius:12,padding:'10px 16px',textAlign:'right'}}>
-          <div style={{fontSize:13,fontWeight:700,color:C.tealD}}>📍 Amas, Gaya — Bihar</div>
-          <div style={{fontSize:11,color:C.teal,marginTop:2}}>{T[l].fastDel}</div>
+        <div style={{
+          background:`linear-gradient(135deg,${P.tealL},#d4f2ea)`,
+          border:`1px solid ${P.teal}33`, borderRadius:14,
+          padding:'12px 18px', textAlign:'right', animation:'fadeUp .3s ease .05s both',
+        }}>
+          <div style={{fontSize:13,fontWeight:700,color:P.tealD}}>📍 Amas, Gaya — Bihar</div>
+          <div style={{fontSize:11,color:P.teal,marginTop:3}}>{T[l].fastDel}</div>
         </div>
       </div>
 
-      {/* Stats grid */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12}}>
-        {stats.map((s,i)=><Stat key={i} {...s} delay={i*0.05}/>)}
+      {/* Stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(165px,1fr))',gap:14}}>
+        {stats.map((s,i) => <Stat key={i} {...s} delay={i*0.05}/>)}
       </div>
 
-      {/* Charts row */}
-      <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
-        <Card style={{flex:1,minWidth:260}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].salesTrend}</div>
-          <ChartBox height={150}>
-            <AreaChart data={salesData} margin={{top:4,right:4,bottom:0,left:-10}}>
+      {/* Charts */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 290px',gap:16}}>
+        {/* Area chart */}
+        <Card>
+          <STitle>{T[l].salesTrend}</STitle>
+          <ChartWrap h={165}>
+            <AreaChart data={SALES} margin={{top:4,right:4,bottom:0,left:-12}}>
               <defs>
                 <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={C.teal} stopOpacity={0.25}/>
-                  <stop offset="95%" stopColor={C.teal} stopOpacity={0}/>
+                  <stop offset="5%"  stopColor={P.teal} stopOpacity={.3}/>
+                  <stop offset="95%" stopColor={P.teal} stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.gray100}/>
-              <XAxis dataKey="day" tick={{fontSize:10,fill:C.gray400}} tickLine={false} axisLine={false}/>
-              <YAxis tick={{fontSize:10,fill:C.gray400}} tickLine={false} axisLine={false} tickFormatter={v=>'₹'+v/1000+'k'}/>
-              <Tooltip formatter={v=>[inr(v),'Revenue']} contentStyle={{borderRadius:8,fontSize:12,border:`1px solid ${C.gray200}`}}/>
-              <Area type="monotone" dataKey="revenue" stroke={C.teal} strokeWidth={2} fill="url(#tg)"/>
+              <CartesianGrid strokeDasharray="3 3" stroke={P.gray100}/>
+              <XAxis dataKey="day" tick={{fontSize:10,fill:P.gray400}} tickLine={false} axisLine={false}/>
+              <YAxis tick={{fontSize:10,fill:P.gray400}} tickLine={false} axisLine={false}
+                tickFormatter={v=>'₹'+v/1000+'k'}/>
+              <Tooltip formatter={v=>[inr(v),'Revenue']}
+                contentStyle={{borderRadius:10,border:`1px solid ${P.gray200}`,fontSize:12}}/>
+              <Area type="monotone" dataKey="revenue" stroke={P.teal} strokeWidth={2.5} fill="url(#tg)"/>
             </AreaChart>
-          </ChartBox>
+          </ChartWrap>
         </Card>
-        <Card style={{width:270,flexShrink:0}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].catBreak}</div>
-          <ChartBox height={130}>
+
+        {/* Donut */}
+        <Card>
+          <STitle>{T[l].catBreak}</STitle>
+          <ChartWrap h={130}>
             <PieChart>
-              <Pie data={CAT_DATA.map(d=>({...d,value:d.pct}))} cx="50%" cy="50%" innerRadius={32} outerRadius={52} dataKey="value" paddingAngle={3}>
-                {CAT_DATA.map((e,i)=><Cell key={i} fill={e.color}/>)}
+              <Pie data={CAT_PIE.map(d=>({...d,value:d.pct}))}
+                cx="50%" cy="50%" innerRadius={36} outerRadius={54}
+                dataKey="value" paddingAngle={4}>
+                {CAT_PIE.map((e,i) => <Cell key={i} fill={e.color}/>)}
               </Pie>
-              <Tooltip formatter={v=>[v+'%','']} contentStyle={{borderRadius:8,fontSize:12}}/>
+              <Tooltip formatter={v=>[v+'%','']}
+                contentStyle={{borderRadius:10,fontSize:12}}/>
             </PieChart>
-          </ChartBox>
-          <div style={{display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center',marginTop:6}}>
-            {CAT_DATA.map(d=>(
-              <span key={d.name} style={{display:'flex',alignItems:'center',gap:4,fontSize:11,color:C.gray600}}>
-                <span style={{width:9,height:9,borderRadius:2,background:d.color,display:'inline-block'}}/>
-                {T[l][d.name.toLowerCase()]||d.name} {d.pct}%
+          </ChartWrap>
+          <div style={{display:'flex',flexWrap:'wrap',gap:10,justifyContent:'center',marginTop:8}}>
+            {CAT_PIE.map(d => (
+              <span key={d.name} style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:P.gray600}}>
+                <span style={{width:10,height:10,borderRadius:3,background:d.color,display:'inline-block'}}/>
+                {T[l][d.name]||d.name} {d.pct}%
               </span>
             ))}
           </div>
@@ -466,105 +624,101 @@ function Home({pinInfo,l}){
 
       {/* Recent orders */}
       <Card>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800}}>{T[l].recentOrders}</div>
-          <span style={{fontSize:12,color:C.teal,fontWeight:600,cursor:'pointer'}}>{T[l].viewAll}</span>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <STitle style={{margin:0}}>{T[l].recentOrders}</STitle>
+          <span style={{fontSize:12,color:P.teal,fontWeight:700,cursor:'pointer'}}>{T[l].viewAll}</span>
         </div>
-        <OrdersTable data={ORDERS} limit={5} l={l}/>
+        <OTable rows={ORDERS.slice(0,5)} showAction={false} l={l}/>
       </Card>
 
-      {/* Bottom row */}
-      <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
-        <div style={{flex:1,minWidth:240}}><DeliveryZone pinInfo={pinInfo} l={l}/></div>
-        <div style={{flex:1,minWidth:240}}><WAPanel l={l}/></div>
+      {/* Delivery + WA */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+        <DeliveryZone pinInfo={pinInfo} l={l}/>
+        <WAPanel l={l}/>
       </div>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   SECTION: ORDERS
-══════════════════════════════════════════════════════ */
-function Orders({l}){
-  const FILTERS=['all','pending','packed','shipped','delivered','cancelled'];
-  const [filter,setFilter]=useState('all');
-  const labelOf=f=>({all:T[l].all,pending:T[l].pending,packed:T[l].packed,shipped:T[l].shipped,delivered:T[l].delivered,cancelled:T[l].cancelled}[f]||f);
-  const shown=filter==='all'?ORDERS:ORDERS.filter(o=>o.status===filter);
+/* ─── ORDERS ────────────────────────────────────────────── */
+function Orders({l}) {
+  const FILTERS = ['all','pending','packed','shipped','delivered','cancelled'];
+  const [flt, setFlt] = useState('all');
+  const labelOf = f => ({
+    all:T[l].all, pending:T[l].pending, packed:T[l].packed,
+    shipped:T[l].shipped, delivered:T[l].delivered, cancelled:T[l].cancelled,
+  }[f]||f);
+  const rows = flt==='all' ? ORDERS : ORDERS.filter(o=>o.status===flt);
   return (
-    <div style={{padding:'22px 20px'}}>
-      <div style={{fontSize:20,fontWeight:800,color:C.gray800,marginBottom:16}}>{T[l].orders}</div>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
-        {FILTERS.map(f=>(
-          <button key={f} onClick={()=>setFilter(f)}
-            style={{padding:'6px 16px',borderRadius:20,border:`1.5px solid ${filter===f?C.teal:C.gray200}`,
-              background:filter===f?C.teal:C.white,color:filter===f?C.white:C.gray600,
-              fontWeight:600,fontSize:12,cursor:'pointer',transition:'all .15s',outline:'none'}}>
-            {labelOf(f)}
-          </button>
+    <div style={{padding:'22px 22px 40px'}}>
+      <div style={{fontSize:20,fontWeight:800,color:P.gray800,marginBottom:18}}>{T[l].orders}</div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:18}}>
+        {FILTERS.map(f => (
+          <button key={f} onClick={()=>setFlt(f)} style={{
+            padding:'6px 18px', borderRadius:20, border:'none',
+            background: flt===f ? P.teal : P.gray100,
+            color: flt===f ? P.white : P.gray600,
+            fontWeight:700, fontSize:12, transition:'all .15s',
+          }}>{labelOf(f)}</button>
         ))}
       </div>
-      <Card>
-        <div style={{overflowX:'auto'}}>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-            <thead>
-              <tr>{[T[l].orderId,T[l].customer,T[l].category,T[l].amount,T[l].status,T[l].time,T[l].action].map(h=>(
-                <th key={h} style={{textAlign:'left',padding:'8px 10px',color:C.gray400,fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.04em',borderBottom:`1px solid ${C.gray100}`,whiteSpace:'nowrap'}}>{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody>
-              {shown.map(o=>(
-                <tr key={o.id}>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,color:C.teal,fontWeight:700}}>{o.id}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,whiteSpace:'nowrap'}}>{o.name}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`}}><span style={{background:C.gray100,color:C.gray600,fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:8}}>{o.cat}</span></td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,fontWeight:700,whiteSpace:'nowrap'}}>{inr(o.amt)}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`}}><Badge status={o.status} l={l}/></td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,color:C.gray400,whiteSpace:'nowrap'}}>{o.ago}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`}}>
-                    <button style={{padding:'5px 14px',borderRadius:8,border:'none',background:C.tealL,color:C.tealD,fontWeight:700,fontSize:12,cursor:'pointer',outline:'none'}}>{T[l].view}</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <Card><OTable rows={rows} showAction={true} l={l}/></Card>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   SECTION: ANALYTICS
-══════════════════════════════════════════════════════ */
-function Analytics({l}){
+/* ─── ANALYTICS ─────────────────────────────────────────── */
+function Analytics({l}) {
   return (
-    <div style={{padding:'22px 20px'}}>
-      <div style={{fontSize:20,fontWeight:800,color:C.gray800,marginBottom:16}}>{T[l].analytics}</div>
-      <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
-        <Card style={{flex:1,minWidth:280}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].ordersRev}</div>
-          <ChartBox height={200}>
-            <BarChart data={salesData} margin={{top:4,right:4,bottom:0,left:-10}} barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.gray100}/>
-              <XAxis dataKey="day" tick={{fontSize:10,fill:C.gray400}} tickLine={false} axisLine={false}/>
-              <YAxis yAxisId="l" tick={{fontSize:10,fill:C.gray400}} tickLine={false} axisLine={false}/>
-              <YAxis yAxisId="r" orientation="right" tick={{fontSize:10,fill:C.gray400}} tickLine={false} axisLine={false} tickFormatter={v=>'₹'+v/1000+'k'}/>
-              <Tooltip contentStyle={{borderRadius:8,fontSize:12}} formatter={(v,n)=>n==='revenue'?[inr(v),'Revenue']:[v,'Orders']}/>
-              <Bar yAxisId="l" dataKey="orders"  fill={C.blue} radius={[4,4,0,0]} maxBarSize={20}/>
-              <Bar yAxisId="r" dataKey="revenue" fill={C.teal} radius={[4,4,0,0]} maxBarSize={20}/>
+    <div style={{padding:'22px 22px 40px'}}>
+      <div style={{fontSize:20,fontWeight:800,color:P.gray800,marginBottom:18}}>{T[l].analytics}</div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:16}}>
+        <Card>
+          <STitle>{T[l].ordersRev}</STitle>
+          <ChartWrap h={220}>
+            <BarChart data={SALES} margin={{top:4,right:4,bottom:0,left:-12}} barGap={5}>
+              <CartesianGrid strokeDasharray="3 3" stroke={P.gray100}/>
+              <XAxis dataKey="day" tick={{fontSize:10,fill:P.gray400}} tickLine={false} axisLine={false}/>
+              <YAxis yAxisId="l" tick={{fontSize:10,fill:P.gray400}} tickLine={false} axisLine={false}/>
+              <YAxis yAxisId="r" orientation="right" tick={{fontSize:10,fill:P.gray400}}
+                tickLine={false} axisLine={false} tickFormatter={v=>'₹'+v/1000+'k'}/>
+              <Tooltip contentStyle={{borderRadius:10,fontSize:12,border:`1px solid ${P.gray200}`}}
+                formatter={(v,n)=>n==='revenue'?[inr(v),'Revenue']:[v,'Orders']}/>
+              <Bar yAxisId="l" dataKey="orders"  fill={P.blue}  radius={[5,5,0,0]} maxBarSize={22}/>
+              <Bar yAxisId="r" dataKey="revenue" fill={P.teal}  radius={[5,5,0,0]} maxBarSize={22}/>
             </BarChart>
-          </ChartBox>
+          </ChartWrap>
+          {/* Legend */}
+          <div style={{display:'flex',gap:16,marginTop:10,justifyContent:'center'}}>
+            {[{c:P.blue,n:'Orders'},{c:P.teal,n:'Revenue'}].map(x=>(
+              <span key={x.n} style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:P.gray600}}>
+                <span style={{width:10,height:10,borderRadius:3,background:x.c,display:'inline-block'}}/>
+                {x.n}
+              </span>
+            ))}
+          </div>
         </Card>
-        <Card style={{width:290,flexShrink:0}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].topProds}</div>
-          {TOP_PRODS.map((p,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 0',borderBottom:i<4?`1px solid ${C.gray100}`:'none'}}>
-              <span style={{fontSize:15,fontWeight:800,color:C.gray400,minWidth:20}}>#{i+1}</span>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.gray800,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div>
-                <div style={{fontSize:11,color:C.gray400,marginTop:1}}>{num(p.units)} {T[l].units} · {inr(p.rev)}</div>
+
+        <Card>
+          <STitle>{T[l].topProds}</STitle>
+          {TOP5.map((p,i) => (
+            <div key={i} style={{
+              display:'flex', alignItems:'center', gap:10,
+              padding:'11px 0',
+              borderBottom: i<4 ? `1px solid ${P.gray100}` : 'none',
+            }}>
+              <span style={{
+                fontSize:16, fontWeight:800, color:P.gray300,
+                minWidth:22, textAlign:'right',
+              }}>#{i+1}</span>
+              <div style={{flex:1, minWidth:0}}>
+                <div style={{fontSize:12.5,fontWeight:600,color:P.gray800,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div>
+                <div style={{fontSize:11,color:P.gray400,marginTop:2}}>{num(p.units)} {T[l].units} · {inr(p.rev)}</div>
               </div>
-              <span style={{background:C.tealL,color:C.tealD,fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:10}}>{p.trend}</span>
+              <span style={{
+                background:P.tealL, color:P.tealD,
+                fontSize:11, fontWeight:700, padding:'3px 9px', borderRadius:10,
+              }}>{p.trend}</span>
             </div>
           ))}
         </Card>
@@ -573,40 +727,38 @@ function Analytics({l}){
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   SECTION: PAYMENTS
-══════════════════════════════════════════════════════ */
-function Payments({l}){
-  const pstats=[
-    {icon:'💳',label:T[l].thisWeek, value:inr(52400),sub:'This week',       color:C.teal},
-    {icon:'⏳',label:T[l].pendPay,  value:inr(9600), sub:T[l].due,          color:C.amber},
-    {icon:'🎉',label:T[l].commission,value:inr(0),   sub:T[l].zeroFee,      color:C.teal},
-    {icon:'🧾',label:T[l].gstColl, value:inr(3840),  sub:T[l].autoCalc,     color:C.coral},
+/* ─── PAYMENTS ──────────────────────────────────────────── */
+function Payments({l}) {
+  const pstats = [
+    {icon:'💳',label:T[l].thisWeek,  value:inr(52400),sub:'This week',   accent:P.teal},
+    {icon:'⏳',label:T[l].pendPay,   value:inr(9600), sub:T[l].due,      accent:P.amber},
+    {icon:'🎉',label:T[l].commission,value:inr(0),    sub:T[l].zeroFee,  accent:P.teal},
+    {icon:'🧾',label:T[l].gstColl,  value:inr(3840), sub:T[l].autoCalc, accent:P.coral},
   ];
   return (
-    <div style={{padding:'22px 20px'}}>
-      <div style={{fontSize:20,fontWeight:800,color:C.gray800,marginBottom:16}}>{T[l].payments}</div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:20}}>
-        {pstats.map((s,i)=><Stat key={i} {...s} delay={i*0.05}/>)}
+    <div style={{padding:'22px 22px 40px'}}>
+      <div style={{fontSize:20,fontWeight:800,color:P.gray800,marginBottom:18}}>{T[l].payments}</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:14,marginBottom:22}}>
+        {pstats.map((s,i) => <Stat key={i} {...s} delay={i*0.05}/>)}
       </div>
       <Card>
-        <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].ledger}</div>
+        <STitle>{T[l].ledger}</STitle>
         <div style={{overflowX:'auto'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <thead>
               <tr>{[T[l].date,T[l].orders,T[l].gross,T[l].gst,T[l].netPay,T[l].status].map(h=>(
-                <th key={h} style={{textAlign:'left',padding:'8px 10px',color:C.gray400,fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.04em',borderBottom:`1px solid ${C.gray100}`,whiteSpace:'nowrap'}}>{h}</th>
+                <th key={h} style={{textAlign:'left',padding:'8px 12px',color:P.gray400,fontSize:10.5,fontWeight:700,textTransform:'uppercase',letterSpacing:'.05em',borderBottom:`2px solid ${P.gray100}`,whiteSpace:'nowrap'}}>{h}</th>
               ))}</tr>
             </thead>
             <tbody>
-              {LEDGER.map((r,i)=>(
+              {LEDGER.map((r,i) => (
                 <tr key={i}>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,fontWeight:600}}>{r.date}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,color:C.gray600}}>{num(r.orders)}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`}}>{inr(r.gross)}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,color:C.coral,fontWeight:600}}>{inr(r.gst)}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`,color:C.tealD,fontWeight:700}}>{inr(r.net)}</td>
-                  <td style={{padding:'11px 10px',borderBottom:`1px solid ${C.gray100}`}}><Badge status={r.status} l={l}/></td>
+                  <td style={{padding:'12px 12px',borderBottom:`1px solid ${P.gray100}`,fontWeight:600}}>{r.date}</td>
+                  <td style={{padding:'12px 12px',borderBottom:`1px solid ${P.gray100}`,color:P.gray600}}>{num(r.ord)}</td>
+                  <td style={{padding:'12px 12px',borderBottom:`1px solid ${P.gray100}`}}>{inr(r.gross)}</td>
+                  <td style={{padding:'12px 12px',borderBottom:`1px solid ${P.gray100}`,color:P.coral,fontWeight:700}}>{inr(r.gst)}</td>
+                  <td style={{padding:'12px 12px',borderBottom:`1px solid ${P.gray100}`,color:P.tealD,fontWeight:800}}>{inr(r.net)}</td>
+                  <td style={{padding:'12px 12px',borderBottom:`1px solid ${P.gray100}`}}><Badge status={r.status} l={l}/></td>
                 </tr>
               ))}
             </tbody>
@@ -617,60 +769,83 @@ function Payments({l}){
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   SECTION: SUPPORT
-══════════════════════════════════════════════════════ */
-function Support({l}){
-  const [cat,setCat]=useState('');
-  const [desc,setDesc]=useState('');
-  const [ok,setOk]=useState(false);
-  const CATS=[T[l].payIssue,T[l].ordIssue,T[l].listBlocked,T[l].retDisp,T[l].other];
-  const submit=()=>{
-    if(!cat||!desc.trim())return;
-    setOk(true);
-    setCat('');setDesc('');
-    setTimeout(()=>setOk(false),3000);
+/* ─── SUPPORT ───────────────────────────────────────────── */
+function Support({l}) {
+  const [cat, setCat] = useState('');
+  const [desc, setDesc] = useState('');
+  const [ok, setOk] = useState(false);
+  const CATS = [T[l].payIssue, T[l].ordIssue, T[l].listBlocked, T[l].retDisp, T[l].other];
+  const handleSubmit = () => {
+    if (!cat || !desc.trim()) return;
+    setOk(true); setCat(''); setDesc('');
+    setTimeout(() => setOk(false), 3000);
   };
-  const statBadge={open:T[l].open,inProg:T[l].inProg,resolved:T[l].resolved};
   return (
-    <div style={{padding:'22px 20px'}}>
-      <div style={{fontSize:20,fontWeight:800,color:C.gray800,marginBottom:16}}>{T[l].support}</div>
-      <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
-        <Card style={{flex:1,minWidth:260}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].raiseTicket}</div>
-          <div style={{background:C.amberL,border:`1px solid ${C.amber}44`,borderRadius:10,padding:'10px 14px',fontSize:12,color:C.amber,fontWeight:500,marginBottom:14}}>{T[l].sla}</div>
-          <div style={{marginBottom:10}}>
-            <div style={{fontSize:12,fontWeight:600,color:C.gray600,marginBottom:5}}>{T[l].category}</div>
-            <select value={cat} onChange={e=>setCat(e.target.value)}
-              style={{width:'100%',padding:'9px 12px',borderRadius:8,border:`1.5px solid ${C.gray200}`,fontSize:13,color:C.gray800,outline:'none',background:C.white}}>
-              <option value="">— Select —</option>
+    <div style={{padding:'22px 22px 40px'}}>
+      <div style={{fontSize:20,fontWeight:800,color:P.gray800,marginBottom:18}}>{T[l].support}</div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+        {/* Raise ticket */}
+        <Card>
+          <STitle>{T[l].raiseTicket}</STitle>
+          <div style={{
+            background:P.amberL, border:`1px solid ${P.amber}55`,
+            borderRadius:10, padding:'11px 14px',
+            fontSize:12, color:P.amber, fontWeight:500, marginBottom:18,
+          }}>{T[l].slaBox}</div>
+
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:600,color:P.gray600,marginBottom:6}}>{T[l].catDrop}</div>
+            <select value={cat} onChange={e=>setCat(e.target.value)} style={{
+              width:'100%', padding:'10px 13px', borderRadius:9,
+              border:`1.5px solid ${P.gray200}`, fontSize:13,
+              color:P.gray800, outline:'none', background:P.white,
+            }}>
+              <option value="">— Select category —</option>
               {CATS.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div style={{marginBottom:14}}>
-            <div style={{fontSize:12,fontWeight:600,color:C.gray600,marginBottom:5}}>{T[l].desc}</div>
-            <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3}
-              style={{width:'100%',padding:'9px 12px',borderRadius:8,border:`1.5px solid ${C.gray200}`,fontSize:13,color:C.gray800,outline:'none',resize:'vertical'}}/>
+
+          <div style={{marginBottom:18}}>
+            <div style={{fontSize:12,fontWeight:600,color:P.gray600,marginBottom:6}}>{T[l].descField}</div>
+            <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={4} style={{
+              width:'100%', padding:'10px 13px', borderRadius:9,
+              border:`1.5px solid ${P.gray200}`, fontSize:13,
+              color:P.gray800, outline:'none', resize:'vertical',
+            }}/>
           </div>
-          {ok&&<div style={{background:C.tealL,color:C.tealD,borderRadius:8,padding:'10px 14px',fontSize:13,fontWeight:600,marginBottom:10}}>{T[l].ticketOk}</div>}
-          <button onClick={submit}
-            style={{width:'100%',padding:'10px',borderRadius:8,border:'none',
-              background:ok?C.teal:C.gray800,color:C.white,fontWeight:700,fontSize:14,
-              cursor:'pointer',transition:'background .2s',outline:'none'}}>
-            {T[l].submit}
-          </button>
+
+          {ok && (
+            <div style={{
+              background:P.tealL, color:P.tealD, borderRadius:9,
+              padding:'11px 14px', fontSize:13, fontWeight:600, marginBottom:14,
+              animation:'fadeIn .3s ease',
+            }}>{T[l].tickOk}</div>
+          )}
+
+          <button onClick={handleSubmit} style={{
+            width:'100%', padding:'12px', borderRadius:9, border:'none',
+            background: ok ? P.teal : P.gray800,
+            color:P.white, fontWeight:700, fontSize:14,
+            transition:'background .25s',
+          }}>{T[l].submit}</button>
         </Card>
-        <Card style={{flex:1,minWidth:260}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].myTickets}</div>
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {TICKETS.map(t=>(
-              <div key={t.id} style={{padding:'12px',borderRadius:10,background:C.gray50,border:`1px solid ${C.gray200}`}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                  <span style={{fontSize:12,fontWeight:700,color:C.gray800}}>{t.id}</span>
-                  <Badge status={t.status} l={l}/>
+
+        {/* My tickets */}
+        <Card>
+          <STitle>{T[l].myTickets}</STitle>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {TICKETS.map(t => (
+              <div key={t.id} style={{
+                padding:'14px 16px', borderRadius:11,
+                background:P.gray50, border:`1px solid ${P.gray200}`,
+                animation:'slideIn .3s ease',
+              }}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+                  <span style={{fontSize:12,fontWeight:800,color:P.gray800}}>{t.id}</span>
+                  <Badge status={t.st} l={l}/>
                 </div>
-                <div style={{fontSize:12,color:C.gray600,marginBottom:4}}>{t.msg}</div>
-                <div style={{fontSize:11,color:C.gray400}}>{t.ago}</div>
+                <div style={{fontSize:12.5,color:P.gray600,lineHeight:1.5,marginBottom:5}}>{t.msg}</div>
+                <div style={{fontSize:11,color:P.gray400}}>{t.ago}</div>
               </div>
             ))}
           </div>
@@ -680,49 +855,79 @@ function Support({l}){
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   SECTION: GROWTH
-══════════════════════════════════════════════════════ */
-function Growth({l}){
-  const SUGG=[
-    {icon:'📸',title:'Add images to 12 listings',desc:'Products with 3+ photos get 40% more orders',cta:T[l].fix},
-    {icon:'🏷️',title:'Restock Kids Ethnic Wear',desc:'Only 3 units left — trending +22%',cta:T[l].restock},
-    {icon:'📍',title:'Expand to Bodh Gaya',desc:'PIN 824231 — 18 km, high demand',cta:T[l].addZone},
+/* ─── GROWTH ────────────────────────────────────────────── */
+function Growth({l}) {
+  const SUGG = [
+    {icon:'📸',title:'Add images to 12 listings',   desc:'Products with 3+ photos get 40% more orders', cta:T[l].fix},
+    {icon:'🏷️',title:'Restock Kids Ethnic Wear',    desc:'Only 3 units left — trending +22%',           cta:T[l].restock},
+    {icon:'📍',title:'Expand to Bodh Gaya',          desc:'PIN 824231 — 18 km, high demand area',        cta:T[l].addZone},
   ];
-  const BOOST=["Silk Banarasi Saree","Men's Kurta Set","Women's Suit"];
   return (
-    <div style={{padding:'22px 20px'}}>
-      <div style={{fontSize:20,fontWeight:800,color:C.gray800,marginBottom:16}}>{T[l].growth}</div>
-      {/* Banner */}
-      <div style={{background:`linear-gradient(135deg,${C.teal},${C.tealD})`,borderRadius:14,padding:'20px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}}>
+    <div style={{padding:'22px 22px 40px'}}>
+      <div style={{fontSize:20,fontWeight:800,color:P.gray800,marginBottom:18}}>{T[l].growth}</div>
+
+      {/* Sale countdown banner */}
+      <div style={{
+        background:`linear-gradient(135deg,${P.teal} 0%,${P.tealD} 100%)`,
+        borderRadius:16, padding:'22px 26px',
+        display:'flex', justifyContent:'space-between', alignItems:'center',
+        flexWrap:'wrap', gap:14, marginBottom:22,
+        boxShadow:`0 6px 24px ${P.teal}44`,
+      }}>
         <div>
-          <div style={{fontSize:18,fontWeight:800,color:C.white}}>🛍️ {T[l].saleTitle}</div>
-          <div style={{fontSize:13,color:'rgba(255,255,255,.8)',marginTop:4}}>{T[l].estBoost}</div>
+          <div style={{fontSize:20,fontWeight:800,color:P.white,marginBottom:5}}>🛍️ {T[l].saleTitle}</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,.8)'}}>{T[l].estBoost}</div>
         </div>
-        <div style={{background:'rgba(255,255,255,.18)',borderRadius:12,padding:'12px 20px',textAlign:'center'}}>
-          <div style={{fontSize:36,fontWeight:800,color:C.white}}>14</div>
-          <div style={{fontSize:11,color:'rgba(255,255,255,.8)',fontWeight:600}}>{T[l].daysLeft}</div>
+        <div style={{
+          background:'rgba(255,255,255,.15)', borderRadius:14,
+          padding:'14px 24px', textAlign:'center',
+          backdropFilter:'blur(4px)',
+          border:'1px solid rgba(255,255,255,.2)',
+        }}>
+          <div style={{fontSize:40,fontWeight:800,color:P.white,lineHeight:1}}>14</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,.8)',fontWeight:600,marginTop:3}}>{T[l].daysLeft}</div>
         </div>
       </div>
-      <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
-        <Card style={{flex:1,minWidth:220}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].boostList}</div>
-          {BOOST.map((p,i)=>(
-            <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:i<2?`1px solid ${C.gray100}`:'none'}}>
-              <span style={{fontSize:13,color:C.gray800}}>{p}</span>
-              <button style={{padding:'5px 14px',borderRadius:8,border:'none',background:C.amberL,color:C.amber,fontWeight:700,fontSize:12,cursor:'pointer',outline:'none'}}>{T[l].boost}</button>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+        {/* Boost listings */}
+        <Card>
+          <STitle>{T[l].boostList}</STitle>
+          {BOOST_PRODS.map((p,i) => (
+            <div key={i} style={{
+              display:'flex', justifyContent:'space-between', alignItems:'center',
+              padding:'12px 0',
+              borderBottom: i<2 ? `1px solid ${P.gray100}` : 'none',
+            }}>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:P.gray800}}>{p}</div>
+                <div style={{fontSize:11,color:P.gray400,marginTop:2}}>Tap to promote this listing</div>
+              </div>
+              <button style={{
+                padding:'6px 16px', borderRadius:9, border:'none',
+                background:P.amberL, color:P.amber, fontWeight:700, fontSize:12,
+              }}>{T[l].boost}</button>
             </div>
           ))}
         </Card>
-        <Card style={{flex:1,minWidth:220}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.gray800,marginBottom:12}}>{T[l].smartSug}</div>
-          {SUGG.map((s,i)=>(
-            <div key={i} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:i<2?`1px solid ${C.gray100}`:'none'}}>
-              <span style={{fontSize:22,flexShrink:0}}>{s.icon}</span>
+
+        {/* Smart suggestions */}
+        <Card>
+          <STitle>{T[l].smartSug}</STitle>
+          {SUGG.map((s,i) => (
+            <div key={i} style={{
+              display:'flex', gap:12,
+              padding:'12px 0',
+              borderBottom: i<2 ? `1px solid ${P.gray100}` : 'none',
+            }}>
+              <span style={{fontSize:24,flexShrink:0,lineHeight:1.2}}>{s.icon}</span>
               <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:700,color:C.gray800}}>{s.title}</div>
-                <div style={{fontSize:12,color:C.gray400,margin:'2px 0 8px'}}>{s.desc}</div>
-                <button style={{padding:'5px 14px',borderRadius:8,border:'none',background:C.tealL,color:C.tealD,fontWeight:700,fontSize:12,cursor:'pointer',outline:'none'}}>{s.cta}</button>
+                <div style={{fontSize:13,fontWeight:700,color:P.gray800}}>{s.title}</div>
+                <div style={{fontSize:11.5,color:P.gray400,margin:'3px 0 8px',lineHeight:1.5}}>{s.desc}</div>
+                <button style={{
+                  padding:'5px 14px', borderRadius:8, border:'none',
+                  background:P.tealL, color:P.tealD, fontWeight:700, fontSize:12,
+                }}>{s.cta}</button>
               </div>
             </div>
           ))}
@@ -732,61 +937,70 @@ function Growth({l}){
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   COMING SOON PLACEHOLDER
-══════════════════════════════════════════════════════ */
-function Soon({name}){
+/* ─── COMING SOON ───────────────────────────────────────── */
+function ComingSoon({name}) {
   return (
-    <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:60,gap:16}}>
-      <span style={{fontSize:52}}>🚧</span>
-      <div style={{fontSize:18,fontWeight:700,color:C.gray800}}>{name}</div>
-      <div style={{fontSize:13,color:C.gray400}}>Coming soon</div>
+    <div style={{
+      flex:1, display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center',
+      padding:60, gap:16, animation:'fadeIn .3s ease',
+    }}>
+      <span style={{fontSize:56,animation:'fadeUp .4s ease'}}>🚧</span>
+      <div style={{fontSize:20,fontWeight:800,color:P.gray800}}>{name}</div>
+      <div style={{fontSize:13,color:P.gray400}}>{T['en'].comingSoon}</div>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    ROOT APP
-══════════════════════════════════════════════════════ */
-function App(){
-  const [lang,setLang]=useState('en');
-  const [page,setPage]=useState('dashboard');
-  const [weather,setWeather]=useState({temp:32,icon:'☀️'});
-  const [pinInfo,setPinInfo]=useState({district:'Gaya',state:'Bihar'});
-  const [wp,setWp]=useState(true);
-  const l=lang;
+═══════════════════════════════════════════════════════════ */
+function App() {
+  const [lang,   setLang]    = useState('en');
+  const [page,   setPage]    = useState('dashboard');
+  const [weather,setWeather] = useState({temp:32, icon:'☀️'});
+  const [pinInfo,setPinInfo] = useState({district:'Gaya', state:'Bihar'});
+  const [wp,     setWp]      = useState(true);
+  const l = lang;
 
-  useEffect(()=>{
-    // Weather API
+  useEffect(() => {
+    /* Weather — Open-Meteo */
     fetch('https://api.open-meteo.com/v1/forecast?latitude=24.7955&longitude=84.9994&current=temperature_2m,weathercode,windspeed_10m&timezone=Asia/Kolkata')
-      .then(r=>r.json())
-      .then(d=>setWeather({temp:Math.round(d.current.temperature_2m),icon:wIcon(d.current.weathercode)}))
-      .catch(()=>{/* keep fallback */});
-    // Pincode API
-    fetch('https://api.postalpincode.in/pincode/823001')
-      .then(r=>r.json())
-      .then(d=>{const po=d[0]?.PostOffice?.[0];if(po)setPinInfo({district:po.District,state:po.State});})
-      .catch(()=>{/* keep fallback */});
-  },[]);
+      .then(r => r.json())
+      .then(d => setWeather({
+        temp: Math.round(d.current.temperature_2m),
+        icon: wIcon(d.current.weathercode),
+      }))
+      .catch(() => {/* keep default */});
 
-  const renderPage=()=>{
-    switch(page){
-      case 'dashboard': return <Home pinInfo={pinInfo} l={l}/>;
+    /* India Post Pincode */
+    fetch('https://api.postalpincode.in/pincode/823001')
+      .then(r => r.json())
+      .then(d => {
+        const po = d[0]?.PostOffice?.[0];
+        if (po) setPinInfo({district: po.District, state: po.State});
+      })
+      .catch(() => {/* keep default */});
+  }, []);
+
+  const renderPage = () => {
+    switch (page) {
+      case 'dashboard': return <Dashboard pinInfo={pinInfo} l={l}/>;
       case 'orders':    return <Orders l={l}/>;
-      case 'payments':  return <Payments l={l}/>;
       case 'analytics': return <Analytics l={l}/>;
+      case 'payments':  return <Payments l={l}/>;
       case 'support':   return <Support l={l}/>;
       case 'growth':    return <Growth l={l}/>;
-      default:          return <Soon name={T[l][page]||page}/>;
+      default:          return <ComingSoon name={T[l][page] || page}/>;
     }
   };
 
   return (
-    <div style={{display:'flex',height:'100vh',width:'100vw',overflow:'hidden'}}>
+    <div style={{display:'flex', height:'100vh', width:'100vw', overflow:'hidden'}}>
       <Sidebar active={page} setActive={setPage} l={l}/>
-      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
+      <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0}}>
         <TopBar lang={lang} setLang={setLang} wp={wp} setWp={setWp} weather={weather} l={l}/>
-        <div className="scroll-area">
+        <div className="main-scroll">
           {renderPage()}
         </div>
       </div>
