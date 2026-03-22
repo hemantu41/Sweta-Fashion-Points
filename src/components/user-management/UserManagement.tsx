@@ -72,722 +72,9 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────────
-
-const css = {
-  // Layout
-  page: {
-    minHeight: '100vh',
-    background: '#0b0f1a',
-    color: '#e2e8f0',
-    fontFamily: "'DM Sans', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif",
-  } as React.CSSProperties,
-  contentArea: {
-    display: 'flex',
-    minHeight: '100vh',
-  } as React.CSSProperties,
-
-  // Sidebar
-  sidebar: {
-    width: 260,
-    background: '#0d1120',
-    borderRight: '1px solid rgba(99, 102, 241, 0.1)',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    bottom: 0,
-    zIndex: 40,
-  } as React.CSSProperties,
-  sidebarLogo: {
-    padding: '24px 20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    borderBottom: '1px solid rgba(99, 102, 241, 0.08)',
-  } as React.CSSProperties,
-  logoMark: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 800,
-    fontSize: 16,
-    color: '#fff',
-    letterSpacing: -0.5,
-  } as React.CSSProperties,
-  logoText: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: '#f1f5f9',
-    letterSpacing: -0.3,
-  } as React.CSSProperties,
-  logoSub: {
-    fontSize: 10,
-    color: '#64748b',
-    fontWeight: 500,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase' as const,
-    marginTop: 2,
-  } as React.CSSProperties,
-  navSection: {
-    flex: 1,
-    padding: '16px 12px',
-    overflowY: 'auto' as const,
-  } as React.CSSProperties,
-  navLabel: {
-    fontSize: 10,
-    fontWeight: 600,
-    color: '#475569',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1.2,
-    padding: '8px 12px 6px',
-  } as React.CSSProperties,
-  navItem: (active: boolean) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '10px 12px',
-    borderRadius: 10,
-    fontSize: 13,
-    fontWeight: active ? 600 : 500,
-    color: active ? '#fff' : '#94a3b8',
-    background: active ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15))' : 'transparent',
-    border: active ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid transparent',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    marginBottom: 2,
-    textDecoration: 'none',
-  }) as React.CSSProperties,
-  navIcon: {
-    fontSize: 16,
-    width: 20,
-    textAlign: 'center' as const,
-  } as React.CSSProperties,
-  sidebarFooter: {
-    padding: '16px 16px',
-    borderTop: '1px solid rgba(99, 102, 241, 0.08)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  } as React.CSSProperties,
-  footerAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: 12,
-    color: '#fff',
-    flexShrink: 0,
-  } as React.CSSProperties,
-  footerName: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: '#e2e8f0',
-  } as React.CSSProperties,
-  footerRole: {
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: 500,
-  } as React.CSSProperties,
-
-  // Main content
-  main: {
-    marginLeft: 260,
-    flex: 1,
-    padding: '28px 32px',
-    minHeight: '100vh',
-  } as React.CSSProperties,
-  header: {
-    marginBottom: 28,
-  } as React.CSSProperties,
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 700,
-    color: '#f1f5f9',
-    letterSpacing: -0.5,
-    marginBottom: 4,
-  } as React.CSSProperties,
-  headerSub: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: 400,
-  } as React.CSSProperties,
-
-  // Stats bar
-  statsBar: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 16,
-    marginBottom: 28,
-  } as React.CSSProperties,
-  statCard: (accent: string) => ({
-    background: '#111827',
-    border: '1px solid rgba(99, 102, 241, 0.1)',
-    borderRadius: 14,
-    padding: '20px 20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 14,
-  }) as React.CSSProperties,
-  statIcon: (accent: string) => ({
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    background: `${accent}15`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 20,
-    flexShrink: 0,
-  }) as React.CSSProperties,
-  statValue: {
-    fontSize: 26,
-    fontWeight: 700,
-    color: '#f1f5f9',
-    lineHeight: 1,
-  } as React.CSSProperties,
-  statLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: 500,
-    marginTop: 3,
-  } as React.CSSProperties,
-
-  // Tabs
-  tabBar: {
-    display: 'flex',
-    gap: 0,
-    marginBottom: 24,
-    borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-  } as React.CSSProperties,
-  tab: (active: boolean) => ({
-    padding: '12px 24px',
-    fontSize: 13,
-    fontWeight: 600,
-    color: active ? '#a5b4fc' : '#64748b',
-    borderBottom: active ? '2px solid #6366f1' : '2px solid transparent',
-    cursor: 'pointer',
-    background: 'transparent',
-    border: 'none',
-    borderBottomWidth: 2,
-    borderBottomStyle: 'solid' as const,
-    borderBottomColor: active ? '#6366f1' : 'transparent',
-    transition: 'all 0.2s',
-    letterSpacing: -0.2,
-  }) as React.CSSProperties,
-
-  // Toolbar
-  toolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-    flexWrap: 'wrap' as const,
-  } as React.CSSProperties,
-  searchBox: {
-    flex: 1,
-    minWidth: 220,
-    position: 'relative' as const,
-  } as React.CSSProperties,
-  searchInput: {
-    width: '100%',
-    padding: '10px 14px 10px 38px',
-    background: '#111827',
-    border: '1px solid rgba(99, 102, 241, 0.15)',
-    borderRadius: 10,
-    color: '#e2e8f0',
-    fontSize: 13,
-    outline: 'none',
-    fontFamily: 'inherit',
-    transition: 'border-color 0.2s',
-  } as React.CSSProperties,
-  searchIcon: {
-    position: 'absolute' as const,
-    left: 12,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    fontSize: 15,
-    color: '#64748b',
-    pointerEvents: 'none' as const,
-  } as React.CSSProperties,
-  filterSelect: {
-    padding: '10px 14px',
-    background: '#111827',
-    border: '1px solid rgba(99, 102, 241, 0.15)',
-    borderRadius: 10,
-    color: '#e2e8f0',
-    fontSize: 13,
-    outline: 'none',
-    fontFamily: 'inherit',
-    cursor: 'pointer',
-    minWidth: 140,
-  } as React.CSSProperties,
-  addBtn: {
-    padding: '10px 20px',
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-    border: 'none',
-    borderRadius: 10,
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontFamily: 'inherit',
-    transition: 'opacity 0.2s, transform 0.1s',
-    whiteSpace: 'nowrap' as const,
-  } as React.CSSProperties,
-
-  // Table
-  tableWrap: {
-    background: '#111827',
-    border: '1px solid rgba(99, 102, 241, 0.1)',
-    borderRadius: 14,
-    overflow: 'hidden',
-  } as React.CSSProperties,
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse' as const,
-    fontSize: 13,
-  } as React.CSSProperties,
-  th: {
-    textAlign: 'left' as const,
-    padding: '14px 18px',
-    fontSize: 11,
-    fontWeight: 600,
-    color: '#64748b',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.8,
-    background: 'rgba(99, 102, 241, 0.04)',
-    borderBottom: '1px solid rgba(99, 102, 241, 0.08)',
-  } as React.CSSProperties,
-  td: {
-    padding: '14px 18px',
-    borderBottom: '1px solid rgba(99, 102, 241, 0.06)',
-    verticalAlign: 'middle' as const,
-  } as React.CSSProperties,
-  tr: (hover: boolean) => ({
-    background: hover ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
-    transition: 'background 0.15s',
-  }) as React.CSSProperties,
-  userCell: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-  } as React.CSSProperties,
-  avatar: (bg: string, size = 36) => ({
-    width: size,
-    height: size,
-    borderRadius: 10,
-    background: bg,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: size > 36 ? 18 : 12,
-    color: '#fff',
-    flexShrink: 0,
-    letterSpacing: -0.3,
-  }) as React.CSSProperties,
-  userName: {
-    fontWeight: 600,
-    color: '#f1f5f9',
-    fontSize: 13,
-  } as React.CSSProperties,
-  userEmail: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: 400,
-  } as React.CSSProperties,
-  roleBadge: (color: string) => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 5,
-    padding: '4px 10px',
-    borderRadius: 20,
-    fontSize: 11,
-    fontWeight: 600,
-    color: color,
-    background: `${color}18`,
-    border: `1px solid ${color}30`,
-    letterSpacing: -0.1,
-  }) as React.CSSProperties,
-  statusDot: (active: boolean) => ({
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    background: active ? '#10b981' : '#64748b',
-    flexShrink: 0,
-  }) as React.CSSProperties,
-  statusCell: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    fontSize: 13,
-    fontWeight: 500,
-  } as React.CSSProperties,
-  actionBtn: (bg: string, color: string) => ({
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    background: bg,
-    border: 'none',
-    color: color,
-    fontSize: 14,
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'opacity 0.2s',
-    fontFamily: 'inherit',
-  }) as React.CSSProperties,
-  actionsCell: {
-    display: 'flex',
-    gap: 6,
-  } as React.CSSProperties,
-
-  // Roles & Permissions tab
-  rolesGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: 18,
-  } as React.CSSProperties,
-  roleCard: (borderColor: string) => ({
-    background: '#111827',
-    border: `1px solid ${borderColor}30`,
-    borderRadius: 14,
-    padding: 22,
-  }) as React.CSSProperties,
-  roleCardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 18,
-  } as React.CSSProperties,
-  roleTitle: (color: string) => ({
-    fontSize: 15,
-    fontWeight: 700,
-    color: '#f1f5f9',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  }) as React.CSSProperties,
-  roleDot: (color: string) => ({
-    width: 10,
-    height: 10,
-    borderRadius: '50%',
-    background: color,
-  }) as React.CSSProperties,
-  roleUserCount: {
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: 500,
-  } as React.CSSProperties,
-  permRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '8px 0',
-    borderBottom: '1px solid rgba(99, 102, 241, 0.06)',
-  } as React.CSSProperties,
-  permLabel: {
-    fontSize: 13,
-    color: '#cbd5e1',
-    fontWeight: 500,
-    textTransform: 'capitalize' as const,
-  } as React.CSSProperties,
-  toggle: (on: boolean, locked: boolean) => ({
-    width: 38,
-    height: 20,
-    borderRadius: 12,
-    background: locked ? '#374151' : on ? '#6366f1' : '#1e293b',
-    border: `1px solid ${locked ? '#4b5563' : on ? '#818cf8' : '#334155'}`,
-    position: 'relative' as const,
-    cursor: locked ? 'not-allowed' : 'pointer',
-    transition: 'all 0.2s',
-    flexShrink: 0,
-  }) as React.CSSProperties,
-  toggleKnob: (on: boolean) => ({
-    width: 14,
-    height: 14,
-    borderRadius: '50%',
-    background: '#fff',
-    position: 'absolute' as const,
-    top: 2,
-    left: on ? 20 : 3,
-    transition: 'left 0.2s',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-  }) as React.CSSProperties,
-  lockedWarning: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '10px 14px',
-    background: 'rgba(239, 68, 68, 0.08)',
-    border: '1px solid rgba(239, 68, 68, 0.2)',
-    borderRadius: 10,
-    marginTop: 14,
-    fontSize: 12,
-    color: '#fca5a5',
-    fontWeight: 500,
-  } as React.CSSProperties,
-
-  // Overlay / backdrop
-  overlay: {
-    position: 'fixed' as const,
-    inset: 0,
-    background: 'rgba(0, 0, 0, 0.6)',
-    backdropFilter: 'blur(4px)',
-    zIndex: 50,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as React.CSSProperties,
-
-  // Drawer
-  drawerBackdrop: {
-    position: 'fixed' as const,
-    inset: 0,
-    background: 'rgba(0, 0, 0, 0.5)',
-    backdropFilter: 'blur(4px)',
-    zIndex: 50,
-  } as React.CSSProperties,
-  drawer: {
-    position: 'fixed' as const,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: 420,
-    background: '#0d1120',
-    borderLeft: '1px solid rgba(99, 102, 241, 0.15)',
-    zIndex: 51,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    boxShadow: '-8px 0 30px rgba(0,0,0,0.4)',
-  } as React.CSSProperties,
-  drawerHeader: {
-    padding: '24px 24px 20px',
-    borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  } as React.CSSProperties,
-  drawerTitle: {
-    fontSize: 17,
-    fontWeight: 700,
-    color: '#f1f5f9',
-  } as React.CSSProperties,
-  drawerClose: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    background: 'rgba(99, 102, 241, 0.08)',
-    border: '1px solid rgba(99, 102, 241, 0.15)',
-    color: '#94a3b8',
-    fontSize: 18,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: 'inherit',
-  } as React.CSSProperties,
-  drawerBody: {
-    flex: 1,
-    padding: 24,
-    overflowY: 'auto' as const,
-  } as React.CSSProperties,
-  drawerProfile: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 28,
-    paddingBottom: 24,
-    borderBottom: '1px solid rgba(99, 102, 241, 0.08)',
-  } as React.CSSProperties,
-  drawerLabel: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: '#64748b',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  } as React.CSSProperties,
-  drawerSelect: {
-    width: '100%',
-    padding: '10px 14px',
-    background: '#111827',
-    border: '1px solid rgba(99, 102, 241, 0.15)',
-    borderRadius: 10,
-    color: '#e2e8f0',
-    fontSize: 13,
-    fontFamily: 'inherit',
-    outline: 'none',
-    cursor: 'pointer',
-  } as React.CSSProperties,
-  drawerSection: {
-    marginBottom: 24,
-  } as React.CSSProperties,
-  permChips: {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: 6,
-    marginTop: 8,
-  } as React.CSSProperties,
-  permChip: (active: boolean) => ({
-    padding: '5px 12px',
-    borderRadius: 20,
-    fontSize: 11,
-    fontWeight: 600,
-    background: active ? 'rgba(99, 102, 241, 0.15)' : 'rgba(51, 65, 85, 0.3)',
-    color: active ? '#a5b4fc' : '#475569',
-    border: `1px solid ${active ? 'rgba(99, 102, 241, 0.3)' : 'rgba(51, 65, 85, 0.4)'}`,
-    textTransform: 'capitalize' as const,
-  }) as React.CSSProperties,
-  statusToggleBtns: {
-    display: 'flex',
-    gap: 8,
-    marginTop: 8,
-  } as React.CSSProperties,
-  statusToggleBtn: (active: boolean, variant: 'active' | 'inactive') => ({
-    flex: 1,
-    padding: '10px 14px',
-    borderRadius: 10,
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    transition: 'all 0.2s',
-    border: 'none',
-    ...(variant === 'active'
-      ? {
-          background: active ? 'rgba(16, 185, 129, 0.15)' : '#111827',
-          color: active ? '#34d399' : '#64748b',
-          outline: active ? '2px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(99, 102, 241, 0.1)',
-        }
-      : {
-          background: active ? 'rgba(239, 68, 68, 0.1)' : '#111827',
-          color: active ? '#f87171' : '#64748b',
-          outline: active ? '2px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(99, 102, 241, 0.1)',
-        }),
-  }) as React.CSSProperties,
-  removeBtn: {
-    width: '100%',
-    padding: '12px',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.25)',
-    borderRadius: 10,
-    color: '#f87171',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    transition: 'background 0.2s',
-    marginTop: 12,
-  } as React.CSSProperties,
-
-  // Add User modal
-  modal: {
-    background: '#111827',
-    border: '1px solid rgba(99, 102, 241, 0.2)',
-    borderRadius: 18,
-    width: '100%',
-    maxWidth: 480,
-    padding: 0,
-    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-  } as React.CSSProperties,
-  modalHeader: {
-    padding: '22px 24px',
-    borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  } as React.CSSProperties,
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: 700,
-    color: '#f1f5f9',
-  } as React.CSSProperties,
-  modalBody: {
-    padding: 24,
-  } as React.CSSProperties,
-  modalInput: {
-    width: '100%',
-    padding: '11px 14px',
-    background: '#0b0f1a',
-    border: '1px solid rgba(99, 102, 241, 0.15)',
-    borderRadius: 10,
-    color: '#e2e8f0',
-    fontSize: 13,
-    fontFamily: 'inherit',
-    outline: 'none',
-    marginBottom: 16,
-    boxSizing: 'border-box' as const,
-    transition: 'border-color 0.2s',
-  } as React.CSSProperties,
-  modalLabel: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: '#94a3b8',
-    marginBottom: 6,
-    display: 'block',
-  } as React.CSSProperties,
-  modalFooter: {
-    padding: '16px 24px 22px',
-    borderTop: '1px solid rgba(99, 102, 241, 0.08)',
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: 10,
-  } as React.CSSProperties,
-  modalCancelBtn: {
-    padding: '10px 20px',
-    background: 'transparent',
-    border: '1px solid rgba(99, 102, 241, 0.2)',
-    borderRadius: 10,
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-  } as React.CSSProperties,
-
-  // No results
-  emptyState: {
-    padding: 48,
-    textAlign: 'center' as const,
-    color: '#64748b',
-    fontSize: 14,
-  } as React.CSSProperties,
-};
-
-// ─── Nav Items ──────────────────────────────────────────────────────────────
-
-const NAV_ITEMS = [
-  { icon: '📊', label: 'Dashboard', key: 'dashboard' },
-  { icon: '📦', label: 'Orders', key: 'orders' },
-  { icon: '👕', label: 'Products', key: 'products' },
-  { icon: '💳', label: 'Payments', key: 'payments' },
-  { icon: '📈', label: 'Reports', key: 'reports' },
-  { icon: '↩️', label: 'Returns', key: 'returns' },
-  { icon: '👥', label: 'User Management', key: 'users' },
-  { icon: '⭐', label: 'Ratings', key: 'ratings' },
-  { icon: '⚙️', label: 'Settings', key: 'settings' },
-];
-
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function UserManagement() {
-  // State
   const [users, setUsers] = useState<User[]>(SEED_USERS);
   const [activeTab, setActiveTab] = useState<TabType>('users');
   const [searchQuery, setSearchQuery] = useState('');
@@ -801,17 +88,13 @@ export default function UserManagement() {
     finance: [...ROLE_CONFIGS.finance.permissions],
   });
 
-  // Edit drawer
   const [editUser, setEditUser] = useState<User | null>(null);
-
-  // Add modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<Role>('ops_manager');
 
-  // ─── Computed ──────────────────────────────────────────────────────────
-
+  // Computed
   const totalUsers = users.length;
   const activeUsers = users.filter(u => u.status === 'active').length;
   const inactiveUsers = users.filter(u => u.status === 'inactive').length;
@@ -826,8 +109,7 @@ export default function UserManagement() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // ─── Handlers ─────────────────────────────────────────────────────────
-
+  // Handlers
   const toggleStatus = (userId: string) => {
     setUsers(prev =>
       prev.map(u =>
@@ -880,344 +162,340 @@ export default function UserManagement() {
     setShowAddModal(false);
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────
-
   return (
-    <div style={css.page}>
-      <div style={css.contentArea}>
-        {/* ── Sidebar ── */}
-        <aside style={css.sidebar}>
-          <div style={css.sidebarLogo}>
-            <div style={css.logoMark}>IF</div>
-            <div>
-              <div style={css.logoText}>Insta Fashion</div>
-              <div style={css.logoSub}>Seller Dashboard</div>
-            </div>
-          </div>
-
-          <nav style={css.navSection}>
-            <div style={css.navLabel}>Main Menu</div>
-            {NAV_ITEMS.map(item => (
-              <div key={item.key} style={css.navItem(item.key === 'users')}>
-                <span style={css.navIcon}>{item.icon}</span>
-                {item.label}
-              </div>
-            ))}
-          </nav>
-
-          <div style={css.sidebarFooter}>
-            <div style={css.footerAvatar}>RP</div>
-            <div>
-              <div style={css.footerName}>Ram Prasad Saw</div>
-              <div style={css.footerRole}>Admin</div>
-            </div>
-          </div>
-        </aside>
-
-        {/* ── Main Content ── */}
-        <main style={css.main}>
-          {/* Header */}
-          <div style={css.header}>
-            <h1 style={css.headerTitle}>User Management</h1>
-            <p style={css.headerSub}>
-              Manage team members, roles, and access permissions
-            </p>
-          </div>
-
-          {/* Stats Bar */}
-          <div style={css.statsBar}>
-            {[
-              { label: 'Total Users', value: totalUsers, icon: '👥', accent: '#6366f1' },
-              { label: 'Active', value: activeUsers, icon: '✅', accent: '#10b981' },
-              { label: 'Inactive', value: inactiveUsers, icon: '⏸️', accent: '#f59e0b' },
-              { label: 'Admin Accounts', value: adminCount, icon: '🛡️', accent: '#ef4444' },
-            ].map(stat => (
-              <div key={stat.label} style={css.statCard(stat.accent)}>
-                <div style={css.statIcon(stat.accent)}>
-                  <span>{stat.icon}</span>
-                </div>
-                <div>
-                  <div style={css.statValue}>{stat.value}</div>
-                  <div style={css.statLabel}>{stat.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Tabs */}
-          <div style={css.tabBar}>
-            <button
-              style={css.tab(activeTab === 'users')}
-              onClick={() => setActiveTab('users')}
-            >
-              👥 Users
-            </button>
-            <button
-              style={css.tab(activeTab === 'roles')}
-              onClick={() => setActiveTab('roles')}
-            >
-              🔐 Roles & Permissions
-            </button>
-          </div>
-
-          {/* ── Users Tab ── */}
-          {activeTab === 'users' && (
-            <>
-              {/* Toolbar */}
-              <div style={css.toolbar}>
-                <div style={css.searchBox}>
-                  <span style={css.searchIcon}>🔍</span>
-                  <input
-                    type="text"
-                    placeholder="Search by name or email..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    style={css.searchInput}
-                  />
-                </div>
-                <select
-                  value={roleFilter}
-                  onChange={e => setRoleFilter(e.target.value)}
-                  style={css.filterSelect}
-                >
-                  <option value="all">All Roles</option>
-                  {(Object.keys(ROLE_CONFIGS) as Role[]).map(r => (
-                    <option key={r} value={r}>
-                      {ROLE_CONFIGS[r].label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                  style={css.filterSelect}
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                <button style={css.addBtn} onClick={() => setShowAddModal(true)}>
-                  <span style={{ fontSize: 16 }}>+</span> Add User
-                </button>
-              </div>
-
-              {/* Users Table */}
-              <div style={css.tableWrap}>
-                <table style={css.table}>
-                  <thead>
-                    <tr>
-                      <th style={css.th}>User</th>
-                      <th style={css.th}>Email</th>
-                      <th style={css.th}>Role</th>
-                      <th style={css.th}>Last Active</th>
-                      <th style={css.th}>Status</th>
-                      <th style={{ ...css.th, textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} style={css.emptyState}>
-                          No users found matching your filters
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredUsers.map(user => {
-                        const rc = ROLE_CONFIGS[user.role];
-                        return (
-                          <tr
-                            key={user.id}
-                            style={css.tr(hoveredRow === user.id)}
-                            onMouseEnter={() => setHoveredRow(user.id)}
-                            onMouseLeave={() => setHoveredRow(null)}
-                          >
-                            <td style={css.td}>
-                              <div style={css.userCell}>
-                                <div style={css.avatar(user.avatarColor)}>
-                                  {getInitials(user.name)}
-                                </div>
-                                <div>
-                                  <div style={css.userName}>{user.name}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ ...css.td, color: '#94a3b8', fontSize: 13 }}>
-                              {user.email}
-                            </td>
-                            <td style={css.td}>
-                              <span style={css.roleBadge(rc.color)}>
-                                <span style={{ ...css.roleDot(rc.color), width: 6, height: 6 }} />
-                                {rc.label}
-                              </span>
-                            </td>
-                            <td style={{ ...css.td, color: '#64748b', fontSize: 12 }}>
-                              {user.lastActive}
-                            </td>
-                            <td style={css.td}>
-                              <div style={css.statusCell}>
-                                <div style={css.statusDot(user.status === 'active')} />
-                                <span style={{ color: user.status === 'active' ? '#34d399' : '#94a3b8' }}>
-                                  {user.status === 'active' ? 'Active' : 'Inactive'}
-                                </span>
-                              </div>
-                            </td>
-                            <td style={{ ...css.td, textAlign: 'right' }}>
-                              <div style={{ ...css.actionsCell, justifyContent: 'flex-end' }}>
-                                <button
-                                  style={css.actionBtn('rgba(99, 102, 241, 0.1)', '#818cf8')}
-                                  title="Edit user"
-                                  onClick={() => setEditUser(user)}
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  style={css.actionBtn(
-                                    user.status === 'active'
-                                      ? 'rgba(245, 158, 11, 0.1)'
-                                      : 'rgba(16, 185, 129, 0.1)',
-                                    user.status === 'active' ? '#fbbf24' : '#34d399'
-                                  )}
-                                  title={user.status === 'active' ? 'Deactivate' : 'Activate'}
-                                  onClick={() => toggleStatus(user.id)}
-                                >
-                                  {user.status === 'active' ? '⏸' : '▶'}
-                                </button>
-                                {user.role !== 'admin' && (
-                                  <button
-                                    style={css.actionBtn('rgba(239, 68, 68, 0.1)', '#f87171')}
-                                    title="Remove user"
-                                    onClick={() => removeUser(user.id)}
-                                  >
-                                    🗑
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {/* ── Roles & Permissions Tab ── */}
-          {activeTab === 'roles' && (
-            <div style={css.rolesGrid}>
-              {(Object.entries(ROLE_CONFIGS) as [Role, RoleConfig][]).map(([role, config]) => {
-                const roleUsers = users.filter(u => u.role === role);
-                return (
-                  <div key={role} style={css.roleCard(config.color)}>
-                    <div style={css.roleCardHeader}>
-                      <div style={css.roleTitle(config.color)}>
-                        <span style={css.roleDot(config.color)} />
-                        {config.label}
-                      </div>
-                      <span style={css.roleUserCount}>
-                        {roleUsers.length} user{roleUsers.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-
-                    {ALL_PERMISSIONS.map(perm => {
-                      const isOn = rolePermissions[role].includes(perm);
-                      const isLocked = !!config.locked;
-                      return (
-                        <div key={perm} style={css.permRow}>
-                          <span style={css.permLabel}>{perm}</span>
-                          <div
-                            style={css.toggle(isOn, isLocked)}
-                            onClick={() => toggleRolePermission(role, perm)}
-                          >
-                            <div style={css.toggleKnob(isOn)} />
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {config.locked && (
-                      <div style={css.lockedWarning}>
-                        <span style={{ fontSize: 14 }}>🔒</span>
-                        Admin permissions are locked and cannot be modified
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </main>
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">User Management</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Manage team members, roles, and access permissions</p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+        >
+          <span className="text-base">+</span> Add User
+        </button>
       </div>
+
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total Users', value: totalUsers, icon: '👥', bg: 'bg-indigo-50', text: 'text-indigo-600' },
+          { label: 'Active', value: activeUsers, icon: '✅', bg: 'bg-green-50', text: 'text-green-600' },
+          { label: 'Inactive', value: inactiveUsers, icon: '⏸️', bg: 'bg-amber-50', text: 'text-amber-600' },
+          { label: 'Admin Accounts', value: adminCount, icon: '🛡️', bg: 'bg-red-50', text: 'text-red-600' },
+        ].map(stat => (
+          <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center text-lg`}>
+              {stat.icon}
+            </div>
+            <div>
+              <div className="text-xl font-bold text-gray-800">{stat.value}</div>
+              <div className="text-[11px] text-gray-400 font-medium">{stat.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-5">
+        {(['users', 'roles'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors
+              ${activeTab === tab ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            {tab === 'users' ? '👥 Users' : '🔐 Roles & Permissions'}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Users Tab ── */}
+      {activeTab === 'users' && (
+        <>
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex-1 min-w-[200px] relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+              />
+            </div>
+            <select
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 min-w-[140px] cursor-pointer"
+            >
+              <option value="all">All Roles</option>
+              {(Object.keys(ROLE_CONFIGS) as Role[]).map(r => (
+                <option key={r} value={r}>{ROLE_CONFIGS[r].label}</option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 min-w-[130px] cursor-pointer"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          {/* Users Table */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Last Active</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm">
+                        No users found matching your filters
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map(user => {
+                      const rc = ROLE_CONFIGS[user.role];
+                      return (
+                        <tr
+                          key={user.id}
+                          className={`border-b border-gray-50 transition-colors ${hoveredRow === user.id ? 'bg-gray-50/70' : ''}`}
+                          onMouseEnter={() => setHoveredRow(user.id)}
+                          onMouseLeave={() => setHoveredRow(null)}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                style={{ background: user.avatarColor }}
+                              >
+                                {getInitials(user.name)}
+                              </div>
+                              <span className="font-semibold text-gray-800 text-sm">{user.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 text-xs">{user.email}</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                              style={{
+                                color: rc.color,
+                                background: `${rc.color}12`,
+                                border: `1px solid ${rc.color}30`,
+                              }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: rc.color }} />
+                              {rc.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{user.lastActive}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full ${user.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                              <span className={`text-xs font-medium ${user.status === 'active' ? 'text-green-600' : 'text-gray-500'}`}>
+                                {user.status === 'active' ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setEditUser(user)}
+                                title="Edit"
+                                className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center hover:bg-indigo-100 transition-colors text-sm"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => toggleStatus(user.id)}
+                                title={user.status === 'active' ? 'Deactivate' : 'Activate'}
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-sm
+                                  ${user.status === 'active' ? 'bg-amber-50 text-amber-500 hover:bg-amber-100' : 'bg-green-50 text-green-500 hover:bg-green-100'}`}
+                              >
+                                {user.status === 'active' ? '⏸' : '▶'}
+                              </button>
+                              {user.role !== 'admin' && (
+                                <button
+                                  onClick={() => removeUser(user.id)}
+                                  title="Remove"
+                                  className="w-8 h-8 rounded-lg bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-100 transition-colors text-sm"
+                                >
+                                  🗑
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Roles & Permissions Tab ── */}
+      {activeTab === 'roles' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {(Object.entries(ROLE_CONFIGS) as [Role, RoleConfig][]).map(([role, config]) => {
+            const roleUsers = users.filter(u => u.role === role);
+            return (
+              <div
+                key={role}
+                className="bg-white rounded-xl border border-gray-100 p-5"
+                style={{ borderLeftWidth: 3, borderLeftColor: config.color }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: config.color }} />
+                    <span className="text-sm font-bold text-gray-800">{config.label}</span>
+                  </div>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    {roleUsers.length} user{roleUsers.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div className="space-y-0">
+                  {ALL_PERMISSIONS.map(perm => {
+                    const isOn = rolePermissions[role].includes(perm);
+                    const isLocked = !!config.locked;
+                    return (
+                      <div key={perm} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                        <span className="text-xs text-gray-600 font-medium capitalize">{perm}</span>
+                        <button
+                          onClick={() => toggleRolePermission(role, perm)}
+                          disabled={isLocked}
+                          className={`w-9 h-5 rounded-full relative transition-all flex-shrink-0
+                            ${isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+                            ${isOn ? 'bg-emerald-500' : 'bg-gray-200'}`}
+                        >
+                          <div
+                            className="w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all shadow-sm"
+                            style={{ left: isOn ? 18 : 3 }}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {config.locked && (
+                  <div className="flex items-center gap-2 mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+                    <span className="text-sm">🔒</span>
+                    <span className="text-[11px] text-red-600 font-medium">Admin permissions are locked and cannot be modified</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Edit User Drawer ── */}
       {editUser && (
         <>
-          <div style={css.drawerBackdrop} onClick={() => setEditUser(null)} />
-          <div style={css.drawer}>
-            <div style={css.drawerHeader}>
-              <span style={css.drawerTitle}>Edit User</span>
-              <button style={css.drawerClose} onClick={() => setEditUser(null)}>
+          <div className="fixed inset-0 bg-black/30 z-50" onClick={() => setEditUser(null)} />
+          <div className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white z-[51] shadow-2xl flex flex-col border-l border-gray-100">
+            {/* Drawer header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-800">Edit User</h3>
+              <button
+                onClick={() => setEditUser(null)}
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
+              >
                 ✕
               </button>
             </div>
-            <div style={css.drawerBody}>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               {/* Profile */}
-              <div style={css.drawerProfile}>
-                <div style={css.avatar(editUser.avatarColor, 64)}>
+              <div className="flex flex-col items-center gap-2 pb-6 border-b border-gray-100">
+                <div
+                  className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-lg font-bold"
+                  style={{ background: editUser.avatarColor }}
+                >
                   {getInitials(editUser.name)}
                 </div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: '#f1f5f9' }}>
-                  {editUser.name}
-                </div>
-                <div style={{ fontSize: 13, color: '#64748b' }}>{editUser.email}</div>
+                <p className="text-base font-semibold text-gray-800">{editUser.name}</p>
+                <p className="text-xs text-gray-400">{editUser.email}</p>
               </div>
 
               {/* Role */}
-              <div style={css.drawerSection}>
-                <div style={css.drawerLabel}>Role</div>
+              <div>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Role</label>
                 <select
-                  style={css.drawerSelect}
                   value={editUser.role}
                   onChange={e => changeUserRole(editUser.id, e.target.value as Role)}
                   disabled={editUser.role === 'admin'}
+                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {(Object.keys(ROLE_CONFIGS) as Role[]).map(r => (
-                    <option key={r} value={r}>
-                      {ROLE_CONFIGS[r].label}
-                    </option>
+                    <option key={r} value={r}>{ROLE_CONFIGS[r].label}</option>
                   ))}
                 </select>
               </div>
 
               {/* Permissions preview */}
-              <div style={css.drawerSection}>
-                <div style={css.drawerLabel}>Permissions</div>
-                <div style={css.permChips}>
-                  {ALL_PERMISSIONS.map(perm => (
-                    <span
-                      key={perm}
-                      style={css.permChip(rolePermissions[editUser.role].includes(perm))}
-                    >
-                      {perm}
-                    </span>
-                  ))}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Permissions</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {ALL_PERMISSIONS.map(perm => {
+                    const active = rolePermissions[editUser.role].includes(perm);
+                    return (
+                      <span
+                        key={perm}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize
+                          ${active
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-gray-50 text-gray-400 border border-gray-100'
+                          }`}
+                      >
+                        {perm}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Status toggle */}
-              <div style={css.drawerSection}>
-                <div style={css.drawerLabel}>Status</div>
-                <div style={css.statusToggleBtns}>
+              <div>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Status</label>
+                <div className="flex gap-2">
                   <button
-                    style={css.statusToggleBtn(editUser.status === 'active', 'active')}
-                    onClick={() => toggleStatus(editUser.id)}
+                    onClick={() => { if (editUser.status !== 'active') toggleStatus(editUser.id); }}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all border
+                      ${editUser.status === 'active'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                      }`}
                   >
                     ✅ Active
                   </button>
                   <button
-                    style={css.statusToggleBtn(editUser.status === 'inactive', 'inactive')}
-                    onClick={() => toggleStatus(editUser.id)}
+                    onClick={() => { if (editUser.status !== 'inactive') toggleStatus(editUser.id); }}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all border
+                      ${editUser.status === 'inactive'
+                        ? 'bg-red-50 text-red-600 border-red-200'
+                        : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
+                      }`}
                   >
                     ⏸ Inactive
                   </button>
@@ -1227,8 +505,8 @@ export default function UserManagement() {
               {/* Remove */}
               {editUser.role !== 'admin' && (
                 <button
-                  style={css.removeBtn}
                   onClick={() => removeUser(editUser.id)}
+                  className="w-full py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
                 >
                   🗑 Remove User
                 </button>
@@ -1240,77 +518,93 @@ export default function UserManagement() {
 
       {/* ── Add User Modal ── */}
       {showAddModal && (
-        <div style={css.overlay} onClick={() => setShowAddModal(false)}>
-          <div style={css.modal} onClick={e => e.stopPropagation()}>
-            <div style={css.modalHeader}>
-              <span style={css.modalTitle}>Add New User</span>
-              <button style={css.drawerClose} onClick={() => setShowAddModal(false)}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-800">Add New User</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
+              >
                 ✕
               </button>
             </div>
-            <div style={css.modalBody}>
-              <label style={css.modalLabel}>Full Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Amit Verma"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                style={css.modalInput}
-              />
 
-              <label style={css.modalLabel}>Email</label>
-              <input
-                type="email"
-                placeholder="e.g. amit.verma@instafashion.in"
-                value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-                style={css.modalInput}
-              />
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="text-xs text-gray-500 font-medium mb-1 block">Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Amit Verma"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium mb-1 block">Email</label>
+                <input
+                  type="email"
+                  placeholder="e.g. amit.verma@instafashion.in"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium mb-1 block">Assign Role</label>
+                <select
+                  value={newRole}
+                  onChange={e => setNewRole(e.target.value as Role)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+                >
+                  {(Object.keys(ROLE_CONFIGS) as Role[])
+                    .filter(r => r !== 'admin')
+                    .map(r => (
+                      <option key={r} value={r}>{ROLE_CONFIGS[r].label}</option>
+                    ))}
+                </select>
+              </div>
 
-              <label style={css.modalLabel}>Assign Role</label>
-              <select
-                value={newRole}
-                onChange={e => setNewRole(e.target.value as Role)}
-                style={{ ...css.modalInput, cursor: 'pointer', marginBottom: 20 }}
-              >
-                {(Object.keys(ROLE_CONFIGS) as Role[])
-                  .filter(r => r !== 'admin')
-                  .map(r => (
-                    <option key={r} value={r}>
-                      {ROLE_CONFIGS[r].label}
-                    </option>
-                  ))}
-              </select>
-
-              <div style={css.drawerLabel}>Permissions Preview</div>
-              <div style={css.permChips}>
-                {ALL_PERMISSIONS.map(perm => (
-                  <span
-                    key={perm}
-                    style={css.permChip(rolePermissions[newRole].includes(perm))}
-                  >
-                    {perm}
-                  </span>
-                ))}
+              {/* Permissions preview */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Permissions Preview</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {ALL_PERMISSIONS.map(perm => {
+                    const active = rolePermissions[newRole].includes(perm);
+                    return (
+                      <span
+                        key={perm}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize
+                          ${active
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-gray-50 text-gray-400 border border-gray-100'
+                          }`}
+                      >
+                        {perm}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-            <div style={css.modalFooter}>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
               <button
-                style={css.modalCancelBtn}
                 onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-sm text-gray-500 font-medium hover:text-gray-700"
               >
                 Cancel
               </button>
               <button
-                style={{
-                  ...css.addBtn,
-                  opacity: !newName.trim() || !newEmail.trim() ? 0.5 : 1,
-                  cursor: !newName.trim() || !newEmail.trim() ? 'not-allowed' : 'pointer',
-                }}
                 onClick={addUser}
                 disabled={!newName.trim() || !newEmail.trim()}
+                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span style={{ fontSize: 16 }}>+</span> Add User
+                <span className="text-base">+</span> Add User
               </button>
             </div>
           </div>
