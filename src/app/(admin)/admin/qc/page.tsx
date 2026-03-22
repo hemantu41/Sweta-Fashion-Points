@@ -248,10 +248,14 @@ export default function AdminQCPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           boxShadow: '0 1px 4px rgba(0,0,0,.06)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: C.brand }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <a href="/" style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: C.brand, textDecoration: 'none' }}>
               Insta Fashion Points
-            </span>
+            </a>
+            <span style={{ color: C.text3, fontSize: 13 }}>/</span>
+            <a href="/admin/dashboard" style={{ fontSize: 13, color: C.blue, fontWeight: 500, textDecoration: 'none', cursor: 'pointer' }}>
+              Dashboard
+            </a>
             <span style={{ color: C.text3, fontSize: 13 }}>/</span>
             <span style={{ fontSize: 13, color: C.text2, fontWeight: 500 }}>Admin QC Review</span>
           </div>
