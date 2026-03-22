@@ -39,6 +39,7 @@ import NDRActionModal from '@/components/ndr/NDRActionModal';
 import CODVerificationBadge from '@/components/ndr/CODVerificationBadge';
 import BulkUploadPanel from '@/components/catalogue/BulkUploadPanel';
 import QCApprovalPanel from '@/components/catalogue/QCApprovalPanel';
+import UserManagement from '@/components/user-management/UserManagement';
 import type { AdminPage, Order, NDRRecord } from '@/types/admin';
 
 // ─── Module 1: Dashboard Home ───────────────────────────────────────────────
@@ -1260,6 +1261,7 @@ function DashboardContent() {
       case 'support': return <SupportPage />;
       case 'growth': return <GrowthPage />;
       case 'ndr': return <NDRPage />;
+      case 'users': return <UserManagement />;
       case 'settings': return <SettingsPage />;
       default: return <DashboardHome />;
     }

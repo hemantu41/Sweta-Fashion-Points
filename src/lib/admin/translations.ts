@@ -301,6 +301,9 @@ const T = {
     'cat.products': 'Products',
     'cat.bulkUpload': 'Bulk Upload',
     'cat.qcApproval': 'QC Approval',
+
+    // User Management
+    'nav.users': 'User Management',
   },
 
   hi: {
@@ -601,6 +604,9 @@ const T = {
     'cat.products': 'प्रोडक्ट',
     'cat.bulkUpload': 'बल्क अपलोड',
     'cat.qcApproval': 'QC अनुमोदन',
+
+    // User Management
+    'nav.users': 'उपयोगकर्ता प्रबंधन',
   },
 } as const;
 

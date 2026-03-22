@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, CreditCard,
   BarChart3, HeadphonesIcon, TrendingUp, Settings,
   ChevronLeft, ChevronRight, ClipboardCheck, LogOut,
-  AlertTriangle,
+  AlertTriangle, Users,
 } from 'lucide-react';
 import { useAdminLang } from './LanguageContext';
 import type { AdminPage } from '@/types/admin';
@@ -25,6 +25,7 @@ const NAV_ITEMS: { page: AdminPage; icon: typeof LayoutDashboard; labelKey: stri
   { page: 'analytics', icon: BarChart3, labelKey: 'nav.analytics' },
   { page: 'support', icon: HeadphonesIcon, labelKey: 'nav.support' },
   { page: 'growth', icon: TrendingUp, labelKey: 'nav.growth' },
+  { page: 'users', icon: Users, labelKey: 'nav.users' },
   { page: 'settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
