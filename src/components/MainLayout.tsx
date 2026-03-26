@@ -40,6 +40,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return <>{children}</>;
   }
 
+  // Seller landing page has its own custom nav and footer
+  if (pathname === '/seller') {
+    return <>{children}</>;
+  }
+
   // For other pages, show full layout with navbar and footer
   return (
     <div className="min-h-screen flex flex-col">
