@@ -28,6 +28,7 @@ export default function SellerPendingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [reRegistering, setReRegistering] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
@@ -94,6 +95,28 @@ export default function SellerPendingPage() {
       setSubmitError('An error occurred. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReRegister = async () => {
+    if (!user) return;
+    setReRegistering(true);
+    try {
+      const res = await fetch('/api/sellers/re-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        router.push('/seller/register');
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to start re-registration. Please try again.');
+      }
+    } catch {
+      alert('An error occurred. Please try again.');
+    } finally {
+      setReRegistering(false);
     }
   };
 
@@ -266,6 +289,19 @@ export default function SellerPendingPage() {
                   Request Reactivation of Seller Account
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Re-register button for rejected sellers */}
+          {isRejected && (
+            <div className="mt-5">
+              <button
+                onClick={handleReRegister}
+                disabled={reRegistering}
+                className="w-full py-3 bg-[#722F37] text-white rounded-xl font-semibold hover:bg-[#8B3D47] transition-colors text-sm disabled:opacity-50"
+              >
+                {reRegistering ? 'Please wait...' : 'Register Again with Updated Details'}
+              </button>
             </div>
           )}
 

@@ -104,6 +104,7 @@ export default function SellerRegisterPage() {
   const [refreshing, setRefreshing] = useState(true);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [reRegistering, setReRegistering] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -465,6 +466,29 @@ export default function SellerRegisterPage() {
     );
   }
 
+  // ─── Re-register handler for rejected sellers ──────────────────────────
+  const handleReRegister = async () => {
+    if (!user) return;
+    setReRegistering(true);
+    try {
+      const res = await fetch('/api/sellers/re-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to start re-registration. Please try again.');
+      }
+    } catch {
+      alert('An error occurred. Please try again.');
+    } finally {
+      setReRegistering(false);
+    }
+  };
+
   // ─── Already a Seller — Show Status ──────────────────────────────────────
   if (isSeller && sellerStatus) {
     const statusConfig: Record<string, { icon: string; color: string; bg: string; title: string; desc: string }> = {
@@ -490,6 +514,15 @@ export default function SellerRegisterPage() {
               <Link href="/seller/dashboard" style={{ padding: '14px 32px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`, color: 'white', borderRadius: 50, fontWeight: 600, textDecoration: 'none', fontSize: 14 }}>
                 Go to Dashboard
               </Link>
+            )}
+            {sellerStatus === 'rejected' && (
+              <button
+                onClick={handleReRegister}
+                disabled={reRegistering}
+                style={{ padding: '14px 32px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`, color: 'white', borderRadius: 50, fontWeight: 600, fontSize: 14, border: 'none', cursor: reRegistering ? 'not-allowed' : 'pointer', opacity: reRegistering ? 0.6 : 1 }}
+              >
+                {reRegistering ? 'Please wait...' : 'Register Again with Updated Details'}
+              </button>
             )}
             <Link href="/" style={{ padding: '14px 32px', border: `2px solid ${C.primary}`, color: C.primary, borderRadius: 50, fontWeight: 600, textDecoration: 'none', fontSize: 14 }}>
               Back to Home
