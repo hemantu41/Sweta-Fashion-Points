@@ -40,8 +40,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return <>{children}</>;
   }
 
-  // Seller landing page has its own custom nav and footer
-  if (pathname === '/seller') {
+  // Seller pages have their own custom nav and footer
+  if (pathname === '/seller' || pathname === '/seller/register') {
     return <>{children}</>;
   }
 
