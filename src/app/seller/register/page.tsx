@@ -955,7 +955,7 @@ export default function SellerRegisterPage() {
                 { key: 'panCard' as const, label: 'PAN Card', optional: false },
                 { key: 'aadhaarFront' as const, label: 'Aadhaar Front', optional: false },
                 { key: 'aadhaarBack' as const, label: 'Aadhaar Back', optional: false },
-                ...(formData.hasGST ? [{ key: 'gstCertificate' as const, label: 'GST Certificate', optional: true }] : []),
+                { key: 'gstCertificate' as const, label: 'GST Certificate', optional: true },
                 { key: 'chequeOrPassbook' as const, label: 'Cancelled Cheque / Passbook', optional: false },
               ]).map(doc => (
                 <DocUploadCard
