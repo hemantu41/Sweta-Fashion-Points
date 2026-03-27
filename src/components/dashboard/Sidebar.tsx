@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, CreditCard,
   BarChart3, HeadphonesIcon, TrendingUp, Settings,
   ChevronLeft, ChevronRight, ClipboardCheck, LogOut,
-  AlertTriangle, Users, RotateCcw, ChevronDown,
+  AlertTriangle, Users, RotateCcw, ChevronDown, Store,
 } from 'lucide-react';
 import { useAdminLang } from './LanguageContext';
 import type { AdminPage } from '@/types/admin';
@@ -30,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     page: 'settings', icon: Settings, labelKey: 'nav.settings',
     children: [
+      { page: 'sellers', icon: Store, labelKey: 'nav.sellers' },
       { page: 'users', icon: Users, labelKey: 'nav.users' },
       { page: 'returns', icon: RotateCcw, labelKey: 'nav.returns' },
     ],
@@ -45,7 +46,7 @@ const MOBILE_NAV: { page: AdminPage; icon: typeof LayoutDashboard; labelKey: str
   { page: 'settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
-const SETTINGS_CHILDREN_PAGES: AdminPage[] = ['settings', 'users', 'returns'];
+const SETTINGS_CHILDREN_PAGES: AdminPage[] = ['settings', 'sellers', 'users', 'returns'];
 
 export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
