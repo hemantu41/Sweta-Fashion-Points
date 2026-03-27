@@ -129,7 +129,6 @@ export default function SellerRegisterPage() {
   });
 
   // OTP states
-  const [phoneOtp, setPhoneOtp] = useState({ sent: false, code: '', verified: false, loading: false, error: '' });
   const [emailOtp, setEmailOtp] = useState({ sent: false, code: '', verified: false, loading: false, error: '' });
 
   // GST/PAN verification states
@@ -199,46 +198,6 @@ export default function SellerRegisterPage() {
   };
 
   // ─── OTP Functions ──────────────────────────────────────────────────────
-  const sendPhoneOTP = async () => {
-    if (!formData.phone || formData.phone.length !== 10) {
-      setPhoneOtp(p => ({ ...p, error: 'Enter a valid 10-digit number' }));
-      return;
-    }
-    setPhoneOtp(p => ({ ...p, loading: true, error: '' }));
-    try {
-      const res = await fetch('/api/sellers/send-verification-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'phone', value: formData.phone }),
-      });
-      if (res.ok) setPhoneOtp(p => ({ ...p, sent: true, loading: false }));
-      else {
-        const data = await res.json();
-        setPhoneOtp(p => ({ ...p, error: data.error || 'Failed to send OTP', loading: false }));
-      }
-    } catch {
-      setPhoneOtp(p => ({ ...p, error: 'Network error', loading: false }));
-    }
-  };
-
-  const verifyPhoneOTP = async () => {
-    if (phoneOtp.code.length !== 6) {
-      setPhoneOtp(p => ({ ...p, error: 'Enter 6-digit OTP' }));
-      return;
-    }
-    setPhoneOtp(p => ({ ...p, loading: true, error: '' }));
-    try {
-      const res = await fetch('/api/sellers/verify-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'phone', value: formData.phone, otp: phoneOtp.code }),
-      });
-      const data = await res.json();
-      if (res.ok && data.verified) setPhoneOtp(p => ({ ...p, verified: true, loading: false }));
-      else setPhoneOtp(p => ({ ...p, error: data.error || 'Invalid OTP', loading: false }));
-    } catch {
-      setPhoneOtp(p => ({ ...p, error: 'Verification failed', loading: false }));
-    }
-  };
-
   const sendEmailOTP = async () => {
     if (!formData.email) {
       setEmailOtp(p => ({ ...p, error: 'Enter your email' }));
@@ -335,9 +294,8 @@ export default function SellerRegisterPage() {
 
     if (step === 1) {
       if (!formData.fullName.trim()) errs.fullName = 'Full name is required';
-      // Phone is optional (DLT not approved yet)
-      if (formData.phone && formData.phone.length !== 10) errs.phone = 'Enter a valid 10-digit phone number';
-      if (formData.phone && formData.phone.length === 10 && !phoneOtp.verified) errs.phone = 'Please verify your phone number';
+      // Phone is optional (DLT not approved yet) — no verification required
+      if (formData.phone && formData.phone.length > 0 && formData.phone.length !== 10) errs.phone = 'Enter a valid 10-digit phone number';
       if (!formData.email) errs.email = 'Email is required';
       if (!emailOtp.verified) errs.email = 'Please verify your email';
     }
@@ -362,7 +320,7 @@ export default function SellerRegisterPage() {
       if (!documents.panCard.file) errs.panCard = 'PAN Card is required';
       if (!documents.aadhaarFront.file) errs.aadhaarFront = 'Aadhaar Front is required';
       if (!documents.aadhaarBack.file) errs.aadhaarBack = 'Aadhaar Back is required';
-      if (formData.hasGST && !documents.gstCertificate.file) errs.gstCertificate = 'GST Certificate is required';
+      // GST certificate upload is optional
       if (!documents.chequeOrPassbook.file) errs.chequeOrPassbook = 'Cancelled Cheque / Passbook is required';
       if (!formData.bankAccountName.trim()) errs.bankAccountName = 'Account holder name required';
       if (!formData.bankAccountNumber) errs.bankAccountNumber = 'Account number required';
@@ -695,41 +653,20 @@ export default function SellerRegisterPage() {
               />
             </FieldGroup>
 
-            {/* Phone with OTP */}
+            {/* Phone (optional, no verification) */}
             <FieldGroup label="Phone Number" labelHi="फोन नंबर" error={errors.phone}>
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', background: '#F3F4F6', borderRadius: 10, fontSize: 14, color: C.body, fontWeight: 500 }}>+91</div>
                 <StyledInput
                   value={formData.phone}
-                  onChange={v => {
-                    updateField('phone', v.replace(/\D/g, '').slice(0, 10));
-                    if (phoneOtp.verified) setPhoneOtp({ sent: false, code: '', verified: false, loading: false, error: '' });
-                  }}
-                  placeholder="10-digit phone number"
+                  onChange={v => updateField('phone', v.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="10-digit phone number (optional)"
                   type="tel"
                   maxLength={10}
-                  disabled={phoneOtp.verified}
                   error={!!errors.phone}
                   style={{ flex: 1 }}
                 />
-                {!phoneOtp.verified ? (
-                  <ActionButton onClick={sendPhoneOTP} loading={phoneOtp.loading} disabled={formData.phone.length !== 10}>
-                    {phoneOtp.sent ? 'Resend' : 'Send OTP'}
-                  </ActionButton>
-                ) : (
-                  <VerifiedBadge />
-                )}
               </div>
-              {phoneOtp.sent && !phoneOtp.verified && (
-                <OtpInput
-                  value={phoneOtp.code}
-                  onChange={v => setPhoneOtp(p => ({ ...p, code: v, error: '' }))}
-                  onVerify={verifyPhoneOTP}
-                  loading={phoneOtp.loading}
-                  error={phoneOtp.error}
-                />
-              )}
-              {phoneOtp.error && !phoneOtp.sent && <ErrorText>{phoneOtp.error}</ErrorText>}
             </FieldGroup>
 
             {/* Email with OTP */}
@@ -1015,11 +952,11 @@ export default function SellerRegisterPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
               {([
-                { key: 'panCard' as const, label: 'PAN Card' },
-                { key: 'aadhaarFront' as const, label: 'Aadhaar Front' },
-                { key: 'aadhaarBack' as const, label: 'Aadhaar Back' },
-                ...(formData.hasGST ? [{ key: 'gstCertificate' as const, label: 'GST Certificate' }] : []),
-                { key: 'chequeOrPassbook' as const, label: 'Cancelled Cheque / Passbook' },
+                { key: 'panCard' as const, label: 'PAN Card', optional: false },
+                { key: 'aadhaarFront' as const, label: 'Aadhaar Front', optional: false },
+                { key: 'aadhaarBack' as const, label: 'Aadhaar Back', optional: false },
+                ...(formData.hasGST ? [{ key: 'gstCertificate' as const, label: 'GST Certificate', optional: true }] : []),
+                { key: 'chequeOrPassbook' as const, label: 'Cancelled Cheque / Passbook', optional: false },
               ]).map(doc => (
                 <DocUploadCard
                   key={doc.key}
@@ -1028,6 +965,7 @@ export default function SellerRegisterPage() {
                   onUpload={(file) => handleDocUpload(doc.key, file)}
                   onRemove={() => { setDocuments(prev => ({ ...prev, [doc.key]: { file: null, preview: '' } })); setErrors(prev => { const n = { ...prev }; delete n[doc.key]; return n; }); }}
                   error={errors[doc.key]}
+                  optional={doc.optional}
                 />
               ))}
             </div>
@@ -1126,7 +1064,7 @@ export default function SellerRegisterPage() {
             {/* Review sections */}
             <ReviewSection title="Personal Information" step={1} onEdit={() => setCurrentStep(1)}>
               <ReviewRow label="Name" value={formData.fullName} />
-              {formData.phone && <ReviewRow label="Phone" value={`+91 ${formData.phone}`} verified={phoneOtp.verified} />}
+              {formData.phone && <ReviewRow label="Phone" value={`+91 ${formData.phone}`} />}
               <ReviewRow label="Email" value={formData.email} verified />
             </ReviewSection>
 
@@ -1363,8 +1301,8 @@ function ErrorText({ children }: { children: React.ReactNode }) {
   return <p style={{ fontSize: 12, color: C.error, marginTop: 6, fontWeight: 500 }}>{children}</p>;
 }
 
-function DocUploadCard({ label, preview, onUpload, onRemove, error }: {
-  label: string; preview: string; onUpload: (file: File) => void; onRemove: () => void; error?: string;
+function DocUploadCard({ label, preview, onUpload, onRemove, error, optional }: {
+  label: string; preview: string; onUpload: (file: File) => void; onRemove: () => void; error?: string; optional?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isPdf = preview === 'pdf';
@@ -1411,7 +1349,7 @@ function DocUploadCard({ label, preview, onUpload, onRemove, error }: {
             }}
           >
             <svg width="24" height="24" fill="none" stroke={C.accent} strokeWidth="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            <span style={{ fontSize: 11, fontWeight: 600, color: C.accent, textAlign: 'center' }}>{label} <span style={{ color: C.error }}>*</span></span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.accent, textAlign: 'center' }}>{label} {optional ? <span style={{ color: C.muted, fontWeight: 400 }}>(optional)</span> : <span style={{ color: C.error }}>*</span>}</span>
             <span style={{ fontSize: 9, color: C.muted, textAlign: 'center' }}>JPEG, PNG, PDF (max 5MB)</span>
           </button>
         )}
