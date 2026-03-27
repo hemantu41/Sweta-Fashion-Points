@@ -105,7 +105,7 @@ export default function SellerPendingPage() {
       const res = await fetch('/api/sellers/re-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, sellerId: sellerInfo?.id }),
       });
       if (res.ok) {
         router.push('/seller/register');

@@ -95,7 +95,7 @@ interface FormData {
 }
 
 export default function SellerRegisterPage() {
-  const { user, isSeller, sellerStatus, isApprovedSeller, login } = useAuth();
+  const { user, isSeller, sellerId, sellerStatus, isApprovedSeller, login } = useAuth();
   const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -474,7 +474,7 @@ export default function SellerRegisterPage() {
       const res = await fetch('/api/sellers/re-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, sellerId }),
       });
       if (res.ok) {
         window.location.reload();
