@@ -54,7 +54,7 @@ const STEPS = [
 
 const BUSINESS_TYPES = [
   'Sarees', 'Women\'s Wear', 'Men\'s Wear', 'Kids Wear', 'Ethnic Wear',
-  'Western Wear', 'Accessories', 'Footwear', 'Jewellery', 'Other',
+  'Western Wear', 'Accessories', 'Footwear', 'Jewellery', 'Makeup & Beauty Products', 'Other',
 ];
 
 const INDIAN_STATES = [
@@ -74,7 +74,6 @@ interface FormData {
   email: string;
   // Step 2
   businessName: string;
-  businessNameHi: string;
   businessTypes: string[];
   hasGST: boolean;
   gstin: string;
@@ -111,7 +110,6 @@ export default function SellerRegisterPage() {
     phone: '',
     email: '',
     businessName: '',
-    businessNameHi: '',
     businessTypes: [],
     hasGST: false,
     gstin: '',
@@ -133,6 +131,10 @@ export default function SellerRegisterPage() {
   // OTP states
   const [phoneOtp, setPhoneOtp] = useState({ sent: false, code: '', verified: false, loading: false, error: '' });
   const [emailOtp, setEmailOtp] = useState({ sent: false, code: '', verified: false, loading: false, error: '' });
+
+  // GST/PAN verification states
+  const [gstVerification, setGstVerification] = useState<{ verified: boolean; loading: boolean; error: string; details: Record<string, string> | null }>({ verified: false, loading: false, error: '', details: null });
+  const [panVerification, setPanVerification] = useState<{ verified: boolean; loading: boolean; error: string; details: Record<string, string> | null }>({ verified: false, loading: false, error: '', details: null });
 
   // Product photos (Step 4)
   const [productPhotos, setProductPhotos] = useState<{ file: File; preview: string }[]>([]);
@@ -277,6 +279,56 @@ export default function SellerRegisterPage() {
     }
   };
 
+  // ─── GST Verification ────────────────────────────────────────────────────
+  const verifyGST = async () => {
+    if (!formData.gstin || formData.gstin.length < 15) {
+      setGstVerification(p => ({ ...p, error: 'Enter a valid 15-character GSTIN' }));
+      return;
+    }
+    setGstVerification(p => ({ ...p, loading: true, error: '' }));
+    try {
+      const res = await fetch('/api/sellers/verify-gst-pan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'gst', value: formData.gstin }),
+      });
+      const data = await res.json();
+      if (res.ok && data.verified) {
+        setGstVerification({ verified: true, loading: false, error: '', details: data.details || null });
+        // Auto-fill business name from GST if available
+        if (data.details?.tradeName && !formData.businessName) {
+          updateField('businessName', data.details.tradeName);
+        }
+      } else {
+        setGstVerification({ verified: false, loading: false, error: data.error || 'GST verification failed', details: null });
+      }
+    } catch {
+      setGstVerification({ verified: false, loading: false, error: 'Network error. Please try again.', details: null });
+    }
+  };
+
+  // ─── PAN Verification ────────────────────────────────────────────────────
+  const verifyPAN = async () => {
+    if (!formData.pan || formData.pan.length !== 10) {
+      setPanVerification(p => ({ ...p, error: 'Enter a valid 10-character PAN' }));
+      return;
+    }
+    setPanVerification(p => ({ ...p, loading: true, error: '' }));
+    try {
+      const res = await fetch('/api/sellers/verify-gst-pan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'pan', value: formData.pan }),
+      });
+      const data = await res.json();
+      if (res.ok && data.verified) {
+        setPanVerification({ verified: true, loading: false, error: '', details: data.details || null });
+      } else {
+        setPanVerification({ verified: false, loading: false, error: data.error || 'PAN verification failed', details: null });
+      }
+    } catch {
+      setPanVerification({ verified: false, loading: false, error: 'Network error. Please try again.', details: null });
+    }
+  };
+
   // ─── Validation ──────────────────────────────────────────────────────────
   const validateStep = (step: number): boolean => {
     const errs: Record<string, string> = {};
@@ -293,8 +345,13 @@ export default function SellerRegisterPage() {
     if (step === 2) {
       if (!formData.businessName.trim()) errs.businessName = 'Business name is required';
       if (formData.businessTypes.length === 0) errs.businessTypes = 'Select at least one business type';
-      if (formData.hasGST && !formData.gstin) errs.gstin = 'GSTIN is required';
-      if (!formData.hasGST && !formData.pan) errs.pan = 'PAN is required';
+      if (formData.hasGST) {
+        if (!formData.gstin) errs.gstin = 'GSTIN is required';
+        else if (!gstVerification.verified) errs.gstin = 'Please verify your GSTIN';
+      } else {
+        if (!formData.pan) errs.pan = 'PAN is required';
+        else if (!panVerification.verified) errs.pan = 'Please verify your PAN';
+      }
       if (!formData.addressLine1.trim()) errs.addressLine1 = 'Address is required';
       if (!formData.city.trim()) errs.city = 'City is required';
       if (!formData.state) errs.state = 'State is required';
@@ -378,7 +435,7 @@ export default function SellerRegisterPage() {
         body: JSON.stringify({
           userId: user.id,
           businessName: formData.businessName,
-          businessNameHi: formData.businessNameHi,
+          businessNameHi: '',
           gstin: formData.hasGST ? formData.gstin : '',
           pan: formData.pan,
           businessEmail: formData.email,
@@ -722,10 +779,6 @@ export default function SellerRegisterPage() {
               <StyledInput value={formData.businessName} onChange={v => updateField('businessName', v)} placeholder="Your business name" error={!!errors.businessName} />
             </FieldGroup>
 
-            <FieldGroup label="Business Name (Hindi)" labelHi="व्यापार नाम (हिंदी)">
-              <StyledInput value={formData.businessNameHi} onChange={v => updateField('businessNameHi', v)} placeholder="आपका व्यापार नाम" />
-            </FieldGroup>
-
             {/* Business Type Chips */}
             <FieldGroup label="What do you sell?" required error={errors.businessTypes}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -759,7 +812,7 @@ export default function SellerRegisterPage() {
             </FieldGroup>
 
             {/* GST / PAN Toggle */}
-            <FieldGroup label="Tax Registration">
+            <FieldGroup label="Tax Registration" required error={errors.gstin || errors.pan}>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                 {[
                   { label: 'I have GST', value: true },
@@ -768,7 +821,12 @@ export default function SellerRegisterPage() {
                   <button
                     key={String(opt.value)}
                     type="button"
-                    onClick={() => updateField('hasGST', opt.value)}
+                    onClick={() => {
+                      updateField('hasGST', opt.value);
+                      // Reset verification when switching
+                      setGstVerification({ verified: false, loading: false, error: '', details: null });
+                      setPanVerification({ verified: false, loading: false, error: '', details: null });
+                    }}
                     style={{
                       flex: 1, padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600,
                       border: `2px solid ${formData.hasGST === opt.value ? C.accent : '#E5E7EB'}`,
@@ -782,12 +840,79 @@ export default function SellerRegisterPage() {
                   </button>
                 ))}
               </div>
+
               {formData.hasGST ? (
-                <StyledInput value={formData.gstin} onChange={v => updateField('gstin', v.toUpperCase())} placeholder="22AAAAA0000A1Z5" maxLength={15} error={!!errors.gstin} />
+                <>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <StyledInput
+                      value={formData.gstin}
+                      onChange={v => {
+                        updateField('gstin', v.toUpperCase());
+                        if (gstVerification.verified) setGstVerification({ verified: false, loading: false, error: '', details: null });
+                      }}
+                      placeholder="22AAAAA0000A1Z5"
+                      maxLength={15}
+                      disabled={gstVerification.verified}
+                      error={!!errors.gstin}
+                      style={{ flex: 1 }}
+                    />
+                    {!gstVerification.verified ? (
+                      <ActionButton onClick={verifyGST} loading={gstVerification.loading} disabled={!formData.gstin || formData.gstin.length < 15}>
+                        Verify GST
+                      </ActionButton>
+                    ) : (
+                      <VerifiedBadge />
+                    )}
+                  </div>
+                  {gstVerification.error && <ErrorText>{gstVerification.error}</ErrorText>}
+                  {gstVerification.verified && gstVerification.details && (
+                    <div style={{ marginTop: 10, padding: 12, background: C.successBg, borderRadius: 10, border: `1px solid ${C.success}30` }}>
+                      {gstVerification.details.tradeName && (
+                        <p style={{ fontSize: 12, color: C.success, fontWeight: 600 }}>Trade Name: {gstVerification.details.tradeName}</p>
+                      )}
+                      {gstVerification.details.legalName && (
+                        <p style={{ fontSize: 12, color: C.success, fontWeight: 500 }}>Legal Name: {gstVerification.details.legalName}</p>
+                      )}
+                      {gstVerification.details.status && (
+                        <p style={{ fontSize: 12, color: C.success, fontWeight: 500 }}>Status: {gstVerification.details.status}</p>
+                      )}
+                      {!gstVerification.details.tradeName && !gstVerification.details.legalName && (
+                        <p style={{ fontSize: 12, color: C.success, fontWeight: 500 }}>GSTIN format verified successfully</p>
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
-                <StyledInput value={formData.pan} onChange={v => updateField('pan', v.toUpperCase())} placeholder="ABCDE1234F" maxLength={10} error={!!errors.pan} />
+                <>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <StyledInput
+                      value={formData.pan}
+                      onChange={v => {
+                        updateField('pan', v.toUpperCase());
+                        if (panVerification.verified) setPanVerification({ verified: false, loading: false, error: '', details: null });
+                      }}
+                      placeholder="ABCDE1234F"
+                      maxLength={10}
+                      disabled={panVerification.verified}
+                      error={!!errors.pan}
+                      style={{ flex: 1 }}
+                    />
+                    {!panVerification.verified ? (
+                      <ActionButton onClick={verifyPAN} loading={panVerification.loading} disabled={!formData.pan || formData.pan.length !== 10}>
+                        Verify PAN
+                      </ActionButton>
+                    ) : (
+                      <VerifiedBadge />
+                    )}
+                  </div>
+                  {panVerification.error && <ErrorText>{panVerification.error}</ErrorText>}
+                  {panVerification.verified && panVerification.details && (
+                    <div style={{ marginTop: 10, padding: 12, background: C.successBg, borderRadius: 10, border: `1px solid ${C.success}30` }}>
+                      <p style={{ fontSize: 12, color: C.success, fontWeight: 600 }}>PAN verified — Type: {panVerification.details.panType}</p>
+                    </div>
+                  )}
+                </>
               )}
-              {(errors.gstin || errors.pan) && <ErrorText>{errors.gstin || errors.pan}</ErrorText>}
             </FieldGroup>
 
             {/* Address */}
@@ -1007,9 +1132,8 @@ export default function SellerRegisterPage() {
 
             <ReviewSection title="Business Details" step={2} onEdit={() => setCurrentStep(2)}>
               <ReviewRow label="Business Name" value={formData.businessName} />
-              {formData.businessNameHi && <ReviewRow label="Business Name (Hindi)" value={formData.businessNameHi} />}
               <ReviewRow label="Categories" value={formData.businessTypes.join(', ')} />
-              <ReviewRow label={formData.hasGST ? 'GSTIN' : 'PAN'} value={formData.hasGST ? formData.gstin : formData.pan} />
+              <ReviewRow label={formData.hasGST ? 'GSTIN' : 'PAN'} value={formData.hasGST ? formData.gstin : formData.pan} verified />
               <ReviewRow label="Address" value={`${formData.addressLine1}${formData.addressLine2 ? ', ' + formData.addressLine2 : ''}, ${formData.city}, ${formData.state} - ${formData.pincode}`} />
               {formData.latitude && <ReviewRow label="Location" value={`${formData.latitude.toFixed(5)}, ${formData.longitude?.toFixed(5)}`} />}
             </ReviewSection>
