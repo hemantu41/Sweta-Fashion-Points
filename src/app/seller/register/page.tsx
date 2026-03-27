@@ -283,8 +283,9 @@ export default function SellerRegisterPage() {
 
     if (step === 1) {
       if (!formData.fullName.trim()) errs.fullName = 'Full name is required';
-      if (!formData.phone || formData.phone.length !== 10) errs.phone = 'Valid 10-digit phone required';
-      if (!phoneOtp.verified) errs.phone = 'Please verify your phone number';
+      // Phone is optional (DLT not approved yet)
+      if (formData.phone && formData.phone.length !== 10) errs.phone = 'Enter a valid 10-digit phone number';
+      if (formData.phone && formData.phone.length === 10 && !phoneOtp.verified) errs.phone = 'Please verify your phone number';
       if (!formData.email) errs.email = 'Email is required';
       if (!emailOtp.verified) errs.email = 'Please verify your email';
     }
@@ -621,7 +622,7 @@ export default function SellerRegisterPage() {
             </FieldGroup>
 
             {/* Phone with OTP */}
-            <FieldGroup label="Phone Number" labelHi="फोन नंबर" required error={errors.phone}>
+            <FieldGroup label="Phone Number" labelHi="फोन नंबर" error={errors.phone}>
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', background: '#F3F4F6', borderRadius: 10, fontSize: 14, color: C.body, fontWeight: 500 }}>+91</div>
                 <StyledInput
@@ -982,7 +983,7 @@ export default function SellerRegisterPage() {
             {/* Review sections */}
             <ReviewSection title="Personal Information" step={1} onEdit={() => setCurrentStep(1)}>
               <ReviewRow label="Name" value={formData.fullName} />
-              <ReviewRow label="Phone" value={`+91 ${formData.phone}`} verified />
+              {formData.phone && <ReviewRow label="Phone" value={`+91 ${formData.phone}`} verified={phoneOtp.verified} />}
               <ReviewRow label="Email" value={formData.email} verified />
             </ReviewSection>
 
