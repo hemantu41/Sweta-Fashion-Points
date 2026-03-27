@@ -21,7 +21,7 @@ export default function QcPipeline({ currentStage, rejected = false, compact = f
               key={i}
               className="h-1 rounded-full flex-1"
               style={{
-                background: isRej ? '#EF4444' : done ? '#1A6B3A' : active ? '#B8860B' : '#E5E7EB',
+                background: isRej ? '#EF4444' : done ? '#2E7D32' : active ? '#C49A3C' : '#E5E7EB',
               }}
             />
           );
@@ -36,7 +36,7 @@ export default function QcPipeline({ currentStage, rejected = false, compact = f
         const done = i < currentStage;
         const active = i === currentStage;
         const isRej = rejected && active;
-        const stepColor = isRej ? '#EF4444' : done ? '#1A6B3A' : active ? '#B8860B' : '#9CA3AF';
+        const stepColor = isRej ? '#EF4444' : done ? '#2E7D32' : active ? '#C49A3C' : '#9CA3AF';
 
         return (
           <div key={i} className="flex items-center flex-1">
@@ -54,7 +54,7 @@ export default function QcPipeline({ currentStage, rejected = false, compact = f
               </span>
             </div>
             {i < STAGES.length - 1 && (
-              <div className="flex-1 h-0.5 mx-1 mb-4" style={{ background: done ? '#1A6B3A' : '#E5E7EB' }} />
+              <div className="flex-1 h-0.5 mx-1 mb-4" style={{ background: done ? '#2E7D32' : '#E5E7EB' }} />
             )}
           </div>
         );

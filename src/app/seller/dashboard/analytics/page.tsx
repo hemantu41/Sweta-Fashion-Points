@@ -19,7 +19,7 @@ interface AnalyticsData {
   categoryData: { name: string; value: number }[];
 }
 
-const PIE_COLORS = ['#8B1A1A', '#1A3D6B', '#1A6B3A', '#8B5E0A', '#5B1A6B', '#6B3D1A'];
+const PIE_COLORS = ['#5B1A3A', '#1565C0', '#2E7D32', '#C49A3C', '#7A2350', '#3D0E2A'];
 
 const METRICS = [
   { key: 'fulfillment', label: 'Order Fulfillment', value: 87, target: 90, unit: '%', good: (v: number) => v >= 90 },
@@ -39,9 +39,9 @@ function fmtDate(dateStr: string) {
 const RevenueTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-100 rounded-lg shadow-lg px-3 py-2 text-xs">
+    <div className="bg-white border border-[#E8E0E4] rounded-lg shadow-lg px-3 py-2 text-xs">
       <p className="text-gray-500 mb-1">{label}</p>
-      <p className="font-bold text-[#8B1A1A]">{fmt(payload[0]?.value || 0)}</p>
+      <p className="font-bold text-[#5B1A3A]">{fmt(payload[0]?.value || 0)}</p>
     </div>
   );
 };
@@ -49,9 +49,9 @@ const RevenueTooltip = ({ active, payload, label }: any) => {
 const OrdersTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-100 rounded-lg shadow-lg px-3 py-2 text-xs">
+    <div className="bg-white border border-[#E8E0E4] rounded-lg shadow-lg px-3 py-2 text-xs">
       <p className="text-gray-500 mb-1">{label}</p>
-      <p className="font-bold text-[#1A3D6B]">{payload[0]?.value} orders</p>
+      <p className="font-bold text-[#1565C0]">{payload[0]?.value} orders</p>
     </div>
   );
 };
@@ -59,7 +59,7 @@ const OrdersTooltip = ({ active, payload, label }: any) => {
 const PieTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-100 rounded-lg shadow-lg px-3 py-2 text-xs">
+    <div className="bg-white border border-[#E8E0E4] rounded-lg shadow-lg px-3 py-2 text-xs">
       <p className="font-semibold text-gray-700">{payload[0]?.name}</p>
       <p className="font-bold" style={{ color: payload[0]?.payload?.fill }}>{fmt(payload[0]?.value || 0)}</p>
     </div>
@@ -88,7 +88,7 @@ export default function AnalyticsPage() {
 
   const healthScore = 72;
   const tier = healthScore >= 86 ? 'Gold' : healthScore >= 61 ? 'Silver' : 'Bronze';
-  const tierColor = healthScore >= 86 ? '#B8860B' : healthScore >= 61 ? '#6B7280' : '#92400E';
+  const tierColor = healthScore >= 86 ? '#C49A3C' : healthScore >= 61 ? '#6B7280' : '#3D0E2A';
   const nextTier = healthScore < 86 ? (healthScore < 61 ? 'Silver' : 'Gold') : null;
   const pointsToNext = healthScore < 61 ? 61 - healthScore : healthScore < 86 ? 86 - healthScore : 0;
 
@@ -107,7 +107,7 @@ export default function AnalyticsPage() {
           {[7, 30, 90].map(d => (
             <button key={d} onClick={() => setDays(d)}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${days === d ? 'text-white' : 'text-gray-500 hover:bg-gray-100 bg-white border border-gray-200'}`}
-              style={days === d ? { background: '#8B1A1A' } : {}}>
+              style={days === d ? { background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' } : {}}>
               {d}d
             </button>
           ))}
@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-4 border-[#8B1A1A] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#5B1A3A] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <>
@@ -128,7 +128,7 @@ export default function AnalyticsPage() {
               { label: 'Return Rate', value: `${data?.returnRate ?? 0}%`, sub: 'Returned orders' },
               { label: 'Avg Order Value', value: fmt(data?.avgOrderValue ?? 0), sub: 'Per transaction' },
             ].map(k => (
-              <div key={k.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <div key={k.label} className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-4">
                 <p className="text-xs text-gray-500 mb-1">{k.label}</p>
                 <p className="text-xl font-bold text-gray-800" style={{ fontFamily: 'var(--font-playfair)' }}>{k.value}</p>
                 <p className="text-[10px] text-gray-400 mt-1">{k.sub}</p>
@@ -140,7 +140,7 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
             {/* Revenue Area Chart */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
               <h3 className="text-sm font-semibold text-gray-800 mb-1">Revenue Trend</h3>
               <p className="text-xs text-gray-400 mb-4">Last {days} days · {fmt(data?.revenue ?? 0)} total</p>
               {revData.length === 0 ? (
@@ -150,8 +150,8 @@ export default function AnalyticsPage() {
                   <AreaChart data={revData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8B1A1A" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#8B1A1A" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#5B1A3A" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#5B1A3A" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
@@ -159,15 +159,15 @@ export default function AnalyticsPage() {
                     <YAxis tick={{ fontSize: 9, fill: '#9CA3AF' }} tickLine={false} axisLine={false}
                       tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
                     <Tooltip content={<RevenueTooltip />} />
-                    <Area type="monotone" dataKey="revenue" stroke="#8B1A1A" strokeWidth={2}
-                      fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: '#8B1A1A' }} />
+                    <Area type="monotone" dataKey="revenue" stroke="#5B1A3A" strokeWidth={2}
+                      fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: '#5B1A3A' }} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
             </div>
 
             {/* Orders Bar Chart */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
               <h3 className="text-sm font-semibold text-gray-800 mb-1">Orders by Day</h3>
               <p className="text-xs text-gray-400 mb-4">Last {days} days · {data?.orders ?? 0} orders total</p>
               {ordData.length === 0 ? (
@@ -179,7 +179,7 @@ export default function AnalyticsPage() {
                     <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#9CA3AF' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                     <YAxis tick={{ fontSize: 9, fill: '#9CA3AF' }} tickLine={false} axisLine={false} allowDecimals={false} />
                     <Tooltip content={<OrdersTooltip />} />
-                    <Bar dataKey="orders" fill="#1A3D6B" radius={[3, 3, 0, 0]} maxBarSize={24} />
+                    <Bar dataKey="orders" fill="#1565C0" radius={[3, 3, 0, 0]} maxBarSize={24} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -190,7 +190,7 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
             {/* Pie Chart */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 lg:col-span-2">
+            <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5 lg:col-span-2">
               <h3 className="text-sm font-semibold text-gray-800 mb-1">Revenue by Category</h3>
               <p className="text-xs text-gray-400 mb-2">Last {days} days breakdown</p>
               {catData.length === 0 ? (
@@ -212,7 +212,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Top Products Table */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden lg:col-span-3">
+            <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm overflow-hidden lg:col-span-3">
               <div className="px-5 py-4 border-b border-gray-50">
                 <h3 className="text-sm font-semibold text-gray-800">Top Products</h3>
                 <p className="text-xs text-gray-400 mt-0.5">By revenue · last {days} days</p>
@@ -222,7 +222,7 @@ export default function AnalyticsPage() {
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                    <tr className="bg-[#F5EDF2] border-b border-[#E8E0E4]">
                       <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">#</th>
                       <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500">Product</th>
                       <th className="text-center px-4 py-2 text-xs font-semibold text-gray-500 hidden sm:table-cell">Units</th>
@@ -232,7 +232,7 @@ export default function AnalyticsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {(data?.topProducts || []).map((p, i) => (
-                      <tr key={p.id} className="hover:bg-gray-50/50">
+                      <tr key={p.id} className="hover:bg-[#C49A3C]/5">
                         <td className="px-4 py-3 text-gray-400 font-medium text-xs">{i + 1}</td>
                         <td className="px-4 py-3 font-medium text-gray-800 truncate max-w-[140px] text-xs">{p.name}</td>
                         <td className="px-4 py-3 text-center text-gray-600 hidden sm:table-cell text-xs">{p.unitsSold}</td>
@@ -243,7 +243,7 @@ export default function AnalyticsPage() {
                         <td className="px-4 py-3 hidden lg:table-cell">
                           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden w-full">
                             <div className="h-full rounded-full transition-all"
-                              style={{ width: `${(p.revenue / maxTopRev) * 100}%`, background: '#8B1A1A' }} />
+                              style={{ width: `${(p.revenue / maxTopRev) * 100}%`, background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }} />
                           </div>
                         </td>
                       </tr>
@@ -289,7 +289,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Seller Health Score */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-sm font-semibold text-gray-800">Seller Health Score</h3>
@@ -303,7 +303,7 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="relative h-3 rounded-full bg-gray-100 mb-1 overflow-hidden">
-          <div className="absolute inset-y-0 left-0 rounded-full transition-all" style={{ width: `${healthScore}%`, background: `linear-gradient(90deg, #92400E, #B8860B)` }} />
+          <div className="absolute inset-y-0 left-0 rounded-full transition-all" style={{ width: `${healthScore}%`, background: `linear-gradient(90deg, #3D0E2A, #C49A3C)` }} />
           {[61, 86].map(t => (
             <div key={t} className="absolute top-0 bottom-0 w-0.5 bg-white/80" style={{ left: `${t}%` }} />
           ))}
@@ -315,7 +315,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
           {METRICS.map(m => {
             const isGood = m.good(m.value);
-            const color = isGood ? '#1A6B3A' : m.invert ? '#8B1A1A' : '#B8860B';
+            const color = isGood ? '#2E7D32' : m.invert ? '#5B1A3A' : '#C49A3C';
             const bg = isGood ? '#EBF7EF' : m.invert ? '#FDF3F3' : '#FEF7EA';
             const barPct = m.max ? (m.value / m.max) * 100 : m.invert ? Math.max(0, 100 - (m.value / m.target) * 100 * 0.5) : Math.min((m.value / (m.target * 1.2)) * 100, 100);
             return (

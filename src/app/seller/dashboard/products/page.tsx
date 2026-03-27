@@ -24,10 +24,10 @@ interface Product {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  approved: { label: 'Approved', bg: '#EBF7EF', color: '#1A6B3A' },
-  pending: { label: 'Pending QC', bg: '#FEF7EA', color: '#8B5E0A' },
-  under_review: { label: 'Under Review', bg: '#EBF2FB', color: '#1A3D6B' },
-  rejected: { label: 'Rejected', bg: '#FDF3F3', color: '#8B1A1A' },
+  approved: { label: 'Approved', bg: '#EBF7EF', color: '#2E7D32' },
+  pending: { label: 'Pending QC', bg: '#FEF7EA', color: '#C49A3C' },
+  under_review: { label: 'Under Review', bg: '#EBF2FB', color: '#1565C0' },
+  rejected: { label: 'Rejected', bg: '#FDF3F3', color: '#C62828' },
 };
 
 function qcStage(status?: string): QcStage {
@@ -89,7 +89,7 @@ export default function ProductsPage() {
         <p className="text-sm text-gray-500">{filtered.length} of {products.length} products</p>
         <Link href="/seller/dashboard/add"
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg"
-          style={{ background: '#8B1A1A' }}>
+          style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
           Add New Product
         </Link>
@@ -100,7 +100,7 @@ export default function ProductsPage() {
         <input
           value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search by name or ID…"
-          className="flex-1 min-w-48 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#8B1A1A]/30"
+          className="flex-1 min-w-48 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#5B1A3A]/30"
         />
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none">
           {CATEGORIES.map(c => <option key={c}>{c}</option>)}
@@ -114,20 +114,20 @@ export default function ProductsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm overflow-hidden">
         {loading ? (
-          <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-[#8B1A1A] border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-[#5B1A3A] border-t-transparent rounded-full animate-spin" /></div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-gray-400 gap-2">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
             <p className="text-sm">No products found</p>
-            <Link href="/seller/dashboard/add" className="text-sm text-[#8B1A1A] hover:underline">Add your first product →</Link>
+            <Link href="/seller/dashboard/add" className="text-sm text-[#5B1A3A] hover:underline">Add your first product →</Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
+                <tr className="border-b border-[#E8E0E4] bg-[#F5EDF2]">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Product</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Category</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Price</th>
@@ -144,7 +144,7 @@ export default function ProductsPage() {
                   const isLow = p.stockQuantity > 0 && p.stockQuantity <= 5;
                   const isOut = p.stockQuantity === 0;
                   return (
-                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr key={p.id} className="hover:bg-[#C49A3C]/5 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
@@ -228,7 +228,7 @@ export default function ProductsPage() {
                 onClick={() => handleDelete(confirmDelete)}
                 disabled={!!deletingId}
                 className="flex-1 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-60"
-                style={{ background: '#8B1A1A' }}
+                style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}
               >
                 {deletingId ? 'Deleting…' : 'Delete'}
               </button>

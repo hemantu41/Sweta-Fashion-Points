@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const BRAND = '#8B1A1A';
+const BRAND = '#3D0E2A';
 
 interface NavItem {
   label: string;
@@ -61,7 +61,7 @@ export default function SellerSidebar({ sellerName, healthScore, orderBadge, pro
 
   const initials = sellerName ? sellerName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : 'SP';
 
-  const tierColor = healthScore >= 86 ? '#B8860B' : healthScore >= 61 ? '#6B7280' : '#92400E';
+  const tierColor = healthScore >= 86 ? '#C49A3C' : healthScore >= 61 ? '#6B7280' : '#92400E';
   const tierLabel = healthScore >= 86 ? 'Gold' : healthScore >= 61 ? 'Silver' : 'Bronze';
 
   const sidebarContent = (
@@ -87,8 +87,8 @@ export default function SellerSidebar({ sellerName, healthScore, orderBadge, pro
           </div>
           <div className="min-w-0">
             <p className="text-white text-sm font-medium truncate">{sellerName || 'Seller'}</p>
-            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-300 font-medium mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>
+            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-[#C49A3C]/20 text-[#DDB868] font-medium mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C49A3C] inline-block"></span>
               Approved Seller
             </span>
           </div>
@@ -106,17 +106,17 @@ export default function SellerSidebar({ sellerName, healthScore, orderBadge, pro
               onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group relative ${
                 isActive
-                  ? 'bg-white/15 text-white font-medium'
+                  ? 'bg-[#C49A3C]/12 text-white font-medium'
                   : 'text-white/65 hover:bg-white/10 hover:text-white'
               }`}
             >
               {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-r-full" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[#C49A3C] rounded-r-full" />
               )}
               <span className={isActive ? 'text-white' : 'text-white/60 group-hover:text-white/90'}>{item.icon}</span>
               <span className="flex-1">{item.label}</span>
               {item.badge != null && item.badge > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/20 text-white min-w-[18px] text-center">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#C49A3C]/25 text-[#DDB868] min-w-[18px] text-center">
                   {item.badge > 99 ? '99+' : item.badge}
                 </span>
               )}
@@ -128,13 +128,13 @@ export default function SellerSidebar({ sellerName, healthScore, orderBadge, pro
       {/* Health score */}
       <div className="px-5 py-4 border-t border-white/10">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-white/60 text-xs">Seller Health</p>
+          <p className="text-[#C49A3C] text-xs">Seller Health</p>
           <span className="text-xs font-semibold" style={{ color: tierColor }}>{tierLabel}</span>
         </div>
         <div className="h-1.5 rounded-full bg-white/15 overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${healthScore}%`, background: `linear-gradient(90deg, #C0392B, #8B1A1A)` }}
+            style={{ width: `${healthScore}%`, background: `linear-gradient(90deg, #7A2350, #5B1A3A)` }}
           />
         </div>
         <div className="flex justify-between mt-1.5">

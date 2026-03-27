@@ -111,7 +111,7 @@ function ProductCard({ product, sellerId }: { product: Product; sellerId: string
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm overflow-hidden">
       {/* Header row */}
       <div className="flex gap-4 p-4 sm:p-5 cursor-pointer" onClick={handleExpand}>
         <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
@@ -167,7 +167,7 @@ function ProductCard({ product, sellerId }: { product: Product; sellerId: string
             {/* Admin rejection reason as first message */}
             {(product.rejectionReason || product.adminNote) && (
               <div className="flex gap-2 mb-3">
-                <div className="w-7 h-7 rounded-full bg-[#8B1A1A] flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-[#5B1A3A] flex items-center justify-center flex-shrink-0">
                   <span className="text-[10px] font-bold text-white">QC</span>
                 </div>
                 <div className="flex-1">
@@ -181,14 +181,14 @@ function ProductCard({ product, sellerId }: { product: Product; sellerId: string
 
             {/* Dynamic feedback messages */}
             {fbLoading ? (
-              <div className="flex justify-center py-4"><div className="w-5 h-5 border-2 border-[#8B1A1A] border-t-transparent rounded-full animate-spin" /></div>
+              <div className="flex justify-center py-4"><div className="w-5 h-5 border-2 border-[#5B1A3A] border-t-transparent rounded-full animate-spin" /></div>
             ) : (
               <div ref={chatRef} className="space-y-3 max-h-64 overflow-y-auto pr-1">
                 {feedback.map(msg => {
                   const isAdmin = msg.author_type === 'admin';
                   return (
                     <div key={msg.id} className={`flex gap-2 ${!isAdmin ? 'flex-row-reverse' : ''}`}>
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${isAdmin ? 'bg-[#8B1A1A] text-white' : 'bg-gray-200 text-gray-600'}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${isAdmin ? 'bg-[#5B1A3A] text-white' : 'bg-gray-200 text-gray-600'}`}>
                         {isAdmin ? 'QC' : 'S'}
                       </div>
                       <div className={`flex-1 ${!isAdmin ? 'flex flex-col items-end' : ''}`}>
@@ -216,11 +216,11 @@ function ProductCard({ product, sellerId }: { product: Product; sellerId: string
                 onChange={e => setReplyText(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleReply()}
                 placeholder="Reply to QC team…"
-                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#8B1A1A]/20 focus:border-[#8B1A1A]"
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5B1A3A]/20 focus:border-[#5B1A3A]"
               />
               <button onClick={handleReply} disabled={sending || !replyText.trim()}
                 className="px-3 py-2 text-xs font-semibold rounded-lg text-white disabled:opacity-40"
-                style={{ background: '#8B1A1A' }}>
+                style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}>
                 {sending ? '…' : 'Send'}
               </button>
             </div>
@@ -247,7 +247,7 @@ function ProductCard({ product, sellerId }: { product: Product; sellerId: string
                 </Link>
                 <button onClick={handleResubmit} disabled={resubmitting || !resubmitNote.trim()}
                   className="px-4 py-2 text-xs font-semibold rounded-lg text-white disabled:opacity-50 flex items-center gap-1.5"
-                  style={{ background: '#8B1A1A' }}>
+                  style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}>
                   {resubmitting ? (
                     <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Resubmitting…</>
                   ) : 'Fix & Resubmit for Review'}
@@ -276,7 +276,7 @@ function ProductCard({ product, sellerId }: { product: Product; sellerId: string
           {isRejected && !resubmitted && (
             <button onClick={handleExpand}
               className="px-4 py-2 text-xs font-semibold rounded-lg text-white"
-              style={{ background: '#8B1A1A' }}>
+              style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}>
               Fix &amp; Resubmit
             </button>
           )}
@@ -310,7 +310,7 @@ export default function QcPage() {
     <div className="space-y-6" style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
 
       {/* Pipeline diagram */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-6">
         <h2 className="text-sm font-semibold text-gray-800 mb-1">Product Approval Pipeline</h2>
         <p className="text-xs text-gray-400 mb-6">Every product goes through these 5 stages before going live to customers.</p>
         <QcPipeline currentStage={0} />
@@ -332,9 +332,9 @@ export default function QcPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Pending QC', count: pending.length, bg: '#FEF7EA', color: '#8B5E0A', icon: '⏳' },
-          { label: 'Under Review', count: underReview.length, bg: '#EBF2FB', color: '#1A3D6B', icon: '🔍' },
-          { label: 'Needs Fix', count: rejected.length, bg: '#FDF3F3', color: '#8B1A1A', icon: '⚡' },
+          { label: 'Pending QC', count: pending.length, bg: '#FEF7EA', color: '#C49A3C', icon: '⏳' },
+          { label: 'Under Review', count: underReview.length, bg: '#EBF2FB', color: '#1565C0', icon: '🔍' },
+          { label: 'Needs Fix', count: rejected.length, bg: '#FDF3F3', color: '#C62828', icon: '⚡' },
         ].map(s => (
           <div key={s.label} className="rounded-xl p-4 text-center" style={{ background: s.bg }}>
             <p className="text-lg mb-1">{s.icon}</p>
@@ -357,10 +357,10 @@ export default function QcPage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-[#8B1A1A] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#5B1A3A] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : products.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
+        <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-12 text-center">
           <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
             <svg className="text-green-600" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -368,7 +368,7 @@ export default function QcPage() {
           </div>
           <h3 className="font-semibold text-gray-800 mb-1">All products approved!</h3>
           <p className="text-sm text-gray-400 mb-4">No products are currently pending review.</p>
-          <Link href="/seller/dashboard/add" className="text-sm text-[#8B1A1A] hover:underline font-medium">Add a new product →</Link>
+          <Link href="/seller/dashboard/add" className="text-sm text-[#5B1A3A] hover:underline font-medium">Add a new product →</Link>
         </div>
       ) : (
         <div className="space-y-4">

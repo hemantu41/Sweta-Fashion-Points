@@ -68,7 +68,7 @@ export default function SellerReviewsPage() {
             onClick={() => setFilter(f.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
               ${filter === f.key
-                ? f.key === 'negative' ? 'bg-red-600 text-white' : 'bg-[#8B1A1A] text-white'
+                ? f.key === 'negative' ? 'bg-red-600 text-white' : 'bg-[#5B1A3A] text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
@@ -86,7 +86,7 @@ export default function SellerReviewsPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-xl border border-gray-100 p-5 animate-pulse">
+            <div key={i} className="bg-white rounded-xl border border-[#E8E0E4] p-5 animate-pulse">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-full bg-gray-200" />
                 <div className="space-y-2">
@@ -101,7 +101,7 @@ export default function SellerReviewsPage() {
           ))}
         </div>
       ) : reviews.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-10 text-center">
+        <div className="bg-white rounded-xl border border-[#E8E0E4] p-10 text-center">
           <div className="text-4xl mb-3">⭐</div>
           <p className="text-sm font-medium text-gray-600">
             {filter === 'negative' ? 'No reviews need your response' : 'No reviews found'}

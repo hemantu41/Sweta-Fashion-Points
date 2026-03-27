@@ -34,9 +34,9 @@ function GstInfo({ price, gst }: { price: number; gst: number }) {
         { label: 'Base Price (ex-GST)', value: `₹${base.toFixed(2)}` },
         { label: `GST Amount (${gst}%)`, value: `₹${gstAmt.toFixed(2)}` },
         { label: 'Customer Pays', value: `₹${price.toFixed(2)}`, bold: true },
-        { label: 'Your Earnings (after 10% fee)', value: `₹${earnings.toFixed(2)}`, bold: true, color: '#1A6B3A' },
+        { label: 'Your Earnings (after 10% fee)', value: `₹${earnings.toFixed(2)}`, bold: true, color: '#2E7D32' },
       ].map(r => (
-        <div key={r.label} className={`flex justify-between py-1.5 border-b border-gray-100 last:border-0 ${r.bold ? 'font-semibold' : ''}`}>
+        <div key={r.label} className={`flex justify-between py-1.5 border-b border-[#E8E0E4] last:border-0 ${r.bold ? 'font-semibold' : ''}`}>
           <span className="text-gray-500">{r.label}</span>
           <span style={{ color: r.color || (r.bold ? '#1A1A1A' : '#6B7280'), fontFamily: r.bold ? 'var(--font-playfair)' : undefined }}>{r.value}</span>
         </div>
@@ -126,7 +126,7 @@ export default function AddProductPage() {
             Add Another
           </button>
           <button onClick={() => router.push('/seller/dashboard/qc')}
-            className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg" style={{ background: '#8B1A1A' }}>
+            className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg" style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}>
             View QC Status
           </button>
         </div>
@@ -142,14 +142,14 @@ export default function AddProductPage() {
         <div className="lg:col-span-3 space-y-5">
 
           {/* Basic Info */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-4">Basic Information</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Product Name *</label>
                 <input value={name} onChange={e => setName(e.target.value)} required
                   placeholder="e.g. Women's Printed Cotton Kurta"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#8B1A1A]/30" />
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#5B1A3A]/30" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -172,7 +172,7 @@ export default function AddProductPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Description *</label>
                 <textarea value={description} onChange={e => setDescription(e.target.value)} required rows={4}
                   placeholder="Describe the product — fabric, style, occasion, wash care…"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#8B1A1A]/30 resize-none" />
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#5B1A3A]/30 resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -190,7 +190,7 @@ export default function AddProductPage() {
           </div>
 
           {/* Variants */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-4">Variants</h3>
             <div className="space-y-4">
               <div>
@@ -198,8 +198,8 @@ export default function AddProductPage() {
                 <div className="flex flex-wrap gap-2">
                   {SIZES.map(s => (
                     <button key={s} type="button" onClick={() => toggleSize(s)}
-                      className={`px-3 py-1.5 text-xs rounded-lg border font-medium transition-all ${sizes.includes(s) ? 'text-white border-[#8B1A1A]' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                      style={sizes.includes(s) ? { background: '#8B1A1A' } : {}}>
+                      className={`px-3 py-1.5 text-xs rounded-lg border font-medium transition-all ${sizes.includes(s) ? 'text-white border-[#5B1A3A]' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                      style={sizes.includes(s) ? { background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' } : {}}>
                       {s}
                     </button>
                   ))}
@@ -221,7 +221,7 @@ export default function AddProductPage() {
           </div>
 
           {/* Pricing & Inventory */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-4">Pricing & Inventory</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -264,10 +264,10 @@ export default function AddProductPage() {
         <div className="lg:col-span-2 space-y-5">
 
           {/* Image upload */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-1">Product Images</h3>
             <p className="text-xs text-gray-400 mb-4">Minimum 4 images recommended. Use plain backgrounds. First image = main image.</p>
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 mb-3 text-center hover:border-[#8B1A1A]/30 transition-colors">
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 mb-3 text-center hover:border-[#5B1A3A]/30 transition-colors">
               <svg className="mx-auto text-gray-300 mb-2" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
               <p className="text-xs text-gray-400">Paste image URL below</p>
             </div>
@@ -276,7 +276,7 @@ export default function AddProductPage() {
                 placeholder="Paste image URL…"
                 className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none" />
               <button type="button" onClick={addImage}
-                className="px-3 py-2 text-xs font-semibold text-white rounded-lg" style={{ background: '#8B1A1A' }}>
+                className="px-3 py-2 text-xs font-semibold text-white rounded-lg" style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}>
                 Add
               </button>
             </div>
@@ -285,7 +285,7 @@ export default function AddProductPage() {
                 {images.map((url, i) => (
                   <div key={i} className="relative">
                     <img src={url} alt="" className="w-14 h-14 rounded-lg object-cover border border-gray-200" />
-                    {i === 0 && <span className="absolute -top-1 -left-1 text-[9px] px-1 bg-[#8B1A1A] text-white rounded-sm">Main</span>}
+                    {i === 0 && <span className="absolute -top-1 -left-1 text-[9px] px-1 bg-[#5B1A3A] text-white rounded-sm">Main</span>}
                     <button type="button" onClick={() => setImages(imgs => imgs.filter((_, j) => j !== i))}
                       className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">×</button>
                   </div>
@@ -296,7 +296,7 @@ export default function AddProductPage() {
           </div>
 
           {/* GST Calculator */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-1">GST Price Calculator</h3>
             <p className="text-xs text-gray-400 mb-4">Live calculation based on your pricing.</p>
             {price ? (
@@ -307,15 +307,15 @@ export default function AddProductPage() {
           </div>
 
           {/* Submit card */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-4">Submit for Review</h3>
             <div className="space-y-3 mb-5">
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={checked1} onChange={e => setChecked1(e.target.checked)} className="mt-0.5 accent-[#8B1A1A]" />
+                <input type="checkbox" checked={checked1} onChange={e => setChecked1(e.target.checked)} className="mt-0.5 accent-[#5B1A3A]" />
                 <span className="text-xs text-gray-600">I confirm that all product information is accurate and the images are genuine product photos.</span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={checked2} onChange={e => setChecked2(e.target.checked)} className="mt-0.5 accent-[#8B1A1A]" />
+                <input type="checkbox" checked={checked2} onChange={e => setChecked2(e.target.checked)} className="mt-0.5 accent-[#5B1A3A]" />
                 <span className="text-xs text-gray-600">I confirm that this product is genuine and I have the right to sell it on Insta Fashion Points.</span>
               </label>
             </div>
@@ -324,7 +324,7 @@ export default function AddProductPage() {
             )}
             <button type="submit" disabled={submitting || !checked1 || !checked2}
               className="w-full py-3 text-sm font-semibold text-white rounded-lg disabled:opacity-50 transition-opacity"
-              style={{ background: '#8B1A1A' }}>
+              style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}>
               {submitting ? 'Submitting…' : 'Submit for Approval'}
             </button>
             <p className="text-[10px] text-gray-400 text-center mt-2">Product will be hidden from customers until approved by our team</p>

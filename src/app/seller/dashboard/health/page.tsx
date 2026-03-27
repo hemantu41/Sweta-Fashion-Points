@@ -12,7 +12,7 @@ const METRICS = [
 
 const HEALTH_SCORE = 72;
 const TIER = HEALTH_SCORE >= 86 ? 'Gold' : HEALTH_SCORE >= 61 ? 'Silver' : 'Bronze';
-const TIER_COLOR = HEALTH_SCORE >= 86 ? '#B8860B' : HEALTH_SCORE >= 61 ? '#6B7280' : '#92400E';
+const TIER_COLOR = HEALTH_SCORE >= 86 ? '#C49A3C' : HEALTH_SCORE >= 61 ? '#6B7280' : '#7A2350';
 const NEXT_TIER = HEALTH_SCORE < 61 ? 'Silver' : HEALTH_SCORE < 86 ? 'Gold' : null;
 const POINTS_TO_NEXT = HEALTH_SCORE < 61 ? 61 - HEALTH_SCORE : HEALTH_SCORE < 86 ? 86 - HEALTH_SCORE : 0;
 const WORST_METRIC = METRICS.filter(m => !m.good(m.value)).sort((a, b) => (a.value / a.target) - (b.value / b.target))[0];
@@ -22,7 +22,7 @@ export default function HealthPage() {
     <div className="space-y-5" style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
 
       {/* Score header */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm p-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Big score */}
           <div className="text-center flex-shrink-0">
@@ -44,7 +44,7 @@ export default function HealthPage() {
 
             <div className="relative h-4 rounded-full bg-gray-100 overflow-hidden">
               <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
-                style={{ width: `${HEALTH_SCORE}%`, background: `linear-gradient(90deg, #92400E 0%, #B8860B 60%, #F59E0B 100%)` }} />
+                style={{ width: `${HEALTH_SCORE}%`, background: `linear-gradient(90deg, #3D0E2A 0%, #5B1A3A 40%, #C49A3C 100%)` }} />
               {[61, 86].map(t => (
                 <div key={t} className="absolute top-0 bottom-0 w-0.5 bg-white" style={{ left: `${t}%` }} />
               ))}
@@ -58,11 +58,11 @@ export default function HealthPage() {
             {/* Tier benefits */}
             <div className="mt-4 grid grid-cols-3 gap-2">
               {[
-                { tier: 'Bronze', color: '#92400E', perks: ['Basic listing', 'Standard support', 'Weekly payout'] },
+                { tier: 'Bronze', color: '#7A2350', perks: ['Basic listing', 'Standard support', 'Weekly payout'] },
                 { tier: 'Silver', color: '#6B7280', perks: ['Boosted search rank', 'Priority support', 'Faster payout'] },
-                { tier: 'Gold', color: '#B8860B', perks: ['Top search position', 'Dedicated manager', 'Daily payout'] },
+                { tier: 'Gold', color: '#C49A3C', perks: ['Top search position', 'Dedicated manager', 'Daily payout'] },
               ].map(t => (
-                <div key={t.tier} className={`rounded-xl p-3 border ${TIER === t.tier ? 'border-2' : 'border border-gray-100 opacity-60'}`}
+                <div key={t.tier} className={`rounded-xl p-3 border ${TIER === t.tier ? 'border-2' : 'border border-[#E8E0E4] opacity-60'}`}
                   style={TIER === t.tier ? { borderColor: t.color, background: `${t.color}08` } : {}}>
                   <p className="text-xs font-semibold mb-1.5" style={{ color: t.color }}>{t.tier}</p>
                   <ul className="space-y-1">
@@ -79,7 +79,7 @@ export default function HealthPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {METRICS.map(m => {
           const isGood = m.good(m.value);
-          const color = isGood ? '#1A6B3A' : '#8B1A1A';
+          const color = isGood ? '#2E7D32' : '#C62828';
           const bg = isGood ? '#EBF7EF' : '#FDF3F3';
           const borderColor = isGood ? '#BBF7D0' : '#FECACA';
           const barPct = m.max

@@ -93,7 +93,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
 
   return (
     <SellerAuthGuard>
-      <div className={`${dmSans.variable} flex h-screen bg-[#F8F6F3] overflow-hidden`} style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+      <div className={`${dmSans.variable} flex h-screen bg-[#FAF7F8] overflow-hidden`} style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
         {/* Sidebar */}
         <SellerSidebar
           sellerName={data.sellerName}

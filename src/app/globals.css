@@ -2,23 +2,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap');
 
 :root {
-  /* Premium Color Palette */
-  --background: #FDFBF7;
-  --foreground: #1A1A1A;
-  --primary: #722F37;
-  --primary-dark: #5A252C;
-  --primary-light: #8B3D47;
-  --secondary: #F5F0E8;
-  --accent: #C9A962;
-  --accent-light: #D4B978;
-  --gold: #B8860B;
-  --cream: #FAF7F2;
-  --charcoal: #2D2D2D;
-  --text-dark: #1A1A1A;
-  --text-muted: #6B6B6B;
-  --text-light: #8A8A8A;
-  --border: #E8E2D9;
-  --border-light: #F0EBE3;
+  /* Premium Color Palette — Wine Maroon + Gold */
+  --background: #FAF7F8;
+  --foreground: #333333;
+  --primary: #5B1A3A;
+  --primary-dark: #3D0E2A;
+  --primary-light: #7A2350;
+  --primary-deep: #1F0E17;
+  --secondary: #F5EDF2;
+  --accent: #C49A3C;
+  --accent-light: #DDB868;
+  --gold: #C49A3C;
+  --cream: #FAF7F8;
+  --charcoal: #333333;
+  --text-dark: #333333;
+  --text-muted: #666666;
+  --text-light: #999999;
+  --border: #E8E0E4;
+  --border-light: #F5EDF2;
 }
 
 @theme inline {
@@ -88,7 +89,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .card-hover:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(114, 47, 55, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 20px 40px rgba(91, 26, 58, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
 }
 
 /* Smooth scroll */
@@ -117,11 +118,11 @@ html {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(114, 47, 55, 0.3);
+  box-shadow: 0 4px 15px rgba(91, 26, 58, 0.3);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 6px 25px rgba(114, 47, 55, 0.4);
+  box-shadow: 0 6px 25px rgba(91, 26, 58, 0.4);
   transform: translateY(-2px);
 }
 
@@ -174,7 +175,7 @@ html {
 .luxury-pattern {
   background-image:
     radial-gradient(circle at 25% 25%, rgba(201, 169, 98, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(114, 47, 55, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 75% 75%, rgba(91, 26, 58, 0.03) 0%, transparent 50%);
 }
 
 /* Selection color */

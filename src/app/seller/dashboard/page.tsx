@@ -52,12 +52,12 @@ function fmt(n: number) {
 }
 
 function deadlineColor(deadline?: string) {
-  if (!deadline) return 'text-gray-500';
+  if (!deadline) return 'text-[#666666]';
   const diff = new Date(deadline).getTime() - Date.now();
   if (diff < 0) return 'text-red-600 font-semibold';
   if (diff < 2 * 3600 * 1000) return 'text-red-500 font-semibold';
   if (diff < 8 * 3600 * 1000) return 'text-amber-600 font-medium';
-  return 'text-gray-500';
+  return 'text-[#666666]';
 }
 
 function fmtDeadline(deadline?: string) {
@@ -65,9 +65,9 @@ function fmtDeadline(deadline?: string) {
   return new Date(deadline).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function StatBar({ value, max = 100, color = '#8B1A1A' }: { value: number; max?: number; color?: string }) {
+function StatBar({ value, max = 100, color = '#5B1A3A' }: { value: number; max?: number; color?: string }) {
   return (
-    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-2">
+    <div className="h-1.5 bg-[#E8E0E4] rounded-full overflow-hidden mt-2">
       <div className="h-full rounded-full transition-all" style={{ width: `${Math.min((value / max) * 100, 100)}%`, background: color }} />
     </div>
   );
@@ -166,7 +166,7 @@ export default function SellerDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-4 border-[#8B1A1A] border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#5B1A3A] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -202,14 +202,14 @@ export default function SellerDashboardPage() {
           title="Approved & Live"
           value={approved.length}
           subtitle={`${approvalRate}% approval rate`}
-          accent="#1A6B3A"
+          accent="#2E7D32"
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
         />
         <KpiCard
           title="Pending QC"
           value={pending.length}
           subtitle="Awaiting admin review"
-          accent="#B8860B"
+          accent="#C49A3C"
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>}
         />
         <KpiCard
@@ -224,97 +224,97 @@ export default function SellerDashboardPage() {
       {/* ── Quick stats row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Order summary */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Order Summary</h3>
-            <Link href="/seller/dashboard/orders" className="text-xs text-[#8B1A1A] hover:underline">View all →</Link>
+            <Link href="/seller/dashboard/orders" className="text-xs text-[#5B1A3A] hover:underline">View all →</Link>
           </div>
           <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
             {[
-              { label: 'Pending Pack', value: ordersToPack.length, color: '#B8860B' },
-              { label: 'Shipped', value: 0, color: '#1A3D6B' },
-              { label: 'Delivered', value: 0, color: '#1A6B3A' },
-              { label: 'Returned', value: 0, color: '#8B1A1A' },
+              { label: 'Pending Pack', value: ordersToPack.length, color: '#C49A3C' },
+              { label: 'Shipped', value: 0, color: '#1565C0' },
+              { label: 'Delivered', value: 0, color: '#2E7D32' },
+              { label: 'Returned', value: 0, color: '#5B1A3A' },
             ].map(s => (
               <div key={s.label} className="flex items-center justify-between py-1">
-                <span className="text-gray-500 text-xs">{s.label}</span>
+                <span className="text-[#666666] text-xs">{s.label}</span>
                 <span className="font-semibold text-sm" style={{ color: s.color, fontFamily: 'var(--font-playfair)' }}>{s.value}</span>
               </div>
             ))}
           </div>
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <div className="flex justify-between text-xs text-[#666666] mb-1">
               <span>Fulfillment Rate</span><span>{fulfillmentRate}%</span>
             </div>
-            <StatBar value={fulfillmentRate} color="#1A6B3A" />
+            <StatBar value={fulfillmentRate} color="#2E7D32" />
           </div>
         </div>
 
         {/* Inventory */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Inventory Status</h3>
-            <Link href="/seller/dashboard/products" className="text-xs text-[#8B1A1A] hover:underline">View all →</Link>
+            <Link href="/seller/dashboard/products" className="text-xs text-[#5B1A3A] hover:underline">View all →</Link>
           </div>
           <div className="grid grid-cols-2 gap-y-2 gap-x-4">
             {[
-              { label: 'In Stock SKUs', value: inStock.length, color: '#1A6B3A' },
-              { label: 'Low Stock', value: lowStock.length, color: '#B8860B' },
-              { label: 'Out of Stock', value: outOfStock.length, color: '#8B1A1A' },
-              { label: 'Total Units', value: totalUnits, color: '#1A3D6B' },
+              { label: 'In Stock SKUs', value: inStock.length, color: '#2E7D32' },
+              { label: 'Low Stock', value: lowStock.length, color: '#C49A3C' },
+              { label: 'Out of Stock', value: outOfStock.length, color: '#5B1A3A' },
+              { label: 'Total Units', value: totalUnits, color: '#1565C0' },
             ].map(s => (
               <div key={s.label} className="flex items-center justify-between py-1">
-                <span className="text-gray-500 text-xs">{s.label}</span>
+                <span className="text-[#666666] text-xs">{s.label}</span>
                 <span className="font-semibold text-sm" style={{ color: s.color, fontFamily: 'var(--font-playfair)' }}>{s.value}</span>
               </div>
             ))}
           </div>
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <div className="flex justify-between text-xs text-[#666666] mb-1">
               <span>Stock Health</span>
               <span>{products.length ? Math.round((inStock.length / products.length) * 100) : 0}%</span>
             </div>
-            <StatBar value={products.length ? (inStock.length / products.length) * 100 : 0} color="#1A6B3A" />
+            <StatBar value={products.length ? (inStock.length / products.length) * 100 : 0} color="#2E7D32" />
           </div>
         </div>
 
         {/* Earnings */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+        <div className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Earnings Overview</h3>
-            <Link href="/seller/dashboard/earnings" className="text-xs text-[#8B1A1A] hover:underline">Details →</Link>
+            <Link href="/seller/dashboard/earnings" className="text-xs text-[#5B1A3A] hover:underline">Details →</Link>
           </div>
           <div className="space-y-2">
             {[
-              { label: 'Pending Payout', value: fmt(earnings.pending), color: '#B8860B' },
-              { label: 'Paid This Month', value: fmt(earnings.paid), color: '#1A6B3A' },
-              { label: 'Commission Deducted', value: fmt(earnings.commission), color: '#8B1A1A' },
+              { label: 'Pending Payout', value: fmt(earnings.pending), color: '#C49A3C' },
+              { label: 'Paid This Month', value: fmt(earnings.paid), color: '#2E7D32' },
+              { label: 'Commission Deducted', value: fmt(earnings.commission), color: '#5B1A3A' },
             ].map(s => (
               <div key={s.label} className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
-                <span className="text-xs text-gray-500">{s.label}</span>
+                <span className="text-xs text-[#666666]">{s.label}</span>
                 <span className="text-sm font-semibold" style={{ color: s.color, fontFamily: 'var(--font-playfair)' }}>{s.value}</span>
               </div>
             ))}
           </div>
-          <div className="mt-3 px-3 py-2 bg-gray-50 rounded-lg">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Next Payout</p>
+          <div className="mt-3 px-3 py-2 bg-[#F5EDF2] rounded-lg">
+            <p className="text-[10px] text-[#999999] uppercase tracking-wide">Next Payout</p>
             <p className="text-sm font-semibold text-gray-700 mt-0.5">Every Monday</p>
           </div>
         </div>
       </div>
 
       {/* ── Orders to Pack ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-xl border border-[#E8E0E4] shadow-sm">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
           <div>
-            <h2 className="text-sm font-semibold text-gray-800">Orders to Pack Today</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{ordersToPack.length} pending</p>
+            <h2 className="text-sm font-semibold text-[#333333]">Orders to Pack Today</h2>
+            <p className="text-xs text-[#999999] mt-0.5">{ordersToPack.length} pending</p>
           </div>
-          <Link href="/seller/dashboard/orders" className="text-xs text-[#8B1A1A] hover:underline font-medium">View all orders →</Link>
+          <Link href="/seller/dashboard/orders" className="text-xs text-[#5B1A3A] hover:underline font-medium">View all orders →</Link>
         </div>
 
         {ordersToPack.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+          <div className="flex flex-col items-center justify-center py-12 text-[#999999] gap-2">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
             <p className="text-sm">All orders packed! Great work.</p>
           </div>
@@ -330,18 +330,18 @@ export default function SellerDashboardPage() {
                     <svg className="text-amber-600" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /></svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800">#{order.order_number}</p>
-                    <p className="text-xs text-gray-400">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
+                    <p className="text-sm font-semibold text-[#333333]">#{order.order_number}</p>
+                    <p className="text-xs text-[#999999]">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
                   </div>
                   <div className="text-right hidden sm:block">
-                    <p className="text-xs text-gray-400">Pack by</p>
+                    <p className="text-xs text-[#999999]">Pack by</p>
                     <p className={`text-sm ${deadlineColor(deadline)}`}>{fmtDeadline(deadline)}</p>
                   </div>
                   <button
                     onClick={() => markPacked(order.id)}
                     disabled={isPacking}
                     className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition-all disabled:opacity-60 flex-shrink-0"
-                    style={{ background: '#8B1A1A' }}
+                    style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}
                   >
                     {isPacking ? 'Packing…' : 'Mark Packed'}
                   </button>
@@ -353,9 +353,9 @@ export default function SellerDashboardPage() {
       </div>
 
       {/* ── Shop Location ── */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+      <div className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-800">Shop Location</h2>
+          <h2 className="text-sm font-semibold text-[#333333]">Shop Location</h2>
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${seller?.latitude ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
             {seller?.latitude ? 'Location Set' : 'Not Set'}
           </span>
@@ -365,20 +365,20 @@ export default function SellerDashboardPage() {
             📍 Lat: {seller.latitude.toFixed(4)}, Lng: {seller.longitude?.toFixed(4)} — Amas, Gaya, Bihar
           </p>
         ) : (
-          <p className="text-sm text-gray-400 mb-4">No location set. Add your shop location for delivery radius calculation.</p>
+          <p className="text-sm text-[#999999] mb-4">No location set. Add your shop location for delivery radius calculation.</p>
         )}
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setShowLocationModal(true)}
             className="px-4 py-2 text-xs font-semibold rounded-lg text-white transition-all"
-            style={{ background: '#8B1A1A' }}
+            style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}
           >
             Pin on Map
           </button>
           <button
             onClick={useCurrentLocation}
             disabled={geoStatus === 'loading'}
-            className="px-4 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
+            className="px-4 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-[#C49A3C]/5 transition-all disabled:opacity-60"
           >
             {geoStatus === 'loading' ? 'Detecting…' : geoStatus === 'error' ? 'Location Error' : 'Use Current Location'}
           </button>
@@ -389,9 +389,9 @@ export default function SellerDashboardPage() {
       {showLocationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-800">Pin Shop Location</h3>
-              <button onClick={() => setShowLocationModal(false)} className="text-gray-400 hover:text-gray-600">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E0E4]">
+              <h3 className="font-semibold text-[#333333]">Pin Shop Location</h3>
+              <button onClick={() => setShowLocationModal(false)} className="text-[#999999] hover:text-gray-600">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
             </div>
@@ -402,13 +402,13 @@ export default function SellerDashboardPage() {
                 onLocationSelect={(lat: number, lng: number) => setPendingCoords({ lat, lng })}
               />
             </div>
-            <div className="px-5 py-4 border-t border-gray-100 flex gap-3">
-              <button onClick={() => setShowLocationModal(false)} className="flex-1 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Cancel</button>
+            <div className="px-5 py-4 border-t border-[#E8E0E4] flex gap-3">
+              <button onClick={() => setShowLocationModal(false)} className="flex-1 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-[#C49A3C]/5">Cancel</button>
               <button
                 onClick={() => pendingCoords && saveLocation(pendingCoords)}
                 disabled={!pendingCoords || savingLocation}
                 className="flex-1 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-60"
-                style={{ background: '#8B1A1A' }}
+                style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}
               >
                 {savingLocation ? 'Saving…' : 'Save Location'}
               </button>

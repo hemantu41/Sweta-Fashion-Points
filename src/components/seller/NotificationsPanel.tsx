@@ -14,22 +14,22 @@ interface NotificationsPanelProps {
 
 const TYPE_CONFIG = {
   order: {
-    bg: '#EBF2FB', color: '#1A3D6B',
+    bg: '#EBF2FB', color: '#1565C0',
     icon: 'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0',
     label: 'Orders',
   },
   qc: {
-    bg: '#EBF7EF', color: '#1A6B3A',
+    bg: '#EBF7EF', color: '#2E7D32',
     icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
     label: 'QC',
   },
   payment: {
-    bg: '#FEFCE8', color: '#B8860B',
+    bg: '#FEFCE8', color: '#C49A3C',
     icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
     label: 'Payments',
   },
   alert: {
-    bg: '#FDF3F3', color: '#8B1A1A',
+    bg: '#F5EDF2', color: '#C62828',
     icon: 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
     label: 'Alerts',
   },
@@ -53,19 +53,19 @@ export default function NotificationsPanel({
         style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-[#E8E0E4]">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-gray-800">Notifications</h2>
               {hasUnread && (
-                <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white rounded-full" style={{ background: '#8B1A1A' }}>
+                <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white rounded-full" style={{ background: '#5B1A3A' }}>
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
               {hasUnread && (
-                <button onClick={onMarkAllRead} className="text-xs text-[#8B1A1A] hover:underline">Mark all read</button>
+                <button onClick={onMarkAllRead} className="text-xs text-[#5B1A3A] hover:underline">Mark all read</button>
               )}
               <button onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:bg-gray-100">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -83,7 +83,7 @@ export default function NotificationsPanel({
               return (
                 <button key={f} onClick={() => setFilter(f)}
                   className={`px-2.5 py-1 text-[10px] font-semibold rounded-md whitespace-nowrap transition-colors ${filter === f ? 'text-white' : 'text-gray-500 hover:bg-gray-100 bg-gray-50'}`}
-                  style={filter === f ? { background: '#8B1A1A' } : {}}>
+                  style={filter === f ? { background: '#5B1A3A' } : {}}>
                   {f === 'all' ? 'All' : TYPE_CONFIG[f].label}
                   {count > 0 && <span className="ml-1 opacity-70">{count}</span>}
                 </button>
@@ -108,7 +108,7 @@ export default function NotificationsPanel({
               return (
                 <div
                   key={n.id}
-                  className={`flex gap-3 px-5 py-3.5 cursor-pointer transition-colors ${!n.is_read ? 'bg-[#FDF3F3]/40 hover:bg-[#FDF3F3]/60' : 'hover:bg-gray-50'}`}
+                  className={`flex gap-3 px-5 py-3.5 cursor-pointer transition-colors ${!n.is_read ? 'bg-[#F5EDF2]/40 hover:bg-[#F5EDF2]/60' : 'hover:bg-gray-50'}`}
                   onClick={() => { if (!n.is_read) onMarkRead(n.id); }}
                 >
                   <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: cfg.bg }}>
@@ -121,7 +121,7 @@ export default function NotificationsPanel({
                     <p className="text-sm text-gray-600 leading-snug mt-0.5">{n.message}</p>
                     <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
                   </div>
-                  {!n.is_read && <span className="w-2 h-2 rounded-full bg-[#8B1A1A] flex-shrink-0 mt-1.5" />}
+                  {!n.is_read && <span className="w-2 h-2 rounded-full bg-[#5B1A3A] flex-shrink-0 mt-1.5" />}
                 </div>
               );
             })
@@ -129,7 +129,7 @@ export default function NotificationsPanel({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100">
+        <div className="px-5 py-3 border-t border-[#E8E0E4]">
           <p className="text-[10px] text-gray-400 text-center">Notifications update automatically every minute</p>
         </div>
       </div>
