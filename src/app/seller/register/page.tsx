@@ -105,6 +105,12 @@ export default function SellerRegisterPage() {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [reRegistering, setReRegistering] = useState(false);
+  const [isReRegistrationMode, setIsReRegistrationMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('reregister') === 'true';
+    }
+    return false;
+  });
 
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -477,7 +483,8 @@ export default function SellerRegisterPage() {
         body: JSON.stringify({ userId: user.id, sellerId }),
       });
       if (res.ok) {
-        window.location.reload();
+        // Show the registration form instead of status screen
+        setIsReRegistrationMode(true);
       } else {
         const data = await res.json();
         alert(data.error || 'Failed to start re-registration. Please try again.');
@@ -489,8 +496,8 @@ export default function SellerRegisterPage() {
     }
   };
 
-  // ─── Already a Seller — Show Status ──────────────────────────────────────
-  if (isSeller && sellerStatus) {
+  // ─── Already a Seller — Show Status (skip if re-registering) ────────────
+  if (isSeller && sellerStatus && !isReRegistrationMode) {
     const statusConfig: Record<string, { icon: string; color: string; bg: string; title: string; desc: string }> = {
       pending: { icon: '⏳', color: '#CA8A04', bg: '#FEFCE8', title: 'Application Under Review', desc: 'Your seller application is being reviewed by our team. We typically review applications within 24-48 hours.' },
       approved: { icon: '🎉', color: C.success, bg: C.successBg, title: 'Congratulations!', desc: 'Your seller application has been approved! You can now start adding products and managing your store.' },

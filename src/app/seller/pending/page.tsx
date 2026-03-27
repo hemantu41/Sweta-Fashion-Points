@@ -108,7 +108,7 @@ export default function SellerPendingPage() {
         body: JSON.stringify({ userId: user.id, sellerId: sellerInfo?.id }),
       });
       if (res.ok) {
-        router.push('/seller/register');
+        router.push('/seller/register?reregister=true');
       } else {
         const data = await res.json();
         alert(data.error || 'Failed to start re-registration. Please try again.');

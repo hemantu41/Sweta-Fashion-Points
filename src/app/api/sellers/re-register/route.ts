@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// POST /api/sellers/re-register - Delete rejected seller record so user can register again
+// POST /api/sellers/re-register - Allow rejected seller to re-register
+// Does NOT delete the old record; the register API will update it instead.
 export async function POST(request: NextRequest) {
   try {
     const { userId, sellerId } = await request.json();
@@ -47,18 +48,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Delete the rejected seller record
-    const { error: deleteError } = await supabaseAdmin
-      .from('spf_sellers')
-      .delete()
-      .eq('id', seller.id);
-
-    if (deleteError) {
-      console.error('[Re-register API] Delete error:', deleteError);
-      return NextResponse.json({ error: 'Failed to remove old application' }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, message: 'Old application removed. You can now register again.' });
+    // Don't delete — the register API will update the existing record.
+    // Just return success so the frontend can redirect to the registration form.
+    return NextResponse.json({ success: true, message: 'You can now register again with updated details.' });
   } catch (error) {
     console.error('Re-register error:', error);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
