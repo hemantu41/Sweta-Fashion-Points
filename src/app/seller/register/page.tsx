@@ -302,6 +302,11 @@ export default function SellerRegisterPage() {
     }
 
     if (step === 3) {
+      if (!documents.panCard.file) errs.panCard = 'PAN Card is required';
+      if (!documents.aadhaarFront.file) errs.aadhaarFront = 'Aadhaar Front is required';
+      if (!documents.aadhaarBack.file) errs.aadhaarBack = 'Aadhaar Back is required';
+      if (formData.hasGST && !documents.gstCertificate.file) errs.gstCertificate = 'GST Certificate is required';
+      if (!documents.chequeOrPassbook.file) errs.chequeOrPassbook = 'Cancelled Cheque / Passbook is required';
       if (!formData.bankAccountName.trim()) errs.bankAccountName = 'Account holder name required';
       if (!formData.bankAccountNumber) errs.bankAccountNumber = 'Account number required';
       if (!formData.bankIfsc) errs.bankIfsc = 'IFSC code required';
@@ -329,9 +334,21 @@ export default function SellerRegisterPage() {
   };
 
   // ─── File Handling ───────────────────────────────────────────────────────
+  const ALLOWED_DOC_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+  const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB
+
   const handleDocUpload = (key: keyof typeof documents, file: File | null) => {
     if (!file) return;
-    const preview = URL.createObjectURL(file);
+    if (!ALLOWED_DOC_TYPES.includes(file.type)) {
+      setErrors(prev => ({ ...prev, [key]: 'Only JPEG, PNG, and PDF files are allowed' }));
+      return;
+    }
+    if (file.size > MAX_DOC_SIZE) {
+      setErrors(prev => ({ ...prev, [key]: 'File size must be under 5MB' }));
+      return;
+    }
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+    const preview = file.type === 'application/pdf' ? 'pdf' : URL.createObjectURL(file);
     setDocuments(prev => ({ ...prev, [key]: { file, preview } }));
   };
 
@@ -869,7 +886,7 @@ export default function SellerRegisterPage() {
           <div className="fade-up" style={{ background: C.bgCard, borderRadius: 16, padding: '32px 28px', boxShadow: '0 4px 20px rgba(91,26,58,0.04)' }}>
             {/* Document Uploads */}
             <h3 style={{ fontFamily: FONT_PLAYFAIR, fontSize: 18, fontWeight: 700, color: C.heading, marginBottom: 6 }}>Document Upload</h3>
-            <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Upload clear photos of your documents for KYC verification</p>
+            <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Upload clear documents for KYC verification. Accepted formats: JPEG, PNG, PDF (max 5MB each)</p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
               {([
@@ -884,7 +901,8 @@ export default function SellerRegisterPage() {
                   label={doc.label}
                   preview={documents[doc.key].preview}
                   onUpload={(file) => handleDocUpload(doc.key, file)}
-                  onRemove={() => setDocuments(prev => ({ ...prev, [doc.key]: { file: null, preview: '' } }))}
+                  onRemove={() => { setDocuments(prev => ({ ...prev, [doc.key]: { file: null, preview: '' } })); setErrors(prev => { const n = { ...prev }; delete n[doc.key]; return n; }); }}
+                  error={errors[doc.key]}
                 />
               ))}
             </div>
@@ -1221,55 +1239,67 @@ function ErrorText({ children }: { children: React.ReactNode }) {
   return <p style={{ fontSize: 12, color: C.error, marginTop: 6, fontWeight: 500 }}>{children}</p>;
 }
 
-function DocUploadCard({ label, preview, onUpload, onRemove }: {
-  label: string; preview: string; onUpload: (file: File) => void; onRemove: () => void;
+function DocUploadCard({ label, preview, onUpload, onRemove, error }: {
+  label: string; preview: string; onUpload: (file: File) => void; onRemove: () => void; error?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const isPdf = preview === 'pdf';
 
   return (
-    <div style={{
-      borderRadius: 12, border: `1.5px dashed ${preview ? C.success + '40' : C.borderMedium}`,
-      background: preview ? C.successBg : C.accentSubtle,
-      overflow: 'hidden', position: 'relative',
-    }}>
-      {preview ? (
-        <div style={{ position: 'relative' }}>
-          <img src={preview} alt={label} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+    <div>
+      <div style={{
+        borderRadius: 12, border: `1.5px dashed ${error ? C.error + '60' : preview ? C.success + '40' : C.borderMedium}`,
+        background: error ? C.errorBg : preview ? C.successBg : C.accentSubtle,
+        overflow: 'hidden', position: 'relative',
+      }}>
+        {preview ? (
+          <div style={{ position: 'relative' }}>
+            {isPdf ? (
+              <div style={{ width: '100%', height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#FEF3C7' }}>
+                <svg width="32" height="32" fill="none" stroke="#D97706" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9l-5-5H7a2 2 0 00-2 2v13a2 2 0 002 2z" /><path d="M14 4v5h5" /></svg>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#D97706', marginTop: 4 }}>PDF</span>
+              </div>
+            ) : (
+              <img src={preview} alt={label} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+            )}
+            <button
+              type="button"
+              onClick={onRemove}
+              style={{
+                position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%',
+                background: 'rgba(0,0,0,0.5)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+            <div style={{ padding: '8px 12px' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: C.success }}>{label}</p>
+            </div>
+          </div>
+        ) : (
           <button
             type="button"
-            onClick={onRemove}
+            onClick={() => inputRef.current?.click()}
             style={{
-              position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%',
-              background: 'rgba(0,0,0,0.5)', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '100%', padding: '24px 12px', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 8, cursor: 'pointer', background: 'none', border: 'none',
             }}
           >
-            <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            <svg width="24" height="24" fill="none" stroke={C.accent} strokeWidth="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.accent, textAlign: 'center' }}>{label} <span style={{ color: C.error }}>*</span></span>
+            <span style={{ fontSize: 9, color: C.muted, textAlign: 'center' }}>JPEG, PNG, PDF (max 5MB)</span>
           </button>
-          <div style={{ padding: '8px 12px' }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: C.success }}>{label}</p>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          style={{
-            width: '100%', padding: '24px 12px', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', gap: 8, cursor: 'pointer', background: 'none', border: 'none',
-          }}
-        >
-          <svg width="24" height="24" fill="none" stroke={C.accent} strokeWidth="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-          <span style={{ fontSize: 11, fontWeight: 600, color: C.accent, textAlign: 'center' }}>{label}</span>
-        </button>
-      )}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={e => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }}
-      />
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          style={{ display: 'none' }}
+          onChange={e => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }}
+        />
+      </div>
+      {error && <ErrorText>{error}</ErrorText>}
     </div>
   );
 }
