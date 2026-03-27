@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { DM_Sans } from 'next/font/google';
 import { useAuth } from '@/context/AuthContext';
@@ -84,6 +84,18 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
       } catch {/* silent */}
     })();
   }, [user?.id, user?.sellerId, user?.name]);
+
+  // Redis cache warmup — fire once per session on first dashboard load
+  const warmedUp = useRef(false);
+  useEffect(() => {
+    if (warmedUp.current || !data.sellerId) return;
+    warmedUp.current = true;
+    fetch('/api/sellers/warmup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sellerId: data.sellerId }),
+    }).catch(() => {/* silent — warmup is best-effort */});
+  }, [data.sellerId]);
 
   const pathKey = Object.keys(PAGE_TITLES).find(k => k === pathname || (k !== '/seller/dashboard' && pathname?.startsWith(k)));
   const { title, subtitle } = PAGE_TITLES[pathKey || '/seller/dashboard'];
