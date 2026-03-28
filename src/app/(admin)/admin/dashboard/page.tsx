@@ -42,6 +42,7 @@ import QCApprovalPanel from '@/components/catalogue/QCApprovalPanel';
 import UserManagement from '@/components/user-management/UserManagement';
 import ReturnAnalytics from '@/components/return-analytics/ReturnAnalytics';
 import SellerManagement from '@/components/seller-management/SellerManagement';
+import CategoryManagement from '@/components/admin/CategoryManagement';
 import type { AdminPage, Order, NDRRecord } from '@/types/admin';
 
 // ─── Module 1: Dashboard Home ───────────────────────────────────────────────
@@ -1266,6 +1267,7 @@ function DashboardContent() {
       case 'sellers': return <SellerManagement />;
       case 'users': return <UserManagement />;
       case 'returns': return <ReturnAnalytics />;
+      case 'categories': return <CategoryManagement />;
       case 'settings': return <SettingsPage />;
       default: return <DashboardHome />;
     }

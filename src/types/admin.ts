@@ -181,4 +181,5 @@ export type AdminPage =
   | 'ndr'
   | 'users'
   | 'returns'
-  | 'sellers';
+  | 'sellers'
+  | 'categories';

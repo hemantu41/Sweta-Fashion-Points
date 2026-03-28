@@ -306,6 +306,7 @@ const T = {
     'nav.sellers': 'Manage Sellers',
     'nav.users': 'User Management',
     'nav.returns': 'Return Analytics',
+    'nav.categories': 'Categories',
   },
 
   hi: {
@@ -611,6 +612,7 @@ const T = {
     'nav.sellers': 'विक्रेता प्रबंधन',
     'nav.users': 'उपयोगकर्ता प्रबंधन',
     'nav.returns': 'रिटर्न एनालिटिक्स',
+    'nav.categories': 'श्रेणियाँ',
   },
 } as const;
 
