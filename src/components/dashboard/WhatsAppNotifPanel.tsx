@@ -30,7 +30,7 @@ export default function WhatsAppNotifPanel() {
   const [logs] = useState(MOCK_LOGS);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MessageCircle size={18} className="text-green-600" />
@@ -43,8 +43,8 @@ export default function WhatsAppNotifPanel() {
         {TEMPLATES.map(tmpl => (
           <button
             key={tmpl.key}
-            className="flex items-center gap-2 p-2.5 rounded-lg border border-green-200 bg-green-50
-              text-xs font-medium text-green-700 hover:bg-green-100 transition-colors"
+            className="flex items-center gap-2 p-2.5 rounded-lg border border-[rgba(196,154,60,0.2)] bg-[#faf6ee]
+              text-xs font-medium text-[#5B1A3A] hover:bg-[#f5eddc] transition-colors"
           >
             <span>{tmpl.emoji}</span>
             <span>{t(tmpl.key)}</span>

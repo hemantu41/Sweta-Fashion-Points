@@ -145,13 +145,13 @@ export default function BulkUploadPanel() {
       {rows.length === 0 && (
         <div
           className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer
-            ${dragging ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}
+            ${dragging ? 'border-[#C49A3C] bg-[#F5EDF2]' : 'border-gray-200 hover:border-gray-300'}`}
           onDragOver={e => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <Upload size={36} className={`mx-auto mb-3 ${dragging ? 'text-emerald-500' : 'text-gray-300'}`} />
+          <Upload size={36} className={`mx-auto mb-3 ${dragging ? 'text-[#C49A3C]' : 'text-gray-300'}`} />
           <p className="text-sm text-gray-600 font-medium">{t('bulk.dropCSV')}</p>
           <p className="text-xs text-gray-400 mt-1">{t('bulk.orClick')}</p>
           <input
@@ -194,7 +194,7 @@ export default function BulkUploadPanel() {
               </button>
               {validCount > 0 && (
                 <button onClick={handleUpload} disabled={uploading}
-                  className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                  className="px-4 py-1.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-xs font-medium hover:from-[#4A1530] hover:to-[#691E45] disabled:opacity-50 transition-colors">
                   {uploading ? <Loader2 size={12} className="inline mr-1 animate-spin" /> : <Upload size={12} className="inline mr-1" />}
                   {t('bulk.uploadValid').replace('{count}', String(validCount))}
                 </button>
@@ -203,7 +203,7 @@ export default function BulkUploadPanel() {
           </div>
 
           {/* Preview table */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>

@@ -34,7 +34,7 @@ export default function SupportTicketWidget() {
 
   if (submitted) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col items-center justify-center min-h-[280px]">
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5 flex flex-col items-center justify-center min-h-[280px]">
         <CheckCircle size={48} className="text-green-500 mb-3" />
         <p className="text-sm font-semibold text-gray-800">Ticket Submitted!</p>
         <p className="text-xs text-gray-400 mt-1">We&apos;ll respond within 24 hours</p>
@@ -43,7 +43,7 @@ export default function SupportTicketWidget() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
       <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('support.newTicket')}</h3>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
@@ -52,7 +52,7 @@ export default function SupportTicketWidget() {
           value={subject}
           onChange={e => setSubject(e.target.value)}
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40"
+            focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/40"
         />
         <textarea
           placeholder={t('support.message')}
@@ -60,14 +60,14 @@ export default function SupportTicketWidget() {
           onChange={e => setMessage(e.target.value)}
           rows={3}
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40"
+            focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/40"
         />
         <div className="flex gap-3">
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
             className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/40"
           >
             {CATEGORIES.map(c => (
               <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -77,7 +77,7 @@ export default function SupportTicketWidget() {
             value={priority}
             onChange={e => setPriority(e.target.value)}
             className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/40"
           >
             {PRIORITIES.map(p => (
               <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -86,8 +86,8 @@ export default function SupportTicketWidget() {
         </div>
         <button
           type="submit"
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white
-            rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white
+            rounded-lg text-sm font-medium hover:from-[#4A1530] hover:to-[#6A1E45] transition-colors"
         >
           <Send size={14} />
           {t('support.submit')}

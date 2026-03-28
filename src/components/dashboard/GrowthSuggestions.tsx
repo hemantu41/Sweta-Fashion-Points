@@ -7,14 +7,14 @@ import { GROWTH_SUGGESTIONS } from '@/lib/admin/constants';
 const TYPE_CONFIG = {
   tip: { icon: Lightbulb, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
   alert: { icon: AlertTriangle, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-  boost: { icon: Rocket, color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+  boost: { icon: Rocket, color: '#5B1A3A', bg: '#fdf2f8', border: '#e8c4d0' },
 };
 
 export default function GrowthSuggestions() {
   const { lang, t } = useAdminLang();
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
       <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('growth.smartTips')}</h3>
       <div className="space-y-3">
         {GROWTH_SUGGESTIONS.slice(0, 4).map(s => {

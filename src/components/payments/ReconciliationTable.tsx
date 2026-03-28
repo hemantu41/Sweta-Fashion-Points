@@ -46,7 +46,7 @@ export default function ReconciliationTable({ onRaiseDispute }: ReconciliationTa
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 p-6 animate-pulse">
+      <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-6 animate-pulse">
         <div className="h-5 w-48 bg-gray-200 rounded mb-4" />
         {[1, 2, 3, 4].map(i => (
           <div key={i} className="h-12 bg-gray-100 rounded-lg mb-2" />
@@ -61,7 +61,7 @@ export default function ReconciliationTable({ onRaiseDispute }: ReconciliationTa
   const mismatchCount = settlements.filter(r => r.difference > 0).length;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <div>

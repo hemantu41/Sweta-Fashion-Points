@@ -129,7 +129,7 @@ export default function QCApprovalPanel() {
 
       {/* Empty state */}
       {queue.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 p-10 text-center">
+        <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-10 text-center">
           <CheckCircle size={40} className="mx-auto text-green-400 mb-3" />
           <p className="text-sm text-gray-600 font-medium">{t('qc.allClear')}</p>
           <p className="text-xs text-gray-400 mt-1">{t('qc.noPending')}</p>
@@ -139,7 +139,7 @@ export default function QCApprovalPanel() {
       {/* Product card grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {queue.map(product => (
-          <div key={product.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all">
+          <div key={product.id} className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden hover:shadow-md transition-all">
             {/* Image placeholder */}
             <div className="h-36 bg-gray-100 flex items-center justify-center text-gray-300 relative">
               <Package size={40} />
@@ -170,9 +170,9 @@ export default function QCApprovalPanel() {
               </p>
 
               {/* Actions */}
-              <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+              <div className="flex gap-2 mt-3 pt-3 border-t border-[rgba(196,154,60,0.08)]">
                 <button onClick={() => handleApprove(product)}
-                  className="flex-1 flex items-center justify-center gap-1 py-2 bg-green-50 text-green-700 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors">
+                  className="flex-1 flex items-center justify-center gap-1 py-2 bg-[#F5EDF2] text-[#5B1A3A] rounded-lg text-xs font-medium hover:bg-[#EDE0E8] transition-colors">
                   <CheckCircle size={14} />{t('qc.approve')}
                 </button>
                 <button onClick={() => { setCommentModal({ product, type: 'changes' }); setComment(''); }}
@@ -224,7 +224,7 @@ export default function QCApprovalPanel() {
                 onChange={e => setComment(e.target.value)}
                 rows={3}
                 placeholder={commentModal.type === 'changes' ? t('qc.changesPlaceholder') : t('qc.rejectPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 resize-none"
               />
             </div>
 

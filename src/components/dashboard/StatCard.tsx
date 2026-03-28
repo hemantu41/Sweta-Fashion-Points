@@ -12,14 +12,14 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, change, icon, color }: StatCardProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{title}</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
           {change !== undefined && (
             <div className={`flex items-center gap-1 mt-2 text-xs font-medium
-              ${change >= 0 ? 'text-green-600' : 'text-red-500'}`}
+              ${change >= 0 ? 'text-[#C49A3C]' : 'text-red-500'}`}
             >
               {change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
               {change >= 0 ? '+' : ''}{change}%

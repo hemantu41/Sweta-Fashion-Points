@@ -18,15 +18,15 @@ export default function RevenueChart({ data }: RevenueChartProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Revenue Area Chart */}
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-5">
+      <div className="lg:col-span-2 bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('dash.revenueChart')}</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#059669" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#C49A3C" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#C49A3C" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -37,7 +37,7 @@ export default function RevenueChart({ data }: RevenueChartProps) {
                 formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
                 contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2}
+              <Area type="monotone" dataKey="revenue" stroke="#C49A3C" strokeWidth={2}
                 fill="url(#revenueGrad)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -45,7 +45,7 @@ export default function RevenueChart({ data }: RevenueChartProps) {
       </div>
 
       {/* Category Donut */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('dash.categorySplit')}</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">

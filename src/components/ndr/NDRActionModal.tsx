@@ -65,7 +65,7 @@ export default function NDRActionModal({ ndr, onClose, onActionComplete }: NDRAc
       icon: RotateCcw,
       label: t('ndr.retryDelivery'),
       desc: t('ndr.retryDesc'),
-      color: 'bg-emerald-600 hover:bg-emerald-700',
+      color: 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] hover:from-[#7A2350] hover:to-[#5B1A3A]',
     },
     {
       key: 'update_address',
@@ -92,8 +92,8 @@ export default function NDRActionModal({ ndr, onClose, onActionComplete }: NDRAc
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-5" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-[rgba(31,14,23,0.5)] backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-5 border border-[rgba(196,154,60,0.08)]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800">{t('ndr.actionTitle')}</h3>

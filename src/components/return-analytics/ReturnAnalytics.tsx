@@ -170,7 +170,7 @@ function downloadFile(data: string, filename: string, mimeType: string) {
 
 function KPICard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col gap-1">
+    <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4 flex flex-col gap-1">
       <p className="text-xs text-gray-500 font-medium">{label}</p>
       <p className="text-xl font-bold" style={{ color }}>{value}</p>
       {sub && <p className="text-[11px] text-gray-400">{sub}</p>}
@@ -217,7 +217,7 @@ function SortHeader({ label, sortKey, currentSort, currentDir, onSort }: {
     >
       <span className="inline-flex items-center gap-1">
         {label}
-        <span className={`text-[9px] ${active ? 'text-emerald-600' : 'text-gray-300'}`}>
+        <span className={`text-[9px] ${active ? 'text-[#5B1A3A]' : 'text-gray-300'}`}>
           {active && currentDir === 'asc' ? '▲' : active && currentDir === 'desc' ? '▼' : '⇅'}
         </span>
       </span>
@@ -436,7 +436,7 @@ export default function ReturnAnalytics() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
+      <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4">
         <div className="flex flex-wrap items-center gap-3">
           {/* Period */}
           <div className="flex items-center bg-gray-50 rounded-lg p-0.5">
@@ -445,7 +445,7 @@ export default function ReturnAnalytics() {
                 key={p.key}
                 onClick={() => setPeriod(p.key)}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  period === p.key ? 'bg-emerald-600 text-white' : 'text-gray-500 hover:text-gray-700'
+                  period === p.key ? 'bg-[#5B1A3A] text-white' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 {p.label}
@@ -476,7 +476,7 @@ export default function ReturnAnalytics() {
             <select
               value={severityFilter}
               onChange={e => setSeverityFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
             >
               <option value="All">All Severity</option>
               {SEVERITY_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -485,7 +485,7 @@ export default function ReturnAnalytics() {
             <select
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
             >
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -502,17 +502,17 @@ export default function ReturnAnalytics() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search orders, sellers, products..."
-                className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
               />
             </div>
           </div>
 
           {/* Export */}
           <div className="flex gap-1.5">
-            <button onClick={exportCSV} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors">
+            <button onClick={exportCSV} className="px-3 py-1.5 bg-[#F5EDF2] text-[#5B1A3A] rounded-lg text-xs font-medium hover:bg-[#EBD9E4] transition-colors">
               Export CSV
             </button>
-            <button onClick={exportJSON} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors">
+            <button onClick={exportJSON} className="px-3 py-1.5 bg-[#FBF6ED] text-[#8B6F2A] rounded-lg text-xs font-medium hover:bg-[#F5ECD4] transition-colors">
               Export JSON
             </button>
           </div>
@@ -527,19 +527,19 @@ export default function ReturnAnalytics() {
             <KPICard label="Total Returns" value={adminKPIs.totalReturns} sub={`in last ${period}`} color="#ef4444" />
             <KPICard label="Active Sellers" value={adminKPIs.activeSellers} sub="with returns" color="#3b82f6" />
             <KPICard label="Return Rate" value={`${adminKPIs.returnRate}%`} sub="platform average" color="#f59e0b" />
-            <KPICard label="Refunds Issued" value={formatINR(adminKPIs.refundsIssued)} sub="total refunded" color="#059669" />
+            <KPICard label="Refunds Issued" value={formatINR(adminKPIs.refundsIssued)} sub="total refunded" color="#C49A3C" />
           </div>
 
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Reason Breakdown */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-5">
               <h3 className="text-sm font-semibold text-gray-800 mb-4">Return Reason Breakdown</h3>
               <ReasonBars data={reasonData} selectedReason={reasonFilter} />
             </div>
 
             {/* 6-month Trend */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-5">
               <h3 className="text-sm font-semibold text-gray-800 mb-4">Return Rate Trend (6 Months)</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={MOCK_TREND}>
@@ -548,14 +548,14 @@ export default function ReturnAnalytics() {
                   <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} unit="%" domain={[0, 'auto']} />
                   <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="platformRate" name="Platform Avg" stroke="#059669" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="platformRate" name="Platform Avg" stroke="#C49A3C" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Seller Table */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-50">
               <h3 className="text-sm font-semibold text-gray-800">Sellers by Return Rate</h3>
             </div>
@@ -576,7 +576,7 @@ export default function ReturnAnalytics() {
                     <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="py-3 px-3 text-sm font-medium text-gray-800">{s.name}</td>
                       <td className="py-3 px-3 text-sm text-gray-600">{s.totalReturns}</td>
-                      <td className="py-3 px-3 text-sm font-semibold" style={{ color: s.returnRate > 6 ? '#ef4444' : s.returnRate > 4 ? '#f59e0b' : '#059669' }}>{s.returnRate}%</td>
+                      <td className="py-3 px-3 text-sm font-semibold" style={{ color: s.returnRate > 6 ? '#ef4444' : s.returnRate > 4 ? '#f59e0b' : '#C49A3C' }}>{s.returnRate}%</td>
                       <td className="py-3 px-3"><ReasonPill reason={s.topReason} /></td>
                       <td className="py-3 px-3 text-sm text-gray-600">{formatINR(s.revenue)}</td>
                       <td className="py-3 px-3"><SeverityPill severity={s.severity} /></td>
@@ -588,7 +588,7 @@ export default function ReturnAnalytics() {
           </div>
 
           {/* Return Log */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-800">Return Log</h3>
               <span className="text-xs text-gray-400">{filteredLogs.length} records</span>
@@ -627,7 +627,7 @@ export default function ReturnAnalytics() {
           </div>
 
           {/* Action Items */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-50">
               <h3 className="text-sm font-semibold text-gray-800">Action Items</h3>
             </div>
@@ -656,7 +656,7 @@ export default function ReturnAnalytics() {
               label="My Return Rate"
               value={`${sellerKPIs.returnRate}%`}
               sub={`Platform avg: ${sellerKPIs.platformAvg}%`}
-              color={sellerKPIs.returnRate > sellerKPIs.platformAvg ? '#ef4444' : '#059669'}
+              color={sellerKPIs.returnRate > sellerKPIs.platformAvg ? '#ef4444' : '#C49A3C'}
             />
             <KPICard label="Platform Average" value={`${sellerKPIs.platformAvg}%`} sub="return rate" color="#3b82f6" />
             <KPICard label="My Refunds" value={formatINR(sellerKPIs.refundsIssued)} sub="total refunded" color="#f59e0b" />
@@ -665,13 +665,13 @@ export default function ReturnAnalytics() {
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Reason Breakdown */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-5">
               <h3 className="text-sm font-semibold text-gray-800 mb-4">My Return Reasons</h3>
               <ReasonBars data={reasonData} selectedReason={reasonFilter} />
             </div>
 
             {/* Trend: Seller vs Platform */}
-            <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-5">
               <h3 className="text-sm font-semibold text-gray-800 mb-4">My Rate vs Platform Average</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={MOCK_TREND}>
@@ -681,14 +681,14 @@ export default function ReturnAnalytics() {
                   <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
                   <Line type="monotone" dataKey="sellerRate" name="My Rate" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="platformRate" name="Platform Avg" stroke="#059669" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="platformRate" name="Platform Avg" stroke="#C49A3C" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Most-Returned Products */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-50">
               <h3 className="text-sm font-semibold text-gray-800">Most-Returned Products</h3>
             </div>
@@ -715,8 +715,8 @@ export default function ReturnAnalytics() {
                         <span
                           className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold"
                           style={{
-                            background: p.returnRate > 10 ? '#fef2f2' : p.returnRate > 5 ? '#fffbeb' : '#ecfdf5',
-                            color: p.returnRate > 10 ? '#dc2626' : p.returnRate > 5 ? '#d97706' : '#059669',
+                            background: p.returnRate > 10 ? '#fef2f2' : p.returnRate > 5 ? '#fffbeb' : '#F5EDF2',
+                            color: p.returnRate > 10 ? '#dc2626' : p.returnRate > 5 ? '#d97706' : '#C49A3C',
                           }}
                         >
                           {p.returnRate}%
@@ -731,7 +731,7 @@ export default function ReturnAnalytics() {
           </div>
 
           {/* Personal Return Log */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-800">My Return Log</h3>
               <span className="text-xs text-gray-400">{filteredLogs.length} records</span>
@@ -768,7 +768,7 @@ export default function ReturnAnalytics() {
           </div>
 
           {/* Fix Suggestions */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-50">
               <h3 className="text-sm font-semibold text-gray-800">Suggestions to Reduce Returns</h3>
             </div>

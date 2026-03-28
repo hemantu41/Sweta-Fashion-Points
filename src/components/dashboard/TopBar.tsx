@@ -34,14 +34,14 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
 
   return (
     <header
-      className="fixed top-0 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-4 md:px-6 transition-all"
+      className="fixed top-0 right-0 h-16 bg-white border-b border-[#E8E0E4] z-30 flex items-center justify-between px-4 md:px-6 transition-all"
       style={{ left: typeof window !== 'undefined' && window.innerWidth < 768 ? 0 : sidebarWidth }}
     >
       {/* Left: Greeting + Search */}
       <div className="flex items-center gap-3">
         {/* Mobile logo */}
-        <div className="md:hidden w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-xs">IF</span>
+        <div className="md:hidden w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B1A3A] to-[#7A2350] flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-bold text-xs">SF</span>
         </div>
         <span className="text-sm font-medium text-gray-700 hidden lg:block">
           {getGreeting()} 👋
@@ -52,7 +52,7 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
             type="text"
             placeholder={t('topbar.search')}
             className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm w-40 md:w-56 lg:w-64
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40"
+              focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/40"
           />
         </div>
       </div>
@@ -68,22 +68,22 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
 
         {/* WhatsApp toggle */}
         <button
-          className="relative p-2 rounded-lg hover:bg-green-50 text-green-600 transition-colors"
+          className="relative p-2 rounded-lg hover:bg-[#F5F0F3] text-[#5B1A3A] transition-colors"
           title={t('topbar.whatsapp')}
         >
           <MessageCircle size={20} />
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#C49A3C] rounded-full border-2 border-white" />
         </button>
 
         {/* Notifications */}
         <div className="relative">
           <button
             onClick={() => setShowNotif(!showNotif)}
-            className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+            className="relative p-2 rounded-lg hover:bg-[#F5F0F3] text-[#5B1A3A] transition-colors"
             title={t('topbar.notifications')}
           >
             <Bell size={20} />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#C49A3C] rounded-full border-2 border-white" />
           </button>
           {showNotif && (
             <div className="absolute right-0 top-12 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-4 z-50">
@@ -95,7 +95,7 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
                 <div className="p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700">
                   3 products pending QC review
                 </div>
-                <div className="p-2 bg-green-50 rounded-lg text-xs text-green-700">
+                <div className="p-2 bg-[#F5F0F3] rounded-lg text-xs text-[#5B1A3A]">
                   Payment of ₹2,450 settled
                 </div>
               </div>
@@ -106,7 +106,7 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
         {/* Language toggle */}
         <button
           onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#F5F0F3] rounded-lg text-xs font-medium text-[#5B1A3A] hover:bg-[#E8E0E4] transition-colors"
         >
           <Globe size={14} />
           <span className="hidden sm:inline">{lang === 'en' ? 'EN' : 'हिं'}</span>
@@ -115,7 +115,7 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
         </button>
 
         {/* Profile avatar */}
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5B1A3A] to-[#7A2350] flex items-center justify-center">
           <User size={16} className="text-white" />
         </div>
       </div>

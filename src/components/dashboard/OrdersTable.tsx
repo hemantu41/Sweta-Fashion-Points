@@ -17,11 +17,11 @@ export default function OrdersTable({ orders, compact = false, onView }: OrdersT
   const displayOrders = compact ? orders.slice(0, 5) : orders;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
+            <tr className="bg-[#FAF7F8] border-b border-[rgba(196,154,60,0.08)]">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('orders.orderId')}</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('orders.customer')}</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('orders.amount')}</th>
@@ -45,7 +45,7 @@ export default function OrdersTable({ orders, compact = false, onView }: OrdersT
                 const badge = order.distance_km !== undefined ? getDistanceBadge(order.distance_km) : null;
                 const statusColor = ORDER_STATUS_COLORS[order.status] || '#6b7280';
                 return (
-                  <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                  <tr key={order.id} className="border-b border-[rgba(196,154,60,0.08)] hover:bg-[rgba(196,154,60,0.06)] transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-800">{order.order_id}</td>
                     <td className="px-4 py-3">
                       <div className="text-gray-800">{order.customer_name}</div>
@@ -79,7 +79,7 @@ export default function OrdersTable({ orders, compact = false, onView }: OrdersT
                       <td className="px-4 py-3">
                         <button
                           onClick={() => onView?.(order)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-emerald-600 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-[rgba(196,154,60,0.06)] text-[#5B1A3A] hover:text-[#C49A3C] transition-colors"
                         >
                           <Eye size={16} />
                         </button>

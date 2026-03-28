@@ -93,18 +93,18 @@ function DashboardHome() {
   return (
     <div className="space-y-6">
       {/* 0% Commission banner */}
-      <div className="p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-lg">₹0</div>
+      <div className="p-4 bg-gradient-to-r from-[#F5EDF2] to-[#FAF7F8] border border-[#E8E0E4] rounded-xl flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-[#F5EDF2] flex items-center justify-center text-[#5B1A3A] font-bold text-lg">₹0</div>
         <div>
-          <p className="text-sm font-semibold text-emerald-800">{t('dash.commission')}</p>
-          <p className="text-xs text-emerald-600">{t('dash.commissionDesc')}</p>
+          <p className="text-sm font-semibold text-[#3D0E2A]">{t('dash.commission')}</p>
+          <p className="text-xs text-[#5B1A3A]">{t('dash.commissionDesc')}</p>
         </div>
       </div>
 
       {/* Row 1: 4 StatCards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title={t('dash.totalOrders')} value={formatNumber(stats.totalOrders)} change={12} icon={<ShoppingCart size={20} />} color="#059669" />
-        <StatCard title={t('dash.totalRevenue')} value={formatINR(stats.totalRevenue)} change={15} icon={<IndianRupee size={20} />} color="#059669" />
+        <StatCard title={t('dash.totalOrders')} value={formatNumber(stats.totalOrders)} change={12} icon={<ShoppingCart size={20} />} color="#5B1A3A" />
+        <StatCard title={t('dash.totalRevenue')} value={formatINR(stats.totalRevenue)} change={15} icon={<IndianRupee size={20} />} color="#C49A3C" />
         <StatCard title={t('dash.pendingApprovals')} value={String(stats.pendingApprovals)} icon={<ClipboardCheck size={20} />} color="#f59e0b" />
         <StatCard title={t('dash.returnRate')} value={`${stats.returnRate}%`} change={-1.5} icon={<RotateCcw size={20} />} color="#ef4444" />
       </div>
@@ -125,7 +125,7 @@ function DashboardHome() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">{t('dash.recentOrders')}</h3>
-            <button className="text-xs text-emerald-600 font-medium hover:underline">{t('dash.viewAll')}</button>
+            <button className="text-xs text-[#C49A3C] font-medium hover:underline">{t('dash.viewAll')}</button>
           </div>
           <OrdersTable orders={orders} compact />
         </div>
@@ -248,7 +248,7 @@ function OrdersPage() {
         {statuses.map(s => (
           <button key={s} onClick={() => setFilter(s)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-              ${filter === s ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              ${filter === s ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {t(`orders.${s}`)}
           </button>
         ))}
@@ -256,8 +256,8 @@ function OrdersPage() {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="mb-3 flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-          <span className="text-sm font-medium text-emerald-800">{selected.size} selected</span>
+        <div className="mb-3 flex items-center gap-2 p-3 bg-[#F5EDF2] border border-[#E8E0E4] rounded-lg">
+          <span className="text-sm font-medium text-[#3D0E2A]">{selected.size} selected</span>
           <button onClick={() => bulkUpdate('confirmed')} className="px-3 py-1 bg-blue-500 text-white rounded-md text-xs font-medium hover:bg-blue-600">
             <PackageCheck size={12} className="inline mr-1" />{t('orders.confirmed')}
           </button>
@@ -274,14 +274,14 @@ function OrdersPage() {
       )}
 
       {/* Orders table with checkboxes and actions */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
+              <tr className="bg-[#FAF7F8] border-b border-[rgba(196,154,60,0.06)]">
                 <th className="px-4 py-3 text-left">
                   <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0}
-                    onChange={selectAll} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                    onChange={selectAll} className="rounded border-gray-300 text-[#C49A3C] focus:ring-[#C49A3C]" />
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('orders.orderId')}</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('orders.customer')}</th>
@@ -299,7 +299,7 @@ function OrdersPage() {
                   <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-3">
                       <input type="checkbox" checked={selected.has(order.id)} onChange={() => toggleSelect(order.id)}
-                        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                        className="rounded border-gray-300 text-[#C49A3C] focus:ring-[#C49A3C]" />
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-800">{order.order_id}</td>
                     <td className="px-4 py-3 text-gray-700">{order.customer_name}</td>
@@ -391,7 +391,7 @@ function CataloguePage() {
         <h2 className="text-lg font-semibold text-gray-800">{t('cat.title')}</h2>
         {catTab === 'products' && (
           <button onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors">
             <Plus size={16} />{t('cat.addProduct')}
           </button>
         )}
@@ -402,7 +402,7 @@ function CataloguePage() {
         {(['products', 'bulk', 'qc'] as const).map(tab => (
           <button key={tab} onClick={() => setCatTab(tab)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-              ${catTab === tab ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              ${catTab === tab ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {tab === 'products' ? t('cat.products') :
              tab === 'bulk' ? t('cat.bulkUpload') : t('cat.qcApproval')}
           </button>
@@ -417,7 +417,7 @@ function CataloguePage() {
             {categories.map(c => (
               <button key={c} onClick={() => setCatFilter(c)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-                  ${catFilter === c ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  ${catFilter === c ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                 {c === 'all' ? t('cat.all') : c}
               </button>
             ))}
@@ -426,7 +426,7 @@ function CataloguePage() {
           {/* Product card grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map(p => (
-              <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all">
+              <div key={p.id} className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden hover:shadow-md transition-all">
                 <div className="h-36 bg-gray-100 flex items-center justify-center text-gray-400">
                   <Package size={40} />
                 </div>
@@ -462,8 +462,8 @@ function CataloguePage() {
                   <h3 className="text-lg font-semibold text-gray-800">{t('cat.addProduct')}</h3>
                   <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
                 </div>
-                <input placeholder="Product Name" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                <input placeholder="Product Name" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
+                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20">
                   {categories.filter(c => c !== 'all').map(c => <option key={c}>{c}</option>)}
                 </select>
 
@@ -472,12 +472,12 @@ function CataloguePage() {
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">MRP (₹)</label>
                     <input type="number" value={mrp} onChange={e => setMrp(e.target.value)} placeholder="999"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">GST Slab</label>
                     <select value={gstSlab} onChange={e => setGstSlab(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20">
                       <option value="5">5%</option>
                       <option value="12">12%</option>
                       <option value="18">18%</option>
@@ -485,7 +485,7 @@ function CataloguePage() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Selling Price</label>
-                    <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm font-semibold text-emerald-700">
+                    <div className="px-3 py-2 bg-[#F5EDF2] border border-[#E8E0E4] rounded-lg text-sm font-semibold text-[#5B1A3A]">
                       ₹{sellingPrice}
                     </div>
                   </div>
@@ -493,9 +493,9 @@ function CataloguePage() {
                 <p className="text-[10px] text-gray-400">GST: ₹{gstAmount} ({gstSlab}%)</p>
 
                 <input placeholder="Images (drag & drop)" className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 text-center" />
-                <input placeholder="Deliverable Pincodes (comma separated)" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                <input placeholder="Deliverable Pincodes (comma separated)" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
 
-                <button className="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                <button className="w-full py-2.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
                   onClick={() => { setShowModal(false); toast.success('Product added!'); }}>
                   {t('cat.addProduct')}
                 </button>
@@ -532,18 +532,18 @@ function PaymentsPage() {
       <h2 className="text-lg font-semibold text-gray-800 mb-4">{t('pay.title')}</h2>
 
       {/* 0% commission banner */}
-      <div className="mb-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-lg">₹0</div>
+      <div className="mb-4 p-4 bg-gradient-to-r from-[#F5EDF2] to-[#FAF7F8] border border-[#E8E0E4] rounded-xl flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-[#F5EDF2] flex items-center justify-center text-[#5B1A3A] font-bold text-lg">₹0</div>
         <div>
-          <p className="text-sm font-semibold text-emerald-800">{t('dash.commission')}</p>
-          <p className="text-xs text-emerald-600">{t('dash.commissionDesc')}</p>
+          <p className="text-sm font-semibold text-[#3D0E2A]">{t('dash.commission')}</p>
+          <p className="text-xs text-[#5B1A3A]">{t('dash.commissionDesc')}</p>
         </div>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <StatCard title={t('pay.totalCollected')} value={formatINR(totalCollected)} icon={<IndianRupee size={20} />} color="#059669" />
-        <StatCard title={t('pay.sellerPayouts')} value={formatINR(totalCollected)} icon={<Users size={20} />} color="#059669" />
+        <StatCard title={t('pay.totalCollected')} value={formatINR(totalCollected)} icon={<IndianRupee size={20} />} color="#C49A3C" />
+        <StatCard title={t('pay.sellerPayouts')} value={formatINR(totalCollected)} icon={<Users size={20} />} color="#5B1A3A" />
         <StatCard title="GST Collected" value={formatINR(gstCollected)} icon={<ClipboardCheck size={20} />} color="#6366f1" />
         <StatCard title={t('pay.pendingSettlement')} value={formatINR(pendingAmount)} icon={<Clock size={20} />} color="#f59e0b" />
       </div>
@@ -553,7 +553,7 @@ function PaymentsPage() {
         {(['settlements', 'gst', 'reconciliation'] as const).map(tab => (
           <button key={tab} onClick={() => setPayTab(tab)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-              ${payTab === tab ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              ${payTab === tab ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {tab === 'settlements' ? t('pay.settlements') :
              tab === 'gst' ? t('pay.gstExport') : t('pay.reconciliation')}
           </button>
@@ -564,10 +564,10 @@ function PaymentsPage() {
       {payTab === 'settlements' && (
         <>
           {/* Settlement table */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
+                <tr className="bg-[#FAF7F8] border-b border-[rgba(196,154,60,0.06)]">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.date')}</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.orderId')}</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Seller</th>
@@ -584,7 +584,7 @@ function PaymentsPage() {
                     <td className="px-4 py-3 font-medium text-gray-800">{p.order_id}</td>
                     <td className="px-4 py-3 text-gray-600">{p.seller_name}</td>
                     <td className="px-4 py-3 font-semibold">{formatINR(p.amount)}</td>
-                    <td className="px-4 py-3 text-emerald-600 font-medium">₹0</td>
+                    <td className="px-4 py-3 text-[#C49A3C] font-medium">₹0</td>
                     <td className="px-4 py-3 font-semibold text-gray-800">{formatINR(p.seller_payout)}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium
@@ -602,7 +602,7 @@ function PaymentsPage() {
 
           {/* Action buttons */}
           <div className="flex gap-3 mt-4">
-            <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+            <button className="px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
               onClick={() => toast.success('Razorpay payout initiated (sandbox)')}>
               Razorpay Payout (Sandbox)
             </button>
@@ -648,7 +648,7 @@ function AnalyticsPage() {
           {['week', 'month', 'quarter'].map(p => (
             <button key={p} onClick={() => setPeriod(p)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-                ${period === p ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                ${period === p ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {t(`analytics.${p}`)}
             </button>
           ))}
@@ -656,7 +656,7 @@ function AnalyticsPage() {
       </div>
 
       {/* Revenue trend line chart */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5 mb-6">
         <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('analytics.revenue')}</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -665,7 +665,7 @@ function AnalyticsPage() {
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} />
               <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={(v: number) => `₹${(v / 1000).toFixed(0)}k`} />
               <Tooltip formatter={(v: number) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-              <Line type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2} dot={{ fill: '#059669', r: 4 }} />
+              <Line type="monotone" dataKey="revenue" stroke="#C49A3C" strokeWidth={2} dot={{ fill: '#C49A3C', r: 4 }} />
               <Line type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -674,7 +674,7 @@ function AnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Category horizontal bar chart */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
           <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('analytics.categoryWise')}</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -683,14 +683,14 @@ function AnalyticsPage() {
                 <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={(v: number) => `₹${(v / 1000).toFixed(0)}k`} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#374151' }} width={90} />
                 <Tooltip formatter={(v: number) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-                <Bar dataKey="revenue" fill="#059669" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" fill="#C49A3C" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Returns donut chart */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
           <h3 className="text-sm font-semibold text-gray-800 mb-4">Returns Analysis</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -708,7 +708,7 @@ function AnalyticsPage() {
       </div>
 
       {/* Delivery zone table */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('delivery.title')}</h3>
         <table className="w-full text-sm">
           <thead>
@@ -770,7 +770,7 @@ function SupportPage() {
 
         {/* Ticket list with SLA */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('support.ticketList')}</h3>
             <div className="space-y-3">
               {MOCK_TICKETS.map(ticket => {
@@ -847,7 +847,7 @@ function GrowthPage() {
       <h2 className="text-lg font-semibold text-gray-800 mb-4">{t('growth.title')}</h2>
 
       {/* Countdown banner */}
-      <div className="mb-6 p-5 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-xl text-white">
+      <div className="mb-6 p-5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] rounded-xl text-white">
         <p className="text-xs font-medium opacity-80 uppercase tracking-wide">{t('growth.countdown')}</p>
         <div className="flex items-baseline gap-2 mt-2">
           <span className="text-4xl font-bold">14</span>
@@ -863,14 +863,14 @@ function GrowthPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Seasonal Offers */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
           <h3 className="text-sm font-semibold text-gray-800 mb-4">Seasonal Offers</h3>
           <div className="space-y-3">
             <input type="number" placeholder="Discount %" value={discount} onChange={e => setDiscount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
             <div className="grid grid-cols-2 gap-3">
-              <input type="date" className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-              <input type="date" className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+              <input type="date" className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
+              <input type="date" className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
             </div>
             <button className="w-full py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
               onClick={() => toast.success(`${discount}% discount offer created!`)}>
@@ -880,13 +880,13 @@ function GrowthPage() {
         </div>
 
         {/* Pincode expansion */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
           <h3 className="text-sm font-semibold text-gray-800 mb-4">Pincode Expansion</h3>
           <div className="flex gap-2 mb-3">
             <input placeholder="Enter 6-digit pincode" value={newPincode} onChange={e => setNewPincode(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
             <button onClick={validatePincode}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+              className="px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors">
               <Search size={14} className="inline mr-1" />Validate
             </button>
           </div>
@@ -898,7 +898,7 @@ function GrowthPage() {
                     <CheckCircle size={14} className="inline mr-1" />
                     {pincodeResult.district}, {pincodeResult.state}
                   </div>
-                  <button className="px-3 py-1 bg-emerald-600 text-white rounded-md text-xs font-medium"
+                  <button className="px-3 py-1 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-md text-xs font-medium"
                     onClick={() => { toast.success('Zone added!'); setPincodeResult(null); setNewPincode(''); }}>
                     Add Zone
                   </button>
@@ -954,19 +954,19 @@ function SettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Business Profile */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-gray-800">{t('settings.profile')}</h3>
           <input placeholder="Business Name" defaultValue="Insta Fashion Points"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
 
           {/* GSTIN with verification */}
           <div>
             <label className="text-xs text-gray-500 mb-1 block">GSTIN</label>
             <div className="flex gap-2">
               <input placeholder="22AAAAA0000A1Z5" value={gstin} onChange={e => setGstin(e.target.value.toUpperCase())}
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
               <button onClick={verifyGST}
-                className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700">
+                className="px-3 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-xs font-medium hover:opacity-90">
                 Verify
               </button>
             </div>
@@ -977,22 +977,22 @@ function SettingsPage() {
             )}
           </div>
 
-          <input placeholder="PAN Number" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+          <input placeholder="PAN Number" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
           <input placeholder="Address" defaultValue="Amas, Gaya, Bihar 824219"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-          <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
+          <button className="px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
             onClick={() => toast.success('Profile saved!')}>
             <Save size={14} className="inline mr-1.5" />{t('common.save')}
           </button>
         </div>
 
         {/* WhatsApp Config */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-gray-800">WhatsApp Configuration</h3>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Phone Number</label>
             <input placeholder="+91 82941xxxxx" value={waPhone} onChange={e => setWaPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
           </div>
           <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
             <div className="w-2 h-2 rounded-full bg-yellow-500" />
@@ -1005,7 +1005,7 @@ function SettingsPage() {
         </div>
 
         {/* Notification Preferences */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-gray-800">{t('settings.notifications')}</h3>
           {[
             { key: 'wa', icon: MessageCircle, label: 'WhatsApp', color: 'text-green-600' },
@@ -1020,7 +1020,7 @@ function SettingsPage() {
               <button
                 onClick={() => setNotifPrefs(p => ({ ...p, [key]: !p[key as keyof typeof p] }))}
                 className={`w-10 h-5 rounded-full transition-colors relative
-                  ${notifPrefs[key as keyof typeof notifPrefs] ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                  ${notifPrefs[key as keyof typeof notifPrefs] ? 'bg-[#C49A3C]' : 'bg-gray-300'}`}>
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all
                   ${notifPrefs[key as keyof typeof notifPrefs] ? 'left-5' : 'left-0.5'}`} />
               </button>
@@ -1029,7 +1029,7 @@ function SettingsPage() {
         </div>
 
         {/* Language preference */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-gray-800">Language Preference</h3>
           <div className="flex gap-3">
             {[
@@ -1038,7 +1038,7 @@ function SettingsPage() {
             ].map(({ code, label, flag }) => (
               <button key={code}
                 className={`flex-1 p-3 rounded-lg border-2 text-sm font-medium transition-all
-                  ${lang === code ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                  ${lang === code ? 'border-[#C49A3C] bg-[#F5EDF2] text-[#5B1A3A]' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                 <span className="text-lg mr-2">{flag}</span>{label}
               </button>
             ))}
@@ -1103,18 +1103,18 @@ function NDRPage() {
         {statusFilters.map(s => (
           <button key={s} onClick={() => setFilter(s)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-              ${filter === s ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              ${filter === s ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {s === 'all' ? t('orders.all') : s === 'pending' ? t('ndr.pending') : s === 'rto_initiated' ? t('ndr.rtoInitiated') : t('ndr.resolved')}
           </button>
         ))}
       </div>
 
       {/* NDR Table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
+              <tr className="bg-[#FAF7F8] border-b border-[rgba(196,154,60,0.06)]">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.orderId')}</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.customer')}</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('ndr.mobile')}</th>
@@ -1175,7 +1175,7 @@ function NDRPage() {
                         <button
                           onClick={() => setSelectedNDR(ndr)}
                           disabled={ndr.status !== 'pending'}
-                          className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 bg-[#F5EDF2] text-[#5B1A3A] rounded-lg text-xs font-medium hover:bg-[#EDE0E8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {t('ndr.action')}
                         </button>
@@ -1272,7 +1272,7 @@ function DashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
+    <div className="min-h-screen bg-[#FAF7F8]">
       <Sidebar activePage={activePage} onNavigate={setActivePage} ndrCount={ndrCount} />
       <TopBar sidebarWidth={sidebarWidth} />
       <main

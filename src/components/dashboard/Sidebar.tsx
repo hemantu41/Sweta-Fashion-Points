@@ -57,16 +57,16 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex fixed left-0 top-0 h-screen bg-white border-r border-gray-200 z-40
+        className={`hidden md:flex fixed left-0 top-0 h-screen bg-[#1F0E17] border-r border-[rgba(196,154,60,0.08)] z-40
           flex-col transition-all duration-300 ${collapsed ? 'w-[68px]' : 'w-[240px]'}`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-gray-100">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center flex-shrink-0">
+        <div className="h-16 flex items-center px-4 border-b border-[rgba(196,154,60,0.08)]">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B1A3A] to-[#7A2350] flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-sm">IF</span>
           </div>
           {!collapsed && (
-            <span className="ml-3 font-semibold text-gray-800 text-sm whitespace-nowrap">
+            <span className="ml-3 font-semibold text-white text-sm whitespace-nowrap">
               Insta Fashion Points
             </span>
           )}
@@ -96,8 +96,8 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
                     title={collapsed ? t(labelKey) : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative
                       ${isActive || isParentActive
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-[rgba(196,154,60,0.1)] text-white border-l-2 border-[#C49A3C]'
+                        : 'text-[rgba(255,255,255,0.45)] hover:bg-[rgba(196,154,60,0.06)] hover:text-[rgba(255,255,255,0.75)]'
                       }`}
                   >
                     <Icon size={20} className="flex-shrink-0" />
@@ -106,14 +106,14 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
                         <span className="flex-1 text-left">{t(labelKey)}</span>
                         <ChevronDown
                           size={14}
-                          className={`transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''} ${isActive || isParentActive ? 'text-white/70' : 'text-gray-400'}`}
+                          className={`transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''} ${isActive || isParentActive ? 'text-white/70' : 'text-[rgba(255,255,255,0.35)]'}`}
                         />
                       </>
                     )}
                   </button>
                   {/* Children */}
                   {!collapsed && settingsOpen && (
-                    <div className="mt-0.5 ml-4 pl-3 border-l-2 border-gray-100 space-y-0.5">
+                    <div className="mt-0.5 ml-4 pl-3 border-l-2 border-[rgba(196,154,60,0.15)] space-y-0.5">
                       {children.map(({ page: childPage, icon: ChildIcon, labelKey: childLabelKey }) => {
                         const isChildActive = activePage === childPage;
                         return (
@@ -122,8 +122,8 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
                             onClick={() => onNavigate(childPage)}
                             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all
                               ${isChildActive
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                                ? 'bg-[rgba(196,154,60,0.12)] text-[#DDB868]'
+                                : 'text-[rgba(255,255,255,0.4)] hover:bg-[rgba(196,154,60,0.06)] hover:text-[rgba(255,255,255,0.65)]'
                               }`}
                           >
                             <ChildIcon size={16} className="flex-shrink-0" />
@@ -144,8 +144,8 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
                 title={collapsed ? t(labelKey) : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative
                   ${isActive
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-[rgba(196,154,60,0.1)] text-white border-l-2 border-[#C49A3C]'
+                    : 'text-[rgba(255,255,255,0.45)] hover:bg-[rgba(196,154,60,0.06)] hover:text-[rgba(255,255,255,0.75)]'
                   }`}
               >
                 <div className="relative flex-shrink-0">
@@ -160,7 +160,7 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
                   <>
                     <span>{t(labelKey)}</span>
                     {showBadge && (
-                      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      <span className="ml-auto bg-[#C49A3C] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
                         {ndrCount > 9 ? '9+' : ndrCount}
                       </span>
                     )}
@@ -174,7 +174,7 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
           <a
             href="/admin/qc"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-              text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+              text-[rgba(255,255,255,0.45)] hover:bg-[rgba(196,154,60,0.06)] hover:text-[rgba(255,255,255,0.75)] transition-all"
             title={collapsed ? t('nav.qc') : undefined}
           >
             <ClipboardCheck size={20} className="flex-shrink-0" />
@@ -183,16 +183,16 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
         </nav>
 
         {/* Collapse toggle + Logout */}
-        <div className="p-2 border-t border-gray-100 space-y-1">
+        <div className="p-2 border-t border-[rgba(196,154,60,0.08)] space-y-1">
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition-all"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[rgba(255,255,255,0.45)] hover:bg-[rgba(196,154,60,0.06)] hover:text-[rgba(255,255,255,0.7)] transition-all"
           >
             {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             {!collapsed && <span>Collapse</span>}
           </button>
           <button
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-all"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-all"
           >
             <LogOut size={18} className="flex-shrink-0" />
             {!collapsed && <span>{t('nav.logout')}</span>}
@@ -201,7 +201,7 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 flex">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1F0E17] border-t border-[rgba(196,154,60,0.15)] z-40 flex">
         {MOBILE_NAV.map(({ page, icon: Icon, labelKey }) => {
           const isActive = activePage === page;
           return (
@@ -209,7 +209,7 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
               key={page}
               onClick={() => onNavigate(page)}
               className={`flex-1 flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors
-                ${isActive ? 'text-emerald-600' : 'text-gray-400'}`}
+                ${isActive ? 'text-[#C49A3C]' : 'text-[rgba(255,255,255,0.4)]'}`}
             >
               <Icon size={20} />
               <span>{t(labelKey)}</span>

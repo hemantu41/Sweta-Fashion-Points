@@ -216,7 +216,7 @@ export default function SellerManagement() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <button
           onClick={() => setFilter('all')}
-          className={`bg-white rounded-xl p-4 border text-left transition-all hover:shadow-md ${filter === 'all' ? 'border-emerald-500 ring-2 ring-emerald-500' : 'border-gray-200'}`}
+          className={`bg-white rounded-xl p-4 border text-left transition-all hover:shadow-md ${filter === 'all' ? 'border-[#C49A3C] ring-2 ring-[#C49A3C]/20' : 'border-[rgba(196,154,60,0.08)]'}`}
         >
           <p className="text-xs text-gray-500 mb-1">Total Sellers</p>
           <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
@@ -257,14 +257,14 @@ export default function SellerManagement() {
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
+      <div className="bg-white rounded-xl p-4 mb-4 border border-[rgba(196,154,60,0.08)]">
         <div className="flex flex-col md:flex-row gap-3">
           <input
             type="text"
             placeholder="Search by business name, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
           />
           <div className="flex gap-2 flex-wrap">
             {['all', 'pending', 'approved', 'rejected', 'suspended'].map((status) => (
@@ -273,7 +273,7 @@ export default function SellerManagement() {
                 onClick={() => setFilter(status as any)}
                 className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   filter === status
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -298,7 +298,7 @@ export default function SellerManagement() {
       )}
 
       {/* Sellers Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-500">Loading sellers...</div>
         ) : filteredSellers.length === 0 ? (
@@ -308,7 +308,7 @@ export default function SellerManagement() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-[#FAF7F8] border-b border-[rgba(196,154,60,0.08)]">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Business Name</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Contact Person</th>
@@ -395,7 +395,7 @@ export default function SellerManagement() {
                         )}
                         <Link
                           href={`/admin/sellers/${seller.id}`}
-                          className="px-3 py-1 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700"
+                          className="px-3 py-1 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white text-xs rounded-lg hover:bg-[#3D0E2A]"
                         >
                           View Details
                         </Link>

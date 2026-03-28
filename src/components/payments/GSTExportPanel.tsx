@@ -176,7 +176,7 @@ export default function GSTExportPanel() {
   return (
     <div className="space-y-5">
       {/* Month/Year picker + Generate */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('gst.title')}</h3>
         <div className="flex flex-wrap items-end gap-3">
           <div>
@@ -184,7 +184,7 @@ export default function GSTExportPanel() {
             <select
               value={month}
               onChange={e => { setMonth(Number(e.target.value)); setGenerated(false); }}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
             >
               {MONTHS.map((m, i) => (
                 <option key={i} value={i}>{lang === 'hi' ? MONTHS_HI[i] : m}</option>
@@ -196,7 +196,7 @@ export default function GSTExportPanel() {
             <select
               value={year}
               onChange={e => { setYear(Number(e.target.value)); setGenerated(false); }}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
             >
               {[2025, 2026, 2027].map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -205,7 +205,7 @@ export default function GSTExportPanel() {
           </div>
           <button
             onClick={handleGenerate}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+            className="px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:from-[#7A2350] hover:to-[#5B1A3A] transition-colors"
           >
             <FileSpreadsheet size={14} className="inline mr-1.5" />{t('gst.generate')}
           </button>
@@ -225,26 +225,26 @@ export default function GSTExportPanel() {
         <>
           {/* Tax summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide">{t('gst.taxableValue')}</p>
               <p className="text-lg font-bold text-gray-800 mt-1">{formatINR(Math.round(totalTaxable))}</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide">CGST (2.5%)</p>
-              <p className="text-lg font-bold text-emerald-600 mt-1">{formatINR(Math.round(totalCGST))}</p>
+              <p className="text-lg font-bold text-[#5B1A3A] mt-1">{formatINR(Math.round(totalCGST))}</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide">SGST (2.5%)</p>
-              <p className="text-lg font-bold text-emerald-600 mt-1">{formatINR(Math.round(totalSGST))}</p>
+              <p className="text-lg font-bold text-[#5B1A3A] mt-1">{formatINR(Math.round(totalSGST))}</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4">
               <p className="text-[10px] text-gray-400 uppercase tracking-wide">IGST</p>
               <p className="text-lg font-bold text-gray-400 mt-1">{formatINR(Math.round(totalIGST))}</p>
             </div>
           </div>
 
           {/* B2C Invoice table */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="p-4 border-b border-gray-100">
               <h4 className="text-sm font-semibold text-gray-800">{t('gst.b2cSummary')}</h4>
               <p className="text-xs text-gray-400">{gstRows.length} {t('gst.invoices')}</p>
@@ -270,8 +270,8 @@ export default function GSTExportPanel() {
                       <td className="px-4 py-3 text-gray-600 text-xs">{r.invoiceDate}</td>
                       <td className="px-4 py-3 text-gray-600 text-xs">{r.placeOfSupply}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatINR(r.taxableValue)}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600">{formatINR(r.cgst)}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600">{formatINR(r.sgst)}</td>
+                      <td className="px-4 py-3 text-right text-[#5B1A3A]">{formatINR(r.cgst)}</td>
+                      <td className="px-4 py-3 text-right text-[#5B1A3A]">{formatINR(r.sgst)}</td>
                       <td className="px-4 py-3 text-right text-gray-400">{formatINR(r.igst)}</td>
                       <td className="px-4 py-3 text-right font-semibold">{formatINR(r.totalTax)}</td>
                     </tr>
@@ -280,8 +280,8 @@ export default function GSTExportPanel() {
                   <tr className="bg-gray-50 font-semibold">
                     <td colSpan={3} className="px-4 py-3 text-gray-700">{t('gst.total')}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Math.round(totalTaxable))}</td>
-                    <td className="px-4 py-3 text-right text-emerald-600">{formatINR(Math.round(totalCGST))}</td>
-                    <td className="px-4 py-3 text-right text-emerald-600">{formatINR(Math.round(totalSGST))}</td>
+                    <td className="px-4 py-3 text-right text-[#5B1A3A]">{formatINR(Math.round(totalCGST))}</td>
+                    <td className="px-4 py-3 text-right text-[#5B1A3A]">{formatINR(Math.round(totalSGST))}</td>
                     <td className="px-4 py-3 text-right text-gray-400">{formatINR(Math.round(totalIGST))}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Math.round(totalCGST + totalSGST + totalIGST))}</td>
                   </tr>
@@ -291,7 +291,7 @@ export default function GSTExportPanel() {
           </div>
 
           {/* HSN Summary table */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="p-4 border-b border-gray-100">
               <h4 className="text-sm font-semibold text-gray-800">{t('gst.hsnSummary')}</h4>
             </div>
@@ -314,8 +314,8 @@ export default function GSTExportPanel() {
                       <td className="px-4 py-3 text-gray-600">{h.description}</td>
                       <td className="px-4 py-3 text-right">{h.qty}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatINR(Math.round(h.taxableValue))}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600">{formatINR(Math.round(h.cgst))}</td>
-                      <td className="px-4 py-3 text-right text-emerald-600">{formatINR(Math.round(h.sgst))}</td>
+                      <td className="px-4 py-3 text-right text-[#5B1A3A]">{formatINR(Math.round(h.cgst))}</td>
+                      <td className="px-4 py-3 text-right text-[#5B1A3A]">{formatINR(Math.round(h.sgst))}</td>
                     </tr>
                   ))}
                 </tbody>

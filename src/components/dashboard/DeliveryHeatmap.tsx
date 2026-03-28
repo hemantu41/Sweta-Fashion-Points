@@ -11,7 +11,7 @@ export default function DeliveryHeatmap() {
   const notServiceable = DELIVERY_ZONES.filter(z => !z.is_serviceable);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-800">{t('delivery.title')}</h3>
         <span className="text-xs text-gray-400">{t('delivery.radius')}: ~100 km</span>
@@ -20,7 +20,7 @@ export default function DeliveryHeatmap() {
       {/* Distance legend */}
       <div className="flex gap-3 mb-4">
         {[
-          { label: '≤20 km', color: '#059669', bg: '#ecfdf5' },
+          { label: '≤20 km', color: '#5B1A3A', bg: '#FAF7F8' },
           { label: '20-50 km', color: '#d97706', bg: '#fffbeb' },
           { label: '50-100 km', color: '#dc2626', bg: '#fef2f2' },
           { label: '>100 km', color: '#6b7280', bg: '#f3f4f6' },
@@ -66,7 +66,7 @@ export default function DeliveryHeatmap() {
               {notServiceable.map(zone => (
                 <div
                   key={zone.pincode}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-400"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8E0E4] bg-gray-50 text-xs text-gray-400"
                 >
                   <MapPin size={12} />
                   {zone.pincode} · {zone.district} · {zone.distance_km} km

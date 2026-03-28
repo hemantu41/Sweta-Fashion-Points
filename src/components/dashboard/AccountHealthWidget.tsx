@@ -29,8 +29,8 @@ interface HealthData {
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return '#22c55e';
-  if (score >= 50) return '#f59e0b';
+  if (score >= 80) return '#C49A3C';
+  if (score >= 50) return '#DDB868';
   return '#ef4444';
 }
 
@@ -53,13 +53,13 @@ export default function AccountHealthWidget() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 p-6 animate-pulse">
-        <div className="h-5 w-40 bg-gray-200 rounded mb-6" />
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-6 animate-pulse">
+        <div className="h-5 w-40 bg-[#E8E0E4] rounded mb-6" />
         <div className="flex items-center gap-8">
-          <div className="w-44 h-44 bg-gray-100 rounded-full" />
+          <div className="w-44 h-44 bg-[#F5EDF2] rounded-full" />
           <div className="flex-1 space-y-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-10 bg-gray-100 rounded-lg" />
+              <div key={i} className="h-10 bg-[#F5EDF2] rounded-lg" />
             ))}
           </div>
         </div>
@@ -82,7 +82,7 @@ export default function AccountHealthWidget() {
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-6">
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-6">
       <h3 className="text-sm font-semibold text-gray-800 mb-5">{t('health.title')}</h3>
 
       <div className="flex flex-col md:flex-row items-center gap-6">
@@ -99,7 +99,7 @@ export default function AccountHealthWidget() {
               <RadialBar
                 dataKey="value"
                 cornerRadius={8}
-                background={{ fill: '#f3f4f6' }}
+                background={{ fill: '#F5EDF2' }}
               />
             </RadialBarChart>
           </ResponsiveContainer>
@@ -123,7 +123,7 @@ export default function AccountHealthWidget() {
               <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2.5">
                   {status === 'good' ? (
-                    <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
+                    <CheckCircle size={16} className="text-[#C49A3C] flex-shrink-0" />
                   ) : (
                     <XCircle size={16} className="text-red-500 flex-shrink-0" />
                   )}
@@ -132,7 +132,7 @@ export default function AccountHealthWidget() {
                     <p className="text-[10px] text-gray-400">{t('health.target')}: {targetLabel}</p>
                   </div>
                 </div>
-                <span className={`text-sm font-bold ${status === 'good' ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-sm font-bold ${status === 'good' ? 'text-[#C49A3C]' : 'text-red-600'}`}>
                   {metric.value}{metric.unit}
                 </span>
               </div>

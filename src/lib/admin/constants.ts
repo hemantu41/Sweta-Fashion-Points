@@ -24,22 +24,22 @@ export const CATEGORIES = [
 ] as const;
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  'Sarees': '#059669',
-  "Men's Wear": '#2563eb',
-  "Women's Wear": '#db2777',
-  "Kids' Wear": '#f59e0b',
-  'Footwear': '#059669',
+  'Sarees': '#C49A3C',
+  "Men's Wear": '#5B1A3A',
+  "Women's Wear": '#7A2350',
+  "Kids' Wear": '#DDB868',
+  'Footwear': '#3D0E2A',
   'Makeup': '#8b5cf6',
-  'Ethnic Wear': '#C9A962',
+  'Ethnic Wear': '#C49A3C',
   'Accessories': '#64748b',
 };
 
 export const DEFAULT_CATEGORY_SPLIT: CategorySplit[] = [
-  { name: 'Sarees', value: 35, color: '#059669' },
-  { name: "Women's Wear", value: 25, color: '#db2777' },
-  { name: "Men's Wear", value: 20, color: '#2563eb' },
-  { name: "Kids' Wear", value: 10, color: '#f59e0b' },
-  { name: 'Footwear', value: 5, color: '#059669' },
+  { name: 'Sarees', value: 35, color: '#C49A3C' },
+  { name: "Women's Wear", value: 25, color: '#7A2350' },
+  { name: "Men's Wear", value: 20, color: '#5B1A3A' },
+  { name: "Kids' Wear", value: 10, color: '#DDB868' },
+  { name: 'Footwear', value: 5, color: '#3D0E2A' },
   { name: 'Other', value: 5, color: '#64748b' },
 ];
 
@@ -123,7 +123,7 @@ export function formatNumber(n: number): string {
 
 // Distance badge color
 export function getDistanceBadge(km: number): { label: string; color: string; bg: string } {
-  if (km <= 20) return { label: 'Near', color: '#059669', bg: '#ecfdf5' };
+  if (km <= 20) return { label: 'Near', color: '#5B1A3A', bg: '#F5EDF2' };
   if (km <= 50) return { label: 'Mid', color: '#d97706', bg: '#fffbeb' };
   if (km <= 100) return { label: 'Far', color: '#dc2626', bg: '#fef2f2' };
   return { label: 'Out of range', color: '#6b7280', bg: '#f3f4f6' };

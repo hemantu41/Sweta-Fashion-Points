@@ -172,7 +172,7 @@ export default function UserManagement() {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:bg-[#3D0E2A] transition-colors"
         >
           <span className="text-base">+</span> Add User
         </button>
@@ -186,7 +186,7 @@ export default function UserManagement() {
           { label: 'Inactive', value: inactiveUsers, icon: '⏸️', bg: 'bg-amber-50', text: 'text-amber-600' },
           { label: 'Admin Accounts', value: adminCount, icon: '🛡️', bg: 'bg-red-50', text: 'text-red-600' },
         ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+          <div key={stat.label} className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center text-lg`}>
               {stat.icon}
             </div>
@@ -205,7 +205,7 @@ export default function UserManagement() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors
-              ${activeTab === tab ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              ${activeTab === tab ? 'bg-[#5B1A3A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             {tab === 'users' ? '👥 Users' : '🔐 Roles & Permissions'}
           </button>
@@ -224,13 +224,13 @@ export default function UserManagement() {
                 placeholder="Search by name or email..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]"
               />
             </div>
             <select
               value={roleFilter}
               onChange={e => setRoleFilter(e.target.value)}
-              className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 min-w-[140px] cursor-pointer"
+              className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 min-w-[140px] cursor-pointer"
             >
               <option value="all">All Roles</option>
               {(Object.keys(ROLE_CONFIGS) as Role[]).map(r => (
@@ -240,7 +240,7 @@ export default function UserManagement() {
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 min-w-[130px] cursor-pointer"
+              className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 min-w-[130px] cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -249,11 +249,11 @@ export default function UserManagement() {
           </div>
 
           {/* Users Table */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
+                  <tr className="bg-[#FAF7F8] border-b border-gray-100">
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">User</th>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Email</th>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Role</th>
@@ -360,7 +360,7 @@ export default function UserManagement() {
             return (
               <div
                 key={role}
-                className="bg-white rounded-xl border border-gray-100 p-5"
+                className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-5"
                 style={{ borderLeftWidth: 3, borderLeftColor: config.color }}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -385,7 +385,7 @@ export default function UserManagement() {
                           disabled={isLocked}
                           className={`w-9 h-5 rounded-full relative transition-all flex-shrink-0
                             ${isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
-                            ${isOn ? 'bg-emerald-500' : 'bg-gray-200'}`}
+                            ${isOn ? 'bg-[#C49A3C]' : 'bg-gray-200'}`}
                         >
                           <div
                             className="w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all shadow-sm"
@@ -445,7 +445,7 @@ export default function UserManagement() {
                   value={editUser.role}
                   onChange={e => changeUserRole(editUser.id, e.target.value as Role)}
                   disabled={editUser.role === 'admin'}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {(Object.keys(ROLE_CONFIGS) as Role[]).map(r => (
                     <option key={r} value={r}>{ROLE_CONFIGS[r].label}</option>
@@ -464,7 +464,7 @@ export default function UserManagement() {
                         key={perm}
                         className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize
                           ${active
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-[#F5EDF2] text-[#5B1A3A] border border-[#E8E0E4]'
                             : 'bg-gray-50 text-gray-400 border border-gray-100'
                           }`}
                       >
@@ -540,7 +540,7 @@ export default function UserManagement() {
                   placeholder="e.g. Amit Verma"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]"
                 />
               </div>
               <div>
@@ -550,7 +550,7 @@ export default function UserManagement() {
                   placeholder="e.g. amit.verma@instafashion.in"
                   value={newEmail}
                   onChange={e => setNewEmail(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]"
                 />
               </div>
               <div>
@@ -558,7 +558,7 @@ export default function UserManagement() {
                 <select
                   value={newRole}
                   onChange={e => setNewRole(e.target.value as Role)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 cursor-pointer"
                 >
                   {(Object.keys(ROLE_CONFIGS) as Role[])
                     .filter(r => r !== 'admin')
@@ -579,7 +579,7 @@ export default function UserManagement() {
                         key={perm}
                         className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize
                           ${active
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-[#F5EDF2] text-[#5B1A3A] border border-[#E8E0E4]'
                             : 'bg-gray-50 text-gray-400 border border-gray-100'
                           }`}
                       >
@@ -602,7 +602,7 @@ export default function UserManagement() {
               <button
                 onClick={addUser}
                 disabled={!newName.trim() || !newEmail.trim()}
-                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:bg-[#3D0E2A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="text-base">+</span> Add User
               </button>
