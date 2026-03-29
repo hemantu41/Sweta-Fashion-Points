@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronRight, X, Check, ImagePlus, Tag, Package, Truck, AlertCircle } from 'lucide-react';
+import { Search, ChevronRight, X, Check, ImagePlus, Tag, Package, Truck, AlertCircle, Upload } from 'lucide-react';
 
 /* ─── Category Types ────────────────────────────────────────────────────────── */
 
@@ -120,8 +120,11 @@ export default function AddProductPage() {
   const [tagInput, setTagInput] = useState('');
 
   /* Photos */
-  const [images, setImages]       = useState<string[]>([]);
-  const [imageInput, setImageInput] = useState('');
+  const [images, setImages]         = useState<string[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploading, setUploading]   = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* Pricing */
   const [mrp, setMrp]     = useState('');
@@ -267,10 +270,36 @@ export default function AddProductPage() {
     const t = tagInput.trim().toLowerCase();
     if (t && !tags.includes(t)) { setTags(p => [...p, t]); setTagInput(''); }
   }
-  function addImage() {
-    const url = imageInput.trim();
-    if (url && !images.includes(url) && images.length < 8) { setImages(p => [...p, url]); setImageInput(''); }
-  }
+
+  const processFiles = useCallback(async (files: FileList | File[]) => {
+    const fileArr = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (!fileArr.length) return;
+    const slots = 8 - images.length;
+    if (slots <= 0) { setUploadError('Maximum 8 photos allowed.'); return; }
+    const toUpload = fileArr.slice(0, slots);
+    setUploading(true);
+    setUploadError('');
+    const results = await Promise.allSettled(toUpload.map(async (file) => {
+      if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name} exceeds 5 MB`);
+      const fd = new FormData();
+      fd.append('file', file);
+      if (sellerId) fd.append('sellerId', sellerId);
+      fd.append('category', 'products');
+      const res = await fetch('/api/upload/image', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`Upload failed for ${file.name}`);
+      const data = await res.json();
+      return data.url as string;
+    }));
+    const uploaded: string[] = [];
+    const errors: string[] = [];
+    results.forEach(r => {
+      if (r.status === 'fulfilled') uploaded.push(r.value);
+      else errors.push(r.reason?.message || 'Upload failed');
+    });
+    if (uploaded.length) setImages(prev => [...prev, ...uploaded].slice(0, 8));
+    if (errors.length) setUploadError(errors.join('; '));
+    setUploading(false);
+  }, [images, sellerId]);
 
   const isValid = name && l3 && description && price && stock && checked1 && checked2 && sellerId;
 
@@ -509,12 +538,54 @@ export default function AddProductPage() {
 
           {/* ── Section 3: Photos ── */}
           <SectionCard title="Photos & Videos">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={e => { if (e.target.files) processFiles(e.target.files); e.target.value = ''; }}
+            />
+
             {/* Guidelines */}
             <div className="p-3 bg-[#F5EDF2] border border-[rgba(196,154,60,0.15)] rounded-xl mb-4 text-xs text-[#666] space-y-1">
-              <p className="font-semibold text-[#5B1A3A] mb-1.5">📸 Photo Guidelines</p>
-              {['Use white / plain background', 'Minimum 3 photos from different angles', 'Include close-up of fabric texture', 'No watermarks or text on images', 'Minimum resolution: 800×800px'].map(tip => (
+              <p className="font-semibold text-[#5B1A3A] mb-1.5">Photo Guidelines</p>
+              {['Use white / plain background', 'Minimum 3 photos from different angles', 'Include close-up of fabric texture', 'No watermarks or text on images', 'Minimum resolution: 800×800px — JPEG, PNG or WebP, max 5 MB each'].map(tip => (
                 <p key={tip} className="flex items-center gap-1.5"><Check size={10} className="text-[#C49A3C]" />{tip}</p>
               ))}
+            </div>
+
+            {/* Drag-and-drop zone */}
+            <div
+              onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={e => { e.preventDefault(); setIsDragOver(false); processFiles(e.dataTransfer.files); }}
+              onClick={() => images.length < 8 && fileInputRef.current?.click()}
+              className={`mb-3 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 py-5 cursor-pointer transition-all ${
+                isDragOver
+                  ? 'border-[#C49A3C] bg-[rgba(196,154,60,0.05)]'
+                  : images.length >= 8
+                    ? 'border-[#E8E0E4] cursor-not-allowed opacity-50'
+                    : 'border-[#E8E0E4] hover:border-[#C49A3C]/60 hover:bg-[#FAFAFA]'
+              }`}
+            >
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="animate-spin w-6 h-6 text-[#C49A3C]" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                  </svg>
+                  <p className="text-xs text-[#999]">Uploading…</p>
+                </div>
+              ) : (
+                <>
+                  <Upload size={22} className="text-[#C49A3C]" />
+                  <p className="text-sm font-medium text-[#5B1A3A]">Drag & drop photos here</p>
+                  <p className="text-xs text-[#999]">or <span className="text-[#C49A3C] font-semibold underline">click to browse</span></p>
+                  <p className="text-[10px] text-[#CCC]">JPEG · PNG · WebP · max 5 MB per file</p>
+                </>
+              )}
             </div>
 
             {/* Image grid */}
@@ -524,39 +595,40 @@ export default function AddProductPage() {
                   {images[i] ? (
                     <div className="relative w-full h-full">
                       <img src={images[i]} alt="" className="w-full h-full object-cover rounded-xl border border-[#E8E0E4]" />
-                      {i === 0 && <span className="absolute top-1 left-1 text-[8px] px-1.5 py-0.5 text-white rounded-md font-bold" style={{ background: '#5B1A3A' }}>Main ★</span>}
+                      {i === 0 && <span className="absolute top-1 left-1 text-[8px] px-1.5 py-0.5 text-white rounded-md font-bold" style={{ background: '#5B1A3A' }}>Main</span>}
                       <button type="button" onClick={() => setImages(p => p.filter((_, j) => j !== i))}
                         className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center shadow">
                         <X size={10} />
                       </button>
                     </div>
                   ) : (
-                    <div className="w-full h-full border-2 border-dashed border-[#E8E0E4] rounded-xl flex flex-col items-center justify-center gap-1 text-[#CCC] hover:border-[#C49A3C]/50 transition-colors cursor-pointer">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading || images.length >= 8}
+                      className="w-full h-full border-2 border-dashed border-[#E8E0E4] rounded-xl flex flex-col items-center justify-center gap-1 text-[#CCC] hover:border-[#C49A3C]/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
                       <ImagePlus size={16} />
                       {i === 0 && <span className="text-[8px] text-[#999]">Main</span>}
-                    </div>
+                    </button>
                   )}
                 </div>
               ))}
             </div>
 
-            <div className="flex gap-2">
-              <input value={imageInput} onChange={e => setImageInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addImage())}
-                placeholder="Paste image URL here…"
-                className={`${INPUT_CLS} flex-1 text-xs`} />
-              <button type="button" onClick={addImage} disabled={images.length >= 8}
-                className="px-4 py-2 text-xs font-semibold text-white rounded-lg disabled:opacity-40 transition-opacity hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
-                Add
-              </button>
-            </div>
-            <p className="text-[10px] text-[#999] mt-1.5">{images.length}/8 photos {images.length < 3 ? `— ${3 - images.length} more required` : '✓'}</p>
+            {uploadError && (
+              <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-200 rounded-lg mb-2">
+                <AlertCircle size={13} className="text-red-500 flex-shrink-0" />
+                <p className="text-xs text-red-600">{uploadError}</p>
+                <button type="button" onClick={() => setUploadError('')} className="ml-auto text-red-400 hover:text-red-600"><X size={12} /></button>
+              </div>
+            )}
+
+            <p className="text-[10px] text-[#999] mt-1">{images.length}/8 photos {images.length < 3 ? `— ${3 - images.length} more required` : '— requirement met'}</p>
 
             {/* Video callout */}
             <div className="mt-3 p-3 bg-[#FFFBEB] border border-[rgba(196,154,60,0.2)] rounded-xl text-xs text-[#5B1A3A] flex items-center gap-2">
-              <span className="text-base">🌟</span>
-              <span><strong>Products with videos get 3× more orders!</strong> <span className="text-[#999]">वीडियो वाले प्रोडक्ट को 3 गुना ज़्यादा ऑर्डर मिलते हैं।</span></span>
+              <span><strong>Products with videos get 3x more orders!</strong></span>
             </div>
           </SectionCard>
 
