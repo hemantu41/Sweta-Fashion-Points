@@ -54,12 +54,11 @@ const GST_OPTS     = [{ label: 'Exempt (0%)', value: 0 }, { label: '5% (Cotton <
 
 /* ─── Sub-components ────────────────────────────────────────────────────────── */
 
-function SectionCard({ title, titleHi, badge, children }: { title: string; titleHi?: string; badge?: React.ReactNode; children: React.ReactNode }) {
+function SectionCard({ title, badge, children }: { title: string; badge?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-5">
       <div className="flex items-center gap-2 mb-4">
         <h3 className="text-sm font-semibold text-[#333333]" style={{ fontFamily: 'var(--font-dm-sans,DM Sans,sans-serif)' }}>{title}</h3>
-        {titleHi && <span className="text-xs italic text-[#C49A3C]">{titleHi}</span>}
         {badge}
       </div>
       {children}
@@ -318,7 +317,7 @@ export default function AddProductPage() {
         <div className="lg:col-span-3 space-y-5">
 
           {/* ── Section 1: Category ── */}
-          <SectionCard title="Category Selection" titleHi="कैटेगरी चुनें">
+          <SectionCard title="Category Selection">
 
             {/* Search */}
             <div className="relative mb-4">
@@ -350,7 +349,7 @@ export default function AddProductPage() {
             {l3 && l1Label && l2Label && l3Label ? (
               <div className="flex items-center justify-between p-3 bg-[#F5EDF2] border border-[rgba(196,154,60,0.15)] rounded-xl mb-4">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-[#5B1A3A]">
-                  <span>{l1Label.icon} {l1Label.name}</span>
+                  <span>{l1Label.name}</span>
                   <ChevronRight size={12} className="text-[#C49A3C]" />
                   <span>{l2Label.name}</span>
                   <ChevronRight size={12} className="text-[#C49A3C]" />
@@ -377,9 +376,7 @@ export default function AddProductPage() {
                           style={l1 === c.id
                             ? { borderColor: '#5B1A3A', borderWidth: '2px', background: '#F5EDF2', boxShadow: '0 4px 15px rgba(91,26,58,0.1)' }
                             : { borderColor: '#E8E0E4', background: 'white' }}>
-                          <span className="text-xl">{c.icon}</span>
                           <span className="text-xs font-semibold text-[#333]">{c.name}</span>
-                          <span className="text-[9px] italic text-[#C49A3C]">{c.nameHi}</span>
                         </button>
                       ))}
                     </div>
@@ -397,7 +394,7 @@ export default function AddProductPage() {
                           style={l2 === c.id
                             ? { background: '#5B1A3A', color: 'white', borderColor: '#5B1A3A', boxShadow: '0 2px 8px rgba(91,26,58,0.2)' }
                             : { background: 'white', color: '#555', borderColor: '#E8E0E4' }}>
-                          <span>{c.icon}</span> {c.name}
+                          {c.name}
                         </button>
                       ))}
                     </div>
@@ -431,7 +428,7 @@ export default function AddProductPage() {
           </SectionCard>
 
           {/* ── Section 2: Product Details ── */}
-          <SectionCard title="Product Details" titleHi="प्रोडक्ट जानकारी">
+          <SectionCard title="Product Details">
             <div className="space-y-4">
               <div>
                 <FieldLabel required>Product Title (English)</FieldLabel>
@@ -486,7 +483,7 @@ export default function AddProductPage() {
           </SectionCard>
 
           {/* ── Section 3: Photos ── */}
-          <SectionCard title="Photos & Videos" titleHi="फोटो और वीडियो">
+          <SectionCard title="Photos & Videos">
             {/* Guidelines */}
             <div className="p-3 bg-[#F5EDF2] border border-[rgba(196,154,60,0.15)] rounded-xl mb-4 text-xs text-[#666] space-y-1">
               <p className="font-semibold text-[#5B1A3A] mb-1.5">📸 Photo Guidelines</p>
@@ -539,7 +536,7 @@ export default function AddProductPage() {
           </SectionCard>
 
           {/* ── Section 4: Pricing ── */}
-          <SectionCard title="Pricing & Stock" titleHi="कीमत और स्टॉक">
+          <SectionCard title="Pricing & Stock">
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
                 <FieldLabel required>MRP (₹)</FieldLabel>
@@ -597,7 +594,7 @@ export default function AddProductPage() {
           </SectionCard>
 
           {/* ── Section 5: Fabric & Specs ── */}
-          <SectionCard title="Fabric & Specifications" titleHi="कपड़ा और विशेषताएं">
+          <SectionCard title="Fabric & Specifications">
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
                 <FieldLabel>Fabric / Material</FieldLabel>
@@ -669,22 +666,21 @@ export default function AddProductPage() {
           {/* ── Section 6: Occasion Tags ── */}
           <SectionCard
             title="Occasion Tags"
-            titleHi="अवसर टैग"
-            badge={<span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'linear-gradient(135deg,#C49A3C,#DDB868)', color: 'white' }}>✨ IFP Special</span>}>
-            <p className="text-xs text-[#666] mb-3">Tag occasions to appear in IFP's Occasion Shop — reaching more customers! <span className="italic text-[#C49A3C]">अवसर टैग से ज़्यादा ग्राहक मिलते हैं!</span></p>
+            badge={<span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'linear-gradient(135deg,#C49A3C,#DDB868)', color: 'white' }}>IFP Special</span>}>
+            <p className="text-xs text-[#666] mb-3">Tag occasions to appear in IFP&apos;s Occasion Shop — reaching more customers!</p>
             <div className="flex flex-wrap gap-2">
               {OCCASION_TAGS.map(t => (
                 <button key={t.id} type="button" onClick={() => toggleMulti(occasionTags, setOccasionTags, t.id)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-all"
                   style={occasionTags.includes(t.id) ? { borderColor: '#C49A3C', borderWidth: '2px', background: 'rgba(196,154,60,0.08)', color: '#5B1A3A', fontWeight: 700 } : { background: 'white', color: '#666', borderColor: '#E8E0E4' }}>
-                  {t.icon} {t.label}
+                  {t.label}
                 </button>
               ))}
             </div>
           </SectionCard>
 
           {/* ── Section 7: Shipping ── */}
-          <SectionCard title="Shipping" titleHi="शिपिंग">
+          <SectionCard title="Shipping">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <FieldLabel>Package Weight (grams)</FieldLabel>
@@ -803,7 +799,7 @@ export default function AddProductPage() {
                       const t = OCCASION_TAGS.find(x => x.id === tid);
                       return t ? (
                         <span key={tid} className="text-[8px] px-1.5 py-0.5 rounded-full border border-[rgba(196,154,60,0.2)] text-[#C49A3C] bg-[rgba(196,154,60,0.06)]">
-                          {t.icon} {t.label}
+                          {t.label}
                         </span>
                       ) : null;
                     })}

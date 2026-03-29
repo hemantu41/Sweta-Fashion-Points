@@ -84,14 +84,28 @@ export default function CategoryManagement() {
   };
 
   const toggleActive = async (id: string, currentActive: boolean) => {
+    // Optimistic update — flip immediately in UI
+    const flipTree = (cats: Category[]): Category[] =>
+      cats.map(c => ({
+        ...c,
+        active: c.id === id ? !currentActive : c.active,
+        children: c.children ? flipTree(c.children) : c.children,
+      }));
+    setCategories(prev => flipTree(prev));
+
     try {
-      await fetch(`/api/admin/categories/${id}`, {
+      const res = await fetch(`/api/admin/categories/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !currentActive }),
       });
+      if (!res.ok) throw new Error('Update failed');
+      // Confirm with server state
       await fetchCategories();
-    } catch { /* silent */ }
+    } catch {
+      // Revert optimistic update on failure
+      await fetchCategories();
+    }
   };
 
   // Keep legacy signature stub to avoid breaking downstream JSX calls that pass (id, level, parentId?)
@@ -183,7 +197,6 @@ export default function CategoryManagement() {
                 {expanded[l1.id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </button>
               <span className={`flex-1 text-sm font-semibold ${l1.active ? 'text-gray-800' : 'text-gray-400 line-through'}`}>{l1.name}</span>
-              {l1.nameHindi && <span className="text-xs text-gray-400 hidden sm:block">{l1.nameHindi}</span>}
               <span className="text-xs text-gray-400 hidden md:block">{l1.children?.length || 0} subcategories</span>
               <span className="px-2 py-0.5 bg-[#C49A3C]/10 text-[#C49A3C] text-xs font-medium rounded-full">{l1.productCount} products</span>
               <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${l1.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{l1.active ? 'Active' : 'Inactive'}</span>
@@ -208,7 +221,6 @@ export default function CategoryManagement() {
                     {expanded[l2.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </button>
                   <span className={`flex-1 text-sm ${l2.active ? 'text-gray-700 font-medium' : 'text-gray-400 line-through'}`}>{l2.name}</span>
-                  {l2.nameHindi && <span className="text-xs text-gray-400 hidden sm:block">{l2.nameHindi}</span>}
                   <span className="text-xs text-gray-400 hidden md:block">{l2.children?.length || 0} types</span>
                   <span className="px-2 py-0.5 bg-[#C49A3C]/10 text-[#C49A3C] text-xs font-medium rounded-full">{l2.productCount} products</span>
                   <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${l2.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{l2.active ? 'Active' : 'Inactive'}</span>
@@ -230,7 +242,6 @@ export default function CategoryManagement() {
                   <div key={l3.id} className="flex items-center gap-2 ml-10 mr-0 px-3.5 py-2 bg-white border-l border-l-gray-200 hover:bg-[#FAF7F8] transition-colors group">
                     <span className="w-2 h-2 rounded-full bg-[#C49A3C]/40 shrink-0 ml-1" />
                     <span className={`flex-1 text-xs ${l3.active ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{l3.name}</span>
-                    {l3.nameHindi && <span className="text-xs text-gray-400 hidden sm:block">{l3.nameHindi}</span>}
                     <span className="px-2 py-0.5 bg-[#C49A3C]/10 text-[#C49A3C] text-xs font-medium rounded-full">{l3.productCount} products</span>
                     <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${l3.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{l3.active ? 'Active' : 'Inactive'}</span>
                     <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">

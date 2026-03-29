@@ -54,7 +54,6 @@ export default function MegaMenu() {
                 : 'text-[#2D2D2D] hover:text-[#722F37]'
               }`}
           >
-            {l1.icon && <span className="mr-1.5 text-base leading-none">{l1.icon}</span>}
             {l1.name}
           </button>
         ))}
@@ -72,9 +71,6 @@ export default function MegaMenu() {
           <div className="bg-[#722F37]">
             <div className="max-w-7xl mx-auto px-8 py-2.5 flex items-center justify-between">
               <h3 className="text-white font-semibold text-sm uppercase tracking-widest">
-                {activeL1.icon && (
-                  <span className="mr-2 text-base">{activeL1.icon}</span>
-                )}
                 {activeL1.name}
               </h3>
               <Link
@@ -102,12 +98,9 @@ export default function MegaMenu() {
                     <Link
                       href={`/category/${l2.slug}`}
                       onClick={handleLinkClick}
-                      className="flex items-center gap-1 text-[#722F37] font-semibold text-sm pb-1.5 border-b border-[#E8E2D9] hover:text-[#5B1A3A] transition-colors truncate"
+                      className="block text-[#722F37] font-semibold text-sm pb-1.5 border-b border-[#E8E2D9] hover:text-[#5B1A3A] transition-colors truncate"
                     >
-                      {l2.icon && (
-                        <span className="text-base flex-shrink-0">{l2.icon}</span>
-                      )}
-                      <span className="truncate">{l2.name}</span>
+                      {l2.name}
                     </Link>
 
                     {/* L3 list */}
