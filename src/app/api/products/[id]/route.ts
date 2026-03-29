@@ -10,10 +10,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Fetch product with seller information
-    const { data: product, error } = await supabase
-      .from('spf_productdetails')
-      .select(`
+    const PRODUCT_SELECT = `
         *,
         seller:spf_sellers!spf_productdetails_seller_id_fkey (
           id,
@@ -23,13 +20,33 @@ export async function GET(
           state,
           business_phone
         )
-      `)
-      .eq('id', id)
-      .is('deleted_at', null)
-      .single();
+      `;
 
-    if (error) {
-      console.error('[Product API] Database error:', error);
+    // Try by UUID first; fall back to product_id for custom IDs like PRD-...
+    let product: any = null;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    if (isUUID) {
+      const { data, error } = await supabase
+        .from('spf_productdetails')
+        .select(PRODUCT_SELECT)
+        .eq('id', id)
+        .is('deleted_at', null)
+        .single();
+      if (!error) product = data;
+    }
+
+    if (!product) {
+      const { data, error } = await supabase
+        .from('spf_productdetails')
+        .select(PRODUCT_SELECT)
+        .eq('product_id', id)
+        .is('deleted_at', null)
+        .single();
+      if (!error) product = data;
+    }
+
+    if (!product) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
