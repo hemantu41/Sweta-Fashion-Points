@@ -53,11 +53,14 @@ const SIZES_LIST = [
   // Waist / bottom wear (inches)
   '20', '22', '24', '26', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46',
 ];
-const FABRIC_OPTS  = ['Cotton', 'Silk', 'Georgette', 'Chiffon', 'Polyester', 'Rayon', 'Linen', 'Net', 'Velvet', 'Wool', 'Blend', 'Other'];
-const WORK_OPTS    = ['Embroidered', 'Printed', 'Woven', 'Zari', 'Sequin', 'Mirror Work', 'Handloom', 'Block Print', 'Bandhani', 'Chikankari', 'Kalamkari', 'Plain'];
-const PATTERN_OPTS = ['Solid', 'Printed', 'Striped', 'Checked', 'Floral', 'Abstract', 'Geometric', 'Paisley'];
-const WASH_OPTS    = ['Hand Wash', 'Machine Wash', 'Dry Clean Only', 'Gentle Wash'];
-const GST_OPTS     = [{ label: 'Exempt (0%)', value: 0 }, { label: '5% (Cotton < ₹1000)', value: 5 }, { label: '12% (Synthetic / > ₹1000)', value: 12 }, { label: '18%', value: 18 }];
+const FABRIC_OPTS   = ['Cotton', 'Silk', 'Georgette', 'Chiffon', 'Polyester', 'Rayon', 'Linen', 'Net', 'Velvet', 'Wool', 'Blend', 'Other'];
+const WORK_OPTS     = ['Embroidered', 'Printed', 'Woven', 'Zari', 'Sequin', 'Mirror Work', 'Handloom', 'Block Print', 'Bandhani', 'Chikankari', 'Kalamkari', 'Plain'];
+const PATTERN_OPTS  = ['Solid', 'Printed', 'Striped', 'Checked', 'Floral', 'Abstract', 'Geometric', 'Paisley'];
+const WASH_OPTS     = ['Hand Wash', 'Machine Wash', 'Dry Clean Only', 'Gentle Wash'];
+const GST_OPTS      = [{ label: 'Exempt (0%)', value: 0 }, { label: '5% (Cotton < ₹1000)', value: 5 }, { label: '12% (Synthetic / > ₹1000)', value: 12 }, { label: '18%', value: 18 }];
+const CLOSURE_OPTS  = ['Asymmetrical', 'Symmetrical'];
+const POCKETS_OPTS  = ['1', '2', '3', 'No Pockets'];
+const WEAVE_OPTS    = ['Chambray', 'Corduroy', 'Denim', 'Dobby', 'Knitted', 'Oxford', 'Regular'];
 
 /* ─── Sub-components ────────────────────────────────────────────────────────── */
 
@@ -142,6 +145,18 @@ export default function AddProductPage() {
   const [weight, setWeight]           = useState('');
   const [dispatchTime, setDispatchTime] = useState('2');
 
+  /* Seller details (editable on this form) */
+  const [sellerAddress, setSellerAddress]         = useState('');
+  const [sellerPincode, setSellerPincode]         = useState('');
+  const [sellerPhone, setSellerPhone]             = useState('');
+  const [sellerPhoneConsent, setSellerPhoneConsent] = useState(false);
+
+  /* Other details */
+  const [productSku, setProductSku]   = useState('');
+  const [closure, setClosure]         = useState('');
+  const [pockets, setPockets]         = useState('');
+  const [weavePattern, setWeavePattern] = useState('');
+
   /* Declarations */
   const [checked1, setChecked1] = useState(false);
   const [checked2, setChecked2] = useState(false);
@@ -154,6 +169,9 @@ export default function AddProductPage() {
         if (d.seller) {
           setSellerId(d.seller.id);
           setSellerName(d.seller.businessName || user.name || 'Seller');
+          setSellerAddress(d.seller.address || d.seller.business_address || '');
+          setSellerPincode(d.seller.pincode || d.seller.business_pincode || '');
+          setSellerPhone(d.seller.businessPhone || d.seller.business_phone || '');
         }
       });
   }, [user?.id]);
@@ -263,7 +281,8 @@ export default function AddProductPage() {
     setSubmitting(true);
     try {
       const body = {
-        sellerId, name, nameHi: nameHi || undefined,
+        sellerId, name,
+        sku: productSku || undefined,
         category: l1, subCategory: l2,
         productType: l3,
         description, brand: brand || undefined,
@@ -276,7 +295,13 @@ export default function AddProductPage() {
         lowStockAlert: parseInt(lowStockAlert) || 10,
         sizes, colors: colors.map(c => ({ name: c, hex: COLORS_LIST.find(x => x.name === c)?.hex || '#000' })),
         workTypes, pattern: pattern || undefined, washCare: washCare || undefined,
+        closure: closure || undefined,
+        pockets: pockets || undefined,
+        weavePattern: weavePattern || undefined,
         occasionTags,
+        sellerAddress: sellerAddress || undefined,
+        sellerPincode: sellerPincode || undefined,
+        sellerPhone: sellerPhone || undefined,
         weight: weight ? parseInt(weight) : undefined,
         dispatchTime: parseInt(dispatchTime),
         images, mainImage: images[0] || undefined,
@@ -438,6 +463,12 @@ export default function AddProductPage() {
           <SectionCard title="Product Details">
             <div className="space-y-4">
               <div>
+                <FieldLabel>Product ID / SKU</FieldLabel>
+                <input value={productSku} onChange={e => setProductSku(e.target.value)} maxLength={50}
+                  placeholder="e.g. SKU-001 (optional — auto-assigned if left blank)"
+                  className={INPUT_CLS} />
+              </div>
+              <div>
                 <FieldLabel required>Product Title (English)</FieldLabel>
                 <input value={name} onChange={e => setName(e.target.value)} maxLength={120}
                   placeholder="e.g. Pure Banarasi Silk Saree with Zari Border"
@@ -451,34 +482,27 @@ export default function AddProductPage() {
                   className={`${INPUT_CLS} resize-none`} />
                 <p className="text-[10px] text-[#999] mt-0.5">{description.length}/2000 chars (min 50)</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <FieldLabel>Brand Name</FieldLabel>
-                  <input value={brand} onChange={e => setBrand(e.target.value)} placeholder="Leave blank if unbranded"
-                    className={INPUT_CLS} />
+              <div>
+                <FieldLabel>Tags / Keywords</FieldLabel>
+                <div className="flex gap-2">
+                  <input value={tagInput} onChange={e => setTagInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                    placeholder="e.g. silk, wedding" className={`${INPUT_CLS} flex-1`} />
+                  <button type="button" onClick={addTag}
+                    className="px-3 py-2 text-xs font-semibold text-white rounded-lg" style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+                    <Tag size={12} />
+                  </button>
                 </div>
-                <div>
-                  <FieldLabel>Tags / Keywords</FieldLabel>
-                  <div className="flex gap-2">
-                    <input value={tagInput} onChange={e => setTagInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                      placeholder="e.g. silk, wedding" className={`${INPUT_CLS} flex-1`} />
-                    <button type="button" onClick={addTag}
-                      className="px-3 py-2 text-xs font-semibold text-white rounded-lg" style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
-                      <Tag size={12} />
-                    </button>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {tags.map(t => (
+                      <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F5EDF2] text-[#5B1A3A] text-[10px] rounded-full font-medium">
+                        {t}
+                        <button type="button" onClick={() => setTags(p => p.filter(x => x !== t))} className="text-[#999] hover:text-[#5B1A3A]"><X size={8} /></button>
+                      </span>
+                    ))}
                   </div>
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {tags.map(t => (
-                        <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F5EDF2] text-[#5B1A3A] text-[10px] rounded-full font-medium">
-                          {t}
-                          <button type="button" onClick={() => setTags(p => p.filter(x => x !== t))} className="text-[#999] hover:text-[#5B1A3A]"><X size={8} /></button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </SectionCard>
@@ -706,6 +730,87 @@ export default function AddProductPage() {
             </div>
           </SectionCard>
 
+          {/* ── Section 8: Seller Details ── */}
+          <SectionCard title="Seller Details">
+            <div className="space-y-4">
+              <div>
+                <FieldLabel>Seller Name</FieldLabel>
+                <input value={sellerName} onChange={e => setSellerName(e.target.value)}
+                  placeholder="Your shop / business name"
+                  className={INPUT_CLS} />
+              </div>
+              <div>
+                <FieldLabel>Address</FieldLabel>
+                <input value={sellerAddress} onChange={e => setSellerAddress(e.target.value)}
+                  placeholder="Shop / warehouse address"
+                  className={INPUT_CLS} />
+              </div>
+              <div>
+                <FieldLabel>Pincode</FieldLabel>
+                <input type="text" inputMode="numeric" value={sellerPincode}
+                  onChange={e => setSellerPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit pincode"
+                  maxLength={6}
+                  className={INPUT_CLS} />
+              </div>
+              <div>
+                <FieldLabel>Phone Number</FieldLabel>
+                <div className="flex gap-2">
+                  <div className="flex items-center px-3 bg-[#F5F0E8] border border-[#E8E0E4] rounded-lg text-sm text-[#666] font-medium flex-shrink-0">
+                    +91
+                  </div>
+                  <input type="tel" inputMode="numeric" value={sellerPhone}
+                    onChange={e => setSellerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="10-digit phone number"
+                    maxLength={10}
+                    className={`${INPUT_CLS} flex-1`} />
+                </div>
+                <label className="flex items-start gap-2.5 mt-2.5 cursor-pointer">
+                  <input type="checkbox" checked={sellerPhoneConsent} onChange={e => setSellerPhoneConsent(e.target.checked)}
+                    className="mt-0.5 accent-[#5B1A3A] flex-shrink-0" />
+                  <span className="text-[11px] text-[#666] leading-relaxed">
+                    I confirm this is my registered business phone number and consent to receive order updates on this number.
+                  </span>
+                </label>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* ── Section 9: Other Details ── */}
+          <SectionCard title="Other Details">
+            <div className="space-y-4">
+              <div>
+                <FieldLabel>Brand Name</FieldLabel>
+                <input value={brand} onChange={e => setBrand(e.target.value)}
+                  placeholder="Type your brand name (leave blank if unbranded)"
+                  className={INPUT_CLS} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <FieldLabel>Closure</FieldLabel>
+                  <select value={closure} onChange={e => setClosure(e.target.value)} className={INPUT_CLS}>
+                    <option value="">Select closure</option>
+                    {CLOSURE_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <FieldLabel>No. of Pockets</FieldLabel>
+                  <select value={pockets} onChange={e => setPockets(e.target.value)} className={INPUT_CLS}>
+                    <option value="">Select pockets</option>
+                    {POCKETS_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Weave Pattern</FieldLabel>
+                <select value={weavePattern} onChange={e => setWeavePattern(e.target.value)} className={INPUT_CLS}>
+                  <option value="">Select weave pattern</option>
+                  {WEAVE_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+            </div>
+          </SectionCard>
+
           {/* ── Declarations & Submit ── */}
           <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-5">
             <div className="space-y-3 mb-5">
@@ -768,7 +873,6 @@ export default function AddProductPage() {
                 <p className="text-sm font-semibold text-[#333] line-clamp-2 mb-1" style={{ fontFamily: 'var(--font-playfair)' }}>
                   {name || <span className="text-[#CCC]">Product title will appear here</span>}
                 </p>
-                {nameHi && <p className="text-xs text-[#999] italic mb-1">{nameHi}</p>}
 
                 {/* Price */}
                 <div className="flex items-baseline gap-2 mb-2">
