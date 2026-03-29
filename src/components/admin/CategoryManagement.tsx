@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronRight, ChevronDown, Plus, Pencil, Search, X, Check } from 'lucide-react';
 
 interface Category {
@@ -11,52 +11,26 @@ interface Category {
   displayOrder: number;
   active: boolean;
   productCount: number;
+  parentId?: string | null;
+  level?: number;
   children?: Category[];
 }
 
-const MOCK_CATEGORIES: Category[] = [
-  {
-    id: '1', name: 'Women', nameHindi: 'महिलाएं', slug: 'women', displayOrder: 1, active: true, productCount: 45,
-    children: [
-      {
-        id: '1-1', name: 'Sarees', nameHindi: 'साड़ियाँ', slug: 'sarees', displayOrder: 1, active: true, productCount: 28,
-        children: [
-          { id: '1-1-1', name: 'Silk Sarees', nameHindi: 'सिल्क साड़ियाँ', slug: 'silk-sarees', displayOrder: 1, active: true, productCount: 12 },
-          { id: '1-1-2', name: 'Cotton Sarees', nameHindi: 'कॉटन साड़ियाँ', slug: 'cotton-sarees', displayOrder: 2, active: true, productCount: 8 },
-          { id: '1-1-3', name: 'Banarasi Sarees', nameHindi: 'बनारसी साड़ियाँ', slug: 'banarasi-sarees', displayOrder: 3, active: false, productCount: 8 },
-        ],
-      },
-      {
-        id: '1-2', name: 'Kurtis & Kurta Sets', nameHindi: 'कुर्तियाँ', slug: 'kurtis-kurta-sets', displayOrder: 2, active: true, productCount: 17,
-        children: [
-          { id: '1-2-1', name: 'Straight Kurtis', nameHindi: 'स्ट्रेट कुर्ती', slug: 'straight-kurtis', displayOrder: 1, active: true, productCount: 9 },
-          { id: '1-2-2', name: 'Anarkali Kurtis', nameHindi: 'अनारकली कुर्ती', slug: 'anarkali-kurtis', displayOrder: 2, active: true, productCount: 8 },
-        ],
-      },
-      { id: '1-3', name: 'Lehengas', nameHindi: 'लहंगा', slug: 'lehengas', displayOrder: 3, active: true, productCount: 0, children: [] },
-    ],
-  },
-  {
-    id: '2', name: 'Men', nameHindi: 'पुरुष', slug: 'men', displayOrder: 2, active: true, productCount: 22,
-    children: [
-      {
-        id: '2-1', name: 'Sherwanis', nameHindi: 'शेरवानी', slug: 'sherwanis', displayOrder: 1, active: true, productCount: 10,
-        children: [
-          { id: '2-1-1', name: 'Wedding Sherwanis', nameHindi: 'शादी शेरवानी', slug: 'wedding-sherwanis', displayOrder: 1, active: true, productCount: 6 },
-          { id: '2-1-2', name: 'Party Sherwanis', nameHindi: 'पार्टी शेरवानी', slug: 'party-sherwanis', displayOrder: 2, active: true, productCount: 4 },
-        ],
-      },
-      { id: '2-2', name: 'Kurta Pyjama', nameHindi: 'कुर्ता पायजामा', slug: 'kurta-pyjama', displayOrder: 2, active: true, productCount: 12, children: [] },
-    ],
-  },
-  {
-    id: '3', name: 'Kids', nameHindi: 'बच्चे', slug: 'kids', displayOrder: 3, active: true, productCount: 18,
-    children: [
-      { id: '3-1', name: 'Girls Ethnic', nameHindi: 'लड़कियों का एथनिक', slug: 'girls-ethnic', displayOrder: 1, active: true, productCount: 10, children: [] },
-      { id: '3-2', name: 'Boys Ethnic', nameHindi: 'लड़कों का एथनिक', slug: 'boys-ethnic', displayOrder: 2, active: true, productCount: 8, children: [] },
-    ],
-  },
-];
+// Maps DB snake_case to component camelCase
+function mapDBCategory(c: any): Category {
+  return {
+    id: c.id,
+    name: c.name,
+    nameHindi: c.name_hindi || undefined,
+    slug: c.slug,
+    displayOrder: c.display_order ?? 0,
+    active: c.is_active,
+    productCount: c.product_count ?? 0,
+    parentId: c.parent_id,
+    level: c.level,
+    children: (c.children || []).map(mapDBCategory),
+  };
+}
 
 interface ModalState {
   open: boolean;
@@ -71,11 +45,31 @@ function slugify(text: string) {
 }
 
 export default function CategoryManagement() {
-  const [categories, setCategories] = useState<Category[]>(MOCK_CATEGORIES);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ '1': true, '1-1': true });
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<ModalState>({ open: false, mode: 'add', level: 1 });
   const [form, setForm] = useState({ name: '', nameHindi: '', slug: '', displayOrder: 1, active: true });
+
+  const fetchCategories = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/categories?tree=true');
+      const data = await res.json();
+      if (data.success) {
+        const mapped = (data.data || []).map(mapDBCategory);
+        setCategories(mapped);
+        // Auto-expand first L1 category
+        if (mapped.length > 0) {
+          setExpanded(prev => ({ ...prev, [mapped[0].id]: true }));
+        }
+      }
+    } catch { /* silent */ }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
   const toggle = (id: string) => setExpanded(p => ({ ...p, [id]: !p[id] }));
 
@@ -89,55 +83,50 @@ export default function CategoryManagement() {
     setModal({ open: true, mode: 'edit', level, category: cat });
   };
 
-  const toggleActive = (id: string, level: 1 | 2 | 3, parentId?: string, grandParentId?: string) => {
-    setCategories(prev => prev.map(l1 => {
-      if (level === 1 && l1.id === id) return { ...l1, active: !l1.active };
-      if (!l1.children) return l1;
-      return {
-        ...l1, children: l1.children.map(l2 => {
-          if (level === 2 && l2.id === id) return { ...l2, active: !l2.active };
-          if (!l2.children) return l2;
-          return {
-            ...l2, children: l2.children.map(l3 =>
-              level === 3 && l3.id === id ? { ...l3, active: !l3.active } : l3
-            ),
-          };
-        }),
-      };
-    }));
+  const toggleActive = async (id: string, currentActive: boolean) => {
+    try {
+      await fetch(`/api/admin/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !currentActive }),
+      });
+      await fetchCategories();
+    } catch { /* silent */ }
   };
 
-  const handleSave = () => {
+  // Keep legacy signature stub to avoid breaking downstream JSX calls that pass (id, level, parentId?)
+  const handleSave = async () => {
     if (!form.name.trim()) return;
-    const newCat: Category = {
-      id: Date.now().toString(),
-      name: form.name.trim(),
-      nameHindi: form.nameHindi.trim() || undefined,
-      slug: form.slug || slugify(form.name),
-      displayOrder: form.displayOrder,
-      active: form.active,
-      productCount: 0,
-      children: modal.level < 3 ? [] : undefined,
-    };
-    if (modal.mode === 'add') {
-      if (modal.level === 1) {
-        setCategories(p => [...p, newCat]);
-      } else if (modal.level === 2) {
-        setCategories(p => p.map(l1 => l1.id === modal.parentId ? { ...l1, children: [...(l1.children || []), newCat] } : l1));
-      } else {
-        setCategories(p => p.map(l1 => ({ ...l1, children: l1.children?.map(l2 => l2.id === modal.parentId ? { ...l2, children: [...(l2.children || []), newCat] } : l2) })));
+    try {
+      if (modal.mode === 'add') {
+        await fetch('/api/admin/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: form.name.trim(),
+            name_hindi: form.nameHindi.trim() || null,
+            slug: form.slug || slugify(form.name),
+            parent_id: modal.parentId || null,
+            level: modal.level,
+            display_order: form.displayOrder,
+            is_active: form.active,
+          }),
+        });
+      } else if (modal.mode === 'edit' && modal.category) {
+        await fetch(`/api/admin/categories/${modal.category.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: form.name.trim(),
+            name_hindi: form.nameHindi.trim() || null,
+            slug: form.slug || slugify(form.name),
+            display_order: form.displayOrder,
+            is_active: form.active,
+          }),
+        });
       }
-    } else if (modal.mode === 'edit' && modal.category) {
-      const id = modal.category.id;
-      const updated = { ...modal.category, ...form, slug: form.slug || slugify(form.name) };
-      setCategories(p => p.map(l1 => {
-        if (l1.id === id) return { ...updated, children: l1.children };
-        return { ...l1, children: l1.children?.map(l2 => {
-          if (l2.id === id) return { ...updated, children: l2.children };
-          return { ...l2, children: l2.children?.map(l3 => l3.id === id ? { ...updated } : l3) };
-        }) };
-      }));
-    }
+      await fetchCategories();
+    } catch { /* silent */ }
     setModal({ open: false, mode: 'add', level: 1 });
   };
 
@@ -177,7 +166,16 @@ export default function CategoryManagement() {
 
       {/* Category Tree */}
       <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] overflow-hidden">
-        {categories.filter(l1 => matchesSearch(l1.name) || l1.children?.some(l2 => matchesSearch(l2.name) || l2.children?.some(l3 => matchesSearch(l3.name)))).map(l1 => (
+        {loading ? (
+          <div className="p-6 space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-10 bg-[#E8E0E4] rounded-lg animate-pulse" />)}
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">
+            No categories found. Add your first category to get started.
+          </div>
+        ) : null}
+        {!loading && categories.filter(l1 => matchesSearch(l1.name) || l1.children?.some(l2 => matchesSearch(l2.name) || l2.children?.some(l3 => matchesSearch(l3.name)))).map(l1 => (
           <div key={l1.id} className="border-b border-[rgba(196,154,60,0.06)] last:border-0">
             {/* Level 1 Row */}
             <div className="flex items-center gap-2 px-4 py-3 bg-white border-l-[3px] border-l-[#5B1A3A] hover:bg-[#FAF7F8] transition-colors group">
@@ -196,7 +194,7 @@ export default function CategoryManagement() {
                 <button onClick={() => openAdd(2, l1.id)} className="px-2.5 py-1 border border-[#C49A3C] text-[#C49A3C] text-xs rounded-lg hover:bg-[#C49A3C]/5">
                   <Plus size={11} className="inline mr-1" />Subcategory
                 </button>
-                <button onClick={() => toggleActive(l1.id, 1)} className={`text-xs ${l1.active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
+                <button onClick={() => toggleActive(l1.id, l1.active)} className={`text-xs ${l1.active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
                   {l1.active ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
@@ -221,7 +219,7 @@ export default function CategoryManagement() {
                     <button onClick={() => openAdd(3, l2.id)} className="px-2.5 py-1 border border-[#C49A3C] text-[#C49A3C] text-xs rounded-lg hover:bg-[#C49A3C]/5">
                       <Plus size={11} className="inline mr-1" />Type
                     </button>
-                    <button onClick={() => toggleActive(l2.id, 2)} className={`text-xs ${l2.active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
+                    <button onClick={() => toggleActive(l2.id, l2.active)} className={`text-xs ${l2.active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
                       {l2.active ? 'Deactivate' : 'Activate'}
                     </button>
                   </div>
@@ -239,7 +237,7 @@ export default function CategoryManagement() {
                       <button onClick={() => openEdit(l3, 3)} className="px-2.5 py-1 border border-[#5B1A3A] text-[#5B1A3A] text-xs rounded-lg hover:bg-[#5B1A3A]/5">
                         <Pencil size={11} className="inline mr-1" />Edit
                       </button>
-                      <button onClick={() => toggleActive(l3.id, 3)} className={`text-xs ${l3.active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
+                      <button onClick={() => toggleActive(l3.id, l3.active)} className={`text-xs ${l3.active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
                         {l3.active ? 'Deactivate' : 'Activate'}
                       </button>
                     </div>

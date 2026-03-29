@@ -1,97 +1,18 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronRight, X, Check, ImagePlus, Tag, Package, Truck, AlertCircle } from 'lucide-react';
 
-/* ─── Category Taxonomy (3 levels) ─────────────────────────────────────────── */
+/* ─── Category Types ────────────────────────────────────────────────────────── */
 
-const L1_CATS = [
-  { id: 'women',      name: 'Women',          nameHi: 'महिला',       icon: '👩' },
-  { id: 'men',        name: 'Men',             nameHi: 'पुरुष',       icon: '👨' },
-  { id: 'kids',       name: 'Kids',            nameHi: 'बच्चे',       icon: '👧' },
-  { id: 'accessories',name: 'Accessories',     nameHi: 'एक्सेसरीज़',  icon: '💍' },
-  { id: 'occasion',   name: 'Occasion Shop',   nameHi: 'अवसर शॉप',   icon: '🎉' },
-];
-
-const L2_CATS: Record<string, { id: string; name: string; nameHi: string; icon: string }[]> = {
-  women: [
-    { id: 'sarees',         name: 'Sarees',               nameHi: 'साड़ियाँ',        icon: '🥻' },
-    { id: 'kurtis',         name: 'Kurtis & Kurta Sets',  nameHi: 'कुर्ती सेट',      icon: '👘' },
-    { id: 'salwar-suits',   name: 'Salwar Suits',          nameHi: 'सलवार सूट',      icon: '👗' },
-    { id: 'lehengas',       name: 'Lehengas',              nameHi: 'लहंगे',           icon: '✨' },
-    { id: 'dress-materials',name: 'Dress Materials',       nameHi: 'ड्रेस मटेरियल',  icon: '🧵' },
-    { id: 'blouses',        name: 'Blouses',               nameHi: 'ब्लाउज',          icon: '👚' },
-    { id: 'dupattas',       name: 'Dupattas & Stoles',     nameHi: 'दुपट्टे',          icon: '🧣' },
-    { id: 'western-wear',   name: 'Western Wear',          nameHi: 'वेस्टर्न वियर',   icon: '👖' },
-    { id: 'bottom-wear',    name: 'Bottom Wear',           nameHi: 'बॉटम वियर',       icon: '👟' },
-    { id: 'innerwear',      name: 'Innerwear & Loungewear',nameHi: 'इनरवियर',         icon: '🩱' },
-    { id: 'winter-wear',    name: 'Winter Wear',           nameHi: 'विंटर वियर',      icon: '🧥' },
-  ],
-  men: [
-    { id: 'mens-ethnic',    name: 'Ethnic Wear',           nameHi: 'एथनिक वियर',     icon: '👘' },
-    { id: 'mens-top',       name: 'Top Wear',              nameHi: 'टॉप वियर',        icon: '👕' },
-    { id: 'mens-bottom',    name: 'Bottom Wear',           nameHi: 'बॉटम वियर',       icon: '👖' },
-    { id: 'mens-innerwear', name: 'Innerwear',             nameHi: 'इनरवियर',         icon: '🩲' },
-    { id: 'mens-sports',    name: 'Sports & Active Wear',  nameHi: 'स्पोर्ट्स वियर',  icon: '🏋️' },
-    { id: 'mens-winter',    name: 'Winter Wear',           nameHi: 'विंटर वियर',      icon: '🧥' },
-    { id: 'mens-nightwear', name: 'Night Wear',            nameHi: 'नाइट वियर',       icon: '🌙' },
-    { id: 'mens-footwear',  name: 'Footwear',              nameHi: 'फुटवियर',         icon: '👟' },
-  ],
-  kids: [
-    { id: 'girls',   name: 'Girls (2–14 yrs)', nameHi: 'लड़कियाँ', icon: '👧' },
-    { id: 'boys',    name: 'Boys (2–14 yrs)',  nameHi: 'लड़के',     icon: '👦' },
-    { id: 'infant',  name: 'Infant (0–2 yrs)', nameHi: 'शिशु',     icon: '🍼' },
-  ],
-  accessories: [
-    { id: 'jewellery',    name: 'Jewellery',        nameHi: 'ज्वेलरी',  icon: '💎' },
-    { id: 'bags',         name: 'Bags & Clutches',  nameHi: 'बैग्स',    icon: '👜' },
-    { id: 'acc-footwear', name: 'Footwear',         nameHi: 'फुटवियर',  icon: '👡' },
-    { id: 'watches',      name: 'Watches',          nameHi: 'घड़ियाँ',   icon: '⌚' },
-    { id: 'acc-others',   name: 'Others',           nameHi: 'अन्य',     icon: '🎀' },
-  ],
-  occasion: [
-    { id: 'wedding-occ',  name: 'Wedding Collection', nameHi: 'वेडिंग',   icon: '💍' },
-    { id: 'festival-occ', name: 'Festival Collection', nameHi: 'फेस्टिवल', icon: '🪔' },
-    { id: 'daily-occ',    name: 'Daily Wear',          nameHi: 'डेली',     icon: '☀️' },
-    { id: 'party-occ',    name: 'Party Wear',          nameHi: 'पार्टी',   icon: '🎉' },
-  ],
-};
-
-const L3_CATS: Record<string, { id: string; name: string; nameHi: string }[]> = {
-  sarees:         [{ id:'silk-sarees',name:'Silk Sarees',nameHi:'सिल्क साड़ी' },{ id:'cotton-sarees',name:'Cotton Sarees',nameHi:'कॉटन साड़ी' },{ id:'georgette-sarees',name:'Georgette Sarees',nameHi:'जॉर्जेट साड़ी' },{ id:'banarasi-sarees',name:'Banarasi Sarees',nameHi:'बनारसी साड़ी' },{ id:'chiffon-sarees',name:'Chiffon Sarees',nameHi:'शिफॉन साड़ी' },{ id:'printed-sarees',name:'Printed Sarees',nameHi:'प्रिंटेड साड़ी' },{ id:'embroidered-sarees',name:'Embroidered Sarees',nameHi:'कढ़ाई साड़ी' },{ id:'designer-sarees',name:'Designer Sarees',nameHi:'डिज़ाइनर साड़ी' },{ id:'daily-sarees',name:'Daily Wear Sarees',nameHi:'डेली वियर साड़ी' },{ id:'party-sarees',name:'Party Wear Sarees',nameHi:'पार्टी वियर साड़ी' }],
-  kurtis:         [{ id:'straight-kurtis',name:'Straight Kurtis',nameHi:'स्ट्रेट कुर्ती' },{ id:'anarkali-kurtis',name:'Anarkali Kurtis',nameHi:'अनारकली कुर्ती' },{ id:'aline-kurtis',name:'A-Line Kurtis',nameHi:'ए-लाइन कुर्ती' },{ id:'kurti-palazzo',name:'Kurti with Palazzo',nameHi:'कुर्ती पलाज़ो' },{ id:'kurti-pant',name:'Kurti with Pant',nameHi:'कुर्ती पैंट' },{ id:'kurti-dupatta',name:'Kurti with Dupatta',nameHi:'कुर्ती दुपट्टा' },{ id:'kurti-set-3pc',name:'Kurti Set (3-piece)',nameHi:'3 पीस कुर्ती सेट' },{ id:'short-kurtis',name:'Short Kurtis',nameHi:'शॉर्ट कुर्ती' },{ id:'long-kurtis',name:'Long Kurtis',nameHi:'लॉन्ग कुर्ती' },{ id:'embroidered-kurtis',name:'Embroidered Kurtis',nameHi:'कढ़ाई कुर्ती' }],
-  'salwar-suits': [{ id:'churidar-suits',name:'Churidar Suits',nameHi:'चूड़ीदार सूट' },{ id:'patiala-suits',name:'Patiala Suits',nameHi:'पटियाला सूट' },{ id:'anarkali-suits',name:'Anarkali Suits',nameHi:'अनारकली सूट' },{ id:'pakistani-suits',name:'Pakistani Suits',nameHi:'पाकिस्तानी सूट' },{ id:'unstitched-suits',name:'Unstitched Suits',nameHi:'अनस्टिचड सूट' },{ id:'semi-stitched',name:'Semi-Stitched Suits',nameHi:'सेमी स्टिचड' },{ id:'readymade-suits',name:'Readymade Suits',nameHi:'रेडीमेड सूट' },{ id:'cotton-suits',name:'Cotton Suits',nameHi:'कॉटन सूट' }],
-  lehengas:       [{ id:'bridal-lehengas',name:'Bridal Lehengas',nameHi:'ब्राइडल लहंगा' },{ id:'party-lehengas',name:'Party Wear Lehengas',nameHi:'पार्टी लहंगा' },{ id:'festival-lehengas',name:'Festival Lehengas',nameHi:'फेस्टिवल लहंगा' },{ id:'lehenga-choli',name:'Lehenga Choli Sets',nameHi:'लहंगा चोली' },{ id:'half-saree',name:'Half Saree / Langa Voni',nameHi:'हाफ साड़ी' },{ id:'designer-lehengas',name:'Designer Lehengas',nameHi:'डिज़ाइनर लहंगा' }],
-  'dress-materials':[{ id:'cotton-dm',name:'Cotton Dress Material',nameHi:'कॉटन' },{ id:'silk-dm',name:'Silk Dress Material',nameHi:'सिल्क' },{ id:'georgette-dm',name:'Georgette Dress Material',nameHi:'जॉर्जेट' },{ id:'embroidered-dm',name:'Embroidered Material',nameHi:'कढ़ाई मटेरियल' },{ id:'printed-dm',name:'Printed Material',nameHi:'प्रिंटेड' },{ id:'churidar-dm',name:'Churidar Material',nameHi:'चूड़ीदार मटेरियल' }],
-  blouses:        [{ id:'readymade-blouses',name:'Readymade Blouses',nameHi:'रेडीमेड ब्लाउज' },{ id:'blouse-pieces',name:'Blouse Pieces',nameHi:'ब्लाउज पीस' },{ id:'designer-blouses',name:'Designer Blouses',nameHi:'डिज़ाइनर ब्लाउज' },{ id:'padded-blouses',name:'Padded Blouses',nameHi:'पैडेड ब्लाउज' },{ id:'embroidered-blouses',name:'Embroidered Blouses',nameHi:'कढ़ाई ब्लाउज' }],
-  dupattas:       [{ id:'silk-dupattas',name:'Silk Dupattas',nameHi:'सिल्क दुपट्टा' },{ id:'cotton-dupattas',name:'Cotton Dupattas',nameHi:'कॉटन दुपट्टा' },{ id:'embroidered-dupattas',name:'Embroidered Dupattas',nameHi:'कढ़ाई दुपट्टा' },{ id:'printed-dupattas',name:'Printed Dupattas',nameHi:'प्रिंटेड दुपट्टा' },{ id:'bandhani-dupattas',name:'Bandhani Dupattas',nameHi:'बंधनी दुपट्टा' },{ id:'phulkari-dupattas',name:'Phulkari Dupattas',nameHi:'फुलकारी दुपट्टा' },{ id:'stoles',name:'Stoles & Shawls',nameHi:'स्टोल और शॉल' }],
-  'western-wear': [{ id:'tops-tunics',name:'Tops & Tunics',nameHi:'टॉप्स' },{ id:'western-tshirts',name:'T-Shirts',nameHi:'टी-शर्ट' },{ id:'western-jeans',name:'Jeans',nameHi:'जींस' },{ id:'dresses',name:'Dresses',nameHi:'ड्रेसेज़' },{ id:'crop-tops',name:'Crop Tops',nameHi:'क्रॉप टॉप' },{ id:'jumpsuits',name:'Jumpsuits',nameHi:'जंपसूट' },{ id:'western-shirts',name:'Shirts',nameHi:'शर्ट' }],
-  'bottom-wear':  [{ id:'palazzos',name:'Palazzos',nameHi:'पलाज़ो' },{ id:'leggings',name:'Leggings',nameHi:'लेगिंग्स' },{ id:'pants-trousers',name:'Pants & Trousers',nameHi:'पैंट' },{ id:'skirts',name:'Skirts',nameHi:'स्कर्ट' },{ id:'culottes',name:'Culottes',nameHi:'क्यूलोट्स' },{ id:'jeggings',name:'Jeggings',nameHi:'जेगिंग्स' },{ id:'sharara',name:'Sharara Pants',nameHi:'शरारा' }],
-  innerwear:      [{ id:'bras',name:'Bras',nameHi:'ब्रा' },{ id:'panties',name:'Panties',nameHi:'पैंटीज़' },{ id:'nightgowns',name:'Nightgowns',nameHi:'नाइटगाउन' },{ id:'night-suits',name:'Night Suits',nameHi:'नाइट सूट' },{ id:'loungewear',name:'Loungewear Sets',nameHi:'लाउंजवियर' },{ id:'camisoles',name:'Camisoles',nameHi:'कैमीसोल' }],
-  'winter-wear':  [{ id:'sweaters',name:'Sweaters',nameHi:'स्वेटर' },{ id:'shawls',name:'Shawls & Wraps',nameHi:'शॉल' },{ id:'jackets',name:'Jackets',nameHi:'जैकेट' },{ id:'thermals-women',name:'Thermals',nameHi:'थर्मल' },{ id:'woolen-kurtis',name:'Woolen Kurtis',nameHi:'ऊनी कुर्ती' }],
-  'mens-ethnic':  [{ id:'kurtas',name:'Kurtas',nameHi:'कुर्ता' },{ id:'kurta-pajama',name:'Kurta Pajama Sets',nameHi:'कुर्ता पजामा' },{ id:'nehru-jackets',name:'Nehru Jackets',nameHi:'नेहरू जैकेट' },{ id:'sherwanis',name:'Sherwanis',nameHi:'शेरवानी' },{ id:'dhotis',name:'Dhotis & Lungis',nameHi:'धोती लुंगी' },{ id:'pathani',name:'Pathani Suits',nameHi:'पठानी सूट' }],
-  'mens-top':     [{ id:'mens-tshirts',name:'T-Shirts',nameHi:'टी-शर्ट' },{ id:'casual-shirts',name:'Casual Shirts',nameHi:'कैजुअल शर्ट' },{ id:'formal-shirts',name:'Formal Shirts',nameHi:'फॉर्मल शर्ट' },{ id:'polo-tshirts',name:'Polo T-Shirts',nameHi:'पोलो टी-शर्ट' },{ id:'oversized',name:'Oversized T-Shirts',nameHi:'ओवरसाइज़' }],
-  'mens-bottom':  [{ id:'mens-jeans',name:'Jeans',nameHi:'जींस' },{ id:'casual-trousers',name:'Casual Trousers',nameHi:'कैजुअल ट्राउज़र' },{ id:'formal-trousers',name:'Formal Trousers',nameHi:'फॉर्मल ट्राउज़र' },{ id:'cargo-pants',name:'Cargo Pants',nameHi:'कार्गो पैंट' },{ id:'mens-track',name:'Track Pants',nameHi:'ट्रैक पैंट' },{ id:'shorts',name:'Shorts',nameHi:'शॉर्ट्स' },{ id:'joggers',name:'Joggers',nameHi:'जॉगर्स' }],
-  'mens-innerwear':[{ id:'vests',name:'Vests',nameHi:'बनियान' },{ id:'briefs',name:'Briefs',nameHi:'ब्रीफ़्स' },{ id:'boxers',name:'Boxers',nameHi:'बॉक्सर्स' },{ id:'trunks',name:'Trunks',nameHi:'ट्रंक्स' }],
-  'mens-sports':  [{ id:'sports-track',name:'Track Pants',nameHi:'ट्रैक पैंट' },{ id:'track-suits',name:'Track Suits',nameHi:'ट्रैक सूट' },{ id:'gym-tshirts',name:'Gym T-Shirts',nameHi:'जिम टी-शर्ट' },{ id:'sports-shorts',name:'Sports Shorts',nameHi:'स्पोर्ट्स शॉर्ट्स' }],
-  'mens-winter':  [{ id:'mens-jackets',name:'Jackets',nameHi:'जैकेट' },{ id:'mens-sweaters',name:'Sweaters',nameHi:'स्वेटर' },{ id:'hoodies',name:'Hoodies',nameHi:'हुडी' },{ id:'sweatshirts',name:'Sweatshirts',nameHi:'स्वेटशर्ट' }],
-  'mens-nightwear':[{ id:'pyjamas',name:'Pyjamas',nameHi:'पजामा' },{ id:'mens-nightsuit',name:'Night Suits',nameHi:'नाइट सूट' }],
-  'mens-footwear':[{ id:'casual-shoes',name:'Casual Shoes',nameHi:'कैजुअल शूज़' },{ id:'formal-shoes',name:'Formal Shoes',nameHi:'फॉर्मल शूज़' },{ id:'sports-shoes',name:'Sports Shoes',nameHi:'स्पोर्ट्स शूज़' },{ id:'sandals',name:'Sandals & Slippers',nameHi:'सैंडल' },{ id:'juttis',name:'Ethnic Footwear (Juttis)',nameHi:'जूतियाँ' }],
-  girls:          [{ id:'girls-ethnic',name:'Ethnic Wear',nameHi:'एथनिक वियर' },{ id:'girls-dresses',name:'Dresses & Frocks',nameHi:'फ्रॉक' },{ id:'girls-tops',name:'Tops & T-Shirts',nameHi:'टॉप्स' },{ id:'girls-pants',name:'Pants & Leggings',nameHi:'पैंट' },{ id:'girls-sets',name:'Sets & Combos',nameHi:'सेट' },{ id:'girls-party',name:'Party Wear',nameHi:'पार्टी वियर' }],
-  boys:           [{ id:'boys-ethnic',name:'Ethnic Wear',nameHi:'एथनिक वियर' },{ id:'boys-tshirts',name:'T-Shirts & Shirts',nameHi:'टी-शर्ट' },{ id:'boys-pants',name:'Pants & Shorts',nameHi:'पैंट' },{ id:'boys-sets',name:'Sets & Combos',nameHi:'सेट' },{ id:'boys-party',name:'Party Wear',nameHi:'पार्टी वियर' },{ id:'boys-winter',name:'Winter Wear',nameHi:'विंटर वियर' }],
-  infant:         [{ id:'rompers',name:'Rompers & Onesies',nameHi:'रोम्पर्स' },{ id:'infant-sets',name:'Sets',nameHi:'सेट' },{ id:'infant-dresses',name:'Dresses (Girls)',nameHi:'फ्रॉक' },{ id:'infant-kurta',name:'Kurta Sets (Boys)',nameHi:'कुर्ता' }],
-  jewellery:      [{ id:'necklace-sets',name:'Necklace Sets',nameHi:'नेकलेस सेट' },{ id:'earrings',name:'Earrings',nameHi:'इयररिंग्स' },{ id:'bangles',name:'Bangles & Bracelets',nameHi:'चूड़ियाँ' },{ id:'anklets',name:'Anklets (Payal)',nameHi:'पायल' },{ id:'maang-tikka',name:'Maang Tikka',nameHi:'मांग टीका' },{ id:'nose-rings',name:'Nose Rings',nameHi:'नथनी' },{ id:'rings',name:'Rings',nameHi:'अंगूठी' },{ id:'bridal-jewellery',name:'Bridal Jewellery Sets',nameHi:'ब्राइडल ज्वेलरी' }],
-  bags:           [{ id:'handbags',name:'Handbags',nameHi:'हैंडबैग' },{ id:'clutches',name:'Clutches',nameHi:'क्लच' },{ id:'tote-bags',name:'Tote Bags',nameHi:'टोट बैग' },{ id:'sling-bags',name:'Sling Bags',nameHi:'स्लिंग बैग' },{ id:'potli-bags',name:'Potli Bags (Ethnic)',nameHi:'पोटली बैग' }],
-  'acc-footwear': [{ id:'women-sandals',name:'Women Sandals',nameHi:'सैंडल' },{ id:'women-heels',name:'Women Heels',nameHi:'हील्स' },{ id:'women-flats',name:'Women Flats',nameHi:'फ्लैट्स' },{ id:'juttis-women',name:'Juttis & Mojaris',nameHi:'जूतियाँ' },{ id:'kolhapuri',name:'Kolhapuri Chappals',nameHi:'कोल्हापुरी' }],
-  watches:        [{ id:'women-watches',name:'Women Watches',nameHi:'महिला घड़ी' },{ id:'men-watches',name:'Men Watches',nameHi:'पुरुष घड़ी' },{ id:'kids-watches',name:'Kids Watches',nameHi:'बच्चों की घड़ी' }],
-  'acc-others':   [{ id:'belts',name:'Belts',nameHi:'बेल्ट' },{ id:'sunglasses',name:'Sunglasses',nameHi:'सनग्लासेज़' },{ id:'hair-accessories',name:'Hair Accessories',nameHi:'हेयर एक्सेसरीज़' },{ id:'scarves',name:'Scarves & Stoles',nameHi:'स्कार्फ' }],
-  'wedding-occ':  [{ id:'bridal-wear',name:'Bridal Wear',nameHi:'ब्राइडल वियर' },{ id:'groom-wear',name:'Groom Wear',nameHi:'ग्रूम वियर' },{ id:'wedding-guest-w',name:'Guest Outfits (Women)',nameHi:'गेस्ट आउटफिट' },{ id:'mehendi-haldi',name:'Mehendi & Haldi Wear',nameHi:'मेहंदी हल्दी' },{ id:'sangeet',name:'Sangeet Outfits',nameHi:'संगीत आउटफिट' }],
-  'festival-occ': [{ id:'diwali',name:'Diwali Special',nameHi:'दिवाली' },{ id:'chhath',name:'Chhath Puja Special',nameHi:'छठ पूजा' },{ id:'eid-occ',name:'Eid Collection',nameHi:'ईद' },{ id:'navratri-occ',name:'Navratri / Durga Puja',nameHi:'नवरात्रि' },{ id:'holi-occ',name:'Holi Special',nameHi:'होली' }],
-  'daily-occ':    [{ id:'office-women',name:'Office Wear (Women)',nameHi:'ऑफिस वियर' },{ id:'office-men',name:'Office Wear (Men)',nameHi:'ऑफिस वियर' },{ id:'college',name:'College / Campus',nameHi:'कॉलेज' },{ id:'casual-everyday',name:'Casual Everyday',nameHi:'कैजुअल' }],
-  'party-occ':    [{ id:'evening',name:'Evening / Cocktail',nameHi:'इवनिंग' },{ id:'birthday',name:'Birthday Party',nameHi:'बर्थडे' },{ id:'anniversary',name:'Anniversary',nameHi:'एनिवर्सरी' },{ id:'reception',name:'Reception Wear',nameHi:'रिसेप्शन' }],
-};
+interface CatOption {
+  id: string;
+  name: string;
+  nameHi: string;
+  icon: string;
+}
 
 /* ─── Occasion tags ─────────────────────────────────────────────────────────── */
 const OCCASION_TAGS = [
@@ -173,6 +94,14 @@ export default function AddProductPage() {
   const [l3, setL3] = useState('');
   const [catSearch, setCatSearch] = useState('');
 
+  /* Categories fetched from DB */
+  const [l1Cats, setL1Cats] = useState<CatOption[]>([]);
+  const [l2Cats, setL2Cats] = useState<CatOption[]>([]);
+  const [l3Cats, setL3Cats] = useState<CatOption[]>([]);
+  const [catsLoading, setCatsLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<{ l1Id: string; l1Name: string; l2Id: string; l2Name: string; l3Id: string; l3Name: string; breadcrumb: string }[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   /* Product details */
   const [name, setName]         = useState('');
   const [nameHi, setNameHi]     = useState('');
@@ -223,38 +152,90 @@ export default function AddProductPage() {
       });
   }, [user?.id]);
 
+  /* Load L1 categories on mount */
+  useEffect(() => {
+    setCatsLoading(true);
+    fetch('/api/categories?level=1&active=true')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setL1Cats((d.data || []).map((c: any) => ({ id: c.id, name: c.name, nameHi: c.name_hindi || '', icon: c.icon || '' })));
+        }
+      })
+      .catch(() => {/* silent */})
+      .finally(() => setCatsLoading(false));
+  }, []);
+
+  /* Load L2 when L1 selected */
+  useEffect(() => {
+    if (!l1) { setL2Cats([]); return; }
+    fetch(`/api/categories?parent_id=${l1}&active=true`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setL2Cats((d.data || []).map((c: any) => ({ id: c.id, name: c.name, nameHi: c.name_hindi || '', icon: c.icon || '' })));
+        }
+      })
+      .catch(() => {/* silent */});
+  }, [l1]);
+
+  /* Load L3 when L2 selected */
+  useEffect(() => {
+    if (!l2) { setL3Cats([]); return; }
+    fetch(`/api/categories?parent_id=${l2}&active=true`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setL3Cats((d.data || []).map((c: any) => ({ id: c.id, name: c.name, nameHi: c.name_hindi || '', icon: c.icon || '' })));
+        }
+      })
+      .catch(() => {/* silent */});
+  }, [l2]);
+
+  /* Debounced category search */
+  const runSearch = useCallback((q: string) => {
+    if (q.length < 2) { setSearchResults([]); return; }
+    setSearchLoading(true);
+    fetch(`/api/categories/search?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setSearchResults((d.data || [])
+            .filter((c: any) => c.level === 3)
+            .map((c: any) => ({
+              l1Id: c.l1_id || '',
+              l1Name: c.breadcrumb?.split(' > ')[0] || '',
+              l2Id: c.l2_id || '',
+              l2Name: c.breadcrumb?.split(' > ')[1] || '',
+              l3Id: c.id,
+              l3Name: c.name,
+              breadcrumb: c.breadcrumb || c.name,
+            }))
+            .slice(0, 8)
+          );
+        }
+      })
+      .catch(() => {/* silent */})
+      .finally(() => setSearchLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!catSearch.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(() => runSearch(catSearch.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [catSearch, runSearch]);
+
   /* Derived values */
   const discountPct = mrp && price && parseFloat(mrp) > parseFloat(price)
     ? Math.round((1 - parseFloat(price) / parseFloat(mrp)) * 100) : 0;
-  const l1Label = L1_CATS.find(c => c.id === l1);
-  const l2Label = (L2_CATS[l1] || []).find(c => c.id === l2);
-  const l3Label = (L3_CATS[l2] || []).find(c => c.id === l3);
+  const l1Label = l1Cats.find(c => c.id === l1);
+  const l2Label = l2Cats.find(c => c.id === l2);
+  const l3Label = l3Cats.find(c => c.id === l3);
 
-  /* Category search */
-  const catSearchResults = useMemo(() => {
-    if (!catSearch.trim() || catSearch.length < 2) return [];
-    const q = catSearch.toLowerCase();
-    const results: { l1Id: string; l1Name: string; l2Id: string; l2Name: string; l3Id: string; l3Name: string }[] = [];
-    for (const [l2Id, l3List] of Object.entries(L3_CATS)) {
-      const l2Cat = Object.values(L2_CATS).flat().find(c => c.id === l2Id);
-      const l1Entry = Object.entries(L2_CATS).find(([, v]) => v.some(c => c.id === l2Id));
-      if (!l2Cat || !l1Entry) continue;
-      const l1Cat = L1_CATS.find(c => c.id === l1Entry[0]);
-      if (!l1Cat) continue;
-      for (const l3 of l3List) {
-        if (l3.name.toLowerCase().includes(q) || l2Cat.name.toLowerCase().includes(q) || l1Cat.name.toLowerCase().includes(q)) {
-          results.push({ l1Id: l1Cat.id, l1Name: l1Cat.name, l2Id, l2Name: l2Cat.name, l3Id: l3.id, l3Name: l3.name });
-          if (results.length >= 8) return results;
-        }
-      }
-    }
-    return results;
-  }, [catSearch]);
-
-  function selectL1(id: string) { setL1(id); setL2(''); setL3(''); setCatSearch(''); }
-  function selectL2(id: string) { setL2(id); setL3(''); }
+  function selectL1(id: string) { setL1(id); setL2(''); setL3(''); setL2Cats([]); setL3Cats([]); setCatSearch(''); setSearchResults([]); }
+  function selectL2(id: string) { setL2(id); setL3(''); setL3Cats([]); }
   function selectL3(id: string) { setL3(id); }
-  function resetCat() { setL1(''); setL2(''); setL3(''); }
+  function resetCat() { setL1(''); setL2(''); setL3(''); setL2Cats([]); setL3Cats([]); }
   function toggleMulti(arr: string[], setArr: (v: string[]) => void, val: string) {
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
   }
@@ -345,11 +326,14 @@ export default function AddProductPage() {
               <input value={catSearch} onChange={e => setCatSearch(e.target.value)}
                 placeholder="Search category… e.g. Banarasi Saree, Kurta"
                 className={`${INPUT_CLS} pl-8 text-xs`} />
-              {catSearchResults.length > 0 && catSearch && (
+              {searchLoading && catSearch.length >= 2 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E8E0E4] rounded-xl shadow-lg z-20 px-3 py-2 text-xs text-[#999]">Searching…</div>
+              )}
+              {searchResults.length > 0 && catSearch && !searchLoading && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E8E0E4] rounded-xl shadow-lg z-20 max-h-56 overflow-y-auto">
-                  {catSearchResults.map(r => (
+                  {searchResults.map(r => (
                     <button key={r.l3Id} type="button"
-                      onClick={() => { selectL1(r.l1Id); selectL2(r.l2Id); selectL3(r.l3Id); setCatSearch(''); }}
+                      onClick={() => { selectL1(r.l1Id); selectL2(r.l2Id); selectL3(r.l3Id); setCatSearch(''); setSearchResults([]); }}
                       className="w-full text-left px-3 py-2.5 text-xs hover:bg-[#F5EDF2] transition-colors flex items-center gap-1.5 border-b border-[#E8E0E4]/50 last:border-0">
                       <span className="text-[#999]">{r.l1Name}</span>
                       <ChevronRight size={10} className="text-[#C49A3C]" />
@@ -379,27 +363,35 @@ export default function AddProductPage() {
                 {/* Step 1: Main category */}
                 <div className="mb-1">
                   <p className="text-xs font-medium text-[#666] mb-2">Step 1: Main Category <span className="text-red-500">*</span></p>
-                  <div className="flex flex-wrap gap-2">
-                    {L1_CATS.map(c => (
-                      <button key={c.id} type="button" onClick={() => selectL1(c.id)}
-                        className="flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-[14px] border transition-all duration-200 min-w-[80px]"
-                        style={l1 === c.id
-                          ? { borderColor: '#5B1A3A', borderWidth: '2px', background: '#F5EDF2', boxShadow: '0 4px 15px rgba(91,26,58,0.1)' }
-                          : { borderColor: '#E8E0E4', background: 'white' }}>
-                        <span className="text-xl">{c.icon}</span>
-                        <span className="text-xs font-semibold text-[#333]">{c.name}</span>
-                        <span className="text-[9px] italic text-[#C49A3C]">{c.nameHi}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {catsLoading ? (
+                    <div className="flex gap-2">
+                      {[1,2,3,4,5].map(i => <div key={i} className="w-20 h-16 rounded-[14px] bg-[#E8E0E4] animate-pulse" />)}
+                    </div>
+                  ) : l1Cats.length === 0 ? (
+                    <p className="text-xs text-[#999]">Unable to load categories. Please refresh.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {l1Cats.map(c => (
+                        <button key={c.id} type="button" onClick={() => selectL1(c.id)}
+                          className="flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-[14px] border transition-all duration-200 min-w-[80px]"
+                          style={l1 === c.id
+                            ? { borderColor: '#5B1A3A', borderWidth: '2px', background: '#F5EDF2', boxShadow: '0 4px 15px rgba(91,26,58,0.1)' }
+                            : { borderColor: '#E8E0E4', background: 'white' }}>
+                          <span className="text-xl">{c.icon}</span>
+                          <span className="text-xs font-semibold text-[#333]">{c.name}</span>
+                          <span className="text-[9px] italic text-[#C49A3C]">{c.nameHi}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Step 2: Subcategory */}
-                {l1 && (L2_CATS[l1] || []).length > 0 && (
+                {l1 && l2Cats.length > 0 && (
                   <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <p className="text-xs font-medium text-[#666] mb-2">Step 2: Subcategory <span className="text-red-500">*</span></p>
                     <div className="flex flex-wrap gap-2">
-                      {(L2_CATS[l1] || []).map(c => (
+                      {l2Cats.map(c => (
                         <button key={c.id} type="button" onClick={() => selectL2(c.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all"
                           style={l2 === c.id
@@ -413,11 +405,11 @@ export default function AddProductPage() {
                 )}
 
                 {/* Step 3: Product type */}
-                {l2 && (L3_CATS[l2] || []).length > 0 && (
+                {l2 && l3Cats.length > 0 && (
                   <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <p className="text-xs font-medium text-[#666] mb-2">Step 3: Product Type <span className="text-red-500">*</span></p>
                     <div className="flex flex-wrap gap-2">
-                      {(L3_CATS[l2] || []).map(c => (
+                      {l3Cats.map(c => (
                         <button key={c.id} type="button" onClick={() => selectL3(c.id)}
                           className="flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs transition-all"
                           style={l3 === c.id
@@ -427,6 +419,11 @@ export default function AddProductPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+                {l2 && l3Cats.length === 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs text-[#999]">No specific product types — you can proceed with the subcategory above.</p>
                   </div>
                 )}
               </>
