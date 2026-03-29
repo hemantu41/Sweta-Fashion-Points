@@ -6,6 +6,8 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import LanguageSwitcher from './LanguageSwitcher';
+import MegaMenu from './MegaMenu';
+import { useCategories } from '@/hooks/useCategories';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -14,6 +16,7 @@ export default function Navbar() {
   const { t } = useLanguage();
   const { user, logout, isAuthenticated, isAdmin, isApprovedSeller, isSeller, sellerStatus, isActiveDeliveryPartner, deliveryPartnerId } = useAuth();
   const { totalItems } = useCart();
+  const { tree: navTree } = useCategories();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close user menu when clicking outside
@@ -26,15 +29,6 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const navLinks = [
-    { href: '/mens', label: t('nav.mens') },
-    { href: '/womens', label: t('nav.womens') },
-    { href: '/sarees', label: t('nav.sarees') },
-    { href: '/kids', label: t('nav.kids') },
-    { href: '/footwear', label: t('nav.footwear') },
-    { href: '/makeup', label: t('nav.makeup') },
-  ];
 
   const userMenuItems = [
     { href: '/profile', label: 'Profile Details', icon: (
@@ -102,17 +96,9 @@ export default function Navbar() {
             </div>
           </form>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="px-4 py-2 text-sm font-bold tracking-wide transition-all duration-300 text-[#2D2D2D] hover:text-[#722F37] elegant-underline"
-              >
-                {link.label}
-              </Link>
-            ))}
+          {/* Desktop Navigation — Mega Menu */}
+          <div className="hidden lg:block relative">
+            <MegaMenu />
           </div>
 
           {/* Right side - Language, Cart & User Menu */}
@@ -556,14 +542,15 @@ export default function Navbar() {
             </form>
 
             <div className="flex flex-col space-y-1">
-              {navLinks.map((link) => (
+              {navTree.map((l1) => (
                 <Link
-                  key={link.href}
-                  href={link.href}
+                  key={l1.slug}
+                  href={`/category/${l1.slug}`}
                   onClick={() => setIsMenuOpen(false)}
                   className="px-4 py-3 rounded-lg text-base font-bold transition-colors text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8]"
                 >
-                  {link.label}
+                  {l1.icon && <span className="mr-2">{l1.icon}</span>}
+                  {l1.name}
                 </Link>
               ))}
             </div>
