@@ -42,6 +42,7 @@ function Icon({ d, size = 18 }: { d: string; size?: number }) {
 const ICONS = {
   dashboard:  'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10',
   orders:     'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z M3 6h18 M16 10a4 4 0 01-8 0',
+  returns:    'M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4M3 6V5a1 1 0 011-1h16a1 1 0 011 1v1M3 18v1a1 1 0 001 1h16a1 1 0 001-1v-1',
   products:   'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
   qc:         'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
   add:        'M12 5v14M5 12h14',
@@ -73,6 +74,7 @@ export default function SellerSidebar({ sellerName, healthScore, orderBadge, pro
   const navItems: NavItem[] = [
     { label: 'Dashboard',    href: '/seller/dashboard',          icon: <Icon d={ICONS.dashboard} /> },
     { label: 'Orders',       href: '/seller/dashboard/orders',   icon: <Icon d={ICONS.orders} />,   badge: orderBadge },
+    { label: 'Returns & RTO', href: '/seller/dashboard/returns', icon: <Icon d={ICONS.returns} /> },
     {
       label: 'Products',
       icon: <Icon d={ICONS.products} />,

@@ -21,6 +21,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/seller/dashboard/earnings': { title: 'Earnings', subtitle: 'Track your payouts and revenue' },
   '/seller/dashboard/analytics': { title: 'Analytics', subtitle: 'Performance insights for your store' },
   '/seller/dashboard/reviews': { title: 'Reviews', subtitle: 'Customer ratings and reviews' },
+  '/seller/dashboard/returns': { title: 'Returns & RTO', subtitle: 'Monitor returns and track return shipments' },
   '/seller/dashboard/health': { title: 'Seller Health', subtitle: 'Your seller performance score' },
   '/seller/dashboard/settings': { title: 'Settings', subtitle: 'Manage your seller account' },
 };
