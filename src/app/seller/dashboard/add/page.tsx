@@ -45,7 +45,14 @@ const COLORS_LIST = [
   { name: 'Grey', hex: '#6B7280' },      { name: 'Cream', hex: '#FFFBEB' },
 ];
 
-const SIZES_LIST   = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size'];
+const SIZES_LIST = [
+  // Clothing sizes
+  'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size',
+  // Shoe / footwear sizes
+  '5', '6', '7', '8', '9', '10', '11',
+  // Waist / bottom wear (inches)
+  '20', '22', '24', '26', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46',
+];
 const FABRIC_OPTS  = ['Cotton', 'Silk', 'Georgette', 'Chiffon', 'Polyester', 'Rayon', 'Linen', 'Net', 'Velvet', 'Wool', 'Blend', 'Other'];
 const WORK_OPTS    = ['Embroidered', 'Printed', 'Woven', 'Zari', 'Sequin', 'Mirror Work', 'Handloom', 'Block Print', 'Bandhani', 'Chikankari', 'Kalamkari', 'Plain'];
 const PATTERN_OPTS = ['Solid', 'Printed', 'Striped', 'Checked', 'Floral', 'Abstract', 'Geometric', 'Paisley'];
@@ -436,12 +443,6 @@ export default function AddProductPage() {
                   placeholder="e.g. Pure Banarasi Silk Saree with Zari Border"
                   className={INPUT_CLS} />
                 <p className="text-[10px] text-[#999] mt-0.5 text-right">{name.length}/120</p>
-              </div>
-              <div>
-                <FieldLabel>Product Title (Hindi) — ऐच्छिक</FieldLabel>
-                <input value={nameHi} onChange={e => setNameHi(e.target.value)} maxLength={120}
-                  placeholder="e.g. शुद्ध बनारसी सिल्क साड़ी ज़री बॉर्डर के साथ"
-                  className={INPUT_CLS} />
               </div>
               <div>
                 <FieldLabel required>Description</FieldLabel>

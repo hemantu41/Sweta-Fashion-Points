@@ -4,9 +4,10 @@ import { invalidateCategoryCache } from '@/lib/categoryCache';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
 
     // Only include fields that were explicitly sent — avoids overwriting with undefined/null
@@ -26,7 +27,7 @@ export async function PUT(
     const { data, error } = await supabaseAdmin
       .from('spf_categories')
       .update(update)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -43,13 +44,15 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const { error } = await supabaseAdmin
       .from('spf_categories')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) throw error;
 
