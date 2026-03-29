@@ -34,15 +34,40 @@ const OCCASION_TAGS = [
 ];
 
 const COLORS_LIST = [
-  { name: 'Red', hex: '#EF4444' },       { name: 'Maroon', hex: '#7F1D1D' },
-  { name: 'Pink', hex: '#EC4899' },      { name: 'Orange', hex: '#F97316' },
-  { name: 'Yellow', hex: '#EAB308' },    { name: 'Gold', hex: '#C49A3C' },
-  { name: 'Green', hex: '#22C55E' },     { name: 'Teal', hex: '#14B8A6' },
-  { name: 'Blue', hex: '#3B82F6' },      { name: 'Navy', hex: '#1E3A5F' },
-  { name: 'Purple', hex: '#A855F7' },    { name: 'Lavender', hex: '#C4B5FD' },
-  { name: 'Black', hex: '#111827' },     { name: 'White', hex: '#F9FAFB' },
-  { name: 'Beige', hex: '#D2B48C' },     { name: 'Brown', hex: '#92400E' },
-  { name: 'Grey', hex: '#6B7280' },      { name: 'Cream', hex: '#FFFBEB' },
+  // Reds & Pinks
+  { name: 'Red',         hex: '#EF4444' }, { name: 'Maroon',      hex: '#7F1D1D' },
+  { name: 'Burgundy',    hex: '#991B1B' }, { name: 'Wine',        hex: '#722F37' },
+  { name: 'Pink',        hex: '#EC4899' }, { name: 'Hot Pink',    hex: '#FF69B4' },
+  { name: 'Blush',       hex: '#FECDD3' }, { name: 'Dusty Pink',  hex: '#D4A5A5' },
+  { name: 'Rose Gold',   hex: '#B76E79' }, { name: 'Peach',       hex: '#FBBF9E' },
+  { name: 'Coral',       hex: '#F97B6B' }, { name: 'Magenta',     hex: '#D946EF' },
+  // Oranges & Yellows
+  { name: 'Orange',      hex: '#F97316' }, { name: 'Rust',        hex: '#B45309' },
+  { name: 'Burnt Orange',hex: '#C2410C' }, { name: 'Yellow',      hex: '#EAB308' },
+  { name: 'Mustard',     hex: '#CA8A04' }, { name: 'Gold',        hex: '#C49A3C' },
+  { name: 'Champagne',   hex: '#F7E7CE' }, { name: 'Copper',      hex: '#B87333' },
+  // Greens
+  { name: 'Green',       hex: '#22C55E' }, { name: 'Emerald',     hex: '#10B981' },
+  { name: 'Teal',        hex: '#14B8A6' }, { name: 'Mint',        hex: '#6EE7B7' },
+  { name: 'Sage',        hex: '#84A98C' }, { name: 'Olive',       hex: '#65A30D' },
+  { name: 'Forest Green',hex: '#166534' }, { name: 'Bottle Green',hex: '#004225' },
+  // Blues
+  { name: 'Sky Blue',    hex: '#38BDF8' }, { name: 'Blue',        hex: '#3B82F6' },
+  { name: 'Royal Blue',  hex: '#2563EB' }, { name: 'Cobalt',      hex: '#1D4ED8' },
+  { name: 'Navy',        hex: '#1E3A5F' }, { name: 'Turquoise',   hex: '#06B6D4' },
+  // Purples
+  { name: 'Lavender',    hex: '#C4B5FD' }, { name: 'Lilac',       hex: '#DDD6FE' },
+  { name: 'Mauve',       hex: '#C084FC' }, { name: 'Purple',      hex: '#A855F7' },
+  { name: 'Violet',      hex: '#7C3AED' }, { name: 'Indigo',      hex: '#4F46E5' },
+  { name: 'Plum',        hex: '#7E22CE' },
+  // Neutrals & Earthy
+  { name: 'White',       hex: '#F9FAFB' }, { name: 'Off White',   hex: '#FAF9F6' },
+  { name: 'Ivory',       hex: '#FFFFF0' }, { name: 'Cream',       hex: '#FFFBEB' },
+  { name: 'Beige',       hex: '#D2B48C' }, { name: 'Khaki',       hex: '#C3B091' },
+  { name: 'Caramel',     hex: '#C19A6B' }, { name: 'Brown',       hex: '#92400E' },
+  { name: 'Chocolate',   hex: '#78350F' }, { name: 'Silver',      hex: '#9CA3AF' },
+  { name: 'Grey',        hex: '#6B7280' }, { name: 'Charcoal',    hex: '#374151' },
+  { name: 'Black',       hex: '#111827' },
 ];
 
 const SIZES_LIST = [
@@ -309,32 +334,29 @@ export default function AddProductPage() {
     if (!isValid) { setError('Please fill all required fields and check the declarations.'); return; }
     setSubmitting(true);
     try {
+      // Auto-generate a product ID if the seller left SKU blank
+      const productId = productSku.trim() || `PRD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
       const body = {
-        sellerId, name,
-        sku: productSku || undefined,
-        category: l1, subCategory: l2,
-        productType: l3,
-        description, brand: brand || undefined,
-        tags,
-        fabric: fabric || undefined,
-        price: parseFloat(price),
-        originalPrice: parseFloat(mrp) || parseFloat(price),
-        gstRate: gst,
-        stockQuantity: parseInt(stock),
-        lowStockAlert: parseInt(lowStockAlert) || 10,
-        sizes, colors: colors.map(c => ({ name: c, hex: COLORS_LIST.find(x => x.name === c)?.hex || '#000' })),
-        workTypes, pattern: pattern || undefined, washCare: washCare || undefined,
-        closure: closure || undefined,
-        pockets: pockets || undefined,
-        weavePattern: weavePattern || undefined,
-        occasionTags,
-        sellerAddress: sellerAddress || undefined,
-        sellerPincode: sellerPincode || undefined,
-        sellerPhone: sellerPhone || undefined,
-        weight: weight ? parseInt(weight) : undefined,
-        dispatchTime: parseInt(dispatchTime),
-        images, mainImage: images[0] || undefined,
-        approvalStatus: 'pending', isActive: false,
+        userId: user?.id,
+        sellerId,
+        product: {
+          productId,
+          name,
+          category: l1,
+          subCategory: l2,
+          description,
+          fabric: fabric || undefined,
+          price: parseFloat(price),
+          originalPrice: parseFloat(mrp) || parseFloat(price),
+          stockQuantity: parseInt(stock),
+          sizes,
+          colors: colors.map(c => ({ name: c, hex: COLORS_LIST.find(x => x.name === c)?.hex || '#000' })),
+          images,
+          mainImage: images[0] || undefined,
+          isActive: false,
+          isNewArrival: false,
+          isBestSeller: false,
+        },
       };
       const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to create product'); }
