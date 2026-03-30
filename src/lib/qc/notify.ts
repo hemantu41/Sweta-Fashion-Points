@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { REASON_MAP } from './constants';
+import { sendEmail } from '@/lib/email';
+import { productApprovedEmail, productRejectedEmail } from '@/lib/emailTemplates/productEmails';
 import type { NotifyPayload, NotifyResult, RejectionReasonId } from '@/types/qc.types';
 
 // ─── In-App Notification ──────────────────────────────────────────────────────
@@ -49,32 +51,38 @@ async function fireEmailNotification(payload: NotifyPayload): Promise<NotifyResu
     return { event, status: 'failed', error: 'No seller email on record' };
   }
 
-  if (!process.env.RESEND_API_KEY) {
-    console.log(
-      '[notify] RESEND_API_KEY not configured — email skipped (set in .env.local to enable)'
-    );
-    return { event, status: 'failed', error: 'RESEND_API_KEY not set' };
-  }
-
   try {
-    const { Resend } = await import('resend');
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const productId = `IFP-PRD-${payload.product.id.slice(0, 8).toUpperCase()}`;
+    const category = [payload.product.category, payload.product.sub_category]
+      .filter(Boolean).join(' > ');
 
-    const subject =
-      payload.type === 'approved'
-        ? `✅ Your product "${payload.product.name}" is now live on Insta Fashion Points`
-        : `Action Required: "${payload.product.name}" needs changes`;
+    let subject: string;
+    let html: string;
 
-    const html = buildEmailHtml(payload);
+    if (payload.type === 'approved') {
+      ({ subject, html } = productApprovedEmail({
+        sellerName: payload.product.seller_name,
+        shopName:   payload.product.seller_name,
+        productTitle:    payload.product.name,
+        productCategory: category,
+        sellingPrice: payload.product.price,
+        productId,
+        productSlug: payload.product.product_id ?? payload.product.id,
+        adminNote:   payload.adminNote ?? payload.note,
+      }));
+    } else {
+      ({ subject, html } = productRejectedEmail({
+        sellerName: payload.product.seller_name,
+        shopName:   payload.product.seller_name,
+        productTitle: payload.product.name,
+        productId,
+        rejectionTags: (payload.reasons ?? []) as string[],
+        adminNote: payload.adminNote ?? payload.note,
+      }));
+    }
 
-    const { error } = await resend.emails.send({
-      from: 'Insta Fashion Points <noreply@instafashionpoints.com>',
-      to: payload.product.seller_email,
-      subject,
-      html,
-    });
-
-    if (error) throw error;
+    const result = await sendEmail({ to: payload.product.seller_email, subject, html });
+    if (!result.success) throw new Error(result.error);
     return { event, status: 'sent' };
   } catch (err: any) {
     console.error('[notify] email failed:', err?.message);

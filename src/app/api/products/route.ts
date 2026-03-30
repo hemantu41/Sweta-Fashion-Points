@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getCachedData, productCache } from '@/lib/cache';
+import { notifyProductSubmitted } from '@/lib/notifications/productNotifications';
 import { filterProductsByDistance } from '@/lib/pincode-distance';
 
 // Helper to check if user is admin
@@ -284,6 +285,12 @@ export async function POST(request: NextRequest) {
 
     // Clear product cache when new product is created
     productCache.clear();
+
+    // Notify seller (non-blocking — does not delay API response)
+    // Only for seller-submitted products; admin-created products skip the review queue
+    if (!userIsAdmin && newProduct?.id) {
+      void notifyProductSubmitted(newProduct.id);
+    }
 
     return NextResponse.json({
       message: 'Product created successfully',
