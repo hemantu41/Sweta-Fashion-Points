@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
-// ─── Seeded mock rating (consistent per product, no real reviews table yet) ──
+// ─── Seeded mock rating (consistent per product) ──────────────────────────────
 function seededVal(id: string, salt: number): number {
   let h = salt;
   for (let i = 0; i < id.length; i++) {
@@ -12,14 +12,12 @@ function seededVal(id: string, salt: number): number {
   }
   return Math.abs(h);
 }
-
 function mockRating(id: string): number {
   const v = seededVal(id, 7919) / 2147483647;
-  return Math.round((3.4 + v * 1.6) * 10) / 10; // 3.4 – 5.0
+  return Math.round((3.4 + v * 1.6) * 10) / 10;
 }
-
 function mockReviews(id: string): string {
-  const n = seededVal(id, 3571) % 4900 + 100; // 100 – 4999
+  const n = seededVal(id, 3571) % 4900 + 100;
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
 
@@ -36,22 +34,54 @@ interface Product {
   isNewArrival?: boolean;
   isBestSeller?: boolean;
   seller?: { businessName: string; businessNameHi?: string; city?: string } | null;
+  is_sponsored?: boolean;
+  is_assured?: boolean;
+  trending_direction?: 'up' | 'down' | null;
+  stock?: number;
 }
 
 interface Props { product: Product }
 
+// ─── Assured Shield SVG ───────────────────────────────────────────────────────
+function AssuredBadge() {
+  return (
+    <span
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 3,
+        marginLeft: 5, color: '#1D6FE8', fontSize: 11, fontWeight: 600,
+        verticalAlign: 'middle', whiteSpace: 'nowrap',
+      }}
+    >
+      <svg width="11" height="13" viewBox="0 0 11 13" fill="none">
+        <path d="M5.5 0L0 2.2V6.5C0 9.6 2.4 12.5 5.5 13C8.6 12.5 11 9.6 11 6.5V2.2L5.5 0Z" fill="#1D6FE8" />
+        <path d="M3.5 6.5L4.9 7.9L7.5 5.3" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      Assured
+    </span>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function ProductCard({ product }: Props) {
-  const [hovered, setHovered] = useState(false);
+  const [hovered,    setHovered]    = useState(false);
+  const [wishlisted, setWishlisted] = useState(false);
 
   const discount =
     product.originalPrice && product.originalPrice > product.price
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
-  const extraImages = Math.max(0, (product.images?.length ?? 0) - 1);
-  const rating      = mockRating(product.id);
-  const reviews     = mockReviews(product.id);
+  const rating  = mockRating(product.id);
+  const reviews = mockReviews(product.id);
+
+  // Deal / urgency logic
+  const stock = product.stock ?? 999;
+  const dealBadge: 'few_left' | 'hot_deal' | 'free_delivery' =
+    stock <= 5     ? 'few_left'      :
+    discount >= 60 ? 'hot_deal'      :
+                     'free_delivery';
+
+  const discountColor = discount >= 50 ? '#16A34A' : '#C49A3C';
 
   return (
     <Link href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
@@ -60,112 +90,153 @@ export default function ProductCard({ product }: Props) {
         onMouseLeave={() => setHovered(false)}
         style={{
           background: '#fff',
-          borderRadius: 12,
+          borderRadius: 8,
           overflow: 'hidden',
-          border: '1px solid #F3F4F6',
           boxShadow: hovered
-            ? '0 8px 24px rgba(91,26,58,0.12)'
-            : '0 1px 4px rgba(0,0,0,0.05)',
-          transition: 'box-shadow 0.22s ease, transform 0.22s ease',
-          transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+            ? '0 4px 20px rgba(0,0,0,0.12)'
+            : '0 1px 4px rgba(0,0,0,0.06)',
+          transition: 'box-shadow 200ms ease',
           cursor: 'pointer',
           fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
         }}
       >
-        {/* ── Image ── */}
+
+        {/* ── Image Block ── */}
         <div style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', background: '#F9F5F3' }}>
           {product.mainImage ? (
             <img
               src={product.mainImage}
               alt={product.name}
               loading="lazy"
-              style={{
-                width: '100%', height: '100%', objectFit: 'cover',
-                transition: 'transform 0.35s ease',
-                transform: hovered ? 'scale(1.05)' : 'scale(1)',
-              }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#E5E7EB' }}>👗</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#E5E7EB' }}>
+              👗
+            </div>
           )}
 
-          {/* Badges — top left */}
-          <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {product.isNewArrival && (
-              <span style={{ background: '#5B1A3A', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4, letterSpacing: '0.06em' }}>
-                NEW
-              </span>
-            )}
-            {product.isBestSeller && (
-              <span style={{ background: '#C49A3C', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4, letterSpacing: '0.06em' }}>
-                BESTSELLER
-              </span>
-            )}
-          </div>
-
-          {/* Discount badge — top right */}
-          {discount > 0 && (
-            <span style={{ position: 'absolute', top: 8, right: 8, background: '#16A34A', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5 }}>
-              {discount}% off
-            </span>
+          {/* Trending badge — top left */}
+          {product.trending_direction && (
+            <div
+              style={{
+                position: 'absolute', top: 8, left: 8,
+                width: 28, height: 28, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: product.trending_direction === 'up' ? '#FFF7ED' : '#F0FDF4',
+                fontSize: 16, fontWeight: 700,
+                color: product.trending_direction === 'up' ? '#F97316' : '#16A34A',
+              }}
+            >
+              {product.trending_direction === 'up' ? '↗' : '↘'}
+            </div>
           )}
 
-          {/* +N more images — bottom left */}
-          {extraImages > 0 && (
-            <span style={{ position: 'absolute', bottom: 44, left: 8, background: 'rgba(0,0,0,0.54)', color: '#fff', fontSize: 10, padding: '3px 8px', borderRadius: 5 }}>
-              +{extraImages} more
-            </span>
-          )}
-
-          {/* Add to cart — slides up on hover */}
-          <div
+          {/* Wishlist heart — top right */}
+          <button
+            onClick={e => { e.preventDefault(); setWishlisted(w => !w); }}
+            aria-label="Add to wishlist"
             style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0,
-              background: '#5B1A3A',
-              padding: '10px 0',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              color: '#fff', fontSize: 13, fontWeight: 600,
-              transform: hovered ? 'translateY(0)' : 'translateY(100%)',
-              transition: 'transform 0.2s ease-in-out',
+              position: 'absolute', top: 8, right: 8,
+              width: 32, height: 32, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.82)',
+              backdropFilter: 'blur(4px)',
+              border: 'none', cursor: 'pointer', padding: 0,
+              transform: hovered ? 'scale(1.1)' : 'scale(1)',
+              transition: 'transform 200ms ease',
             }}
           >
-            <ShoppingCart size={14} />
-            Add to Cart
-          </div>
+            <Heart
+              size={16}
+              fill={wishlisted ? '#DC2626' : 'none'}
+              stroke={wishlisted ? '#DC2626' : '#6B7280'}
+              strokeWidth={2}
+            />
+          </button>
         </div>
 
-        {/* ── Info ── */}
-        <div style={{ padding: '10px 11px 13px' }}>
-          {/* Name — single line, truncate */}
-          <p style={{ fontSize: 13, fontWeight: 500, color: '#1A1A1A', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {/* ── Info Block ── */}
+        <div style={{ padding: '8px 10px 12px' }}>
+
+          {/* Sponsored */}
+          {product.is_sponsored && (
+            <p style={{ fontSize: 11, color: '#9CA3AF', margin: '0 0 2px' }}>Sponsored</p>
+          )}
+
+          {/* Brand / seller name */}
+          {product.seller?.businessName && (
+            <p style={{
+              fontSize: 11, color: '#6B7280', fontWeight: 600, margin: '0 0 2px',
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {product.seller.businessName}
+            </p>
+          )}
+
+          {/* Product name + optional Assured badge */}
+          <p style={{
+            fontSize: 14, color: '#1A1A1A', margin: '0 0 6px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          } as React.CSSProperties}>
             {product.name}
+            {product.is_assured && <AssuredBadge />}
           </p>
 
-
-          {/* Price */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
-            <span style={{ fontSize: 17, fontWeight: 700, color: '#1A1A1A' }}>
+          {/* Price row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 5 }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A' }}>
               ₹{product.price.toLocaleString('en-IN')}
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
               <>
-                <span style={{ fontSize: 11, color: '#9CA3AF', textDecoration: 'line-through' }}>
+                <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>
                   ₹{product.originalPrice.toLocaleString('en-IN')}
                 </span>
-                <span style={{ fontSize: 11, color: '#16A34A', fontWeight: 700 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: discountColor }}>
                   {discount}% off
                 </span>
               </>
             )}
           </div>
 
-          {/* Rating */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, background: '#5B1A3A', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>
-              ⭐ {rating}
-            </span>
-            <span style={{ fontSize: 10, color: '#9CA3AF' }}>({reviews} reviews)</span>
+          {/* Deal / urgency badge */}
+          <div style={{ marginBottom: 6, minHeight: 20 }}>
+            {dealBadge === 'few_left' && (
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#DC2626' }}>
+                Only few left
+              </span>
+            )}
+            {dealBadge === 'hot_deal' && (
+              <span style={{
+                display: 'inline-block', fontSize: 11, fontWeight: 700,
+                background: '#16A34A', color: '#fff',
+                padding: '2px 8px', borderRadius: 4,
+              }}>
+                Hot Deal
+              </span>
+            )}
+            {dealBadge === 'free_delivery' && (
+              <span style={{ fontSize: 11, color: '#6B7280' }}>Free Delivery</span>
+            )}
           </div>
+
+          {/* Rating row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 2,
+              background: '#5B1A3A', color: '#fff',
+              fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+            }}>
+              ★ {rating}
+            </span>
+            <span style={{ fontSize: 12, color: '#9CA3AF' }}>({reviews})</span>
+          </div>
+
         </div>
       </div>
     </Link>
