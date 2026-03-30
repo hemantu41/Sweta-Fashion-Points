@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart } from 'lucide-react';
 
-// ─── Seeded mock rating (consistent per product, no real reviews table yet) ───
+// ─── Seeded mock helpers (consistent per product, no real reviews table yet) ──
 function seededVal(id: string, salt: number): number {
   let h = salt;
   for (let i = 0; i < id.length; i++) {
@@ -17,17 +16,32 @@ function mockRating(id: string): number {
   const v = seededVal(id, 7919) / 2147483647;
   return Math.round((3.4 + v * 1.6) * 10) / 10; // 3.4 – 5.0
 }
-function mockReviewCount(id: string): string {
-  const n = seededVal(id, 3571) % 4900 + 100; // 100 – 4999
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+function mockReviewCount(id: string): number {
+  return seededVal(id, 3571) % 4900 + 100; // 100 – 4999
+}
+// TODO: replace with real data from spf_reviews once aggregates are live
+function mockBreakdown(id: string): RatingBreakdown['breakdown'] {
+  const s5 = 40 + (seededVal(id, 1111) % 35); // 40–74
+  const s4 = 10 + (seededVal(id, 2222) % 20); // 10–29
+  const s3 =  5 + (seededVal(id, 3333) % 10); //  5–14
+  const rem = Math.max(0, 100 - s5 - s4 - s3);
+  const s2 = Math.floor(rem * 0.4);
+  const s1 = rem - s2;
+  return { 5: s5, 4: s4, 3: s3, 2: s2, 1: s1 };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+interface RatingBreakdown {
+  average: number;
+  total: number;
+  breakdown: { 5: number; 4: number; 3: number; 2: number; 1: number };
+}
+
 export interface Product {
   id: string;
   name: string;
   price: number;
-  originalPrice?: number;   // MRP / was originalPrice in API
+  originalPrice?: number;
   mainImage?: string;
   images?: string[];
   sizes?: string[];
@@ -36,12 +50,13 @@ export interface Product {
   isNewArrival?: boolean;
   isBestSeller?: boolean;
   seller?: { businessName: string; businessNameHi?: string; city?: string } | null;
-  // Optional enrichment fields
   is_sponsored?: boolean;
   is_assured?: boolean;
   trending_direction?: 'up' | 'down' | null;
   avg_rating?: number;
   review_count?: number;
+  // TODO: wire to real aggregated data once spf_reviews aggregates are available
+  rating_breakdown?: RatingBreakdown;
 }
 
 // ─── Assured shield badge ─────────────────────────────────────────────────────
@@ -65,8 +80,7 @@ function AssuredBadge() {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function ProductCard({ product }: { product: Product }) {
-  const [hovered,    setHovered]    = useState(false);
-  const [wishlisted, setWishlisted] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const imgSrc = product.mainImage || product.images?.[0];
 
@@ -75,12 +89,14 @@ export default function ProductCard({ product }: { product: Product }) {
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
-  const rating      = product.avg_rating   ?? mockRating(product.id);
-  const reviewCount = product.review_count
-    ? (product.review_count >= 1000
-        ? `${(product.review_count / 1000).toFixed(1)}k`
-        : String(product.review_count))
-    : mockReviewCount(product.id);
+  const rating      = product.avg_rating ?? mockRating(product.id);
+  const reviewTotal = product.review_count ?? mockReviewCount(product.id);
+  const reviewLabel = reviewTotal >= 1000
+    ? `${(reviewTotal / 1000).toFixed(1)}k`
+    : String(reviewTotal);
+
+  // Rating breakdown — real data preferred, mock fallback
+  const breakdown = product.rating_breakdown?.breakdown ?? mockBreakdown(product.id);
 
   const stock = product.stockQuantity ?? 999;
   const dealBadge: 'few_left' | 'hot_deal' | null =
@@ -91,7 +107,10 @@ export default function ProductCard({ product }: { product: Product }) {
   const discountColor = discount >= 50 ? '#16A34A' : '#C49A3C';
 
   return (
-    <Link href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', outline: 'none' }}>
+    <Link
+      href={`/product/${product.id}`}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block', outline: 'none' }}
+    >
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -104,8 +123,8 @@ export default function ProductCard({ product }: { product: Product }) {
         }}
       >
 
-        {/* ── Image Block ── */}
-        <div style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', background: '#F0EBEE' }}>
+        {/* ── Image Block — Change 1: bg-white, no border/ring/outline ── */}
+        <div className="relative aspect-[3/4] overflow-hidden bg-white">
           {imgSrc ? (
             <Image
               src={imgSrc}
@@ -121,7 +140,7 @@ export default function ProductCard({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* Trending badge — top left */}
+          {/* Trending badge — top left (kept as-is) */}
           {product.trending_direction && (
             <div
               style={{
@@ -137,28 +156,7 @@ export default function ProductCard({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* Wishlist heart — top right */}
-          <button
-            onClick={e => { e.preventDefault(); setWishlisted(w => !w); }}
-            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-            style={{
-              position: 'absolute', top: 8, right: 8,
-              width: 32, height: 32, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(255,255,255,0.82)',
-              backdropFilter: 'blur(4px)',
-              border: 'none', cursor: 'pointer', padding: 0,
-              transform: hovered ? 'scale(1.1)' : 'scale(1)',
-              transition: 'transform 200ms ease',
-            }}
-          >
-            <Heart
-              size={16}
-              fill={wishlisted ? '#DC2626' : 'none'}
-              stroke={wishlisted ? '#DC2626' : '#6B7280'}
-              strokeWidth={2}
-            />
-          </button>
+          {/* Change 2: Wishlist heart removed entirely */}
         </div>
 
         {/* ── Info Block ── */}
@@ -219,16 +217,71 @@ export default function ProductCard({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* Rating row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 2,
-              background: '#F5EDF2', color: '#5B1A3A',
-              fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-            }}>
-              ★ {rating.toFixed(1)}
+          {/* Change 3: Rating row with hover tooltip breakdown */}
+          <div className="relative group/rating inline-flex items-center gap-1 pt-0.5 cursor-default">
+
+            {/* Tooltip — visible on hover */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                            invisible opacity-0
+                            group-hover/rating:visible group-hover/rating:opacity-100
+                            transition-all duration-200
+                            bg-white border border-gray-200 rounded-lg shadow-xl
+                            p-3 z-50 min-w-[180px] pointer-events-none">
+
+              {/* Tooltip arrow */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2
+                              border-4 border-transparent border-t-white" />
+
+              {/* Header */}
+              <p className="text-[12px] font-semibold text-gray-800 mb-1"
+                 style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+                Overall Rating
+              </p>
+              <div className="flex items-center gap-1 mb-2">
+                <span style={{ color: '#5B1A3A', fontSize: 13 }}>★</span>
+                <span className="text-[13px] font-bold text-gray-900"
+                      style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+                  {rating.toFixed(1)}
+                </span>
+                <span className="text-[11px] text-gray-400"
+                      style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+                  based on {reviewLabel}
+                </span>
+              </div>
+
+              <div className="border-t border-gray-100 mb-2" />
+
+              {/* Breakdown bars */}
+              {([5, 4, 3, 2, 1] as const).map(star => (
+                <div key={star} className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[11px] text-gray-500 w-5 text-right"
+                        style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+                    {star}★
+                  </span>
+                  <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${breakdown[star]}%`, background: '#5B1A3A' }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-gray-400 w-7 text-right"
+                        style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+                    {breakdown[star]}%
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Visible rating badge */}
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold"
+                 style={{ background: '#F5EDF2', color: '#5B1A3A', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+              <span>★</span>
+              <span>{rating.toFixed(1)}</span>
+            </div>
+            <span className="text-[11px] text-gray-400"
+                  style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+              ({reviewLabel})
             </span>
-            <span style={{ fontSize: 11, color: '#9CA3AF' }}>({reviewCount})</span>
           </div>
 
         </div>
