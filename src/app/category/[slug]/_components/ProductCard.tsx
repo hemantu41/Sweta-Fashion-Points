@@ -143,7 +143,7 @@ export default function ProductCard({ product }: Props) {
 
 
           {/* Price */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap', marginBottom: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
             <span style={{ fontSize: 17, fontWeight: 700, color: '#1A1A1A' }}>
               ₹{product.price.toLocaleString('en-IN')}
             </span>
@@ -152,18 +152,11 @@ export default function ProductCard({ product }: Props) {
                 <span style={{ fontSize: 11, color: '#9CA3AF', textDecoration: 'line-through' }}>
                   ₹{product.originalPrice.toLocaleString('en-IN')}
                 </span>
-                <span style={{ fontSize: 11, color: '#16A34A', fontWeight: 600 }}>
+                <span style={{ fontSize: 11, color: '#16A34A', fontWeight: 700 }}>
                   {discount}% off
                 </span>
               </>
             )}
-          </div>
-
-          {/* Free delivery pill */}
-          <div style={{ marginBottom: 6 }}>
-            <span style={{ display: 'inline-block', border: '1px solid #E5E7EB', borderRadius: 20, padding: '2px 8px', fontSize: 10, color: '#6B7280', fontWeight: 500 }}>
-              Free Delivery
-            </span>
           </div>
 
           {/* Rating */}
@@ -171,7 +164,7 @@ export default function ProductCard({ product }: Props) {
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, background: '#5B1A3A', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>
               ⭐ {rating}
             </span>
-            <span style={{ fontSize: 10, color: '#9CA3AF' }}>({reviews})</span>
+            <span style={{ fontSize: 10, color: '#9CA3AF' }}>({reviews} reviews)</span>
           </div>
         </div>
       </div>
