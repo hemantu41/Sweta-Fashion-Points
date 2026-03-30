@@ -1,6 +1,5 @@
 'use client';
 
-import { ArrowUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 const SORT_OPTIONS = [
@@ -21,54 +20,98 @@ interface Props {
 
 export default function SortBar({ sort, onSortChange, filteredTotal, currentPage, pageSize }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const activeLabel = SORT_OPTIONS.find(o => o.value === sort)?.label ?? 'Newest';
   const from = filteredTotal === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const to   = Math.min(currentPage * pageSize, filteredTotal);
-  const activeLabel = SORT_OPTIONS.find(o => o.value === sort)?.label ?? 'Newest';
 
   return (
     <div
-      className="flex items-center justify-between flex-wrap gap-3 mb-4 pb-3 border-b border-gray-100"
-      style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}
+      className="sticky top-0 z-10 bg-white"
+      style={{
+        borderBottom: '1px solid #E5E7EB',
+        fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+      }}
     >
-      {/* Left: count */}
-      <span className="text-[13px] text-gray-400">
-        {filteredTotal === 0 ? 'No results' : (
-          <>
-            Showing{' '}
-            <strong className="text-gray-700">{from}–{to}</strong>
-            {' '}of{' '}
-            <strong className="text-gray-700">{filteredTotal}</strong>
-            {' '}products
-          </>
-        )}
-      </span>
+      {/* ── Desktop: tab row ── */}
+      <div className="hidden md:flex items-center">
+        <span style={{ fontSize: 13, color: '#6B7280', padding: '0 14px', whiteSpace: 'nowrap' }}>
+          Sort By
+        </span>
+        <div style={{ width: 1, height: 18, background: '#E5E7EB', flexShrink: 0 }} />
+        {SORT_OPTIONS.map(opt => {
+          const active = sort === opt.value;
+          return (
+            <button
+              key={opt.value}
+              onClick={() => onSortChange(opt.value)}
+              style={{
+                fontSize: 14,
+                fontWeight: active ? 600 : 400,
+                color: active ? '#5B1A3A' : '#374151',
+                padding: '13px 18px',
+                background: 'none',
+                border: 'none',
+                borderBottom: active ? '2px solid #5B1A3A' : '2px solid transparent',
+                cursor: 'pointer',
+                transition: 'color 150ms ease, border-color 150ms ease',
+                whiteSpace: 'nowrap',
+                marginBottom: -1, // sit flush on the container border
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = '#5B1A3A'; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = '#374151'; }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
 
-      {/* Right: sort pills */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[12px] text-gray-400 flex items-center gap-1">
-          <ArrowUpDown size={11} /> Sort by:
+        {/* Result count — pushed to right */}
+        <span style={{ fontSize: 12, color: '#9CA3AF', marginLeft: 'auto', padding: '0 16px', whiteSpace: 'nowrap' }}>
+          {filteredTotal === 0 ? 'No results' : (
+            <>{from}–{to} of <strong style={{ color: '#6B7280' }}>{filteredTotal}</strong></>
+          )}
+        </span>
+      </div>
+
+      {/* ── Mobile: label + dropdown ── */}
+      <div className="flex md:hidden items-center justify-between px-4 py-2.5">
+        <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+          {filteredTotal === 0 ? 'No results' : (
+            <>{from}–{to} of <strong style={{ color: '#6B7280' }}>{filteredTotal}</strong></>
+          )}
         </span>
 
-        {/* Mobile: dropdown */}
-        <div className="relative md:hidden">
+        <div style={{ position: 'relative' }}>
           <button
             onClick={() => setDropdownOpen(o => !o)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold border"
-            style={{ borderColor: '#5B1A3A', color: '#5B1A3A' }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              fontSize: 13, fontWeight: 600, color: '#5B1A3A',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            }}
           >
+            <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 400 }}>Sort:</span>
             {activeLabel} ▾
           </button>
+
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[180px] overflow-hidden">
+            <div style={{
+              position: 'absolute', right: 0, top: '100%', marginTop: 4,
+              background: '#fff', border: '1px solid #E5E7EB',
+              borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+              zIndex: 30, minWidth: 190, overflow: 'hidden',
+            }}>
               {SORT_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => { onSortChange(opt.value); setDropdownOpen(false); }}
-                  className="w-full text-left px-4 py-2.5 text-[13px] transition-colors"
                   style={{
-                    background: sort === opt.value ? 'rgba(91,26,58,0.06)' : '#fff',
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '11px 16px', fontSize: 13, border: 'none',
+                    background: sort === opt.value ? 'rgba(91,26,58,0.05)' : '#fff',
                     color: sort === opt.value ? '#5B1A3A' : '#374151',
                     fontWeight: sort === opt.value ? 600 : 400,
+                    cursor: 'pointer',
                   }}
                 >
                   {opt.label}
@@ -76,29 +119,6 @@ export default function SortBar({ sort, onSortChange, filteredTotal, currentPage
               ))}
             </div>
           )}
-        </div>
-
-        {/* Desktop: pills */}
-        <div className="hidden md:flex items-center gap-1.5 flex-wrap">
-          {SORT_OPTIONS.map(opt => {
-            const active = sort === opt.value;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => onSortChange(opt.value)}
-                className="px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all"
-                style={{
-                  background: active ? '#5B1A3A' : '#fff',
-                  color:      active ? '#fff'    : '#374151',
-                  borderColor: active ? '#5B1A3A' : '#E5E7EB',
-                }}
-                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = '#FDF4F8'; }}
-                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = '#fff'; }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
         </div>
       </div>
     </div>

@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Heart } from 'lucide-react';
 
-// ─── Seeded mock rating (consistent per product) ──────────────────────────────
+// ─── Seeded mock rating (consistent per product, no real reviews table yet) ───
 function seededVal(id: string, salt: number): number {
   let h = salt;
   for (let i = 0; i < id.length; i++) {
@@ -14,35 +15,36 @@ function seededVal(id: string, salt: number): number {
 }
 function mockRating(id: string): number {
   const v = seededVal(id, 7919) / 2147483647;
-  return Math.round((3.4 + v * 1.6) * 10) / 10;
+  return Math.round((3.4 + v * 1.6) * 10) / 10; // 3.4 – 5.0
 }
-function mockReviews(id: string): string {
-  const n = seededVal(id, 3571) % 4900 + 100;
+function mockReviewCount(id: string): string {
+  const n = seededVal(id, 3571) % 4900 + 100; // 100 – 4999
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Product {
+export interface Product {
   id: string;
   name: string;
   price: number;
-  originalPrice?: number;
+  originalPrice?: number;   // MRP / was originalPrice in API
   mainImage?: string;
   images?: string[];
   sizes?: string[];
   fabric?: string;
+  stockQuantity?: number;
   isNewArrival?: boolean;
   isBestSeller?: boolean;
   seller?: { businessName: string; businessNameHi?: string; city?: string } | null;
+  // Optional enrichment fields
   is_sponsored?: boolean;
   is_assured?: boolean;
   trending_direction?: 'up' | 'down' | null;
-  stock?: number;
+  avg_rating?: number;
+  review_count?: number;
 }
 
-interface Props { product: Product }
-
-// ─── Assured Shield SVG ───────────────────────────────────────────────────────
+// ─── Assured shield badge ─────────────────────────────────────────────────────
 function AssuredBadge() {
   return (
     <span
@@ -62,20 +64,25 @@ function AssuredBadge() {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product }: { product: Product }) {
   const [hovered,    setHovered]    = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+
+  const imgSrc = product.mainImage || product.images?.[0];
 
   const discount =
     product.originalPrice && product.originalPrice > product.price
       ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0;
 
-  const rating  = mockRating(product.id);
-  const reviews = mockReviews(product.id);
+  const rating      = product.avg_rating   ?? mockRating(product.id);
+  const reviewCount = product.review_count
+    ? (product.review_count >= 1000
+        ? `${(product.review_count / 1000).toFixed(1)}k`
+        : String(product.review_count))
+    : mockReviewCount(product.id);
 
-  // Deal / urgency logic
-  const stock = product.stock ?? 999;
+  const stock = product.stockQuantity ?? 999;
   const dealBadge: 'few_left' | 'hot_deal' | 'free_delivery' =
     stock <= 5     ? 'few_left'      :
     discount >= 60 ? 'hot_deal'      :
@@ -90,25 +97,23 @@ export default function ProductCard({ product }: Props) {
         onMouseLeave={() => setHovered(false)}
         style={{
           background: '#fff',
-          borderRadius: 8,
-          overflow: 'hidden',
-          boxShadow: hovered
-            ? '0 4px 20px rgba(0,0,0,0.12)'
-            : '0 1px 4px rgba(0,0,0,0.06)',
-          transition: 'box-shadow 200ms ease',
           cursor: 'pointer',
           fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+          boxShadow: hovered ? '0 4px 20px rgba(0,0,0,0.12)' : 'none',
+          transition: 'box-shadow 200ms ease',
         }}
       >
 
         {/* ── Image Block ── */}
         <div style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', background: '#F9F5F3' }}>
-          {product.mainImage ? (
-            <img
-              src={product.mainImage}
+          {imgSrc ? (
+            <Image
+              src={imgSrc}
               alt={product.name}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover"
               loading="lazy"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#E5E7EB' }}>
@@ -135,7 +140,7 @@ export default function ProductCard({ product }: Props) {
           {/* Wishlist heart — top right */}
           <button
             onClick={e => { e.preventDefault(); setWishlisted(w => !w); }}
-            aria-label="Add to wishlist"
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
             style={{
               position: 'absolute', top: 8, right: 8,
               width: 32, height: 32, borderRadius: '50%',
@@ -164,31 +169,23 @@ export default function ProductCard({ product }: Props) {
             <p style={{ fontSize: 11, color: '#9CA3AF', margin: '0 0 2px' }}>Sponsored</p>
           )}
 
-          {/* Brand / seller name */}
-          {product.seller?.businessName && (
-            <p style={{
-              fontSize: 11, color: '#6B7280', fontWeight: 600, margin: '0 0 2px',
-              textTransform: 'uppercase', letterSpacing: '0.06em',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {product.seller.businessName}
-            </p>
-          )}
-
           {/* Product name + optional Assured badge */}
-          <p style={{
-            fontSize: 14, color: '#1A1A1A', margin: '0 0 6px',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          } as React.CSSProperties}>
+          <p
+            style={{
+              fontSize: 13, color: '#1A1A1A', margin: '0 0 5px',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              lineHeight: 1.35,
+            } as React.CSSProperties}
+          >
             {product.name}
             {product.is_assured && <AssuredBadge />}
           </p>
 
           {/* Price row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: 5 }}>
             <span style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A' }}>
               ₹{product.price.toLocaleString('en-IN')}
             </span>
@@ -205,11 +202,9 @@ export default function ProductCard({ product }: Props) {
           </div>
 
           {/* Deal / urgency badge */}
-          <div style={{ marginBottom: 6, minHeight: 20 }}>
+          <div style={{ marginBottom: 5, minHeight: 18 }}>
             {dealBadge === 'few_left' && (
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#DC2626' }}>
-                Only few left
-              </span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#DC2626' }}>Only few left</span>
             )}
             {dealBadge === 'hot_deal' && (
               <span style={{
@@ -232,9 +227,9 @@ export default function ProductCard({ product }: Props) {
               background: '#5B1A3A', color: '#fff',
               fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
             }}>
-              ★ {rating}
+              ★ {rating.toFixed(1)}
             </span>
-            <span style={{ fontSize: 12, color: '#9CA3AF' }}>({reviews})</span>
+            <span style={{ fontSize: 11, color: '#9CA3AF' }}>({reviewCount})</span>
           </div>
 
         </div>

@@ -326,17 +326,19 @@ export default function CategoryPage() {
             )}
 
             {/* Sort bar */}
-            <SortBar
-              sort={sortBy}
-              onSortChange={s => updateFilters({ sort: s })}
-              filteredTotal={sorted.length}
-              currentPage={page}
-              pageSize={PAGE_SIZE}
-            />
+            <div className="mb-3">
+              <SortBar
+                sort={sortBy}
+                onSortChange={s => updateFilters({ sort: s })}
+                filteredTotal={sorted.length}
+                currentPage={page}
+                pageSize={PAGE_SIZE}
+              />
+            </div>
 
             {/* ── Loading skeletons ── */}
             {isLoading && (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-xl overflow-hidden border border-gray-100">
                     <div
@@ -403,7 +405,7 @@ export default function CategoryPage() {
 
             {/* ── Product grid ── */}
             {!isLoading && paginated.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
                 {paginated.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}

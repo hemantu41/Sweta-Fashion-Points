@@ -2,6 +2,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap');
 
 :root {
+  /* IFP Brand tokens */
+  --ifp-maroon: #5B1A3A;
+  --ifp-gold: #C49A3C;
+  --ifp-bg: #F1F3F6;
+  --ifp-card: #FFFFFF;
+  --ifp-text: #1A1A1A;
+  --ifp-muted: #6B7280;
+  --ifp-green: #16A34A;
+  --ifp-red: #DC2626;
+  --ifp-blue: #1D6FE8;
+
   /* Premium Color Palette — Wine Maroon + Gold */
   --background: #FAF7F8;
   --foreground: #333333;
