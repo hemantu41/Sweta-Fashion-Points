@@ -32,7 +32,25 @@ interface FilterProps {
 
 // ─── Static option lists ──────────────────────────────────────────────────────
 
-const SIZES    = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+const SIZES = [
+  // Standard apparel
+  'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL',
+  // Numeric dress / bottom sizes
+  '28', '30', '32', '34', '36', '38', '40', '42', '44', '46',
+  // Kids / saree blouse / kids numeric
+  '20', '22', '24', '26',
+  // Footwear
+  '5', '6', '7', '8', '9', '10', '11',
+];
+const ALL_FABRICS = [
+  'Cotton', 'Pure Cotton', 'Silk', 'Pure Silk', 'Banarasi Silk', 'Kanjivaram Silk',
+  'Chiffon', 'Georgette', 'Crepe', 'Satin', 'Net', 'Lace',
+  'Rayon', 'Viscose', 'Polyester', 'Nylon',
+  'Linen', 'Khadi', 'Handloom',
+  'Velvet', 'Brocade', 'Jacquard', 'Organza', 'Chanderi', 'Tussar',
+  'Denim', 'Wool', 'Fleece', 'Terry Cotton',
+];
+
 const DISCOUNT = [{ label: '10% or more', value: 10 }, { label: '25% or more', value: 25 }, { label: '50% or more', value: 50 }];
 const RATINGS  = [{ label: '4★ & above', value: 4 }, { label: '3★ & above', value: 3 }];
 
@@ -260,21 +278,19 @@ function FilterContent({ filters, onChange, onClear, availableFabrics, available
         </Accordion>
 
         {/* Fabric */}
-        {availableFabrics.length > 0 && (
-          <Accordion title="Fabric">
-            <div className="space-y-2.5">
-              {availableFabrics.map(fabric => (
-                <label key={fabric} className="flex items-center gap-2.5 cursor-pointer group">
-                  <Checkbox
-                    checked={filters.fabrics.includes(fabric)}
-                    onClick={() => onChange({ fabrics: toggle(filters.fabrics, fabric) })}
-                  />
-                  <span className="text-[13px] text-gray-600 group-hover:text-gray-900 transition-colors">{fabric}</span>
-                </label>
-              ))}
-            </div>
-          </Accordion>
-        )}
+        <Accordion title="Fabric">
+          <div className="space-y-2.5">
+            {[...new Set([...availableFabrics, ...ALL_FABRICS])].map(fabric => (
+              <label key={fabric} className="flex items-center gap-2.5 cursor-pointer group">
+                <Checkbox
+                  checked={filters.fabrics.includes(fabric)}
+                  onClick={() => onChange({ fabrics: toggle(filters.fabrics, fabric) })}
+                />
+                <span className="text-[13px] text-gray-600 group-hover:text-gray-900 transition-colors">{fabric}</span>
+              </label>
+            ))}
+          </div>
+        </Accordion>
 
         {/* Rating */}
         <Accordion title="Rating">

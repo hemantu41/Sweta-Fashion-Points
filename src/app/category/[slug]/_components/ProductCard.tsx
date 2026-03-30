@@ -83,15 +83,15 @@ export default function ProductCard({ product }: { product: Product }) {
     : mockReviewCount(product.id);
 
   const stock = product.stockQuantity ?? 999;
-  const dealBadge: 'few_left' | 'hot_deal' | 'free_delivery' =
-    stock <= 5     ? 'few_left'      :
-    discount >= 60 ? 'hot_deal'      :
-                     'free_delivery';
+  const dealBadge: 'few_left' | 'hot_deal' | null =
+    stock <= 5     ? 'few_left' :
+    discount >= 60 ? 'hot_deal' :
+                     null;
 
   const discountColor = discount >= 50 ? '#16A34A' : '#C49A3C';
 
   return (
-    <Link href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+    <Link href={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', outline: 'none' }}>
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -105,7 +105,7 @@ export default function ProductCard({ product }: { product: Product }) {
       >
 
         {/* ── Image Block ── */}
-        <div style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', background: '#F9F5F3' }}>
+        <div style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', background: '#F0EBEE' }}>
           {imgSrc ? (
             <Image
               src={imgSrc}
@@ -202,29 +202,28 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
 
           {/* Deal / urgency badge */}
-          <div style={{ marginBottom: 5, minHeight: 18 }}>
-            {dealBadge === 'few_left' && (
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#DC2626' }}>Only few left</span>
-            )}
-            {dealBadge === 'hot_deal' && (
-              <span style={{
-                display: 'inline-block', fontSize: 11, fontWeight: 700,
-                background: '#16A34A', color: '#fff',
-                padding: '2px 8px', borderRadius: 4,
-              }}>
-                Hot Deal
-              </span>
-            )}
-            {dealBadge === 'free_delivery' && (
-              <span style={{ fontSize: 11, color: '#6B7280' }}>Free Delivery</span>
-            )}
-          </div>
+          {dealBadge && (
+            <div style={{ marginBottom: 5 }}>
+              {dealBadge === 'few_left' && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#DC2626' }}>Only few left</span>
+              )}
+              {dealBadge === 'hot_deal' && (
+                <span style={{
+                  display: 'inline-block', fontSize: 11, fontWeight: 700,
+                  background: '#16A34A', color: '#fff',
+                  padding: '2px 8px', borderRadius: 4,
+                }}>
+                  Hot Deal
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Rating row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 2,
-              background: '#5B1A3A', color: '#fff',
+              background: '#F5EDF2', color: '#5B1A3A',
               fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
             }}>
               ★ {rating.toFixed(1)}
