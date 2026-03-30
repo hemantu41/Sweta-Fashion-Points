@@ -141,13 +141,6 @@ export default function ProductCard({ product }: Props) {
             {product.name}
           </p>
 
-          {/* Seller */}
-          {product.seller && (
-            <p style={{ fontSize: 10, color: '#C49A3C', fontWeight: 600, margin: '0 0 6px' }}>
-              🏪 {product.seller.businessName}
-              {product.seller.city ? `, ${product.seller.city.toUpperCase()}` : ''}
-            </p>
-          )}
 
           {/* Price */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexWrap: 'wrap', marginBottom: 5 }}>

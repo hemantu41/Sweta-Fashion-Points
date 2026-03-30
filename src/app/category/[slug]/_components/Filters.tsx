@@ -190,16 +190,6 @@ function FilterContent({ filters, onChange, onClear, availableFabrics, available
               {filters.minRating}★+ <X size={9} style={{ color: '#C49A3C' }} />
             </button>
           )}
-          {filters.cities.map(c => (
-            <button
-              key={c}
-              onClick={() => onChange({ cities: filters.cities.filter(x => x !== c) })}
-              className="flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border"
-              style={{ borderColor: '#5B1A3A', color: '#5B1A3A' }}
-            >
-              {c} <X size={9} style={{ color: '#C49A3C' }} />
-            </button>
-          ))}
           {filters.minDiscount && (
             <button
               onClick={() => onChange({ minDiscount: null })}
@@ -303,22 +293,6 @@ function FilterContent({ filters, onChange, onClear, availableFabrics, available
           </div>
         </Accordion>
 
-        {/* Seller Location */}
-        {availableCities.length > 0 && (
-          <Accordion title="Seller Location">
-            <div className="space-y-2.5">
-              {availableCities.slice(0, 8).map(city => (
-                <label key={city} className="flex items-center gap-2.5 cursor-pointer group">
-                  <Checkbox
-                    checked={filters.cities.includes(city)}
-                    onClick={() => onChange({ cities: toggle(filters.cities, city) })}
-                  />
-                  <span className="text-[13px] text-gray-600 group-hover:text-gray-900 transition-colors">{city}</span>
-                </label>
-              ))}
-            </div>
-          </Accordion>
-        )}
 
         {/* Discount */}
         <Accordion title="Discount">
