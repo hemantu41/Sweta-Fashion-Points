@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { productCache } from '@/lib/cache';
+import { sendEmail } from '@/lib/email';
+import { productApprovedEmail, productRejectedEmail } from '@/lib/emailTemplates/productEmails';
 
 // GET /api/admin/products/review - Fetch products pending approval
 export async function GET(request: NextRequest) {
@@ -105,6 +107,72 @@ export async function PUT(request: NextRequest) {
     // Clear product cache after approval/rejection
     productCache.clear();
     console.log('[Admin Product Review API] Cache cleared after product approval/rejection');
+
+    // ── Send email + in-app notification (non-blocking) ──
+    void (async () => {
+      try {
+        // Fetch seller name + email
+        const { data: sellerRow } = await supabaseAdmin
+          .from('spf_sellers')
+          .select('business_name, spf_users!spf_sellers_user_id_fkey(email)')
+          .eq('id', product.seller_id)
+          .single();
+
+        const sellerName  = (sellerRow as any)?.business_name ?? 'Seller';
+        const sellerEmail = (sellerRow as any)?.spf_users?.email as string | undefined;
+
+        const productId  = `IFP-PRD-${product.id.slice(0, 8).toUpperCase()}`;
+        const category   = [product.category, product.sub_category].filter(Boolean).join(' > ');
+
+        // In-app notification
+        await supabaseAdmin.from('spf_notifications').insert({
+          seller_id:    product.seller_id,
+          type:         'qc',
+          title:        action === 'approve'
+            ? `✅ "${product.name}" is now live!`
+            : `❌ "${product.name}" needs changes`,
+          message:      action === 'approve'
+            ? `Your product has been approved and is now visible to customers.`
+            : `Your product was rejected. Please review the feedback and resubmit.`,
+          product_id:   product.id,
+          product_name: product.name,
+          is_read:      false,
+        });
+
+        if (!sellerEmail) {
+          console.warn('[Admin Product Review API] No seller email — skipping email notification');
+          return;
+        }
+
+        let subject: string;
+        let html: string;
+
+        if (action === 'approve') {
+          ({ subject, html } = productApprovedEmail({
+            sellerName,
+            shopName:        sellerName,
+            productTitle:    product.name,
+            productCategory: category,
+            sellingPrice:    product.price,
+            productId,
+            productSlug:     product.product_id ?? product.id,
+          }));
+        } else {
+          ({ subject, html } = productRejectedEmail({
+            sellerName,
+            shopName:     sellerName,
+            productTitle: product.name,
+            productId,
+            rejectionTags: [],
+            adminNote:    rejectionReason,
+          }));
+        }
+
+        await sendEmail({ to: sellerEmail, subject, html });
+      } catch (err: any) {
+        console.error('[Admin Product Review API] Notification error (non-fatal):', err?.message);
+      }
+    })();
 
     return NextResponse.json({
       success: true,
