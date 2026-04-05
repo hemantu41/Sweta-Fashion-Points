@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { addPickupLocation } from '@/lib/shiprocket';
 
 // Log a seller status change to history
 async function logStatusHistory(
@@ -200,6 +201,40 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, updateData.reason);
+
+        // Register pickup address with Shiprocket (non-blocking)
+        void (async () => {
+          try {
+            const { data: sellerData } = await supabaseAdmin
+              .from('spf_sellers')
+              .select('business_name, business_email, business_phone, address_line1, city, state, pincode, pickup_pincode')
+              .eq('id', sellerId)
+              .single();
+
+            if (sellerData) {
+              const pickupResult = await addPickupLocation({
+                name: sellerData.business_name || 'Seller',
+                email: sellerData.business_email || '',
+                phone: sellerData.business_phone || '',
+                address: sellerData.address_line1 || '',
+                city: sellerData.city || '',
+                state: sellerData.state || '',
+                pincode: sellerData.pickup_pincode || sellerData.pincode || '',
+              });
+
+              if (pickupResult.success && pickupResult.pickupLocationName) {
+                await supabaseAdmin
+                  .from('spf_sellers')
+                  .update({ shiprocket_pickup_location: pickupResult.pickupLocationName })
+                  .eq('id', sellerId);
+                console.log(`[Seller Approve] Registered Shiprocket pickup: ${pickupResult.pickupLocationName} for seller ${sellerId}`);
+              }
+            }
+          } catch (err: any) {
+            console.error('[Seller Approve] Shiprocket pickup registration failed (non-fatal):', err?.message);
+          }
+        })();
+
         return NextResponse.json({ success: true, message: 'Seller approved successfully' });
       }
 
