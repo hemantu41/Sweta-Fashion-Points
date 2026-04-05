@@ -19,8 +19,11 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: "Insta Fashion Points | Premium Clothing Store in Amas, Gaya, Bihar",
-  description: "Discover trendy fashion for Men, Women, Kids & exclusive Saree collections at Insta Fashion Points. Your trusted clothing store in Amas, Gaya, Bihar. Shop quality fashion at affordable prices.",
+  title: {
+    default: "Affordable & Premium Fashion Products | Insta Fashion Points",
+    template: "%s | Insta Fashion Points",
+  },
+  description: "Shop affordable and premium fashion products from local boutiques. Fast delivery in Hyderabad and pan-India shipping.",
   keywords: "clothing store Amas, fashion store Gaya, saree shop Bihar, men's fashion, women's fashion, kids clothing, ethnic wear, wedding sarees, party wear, Insta Fashion Points",
   openGraph: {
     title: "Insta Fashion Points | Premium Clothing Store in Amas, Gaya",
