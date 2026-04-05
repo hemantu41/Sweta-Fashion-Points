@@ -79,9 +79,9 @@ export default function SellerSidebar({ sellerName, healthScore, orderBadge, pro
     {
       label: 'Products',
       icon: <Icon d={ICONS.products} />,
-      badge: (productBadge || 0) + (qcBadge || 0) || undefined,
+      badge: qcBadge || undefined,
       children: [
-        { label: 'My Products', href: '/seller/dashboard/products', icon: <Icon d={ICONS.products} size={15} />, badge: productBadge },
+        { label: 'My Products', href: '/seller/dashboard/products', icon: <Icon d={ICONS.products} size={15} /> },
         { label: 'QC Status',   href: '/seller/dashboard/qc',       icon: <Icon d={ICONS.qc} size={15} />,       badge: qcBadge },
         { label: 'Add Product', href: '/seller/dashboard/add',      icon: <Icon d={ICONS.add} size={15} /> },
       ],
