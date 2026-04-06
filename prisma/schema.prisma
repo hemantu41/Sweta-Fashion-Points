@@ -16,7 +16,9 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Supabase: use pooler for url, direct for migrations
+  directUrl = env("DIRECT_URL")
+  // DATABASE_URL    = Supabase connection pooler URL (port 6543)
+  // DIRECT_URL      = Supabase direct connection URL  (port 5432, for migrations)
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
