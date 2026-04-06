@@ -30,14 +30,31 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Seller packing queue: captured + unpacked + items contain this seller
-      ({ data, error } = await supabase
+      const SELECT_COLS = 'id, order_number, status, delivery_address, items, amount, packing_deadline, sla_deadline, packed_at, shipped_at, created_at, payment_completed_at, seller_id';
+      const ACTIVE_STATUSES = ['captured', 'accepted', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'returned', 'on_hold'];
+
+      // Query 1: orders where top-level seller_id matches
+      const { data: d1 } = await supabase
         .from('spf_payment_orders')
-        .select('id, order_number, status, delivery_address, items, packing_deadline, sla_deadline, packed_at, created_at, payment_completed_at')
-        .eq('status', 'captured')
-        .is('packed_at', null)
+        .select(SELECT_COLS)
+        .eq('seller_id', sellerId)
+        .in('status', ACTIVE_STATUSES)
+        .order('created_at', { ascending: false });
+
+      // Query 2: orders where items JSONB contains seller_id
+      const { data: d2, error: err2 } = await supabase
+        .from('spf_payment_orders')
+        .select(SELECT_COLS)
         .contains('items', [{ seller_id: sellerId }])
-        .order('created_at', { ascending: false }));
+        .in('status', ACTIVE_STATUSES)
+        .order('created_at', { ascending: false });
+
+      error = err2;
+
+      // Merge and deduplicate
+      const all = [...(d1 || []), ...(d2 || [])];
+      const seen = new Set<string>();
+      data = all.filter(o => seen.has(o.id) ? false : !!seen.add(o.id));
     } else {
       // Buyer order history — use * to avoid hard-coding column names
       ({ data, error } = await supabase
