@@ -1,96 +1,104 @@
+/**
+ * GET /api/orders?sellerId=  — seller order list
+ * GET /api/orders?userId=    — buyer order history
+ *
+ * Reads from spf_orders (Prisma) and returns data shaped like the
+ * old spf_payment_orders format so the seller dashboard page works
+ * without any changes.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { sellerCacheGet, sellerCacheSet } from '@/lib/sellerCache';
+import prisma from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
+
+// Map Prisma OrderStatus enum → old spf_payment_orders status strings
+function mapStatus(status: string): string {
+  switch (status) {
+    case 'CONFIRMED':
+    case 'SELLER_NOTIFIED':   return 'captured';
+    case 'ACCEPTED':           return 'accepted';
+    case 'PACKED':
+    case 'READY_TO_SHIP':
+    case 'PICKUP_SCHEDULED':   return 'packed';
+    case 'IN_TRANSIT':         return 'shipped';
+    case 'OUT_FOR_DELIVERY':   return 'out_for_delivery';
+    case 'DELIVERED':          return 'delivered';
+    case 'CANCELLED':          return 'cancelled';
+    case 'RETURN_INITIATED':
+    case 'RETURNED':           return 'returned';
+    default:                   return status.toLowerCase();
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId');
-    const sellerId = request.nextUrl.searchParams.get('sellerId');
+    const { searchParams } = request.nextUrl;
+    const userId   = searchParams.get('userId');
+    const sellerId = searchParams.get('sellerId');
 
     if (!userId && !sellerId) {
       return NextResponse.json(
         { error: 'User ID or Seller ID is required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Fetch orders — split query by path to avoid selecting columns
-    // (packing_deadline, sla_deadline, packed_at) that may not yet exist
-    // if the fast-delivery SQL migration hasn't been applied.
-    let data: any[] | null = null;
-    let error: any = null;
+    // Build Prisma where clause; exclude unpaid/failed orders from dashboard
+    const where = sellerId
+      ? {
+          sellerId,
+          status: {
+            notIn: ['PENDING_PAYMENT', 'PAYMENT_FAILED'] as any,
+          },
+        }
+      : { customerId: userId! };
 
-    if (sellerId) {
-      // ── Cache-first for seller orders ─────────────────────────────────
-      const cachedOrders = await sellerCacheGet<any[]>(sellerId, 'orders');
-      if (cachedOrders !== null) {
-        return NextResponse.json(
-          { success: true, orders: cachedOrders, fromCache: true },
-          { headers: { 'X-Cache': 'HIT' } }
-        );
-      }
+    const dbOrders = await prisma.order.findMany({
+      where,
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+    });
 
-      const SELECT_COLS = 'id, order_number, status, delivery_address, items, amount, packing_deadline, sla_deadline, packed_at, shipped_at, created_at, payment_completed_at, seller_id';
-      const ACTIVE_STATUSES = ['captured', 'accepted', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'returned', 'on_hold'];
+    // Transform to old spf_payment_orders shape
+    const orders = dbOrders.map(o => ({
+      id:               o.id,
+      order_number:     o.orderNumber,
+      seller_id:        o.sellerId,
+      user_id:          o.customerId,
+      status:           mapStatus(o.status),
+      // amount in paise (× 100) so existing fmtAmount helper works
+      amount:           Math.round((Number(o.subtotal) + Number(o.shippingCharge)) * 100),
+      // SLA deadlines
+      sla_deadline:     o.acceptanceSlaDeadline?.toISOString() ?? null,
+      packing_deadline: o.packingSlaDeadline?.toISOString()    ?? null,
+      // Lifecycle timestamps
+      packed_at:        o.packedAt?.toISOString()   ?? null,
+      shipped_at:       o.pickedUpAt?.toISOString() ?? null,
+      created_at:       o.createdAt.toISOString(),
+      // Delivery address — shippingAddress JSON stored as { name, phone, house, area, city, state, pincode }
+      delivery_address: o.shippingAddress,
+      // Items
+      items: o.items.map(item => ({
+        id:              item.id,
+        product_id:      item.productId,
+        seller_id:       item.sellerId,
+        product_name:    item.productName,
+        name:            item.productName,   // alias used by some UI components
+        variant_details: item.variantDetails,
+        sku:             item.sku,
+        quantity:        item.quantity,
+        unit_price:      Number(item.unitPrice),
+        total_price:     Number(item.totalPrice),
+      })),
+    }));
 
-      // Query 1: orders where top-level seller_id matches
-      const { data: d1 } = await supabase
-        .from('spf_payment_orders')
-        .select(SELECT_COLS)
-        .eq('seller_id', sellerId)
-        .in('status', ACTIVE_STATUSES)
-        .order('created_at', { ascending: false });
-
-      // Query 2: orders where items JSONB contains seller_id
-      const { data: d2, error: err2 } = await supabase
-        .from('spf_payment_orders')
-        .select(SELECT_COLS)
-        .contains('items', [{ seller_id: sellerId }])
-        .in('status', ACTIVE_STATUSES)
-        .order('created_at', { ascending: false });
-
-      error = err2;
-
-      // Merge and deduplicate
-      const all = [...(d1 || []), ...(d2 || [])];
-      const seen = new Set<string>();
-      data = all.filter(o => seen.has(o.id) ? false : !!seen.add(o.id));
-    } else {
-      // Buyer order history — use * to avoid hard-coding column names
-      ({ data, error } = await supabase
-        .from('spf_payment_orders')
-        .select('*')
-        .eq('user_id', userId!)
-        .order('created_at', { ascending: false }));
-    }
-
-    const orders = data;
-
-    if (error) {
-      console.error('[Orders API] Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch orders', details: error.message },
-        { status: 500 }
-      );
-    }
-
-    // Cache seller orders after DB fetch (background)
-    if (sellerId && orders) {
-      sellerCacheSet(sellerId, 'orders', orders).catch(() => {});
-    }
-
+    return NextResponse.json({ success: true, orders });
+  } catch (err: any) {
+    console.error('[Orders API] Error:', err?.message);
     return NextResponse.json(
-      { success: true, orders: orders || [], fromCache: false },
-      { headers: { 'X-Cache': 'MISS' } }
-    );
-  } catch (error: any) {
-    console.error('[Orders API] Error:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch orders',
-        details: error.message || String(error),
-      },
-      { status: 500 }
+      { error: 'Failed to fetch orders', details: err?.message },
+      { status: 500 },
     );
   }
 }
