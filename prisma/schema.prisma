@@ -1,0 +1,384 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Insta Fashion Points — Prisma Schema
+// Order Lifecycle System
+//
+// To apply:
+//   npx prisma migrate dev --name order_lifecycle
+//   npx prisma generate
+//
+// Datasource targets Supabase Postgres (swap DATABASE_URL for RDS in prod).
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Supabase: use pooler for url, direct for migrations
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ═════════════════════════════════════════════════════════════════════════════
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAYMENT_FAILED
+  CONFIRMED
+  SELLER_NOTIFIED
+  ACCEPTED
+  PACKED
+  READY_TO_SHIP
+  PICKUP_SCHEDULED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURN_INITIATED
+  RETURNED
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NET_BANKING
+  COD
+}
+
+enum RiskStatus {
+  CLEAR
+  SOFT_FLAG
+  HOLD
+  REJECTED
+}
+
+enum FlagType {
+  COD_HIGH_VALUE_NEW_CUSTOMER  // COD order > ₹2000 from customer < 30 days old
+  EXCESS_COD_UNDELIVERED       // >3 undelivered COD orders in last 90 days
+  HIGH_RTO_PINCODE             // Delivery pincode RTO rate > 30%
+  RAPID_ORDER_AFTER_SIGNUP     // Order placed < 1 hr after account creation
+  MULTI_ACCOUNT_DEVICE         // Same device fingerprint on multiple accounts
+  ADDRESS_ABUSE                // Same address used with >5 different accounts
+  VELOCITY_BREACH              // >10 orders in 24 hrs from one customer
+  VPN_PROXY                    // Order placed via VPN or proxy IP
+  AMOUNT_MISMATCH              // Payment amount != order amount
+  DUPLICATE_TRANSACTION        // Same cart + address + amount placed twice in 10 min
+}
+
+enum ActorType {
+  SYSTEM
+  SELLER
+  ADMIN
+  COURIER
+}
+
+enum PayoutCycle {
+  T7 // Payout 7 days after delivery
+  T5 // Payout 5 days after delivery (premium sellers)
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  ON_HOLD
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 1. ORDER
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Core order record. One order = one seller. Cross-seller carts split at checkout.
+model Order {
+  /// UUID primary key
+  id                   String      @id @default(uuid())
+
+  /// Format: IFP-ORD-YYYYMMDD-XXXX (e.g. IFP-ORD-20260407-A3F9)
+  orderNumber          String      @unique @map("order_number")
+
+  customerId           String      @map("customer_id")
+  sellerId             String      @map("seller_id")
+
+  // ── Status ───────────────────────────────────────────────────────────────
+  status               OrderStatus @default(PENDING_PAYMENT)
+
+  /// IFP Fast delivery deferred — only STANDARD for now
+  deliveryType         String      @default("STANDARD") @map("delivery_type")
+
+  // ── Payment ───────────────────────────────────────────────────────────────
+  paymentMethod        PaymentMethod? @map("payment_method")
+
+  /// razorpay: captured | failed | refunded | pending
+  paymentStatus        String?     @map("payment_status")
+
+  /// Razorpay order_id or COD reference
+  paymentGatewayRef    String?     @map("payment_gateway_ref")
+
+  /// Razorpay payment_id
+  transactionId        String?     @map("transaction_id")
+
+  // ── Financials (all INR, stored as paise-free decimal) ────────────────────
+  subtotal             Decimal     @db.Decimal(12, 2)
+
+  /// Charged to customer; 0 if free shipping
+  shippingCharge       Decimal     @default(0) @db.Decimal(10, 2) @map("shipping_charge")
+
+  /// IFP platform commission (% of subtotal)
+  platformFee          Decimal     @default(0) @db.Decimal(10, 2) @map("platform_fee")
+
+  /// Razorpay PG fee (2% + GST approx)
+  pgFee                Decimal     @default(0) @db.Decimal(10, 2) @map("pg_fee")
+
+  /// subtotal - platformFee - pgFee + shippingCharge (if platform absorbs shipping)
+  sellerPayoutAmount   Decimal     @default(0) @db.Decimal(12, 2) @map("seller_payout_amount")
+
+  // ── Delivery address ──────────────────────────────────────────────────────
+  /// { name, phone, house, area, city, state, pincode, landmark? }
+  shippingAddress      Json        @map("shipping_address")
+
+  // ── Logistics ─────────────────────────────────────────────────────────────
+  awbNumber            String?     @unique @map("awb_number")
+  courierPartner       String?     @map("courier_partner")
+  trackingUrl          String?     @map("tracking_url")
+  shiprocketOrderId    String?     @map("shiprocket_order_id")
+  shiprocketShipmentId String?     @map("shiprocket_shipment_id")
+
+  // ── Lifecycle timestamps ──────────────────────────────────────────────────
+  sellerAcceptedAt     DateTime?   @map("seller_accepted_at")
+  packedAt             DateTime?   @map("packed_at")
+  readyAt              DateTime?   @map("ready_at")
+  pickedUpAt           DateTime?   @map("picked_up_at")
+  deliveredAt          DateTime?   @map("delivered_at")
+
+  // ── SLA deadlines ─────────────────────────────────────────────────────────
+  /// Seller must accept within 2 hrs of CONFIRMED
+  acceptanceSlaDeadline DateTime?  @map("acceptance_sla_deadline")
+
+  /// Seller must pack within 4 hrs of acceptance
+  packingSlaDeadline   DateTime?   @map("packing_sla_deadline")
+
+  /// Customer can initiate return until delivered_at + 7 days
+  returnWindowClosesAt DateTime?   @map("return_window_closes_at")
+
+  // ── Fraud / Risk ──────────────────────────────────────────────────────────
+  /// Cumulative score from OrderRiskFlag.scoreContribution
+  riskScore            Int         @default(0) @map("risk_score")
+  riskStatus           RiskStatus  @default(CLEAR) @map("risk_status")
+
+  // ── Fulfilment extras ─────────────────────────────────────────────────────
+  /// Optional photo proof seller uploads before handing to courier
+  packedPhotoUrl       String?     @map("packed_photo_url")
+  notes                String?
+
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt      @map("updated_at")
+
+  // ── Relations ─────────────────────────────────────────────────────────────
+  items                OrderItem[]
+  statusHistory        OrderStatusHistory[]
+  riskFlags            OrderRiskFlag[]
+  payout               SellerPayout?
+
+  @@index([customerId],          name: "idx_spf_orders_customer_id")
+  @@index([sellerId],            name: "idx_spf_orders_seller_id")
+  @@index([status],              name: "idx_spf_orders_status")
+  @@index([awbNumber],           name: "idx_spf_orders_awb")
+  @@index([riskStatus],          name: "idx_spf_orders_risk_status")
+  @@index([createdAt],           name: "idx_spf_orders_created_at")
+  @@index([sellerId, status],    name: "idx_spf_orders_seller_status")
+  @@map("spf_orders")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 2. ORDER ITEMS
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Line items belonging to an order. Immutable after order is confirmed.
+model OrderItem {
+  id             String   @id @default(uuid())
+  orderId        String   @map("order_id")
+  productId      String   @map("product_id")
+  variantId      String?  @map("variant_id")
+  sellerId       String   @map("seller_id")
+
+  productName    String   @map("product_name")
+
+  /// { size?: string, color?: string, ...other variant attrs }
+  variantDetails Json?    @map("variant_details")
+
+  sku            String?
+
+  quantity       Int
+  unitPrice      Decimal  @db.Decimal(10, 2) @map("unit_price")
+  totalPrice     Decimal  @db.Decimal(10, 2) @map("total_price")
+
+  /// 4-6 digit HSN code for GST invoice generation
+  hsnCode        String?  @map("hsn_code")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId],    name: "idx_spf_order_items_order_id")
+  @@index([productId],  name: "idx_spf_order_items_product_id")
+  @@index([sellerId],   name: "idx_spf_order_items_seller_id")
+  @@map("spf_order_items")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 3. ORDER STATUS HISTORY (append-only audit log)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Immutable event log for every status transition on an order.
+/// Never update or delete rows — only append.
+model OrderStatusHistory {
+  id         String      @id @default(uuid())
+  orderId    String      @map("order_id")
+
+  fromStatus OrderStatus? @map("from_status") // null on first entry (PENDING_PAYMENT)
+  toStatus   OrderStatus  @map("to_status")
+
+  actorType  ActorType   @map("actor_type")
+
+  /// userId / sellerId / adminId / courier_service depending on actorType
+  actorId    String?     @map("actor_id")
+
+  /// Human-readable reason or system event name
+  note       String?
+
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId],             name: "idx_spf_order_history_order_id")
+  @@index([orderId, createdAt],  name: "idx_spf_order_history_order_time")
+  @@map("spf_order_status_history")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 4. ORDER RISK FLAGS
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// One row per risk signal detected on an order.
+/// Sum of scoreContribution → Order.riskScore.
+model OrderRiskFlag {
+  id                String    @id @default(uuid())
+  orderId           String    @map("order_id")
+
+  flagType          FlagType  @map("flag_type")
+
+  /// The raw value that triggered this flag (e.g. "cod_amount=3500", "rto_rate=0.45")
+  flagValue         String?   @map("flag_value")
+
+  /// Points added to Order.riskScore for this flag
+  scoreContribution Int       @default(0) @map("score_contribution")
+
+  resolvedByAdminId String?   @map("resolved_by_admin_id")
+  resolvedAt        DateTime? @map("resolved_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId],             name: "idx_spf_risk_flags_order_id")
+  @@index([flagType],            name: "idx_spf_risk_flags_type")
+  @@index([resolvedAt],          name: "idx_spf_risk_flags_resolved")
+  @@map("spf_order_risk_flags")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 5. CUSTOMER RISK PROFILE
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// 1-to-1 with spf_users. Maintained by background jobs + webhook handlers.
+model CustomerRiskProfile {
+  /// FK to spf_users.id
+  customerId          String    @id @map("customer_id")
+
+  totalCodOrders      Int       @default(0) @map("total_cod_orders")
+  undeliveredCodCount Int       @default(0) @map("undelivered_cod_count")
+  rtoCount            Int       @default(0) @map("rto_count")
+  fraudHoldCount      Int       @default(0) @map("fraud_hold_count")
+  lastFraudHoldAt     DateTime? @map("last_fraud_hold_at")
+
+  isBlocked           Boolean   @default(false) @map("is_blocked")
+  blockReason         String?   @map("block_reason")
+
+  lastUpdated         DateTime  @updatedAt @map("last_updated")
+
+  @@index([isBlocked], name: "idx_spf_crp_blocked")
+  @@map("spf_customer_risk_profiles")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 6. SELLER PAYOUT
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// One payout record per order. Created when order is DELIVERED.
+/// Processed on T+5 or T+7 depending on seller tier.
+model SellerPayout {
+  id                 String       @id @default(uuid())
+  sellerId           String       @map("seller_id")
+  orderId            String       @unique @map("order_id")
+
+  grossAmount        Decimal      @db.Decimal(12, 2) @map("gross_amount")
+
+  /// Courier cost deducted if seller is on self-ship plan
+  shippingDeduction  Decimal      @default(0) @db.Decimal(10, 2) @map("shipping_deduction")
+
+  /// PG fee pass-through (usually 0 for prepaid, ~1.5% for COD)
+  pgFeeDeduction     Decimal      @default(0) @db.Decimal(10, 2) @map("pg_fee_deduction")
+
+  /// grossAmount - shippingDeduction - pgFeeDeduction
+  netPayout          Decimal      @db.Decimal(12, 2) @map("net_payout")
+
+  payoutCycle        PayoutCycle  @map("payout_cycle")
+  status             PayoutStatus @default(PENDING)
+
+  /// Scheduled date for bank transfer
+  payoutDate         DateTime?    @map("payout_date")
+
+  /// Bank UTR / NEFT reference number
+  utrNumber          String?      @map("utr_number")
+
+  createdAt          DateTime     @default(now()) @map("created_at")
+
+  order              Order        @relation(fields: [orderId], references: [id])
+
+  @@index([sellerId],              name: "idx_spf_payouts_seller_id")
+  @@index([status],                name: "idx_spf_payouts_status")
+  @@index([payoutDate],            name: "idx_spf_payouts_date")
+  @@index([sellerId, status],      name: "idx_spf_payouts_seller_status")
+  @@map("spf_seller_payouts")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 7. PINCODE RISK CONFIG
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Per-pincode delivery risk settings. Used by the fraud engine at checkout.
+/// Seeded with known high-RTO pincodes. Updated weekly from courier data.
+model PincodeRiskConfig {
+  /// 6-digit Indian pincode (PK)
+  pincode        String  @id
+
+  /// Historical RTO rate 0.00–1.00 (e.g. 0.35 = 35% return-to-origin)
+  rtoRate        Decimal @db.Decimal(5, 4) @map("rto_rate")
+
+  /// True if COD should be blocked for this pincode
+  isCodDisabled  Boolean @default(false) @map("is_cod_disabled")
+
+  /// False if courier cannot deliver here at all
+  isServiceable  Boolean @default(true) @map("is_serviceable")
+
+  city           String
+  state          String
+
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([isCodDisabled],  name: "idx_spf_pincode_cod_disabled")
+  @@index([isServiceable],  name: "idx_spf_pincode_serviceable")
+  @@index([rtoRate],        name: "idx_spf_pincode_rto_rate")
+  @@map("spf_pincode_risk_config")
+}
