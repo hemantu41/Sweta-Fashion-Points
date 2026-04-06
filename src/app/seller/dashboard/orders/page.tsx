@@ -6,7 +6,7 @@
  * Mobile-first card layout.
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 
@@ -636,17 +636,16 @@ export default function SellerOrdersPage() {
 
   const [tab,          setTab]          = useState<TabKey>('pending');
   const [orders,       setOrders]       = useState<OrderRow[]>([]);
+  const [total,        setTotal]        = useState(0);
   const [totalPages,   setTotalPages]   = useState(0);
   const [page,         setPage]         = useState(1);
-  const [loading,      setLoading]      = useState(false);
+  const [loading,      setLoading]      = useState(true);
   const [stats,        setStats]        = useState<Stats | null>(null);
   const [drawer,       setDrawer]       = useState<OrderDetail | null>(null);
   const [drawerLoading,setDrawerLoading]= useState(false);
   const [packModal,    setPackModal]    = useState<OrderRow | null>(null);
   const [actionLoading,setActionLoading]= useState<string | null>(null);
   const [toast,        setToast]        = useState<{ msg: string; ok: boolean } | null>(null);
-  // bump to re-trigger the fetch effect after an action
-  const [refreshKey,   setRefreshKey]   = useState(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -659,41 +658,38 @@ export default function SellerOrdersPage() {
     setTimeout(() => { if (mountedRef.current) setToast(null); }, 4000);
   };
 
-  const refresh = () => setRefreshKey(k => k + 1);
-
-  // ── Tab change: always reset to page 1 ────────────────────────────────────
-  const changeTab = (newTab: TabKey) => {
-    setTab(newTab);
-    setPage(1);
-  };
-
-  // ── Single effect: fetch stats + orders whenever deps change ───────────────
-  useEffect(() => {
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const fetchStats = useCallback(async () => {
     if (!sellerId) return;
-    let cancelled = false;
+    const res = await fetch(`/api/seller/orders?sellerId=${sellerId}&stats=true`);
+    if (res.ok) setStats(await res.json());
+  }, [sellerId]);
 
+  // ── Orders list ────────────────────────────────────────────────────────────
+  const fetchOrders = useCallback(async () => {
+    if (!sellerId) return;
     setLoading(true);
-
-    const statsUrl  = `/api/seller/orders?sellerId=${encodeURIComponent(sellerId)}&stats=true`;
-    const ordersUrl = `/api/seller/orders?sellerId=${encodeURIComponent(sellerId)}&tab=${tab}&page=${page}`;
-
-    Promise.all([
-      fetch(statsUrl).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(ordersUrl).then(r => r.ok ? r.json() : null).catch(() => null),
-    ]).then(([statsData, ordersData]) => {
-      if (cancelled) return;
-      if (statsData)  setStats(statsData);
-      if (ordersData) {
-        setOrders(ordersData.orders ?? []);
-        setTotalPages(ordersData.totalPages ?? 1);
+    try {
+      const res = await fetch(
+        `/api/seller/orders?sellerId=${encodeURIComponent(sellerId)}&tab=${tab}&page=${page}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data.orders);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
       }
-      setLoading(false);
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
-    });
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [sellerId, tab, page]);
 
-    return () => { cancelled = true; };
-  }, [sellerId, tab, page, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(1); }, [tab]);
+
+  useEffect(() => {
+    fetchStats();
+    fetchOrders();
+  }, [fetchStats, fetchOrders]);
 
   // ── Open drawer ────────────────────────────────────────────────────────────
   const openDrawer = async (id: string) => {
@@ -722,7 +718,8 @@ export default function SellerOrdersPage() {
           ? ` Pack before ${new Date(data.packingSlaDeadline).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}`
           : '';
         showToast(`Order accepted!${deadline}`);
-        refresh();
+        fetchOrders();
+        fetchStats();
       } else {
         showToast(data.error ?? 'Failed to accept', false);
       }
@@ -747,7 +744,8 @@ export default function SellerOrdersPage() {
       if (res.ok) {
         showToast('Order marked as packed!');
         setPackModal(null);
-        refresh();
+        fetchOrders();
+        fetchStats();
       } else {
         showToast(data.error ?? 'Failed to pack', false);
       }
@@ -770,7 +768,8 @@ export default function SellerOrdersPage() {
       const data = await res.json();
       if (res.ok) {
         showToast(data.message ?? 'Pickup scheduled!');
-        refresh();
+        fetchOrders();
+        fetchStats();
       } else {
         showToast(data.error ?? 'Failed to schedule pickup', false);
       }
@@ -781,8 +780,9 @@ export default function SellerOrdersPage() {
     }
   };
 
-  // Show nothing while auth is still resolving (avoids flash)
-  if (user === undefined) return null;
+  if (!sellerId) {
+    return <div className="p-8 text-center" style={{ color: C.muted }}>Loading…</div>;
+  }
 
   const statCards = [
     { label: 'New Orders',       value: stats?.newOrders      ?? 0, color: C.maroon,   tab: 'pending'   },
@@ -810,7 +810,7 @@ export default function SellerOrdersPage() {
         {statCards.map(s => (
           <button
             key={s.label}
-            onClick={() => changeTab(s.tab as TabKey)}
+            onClick={() => setTab(s.tab as TabKey)}
             className="bg-white rounded-2xl p-4 text-left transition-all hover:shadow-md"
             style={{
               borderLeft: `4px solid ${s.color}`,
@@ -833,7 +833,7 @@ export default function SellerOrdersPage() {
           return (
             <button
               key={t.key}
-              onClick={() => changeTab(t.key)}
+              onClick={() => setTab(t.key)}
               className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-all"
               style={{
                 borderBottom: tab === t.key ? `3px solid ${C.gold}` : '3px solid transparent',
@@ -947,7 +947,7 @@ export default function SellerOrdersPage() {
               order={drawer}
               sellerId={sellerId}
               onClose={() => setDrawer(null)}
-              onAction={() => refresh()}
+              onAction={() => { fetchOrders(); fetchStats(); }}
             />
           )}
         </>
