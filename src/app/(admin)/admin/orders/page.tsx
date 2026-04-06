@@ -1,1276 +1,983 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+/**
+ * Admin — Orders Management
+ * Tabs: All | Pending | Accepted | Ready to Ship | In Transit | Delivered | SLA Breach | Flagged
+ * Features: stats row, orders table, SLA countdown, risk flags, order detail drawer, admin actions
+ */
+
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { COURIER_PROVIDERS } from '@/lib/courier-providers';
-import { Pagination } from '@/components/Pagination';
 
-interface Order {
-  id: string;
-  order_number: string;
-  razorpay_order_id: string;
-  razorpay_payment_id?: string;
-  amount: number;
-  status: string;
-  delivery_status?: string;
-  tracking_number?: string;
-  delivery_type?: 'partner' | 'courier';
-  courier_company?: string;
-  courier_tracking_number?: string;
-  courier_tracking_url?: string;
-  user_id: string;
-  delivery_address: any;
-  items: any[];
-  created_at: string;
-  payment_completed_at?: string;
-  packing_deadline?: string;
-  sla_deadline?: string;
-  packed_at?: string;
-  batch_id?: string;
+// ─── Brand ────────────────────────────────────────────────────────────────────
+const C = {
+  maroon:  '#5B1A3A',
+  gold:    '#C49A3C',
+  bg:      '#FAF7F8',
+  sidebar: '#1F0E17',
+  text:    '#1a1a1a',
+  muted:   '#6b7280',
+  border:  '#e5e0e3',
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface OrderRow {
+  id:                    string;
+  orderNumber:           string;
+  status:                string;
+  riskStatus:            string;
+  riskScore:             number;
+  customerId:            string;
+  customerName:          string;
+  customerEmail:         string;
+  paymentMethod:         string | null;
+  subtotal:              number;
+  shippingCharge:        number;
+  total:                 number;
+  acceptanceSlaDeadline: string | null;
+  packingSlaDeadline:    string | null;
+  awbNumber:             string | null;
+  courierPartner:        string | null;
+  createdAt:             string;
+  itemCount:             number;
 }
 
-interface DeliveryPartner {
-  id: string;
-  name: string;
-  mobile: string;
-  vehicle_type: string | null;
-  status: string;
-  availability_status: string;
-  service_pincodes: string[];
-  distance_km?: number | null;
-  latitude?: number | null;
-  longitude?: number | null;
+interface OrderDetail extends OrderRow {
+  sellerId:           string;
+  sellerName:         string;
+  sellerEmail:        string;
+  sellerPhone:        string;
+  customerPhone:      string;
+  platformFee:        number;
+  pgFee:              number;
+  sellerPayoutAmount: number;
+  shippingAddress:    any;
+  trackingUrl:        string | null;
+  notes:              string | null;
+  items: {
+    id:         string;
+    productName: string;
+    quantity:   number;
+    unitPrice:  number;
+    totalPrice: number;
+    sku:        string | null;
+    variantDetails: any;
+  }[];
+  statusHistory: {
+    id:         string;
+    fromStatus: string | null;
+    toStatus:   string;
+    actorType:  string;
+    actorId:    string | null;
+    note:       string | null;
+    createdAt:  string;
+  }[];
+  riskFlags: {
+    id:                string;
+    flagType:          string;
+    flagValue:         string | null;
+    scoreContribution: number;
+    createdAt:         string;
+  }[];
+  payout: {
+    grossAmount:       number;
+    shippingDeduction: number;
+    pgFeeDeduction:    number;
+    netPayout:         number;
+    status:            string;
+    payoutDate:        string | null;
+  } | null;
 }
 
-interface EscalationOrder {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  customerPhone: string;
-  packingDeadline: string;
-  slaDeadline: string;
-  minutesOverdue: number | null;
-  itemCount: number;
+interface Stats {
+  totalToday:        number;
+  pendingAcceptance: number;
+  slaAtRisk:         number;
+  fraudHold:         number;
+  deliveredToday:    number;
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { key: 'all',        label: 'All Orders' },
+  { key: 'pending',    label: 'Pending' },
+  { key: 'accepted',   label: 'Accepted' },
+  { key: 'ready',      label: 'Ready to Ship' },
+  { key: 'in-transit', label: 'In Transit' },
+  { key: 'delivered',  label: 'Delivered' },
+  { key: 'sla-breach', label: '🔴 SLA Breach' },
+  { key: 'flagged',    label: '⚠️ Flagged' },
+] as const;
+
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  PENDING_PAYMENT:  { bg: '#fef3c7', color: '#92400e' },
+  PAYMENT_FAILED:   { bg: '#fee2e2', color: '#991b1b' },
+  CONFIRMED:        { bg: '#dbeafe', color: '#1e40af' },
+  SELLER_NOTIFIED:  { bg: '#ede9fe', color: '#5b21b6' },
+  ACCEPTED:         { bg: '#d1fae5', color: '#065f46' },
+  PACKED:           { bg: '#ecfdf5', color: '#047857' },
+  READY_TO_SHIP:    { bg: '#d1fae5', color: '#065f46' },
+  PICKUP_SCHEDULED: { bg: '#cffafe', color: '#164e63' },
+  IN_TRANSIT:       { bg: '#dbeafe', color: '#1e40af' },
+  OUT_FOR_DELIVERY: { bg: '#e0f2fe', color: '#075985' },
+  DELIVERED:        { bg: '#d1fae5', color: '#065f46' },
+  CANCELLED:        { bg: '#fee2e2', color: '#991b1b' },
+  RETURN_INITIATED: { bg: '#fef3c7', color: '#92400e' },
+  RETURNED:         { bg: '#ffedd5', color: '#9a3412' },
+};
+
+const RISK_COLORS: Record<string, { bg: string; color: string }> = {
+  CLEAR:     { bg: '#d1fae5', color: '#065f46' },
+  SOFT_FLAG: { bg: '#fef3c7', color: '#92400e' },
+  HOLD:      { bg: '#fee2e2', color: '#991b1b' },
+  REJECTED:  { bg: '#4b0000', color: '#fca5a5' },
+};
+
+const STATUS_STEPS = [
+  'PENDING_PAYMENT', 'CONFIRMED', 'SELLER_NOTIFIED', 'ACCEPTED',
+  'PACKED', 'PICKUP_SCHEDULED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED',
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtINR(n: number) {
+  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function SlaCountdown({ deadline }: { deadline: string }) {
+  const [remaining, setRemaining] = useState('');
+
+  useEffect(() => {
+    const tick = () => {
+      const ms  = new Date(deadline).getTime() - Date.now();
+      if (ms <= 0) { setRemaining('BREACHED'); return; }
+      const h   = Math.floor(ms / 3600000);
+      const m   = Math.floor((ms % 3600000) / 60000);
+      const s   = Math.floor((ms % 60000) / 1000);
+      setRemaining(`${h}h ${m}m ${s}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  const isBreached = remaining === 'BREACHED';
+  return (
+    <span style={{
+      fontSize: 12, fontWeight: 600, fontFamily: 'monospace',
+      color: isBreached ? '#dc2626' : '#d97706',
+    }}>
+      {remaining}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const c = STATUS_COLORS[status] ?? { bg: '#f3f4f6', color: '#374151' };
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99,
+      background: c.bg, color: c.color, whiteSpace: 'nowrap',
+    }}>
+      {status.replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+function RiskBadge({ riskStatus, riskScore }: { riskStatus: string; riskScore: number }) {
+  if (riskStatus === 'CLEAR' && riskScore === 0) return null;
+  const c = RISK_COLORS[riskStatus] ?? { bg: '#f3f4f6', color: '#374151' };
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+      background: c.bg, color: c.color,
+    }}>
+      {riskStatus} {riskScore > 0 ? `(${riskScore})` : ''}
+    </span>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminOrdersPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [partners, setPartners] = useState<DeliveryPartner[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState<string>('');
-  const [search, setSearch] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<any>(null);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [deliveryType, setDeliveryType] = useState<'partner' | 'courier'>('partner');
-  const [selectedPartner, setSelectedPartner] = useState<string>('');
-  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
-  const [courierCompany, setCourierCompany] = useState('');
-  const [courierTrackingNumber, setCourierTrackingNumber] = useState('');
-  const [courierExpectedDeliveryDate, setCourierExpectedDeliveryDate] = useState('');
-  const [courierNotes, setCourierNotes] = useState('');
-  const [assigning, setAssigning] = useState(false);
 
-  // Escalations + SLA countdown
-  const [escalations, setEscalations] = useState<EscalationOrder[]>([]);
-  const [loadingEscalations, setLoadingEscalations] = useState(false);
-  const [escalationsExpanded, setEscalationsExpanded] = useState(true);
-  const [now, setNow] = useState(new Date());
-  const [markingPacked, setMarkingPacked] = useState<string | null>(null);
-  const [sellerCoords, setSellerCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [tab,       setTab]       = useState<string>('all');
+  const [search,    setSearch]    = useState('');
+  const [searchQ,   setSearchQ]   = useState(''); // debounced
+  const [page,      setPage]      = useState(1);
+  const [orders,    setOrders]    = useState<OrderRow[]>([]);
+  const [total,     setTotal]     = useState(0);
+  const [totalPages,setTotalPages]= useState(0);
+  const [loading,   setLoading]   = useState(true);
+  const [stats,     setStats]     = useState<Stats | null>(null);
+  const [drawer,    setDrawer]    = useState<OrderDetail | null>(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [toast,     setToast]     = useState<{ msg: string; ok: boolean } | null>(null);
+  const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Shiprocket states
-  const [showShiprocketModal, setShowShiprocketModal] = useState(false);
-  const [loadingRates, setLoadingRates] = useState(false);
-  const [availableCouriers, setAvailableCouriers] = useState<any[]>([]);
-  const [selectedCourierId, setSelectedCourierId] = useState<number | null>(null);
-  const [creatingShipment, setCreatingShipment] = useState(false);
-
+  // Auth guard
   useEffect(() => {
-    if (!user) {
-      router.replace('/login');
-      return;
-    }
-    fetchOrders();
-    fetchPartners();
-    fetchEscalations();
-    const countdownInterval = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(countdownInterval);
-  }, [user, statusFilter, deliveryStatusFilter, page]);
+    if (!user) router.replace('/login');
+  }, [user]);
 
-  const fetchOrders = async () => {
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => { setSearchQ(search); setPage(1); }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Reset page when tab changes
+  useEffect(() => { setPage(1); }, [tab]);
+
+  // Fetch stats
+  const fetchStats = useCallback(async () => {
+    const res = await fetch('/api/admin/orders/v2/stats');
+    if (res.ok) setStats(await res.json());
+  }, []);
+
+  // Fetch orders
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('limit', '20'); // 20 orders per page
-      if (statusFilter && statusFilter !== 'all') {
-        params.append('status', statusFilter);
+      const qs = new URLSearchParams({ tab, page: String(page) });
+      if (searchQ) qs.set('search', searchQ);
+      const res = await fetch(`/api/admin/orders/v2?${qs}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data.orders);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
       }
-
-      const response = await fetch(`/api/admin/orders?${params}`);
-      const data = await response.json();
-
-      if (response.ok) {
-        let filteredOrders = data.data || [];
-
-        // Apply delivery status filter (client-side for now)
-        if (deliveryStatusFilter) {
-          filteredOrders = filteredOrders.filter(
-            (o: Order) => (o.delivery_status || 'pending_assignment') === deliveryStatusFilter
-          );
-        }
-
-        setOrders(filteredOrders);
-        setPagination(data.pagination);
-      } else {
-        setError(data.error || 'Failed to fetch orders');
-      }
-    } catch (error) {
-      console.error('Fetch orders error:', error);
-      setError('An error occurred while fetching orders');
     } finally {
       setLoading(false);
     }
-  };
+  }, [tab, page, searchQ]);
 
-  const fetchPartners = async (coords?: { lat: number; lng: number }) => {
-    try {
-      const url = new URL('/api/delivery-partners', window.location.origin);
-      url.searchParams.set('status', 'active');
-      if (coords) {
-        url.searchParams.set('sellerLat', String(coords.lat));
-        url.searchParams.set('sellerLng', String(coords.lng));
-      }
-      const response = await fetch(url.toString());
-      const data = await response.json();
+  useEffect(() => {
+    fetchStats();
+    fetchOrders();
+  }, [fetchStats, fetchOrders]);
 
-      if (response.ok) {
-        setPartners(data.partners || []);
-      }
-    } catch (error) {
-      console.error('Fetch partners error:', error);
+  // SLA Breach tab: auto-refresh every 60s
+  useEffect(() => {
+    if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    if (tab === 'sla-breach') {
+      autoRefreshRef.current = setInterval(fetchOrders, 60_000);
     }
+    return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
+  }, [tab, fetchOrders]);
+
+  // Show toast
+  const showToast = (msg: string, ok = true) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3000);
   };
 
-  const fetchEscalations = async () => {
-    try {
-      setLoadingEscalations(true);
-      const response = await fetch('/api/admin/orders/escalations');
-      const data = await response.json();
-      if (response.ok) {
-        setEscalations(data.escalations || []);
-      }
-    } catch (error) {
-      console.error('Fetch escalations error:', error);
-    } finally {
-      setLoadingEscalations(false);
+  // Open drawer
+  const openDrawer = async (id: string) => {
+    setDrawerLoading(true);
+    setDrawer(null);
+    const res = await fetch(`/api/admin/orders/v2/${id}`);
+    if (res.ok) {
+      const data = await res.json();
+      setDrawer(data.order);
     }
+    setDrawerLoading(false);
   };
 
-  const markOrderPacked = async (orderId: string) => {
+  // Admin action helper
+  const action = async (
+    orderId: string,
+    endpoint: string,
+    body?: object,
+    successMsg = 'Done',
+  ) => {
+    setActionLoading(endpoint);
     try {
-      setMarkingPacked(orderId);
-      const response = await fetch(`/api/orders/${orderId}/packing-status`, {
-        method: 'POST',
+      const res = await fetch(`/api/admin/orders/v2/${orderId}/${endpoint}`, {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sellerId: 'admin' }),
+        body:    body ? JSON.stringify(body) : undefined,
       });
-      if (response.ok) {
-        setEscalations((prev) => prev.filter((e) => e.id !== orderId));
+      const data = await res.json();
+      if (res.ok) {
+        showToast(successMsg);
         fetchOrders();
-      }
-    } catch (error) {
-      console.error('Mark packed error:', error);
-    } finally {
-      setMarkingPacked(null);
-    }
-  };
-
-  const formatCountdown = (deadline: string | undefined): { label: string; color: string } => {
-    if (!deadline) return { label: '', color: '' };
-    const diff = new Date(deadline).getTime() - now.getTime();
-    if (diff <= 0) {
-      const over = Math.floor(-diff / 60_000);
-      return { label: `OVERDUE ${over}m`, color: 'bg-red-100 text-red-700 border-red-200' };
-    }
-    const mins = Math.floor(diff / 60_000);
-    if (mins < 60) {
-      const color = mins <= 30 ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      return { label: `Pack: ${mins}m left`, color };
-    }
-    const hrs = Math.floor(mins / 60);
-    const rem = mins % 60;
-    return { label: `Pack: ${hrs}h ${rem}m left`, color: 'bg-green-100 text-green-700 border-green-200' };
-  };
-
-  const formatSlaCountdown = (deadline: string | undefined): { label: string; color: string } => {
-    if (!deadline) return { label: '', color: '' };
-    const diff = new Date(deadline).getTime() - now.getTime();
-    if (diff <= 0) return { label: 'SLA BREACHED', color: 'bg-red-100 text-red-700 border-red-200' };
-    const mins = Math.floor(diff / 60_000);
-    if (mins <= 30) return { label: `SLA: ${mins}m`, color: 'bg-red-100 text-red-700 border-red-200' };
-    if (mins <= 60) return { label: `SLA: ${mins}m`, color: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
-    const hrs = Math.floor(mins / 60);
-    const rem = mins % 60;
-    return { label: `SLA: ${hrs}h ${rem}m`, color: 'bg-green-100 text-green-700 border-green-200' };
-  };
-
-  const openAssignModal = async (order: Order) => {
-    setSelectedOrder(order);
-    setShowAssignModal(true);
-    setDeliveryType('partner');
-    setSelectedPartner('');
-    setEstimatedDeliveryDate('');
-    setCourierCompany('');
-    setCourierTrackingNumber('');
-    setCourierExpectedDeliveryDate('');
-    setCourierNotes('');
-    setSellerCoords(null);
-
-    // Try to fetch seller GPS for distance-sorted partner list
-    const firstSellerId =
-      Array.isArray(order.items) && order.items.length > 0
-        ? order.items[0]?.seller_id
-        : null;
-    if (firstSellerId) {
-      try {
-        const res = await fetch(`/api/sellers/me?sellerId=${firstSellerId}`);
-        const data = await res.json();
-        const lat = data.seller?.latitude;
-        const lng = data.seller?.longitude;
-        if (lat != null && lng != null) {
-          const coords = { lat: Number(lat), lng: Number(lng) };
-          setSellerCoords(coords);
-          fetchPartners(coords);
-          return;
-        }
-      } catch {
-        // fallthrough
-      }
-    }
-    fetchPartners();
-  };
-
-  const handleAssignPartner = async () => {
-    if (!selectedOrder || !selectedPartner) {
-      alert('Please select a delivery partner');
-      return;
-    }
-
-    try {
-      setAssigning(true);
-
-      const response = await fetch(`/api/orders/${selectedOrder.id}/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deliveryPartnerId: selectedPartner,
-          estimatedDeliveryDate: estimatedDeliveryDate || null,
-          assignedBy: user?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Order assigned successfully!');
-        setShowAssignModal(false);
-        fetchOrders();
+        fetchStats();
+        if (drawer?.id === orderId) openDrawer(orderId);
       } else {
-        alert(data.error || 'Failed to assign order');
+        showToast(data.error ?? 'Something went wrong', false);
       }
-    } catch (error) {
-      alert('Error assigning order');
+    } catch {
+      showToast('Network error', false);
     } finally {
-      setAssigning(false);
+      setActionLoading(null);
     }
   };
 
-  const handleAssignCourier = async () => {
-    if (!selectedOrder || !courierCompany || !courierTrackingNumber) {
-      alert('Please fill in courier company and tracking number');
-      return;
-    }
-
-    try {
-      setAssigning(true);
-
-      const response = await fetch(`/api/orders/${selectedOrder.id}/assign-courier`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          courierCompany,
-          courierTrackingNumber,
-          courierExpectedDeliveryDate: courierExpectedDeliveryDate || null,
-          courierNotes: courierNotes || null,
-          assignedBy: user?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Order assigned to courier successfully!');
-        setShowAssignModal(false);
-        fetchOrders();
-      } else {
-        alert(data.error || 'Failed to assign order to courier');
-      }
-    } catch (error) {
-      alert('Error assigning order to courier');
-    } finally {
-      setAssigning(false);
-    }
+  const handleCancel = (orderId: string) => {
+    const reason = window.prompt('Cancel reason (optional):');
+    if (reason === null) return; // user pressed Cancel
+    action(orderId, 'cancel', { reason }, 'Order cancelled');
   };
 
-  const handleAssignDelivery = () => {
-    if (deliveryType === 'partner') {
-      handleAssignPartner();
-    } else {
-      handleAssignCourier();
-    }
+  // Active SLA deadline for a row
+  const activeSlaDeadline = (o: OrderRow): string | null => {
+    if (o.status === 'SELLER_NOTIFIED') return o.acceptanceSlaDeadline;
+    if (o.status === 'ACCEPTED')        return o.packingSlaDeadline;
+    return null;
   };
 
-  const handleAutoAssign = async (orderId: string) => {
-    if (!confirm('Auto-assign this order to the best available partner?')) return;
-
-    try {
-      const response = await fetch('/api/orders/auto-assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId,
-          assignedBy: user?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert(`Order auto-assigned to ${data.partner.name}!`);
-        fetchOrders();
-      } else {
-        alert(data.error || 'Failed to auto-assign order');
-      }
-    } catch (error) {
-      alert('Error auto-assigning order');
-    }
-  };
-
-  // Shiprocket functions
-  const handleUseShiprocket = async () => {
-    if (!selectedOrder) return;
-
-    setLoadingRates(true);
-    setShowShiprocketModal(true);
-
-    try {
-      // Fetch available couriers and rates
-      const response = await fetch(
-        `/api/shiprocket/serviceability?` +
-          new URLSearchParams({
-            pickupPincode: '302001', // You can make this configurable
-            deliveryPincode: selectedOrder.delivery_address.pincode,
-            weight: '0.5', // Default 500g, can be made dynamic
-            cod: 'false',
-            declaredValue: (selectedOrder.amount / 100).toString(),
-          })
-      );
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setAvailableCouriers(data.couriers || []);
-        // Auto-select cheapest courier
-        if (data.recommendedCourier) {
-          setSelectedCourierId(data.recommendedCourier.courier_company_id);
-        }
-      } else {
-        alert(data.error || 'Failed to fetch courier rates');
-        setShowShiprocketModal(false);
-      }
-    } catch (error) {
-      console.error('Error fetching rates:', error);
-      alert('Error fetching courier rates');
-      setShowShiprocketModal(false);
-    } finally {
-      setLoadingRates(false);
-    }
-  };
-
-  const handleCreateShiprocketShipment = async () => {
-    if (!selectedOrder || !selectedCourierId) {
-      alert('Please select a courier');
-      return;
-    }
-
-    try {
-      setCreatingShipment(true);
-
-      const response = await fetch('/api/shiprocket/create-shipment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: selectedOrder.id,
-          courierCompanyId: selectedCourierId,
-          weight: 0.5, // Default 500g, can be made dynamic
-          dimensions: {
-            // Default dimensions, can be made dynamic
-            length: 30,
-            breadth: 20,
-            height: 10,
-          },
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        alert(
-          `Shipment created successfully!\n\n` +
-            `Courier: ${data.courierName}\n` +
-            `AWB: ${data.awbCode}\n\n` +
-            `Order has been updated with tracking details.`
-        );
-        setShowShiprocketModal(false);
-        setShowAssignModal(false);
-        fetchOrders();
-      } else {
-        alert(data.error || 'Failed to create shipment');
-      }
-    } catch (error) {
-      console.error('Error creating shipment:', error);
-      alert('Error creating shipment');
-    } finally {
-      setCreatingShipment(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const colors: { [key: string]: string } = {
-      captured: 'bg-green-100 text-green-700 border-green-200',
-      failed: 'bg-red-100 text-red-700 border-red-200',
-      pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      created: 'bg-blue-100 text-blue-700 border-blue-200',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700 border-gray-200';
-  };
-
-  const getDeliveryStatusBadge = (status?: string) => {
-    const colors: { [key: string]: string } = {
-      delivered: 'bg-green-100 text-green-700 border-green-200',
-      out_for_delivery: 'bg-blue-100 text-blue-700 border-blue-200',
-      in_transit: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-      picked_up: 'bg-purple-100 text-purple-700 border-purple-200',
-      accepted: 'bg-teal-100 text-teal-700 border-teal-200',
-      assigned: 'bg-cyan-100 text-cyan-700 border-cyan-200',
-      pending_assignment: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    };
-    return colors[status || 'pending_assignment'] || 'bg-gray-100 text-gray-700 border-gray-200';
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const getAvailablePartners = () => {
-    if (!selectedOrder) return partners;
-    // Partners are already distance-sorted when sellerCoords were provided.
-    // Fallback: filter by pincode if no GPS
-    if (sellerCoords) return partners;
-
-    const orderPincode = selectedOrder.delivery_address?.pincode;
-    if (!orderPincode) return partners;
-
-    return partners.filter((partner) => {
-      if (!partner.service_pincodes || partner.service_pincodes.length === 0) return true;
-      return partner.service_pincodes.includes(orderPincode);
-    });
-  };
-
-  const filteredOrders = orders.filter(
-    (order) =>
-      order.order_number.toLowerCase().includes(search.toLowerCase()) ||
-      (order.tracking_number && order.tracking_number.toLowerCase().includes(search.toLowerCase()))
-  );
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair)' }}>
-            Order Management
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Inter, sans-serif' }}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 16, right: 16, zIndex: 9999,
+          background: toast.ok ? '#065f46' : '#991b1b',
+          color: '#fff', padding: '10px 20px', borderRadius: 8,
+          fontWeight: 600, fontSize: 14, boxShadow: '0 4px 12px rgba(0,0,0,.2)',
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{
+        background: C.sidebar, padding: '16px 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => router.push('/admin/dashboard')}
+            style={{ background: 'none', border: 'none', color: C.gold, cursor: 'pointer', fontSize: 20 }}
+          >←</button>
+          <h1 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>
+            Orders Management
           </h1>
-          <p className="text-[#6B6B6B] mt-2">View and assign orders to delivery partners</p>
         </div>
+        <button
+          onClick={() => { fetchOrders(); fetchStats(); }}
+          style={{
+            background: C.gold, color: '#fff', border: 'none',
+            borderRadius: 8, padding: '8px 16px', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600,
+          }}
+        >
+          ↻ Refresh
+        </button>
+      </div>
 
-        {/* Escalation Banner */}
-        {(loadingEscalations || escalations.length > 0) && (
-          <div className="bg-red-50 border border-red-300 rounded-xl mb-6 overflow-hidden">
+      <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
+
+        {/* Stats Row */}
+        {stats && (
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(5,1fr)',
+            gap: 12, marginBottom: 20,
+          }}>
+            {[
+              { label: "Today's Orders",   value: stats.totalToday,        color: C.maroon },
+              { label: 'Pending Acceptance',value: stats.pendingAcceptance, color: '#7c3aed' },
+              { label: 'SLA At-Risk',       value: stats.slaAtRisk,         color: '#d97706' },
+              { label: 'Fraud Hold',        value: stats.fraudHold,         color: '#dc2626' },
+              { label: 'Delivered Today',   value: stats.deliveredToday,    color: '#059669' },
+            ].map(s => (
+              <div key={s.label} style={{
+                background: '#fff', borderRadius: 12,
+                padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,.06)',
+                borderLeft: `4px solid ${s.color}`,
+              }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div style={{
+          display: 'flex', gap: 4, borderBottom: `2px solid ${C.border}`,
+          marginBottom: 16, overflowX: 'auto',
+        }}>
+          {TABS.map(t => (
             <button
-              onClick={() => setEscalationsExpanded((v) => !v)}
-              className="w-full flex items-center justify-between px-5 py-3 text-left"
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '10px 16px', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+                borderBottom: tab === t.key ? `3px solid ${C.gold}` : '3px solid transparent',
+                color: tab === t.key ? C.gold : C.muted,
+                marginBottom: -2,
+              }}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-red-600">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                  </svg>
-                </span>
-                <span className="font-semibold text-red-800">
-                  {loadingEscalations
-                    ? 'Checking escalations…'
-                    : `${escalations.length} order${escalations.length !== 1 ? 's' : ''} overdue for packing`}
-                </span>
-              </div>
-              <svg
-                className={`w-4 h-4 text-red-600 transition-transform ${escalationsExpanded ? 'rotate-180' : ''}`}
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              {t.label}
             </button>
+          ))}
+        </div>
 
-            {escalationsExpanded && !loadingEscalations && escalations.length > 0 && (
-              <div className="border-t border-red-200 divide-y divide-red-100">
-                {escalations.map((e) => (
-                  <div key={e.id} className="flex items-center justify-between px-5 py-3 gap-4">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-red-900">#{e.orderNumber}</span>
-                      <span className="text-red-700 text-sm ml-3">{e.customerName}</span>
-                      {e.customerPhone && (
-                        <span className="text-red-500 text-xs ml-2">{e.customerPhone}</span>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-semibold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-                        {e.minutesOverdue}m overdue · {e.itemCount} item{e.itemCount !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => markOrderPacked(e.id)}
-                      disabled={markingPacked === e.id}
-                      className="shrink-0 px-3 py-1 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-                    >
-                      {markingPacked === e.id ? '…' : 'Mark Packed'}
-                    </button>
-                  </div>
+        {/* Search */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
+          <input
+            placeholder="Search order number or customer ID…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              flex: 1, maxWidth: 360, padding: '8px 14px', borderRadius: 8,
+              border: `1px solid ${C.border}`, fontSize: 13, outline: 'none',
+            }}
+          />
+          <span style={{ fontSize: 13, color: C.muted }}>{total} orders</span>
+          {tab === 'sla-breach' && (
+            <span style={{
+              fontSize: 12, color: '#dc2626', fontWeight: 600,
+              background: '#fee2e2', padding: '4px 10px', borderRadius: 6,
+            }}>
+              Auto-refresh: 60s
+            </span>
+          )}
+        </div>
+
+        {/* Table */}
+        <div style={{
+          background: '#fff', borderRadius: 12, overflow: 'hidden',
+          boxShadow: '0 1px 4px rgba(0,0,0,.07)',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: C.sidebar }}>
+                {['Order', 'Customer', 'Items', 'Amount', 'Payment', 'Status', 'Risk', 'SLA', 'Date', 'Actions'].map(h => (
+                  <th key={h} style={{
+                    padding: '10px 14px', textAlign: 'left', fontSize: 11,
+                    fontWeight: 700, color: '#ccc', letterSpacing: .5, whiteSpace: 'nowrap',
+                  }}>{h}</th>
                 ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <button
-            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter(''); }}
-            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${!statusFilter && !deliveryStatusFilter ? 'border-[#722F37] ring-2 ring-[#722F37]' : 'border-[#E8E2D9]'}`}
-          >
-            <p className="text-sm text-[#6B6B6B] mb-1">Total Orders</p>
-            <p className="text-2xl font-bold text-[#722F37]">{orders.length}</p>
-          </button>
-          <button
-            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter('pending_assignment'); }}
-            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${deliveryStatusFilter === 'pending_assignment' ? 'border-yellow-500 ring-2 ring-yellow-400' : 'border-[#E8E2D9]'}`}
-          >
-            <p className="text-sm text-[#6B6B6B] mb-1">Pending Assignment</p>
-            <p className="text-2xl font-bold text-yellow-600">
-              {orders.filter((o) => !o.delivery_status || o.delivery_status === 'pending_assignment').length}
-            </p>
-          </button>
-          <button
-            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter('in_transit'); }}
-            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${deliveryStatusFilter === 'in_transit' ? 'border-blue-500 ring-2 ring-blue-400' : 'border-[#E8E2D9]'}`}
-          >
-            <p className="text-sm text-[#6B6B6B] mb-1">In Transit</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {orders.filter((o) => o.delivery_status === 'in_transit' || o.delivery_status === 'out_for_delivery').length}
-            </p>
-          </button>
-          <button
-            onClick={() => { setStatusFilter(''); setDeliveryStatusFilter('delivered'); }}
-            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${deliveryStatusFilter === 'delivered' ? 'border-green-500 ring-2 ring-green-400' : 'border-[#E8E2D9]'}`}
-          >
-            <p className="text-sm text-[#6B6B6B] mb-1">Delivered</p>
-            <p className="text-2xl font-bold text-green-600">
-              {orders.filter((o) => o.delivery_status === 'delivered').length}
-            </p>
-          </button>
-          <button
-            onClick={() => { setDeliveryStatusFilter(''); setStatusFilter('captured'); }}
-            className={`bg-white rounded-xl shadow-md p-4 border text-left transition-all hover:shadow-lg ${statusFilter === 'captured' ? 'border-green-500 ring-2 ring-green-400' : 'border-[#E8E2D9]'}`}
-          >
-            <p className="text-sm text-[#6B6B6B] mb-1">Payment Success</p>
-            <p className="text-2xl font-bold text-green-600">
-              {orders.filter((o) => o.status === 'captured').length}
-            </p>
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-[#E8E2D9]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Search</label>
-              <input
-                type="text"
-                placeholder="Search by order number or tracking..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Payment Status</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-              >
-                <option value="">All</option>
-                <option value="captured">Captured</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Delivery Status</label>
-              <select
-                value={deliveryStatusFilter}
-                onChange={(e) => setDeliveryStatusFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-              >
-                <option value="">All</option>
-                <option value="pending_assignment">Pending Assignment</option>
-                <option value="assigned">Assigned</option>
-                <option value="accepted">Accepted</option>
-                <option value="in_transit">In Transit</option>
-                <option value="delivered">Delivered</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
-
-        {/* Orders Table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-[#6B6B6B]">Loading orders...</p>
-          </div>
-        ) : filteredOrders.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-[#E8E2D9]">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-[#722F37]/5 to-[#E8E2D9]/30">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#2D2D2D] uppercase">Order</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#2D2D2D] uppercase">Customer</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#2D2D2D] uppercase">Amount</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#2D2D2D] uppercase">Payment</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#2D2D2D] uppercase">Delivery</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-[#2D2D2D] uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: C.muted }}>
+                  Loading…
+                </td></tr>
+              ) : orders.length === 0 ? (
+                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: C.muted }}>
+                  No orders found
+                </td></tr>
+              ) : orders.map((o, i) => {
+                const sla = activeSlaDeadline(o);
+                return (
+                  <tr
+                    key={o.id}
+                    style={{
+                      borderBottom: `1px solid ${C.border}`,
+                      background: i % 2 === 0 ? '#fff' : '#faf9fb',
+                      cursor: 'pointer',
+                      transition: 'background .1s',
+                    }}
+                    onClick={() => openDrawer(o.id)}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f5f0f4')}
+                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#faf9fb')}
+                  >
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.maroon }}>{o.orderNumber}</div>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{o.customerName}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{o.customerEmail}</div>
+                    </td>
+                    <td style={{ padding: '10px 14px', fontSize: 13, textAlign: 'center' }}>
+                      {o.itemCount}
+                    </td>
+                    <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600 }}>
+                      {fmtINR(o.total)}
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '2px 8px',
+                        borderRadius: 99, background: '#f3f4f6', color: '#374151',
+                      }}>
+                        {o.paymentMethod ?? 'N/A'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <StatusBadge status={o.status} />
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <RiskBadge riskStatus={o.riskStatus} riskScore={o.riskScore} />
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      {sla ? <SlaCountdown deadline={sla} /> : (
+                        <span style={{ fontSize: 12, color: C.muted }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 14px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
+                      {fmtDate(o.createdAt)}
+                    </td>
+                    <td style={{ padding: '10px 14px' }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {(o.status === 'SELLER_NOTIFIED' || o.status === 'ACCEPTED') && (
+                          <ActionBtn
+                            label="Nudge"
+                            color="#7c3aed"
+                            loading={actionLoading === 'nudge-seller'}
+                            onClick={() => action(o.id, 'nudge-seller', undefined, 'Seller nudged')}
+                          />
+                        )}
+                        {(o.status === 'SELLER_NOTIFIED' || o.status === 'ACCEPTED') && (
+                          <ActionBtn
+                            label="+1h"
+                            color={C.gold}
+                            loading={actionLoading === 'sla-extend'}
+                            onClick={() => action(o.id, 'sla-extend', undefined, 'SLA extended +1h')}
+                          />
+                        )}
+                        {o.riskStatus === 'HOLD' && (
+                          <ActionBtn
+                            label="Approve"
+                            color="#059669"
+                            loading={actionLoading === 'approve-hold'}
+                            onClick={() => action(o.id, 'approve-hold', undefined, 'Order approved')}
+                          />
+                        )}
+                        {!['DELIVERED', 'CANCELLED', 'RETURNED'].includes(o.status) && (
+                          <ActionBtn
+                            label="Cancel"
+                            color="#dc2626"
+                            loading={actionLoading === 'cancel'}
+                            onClick={() => handleCancel(o.id)}
+                          />
+                        )}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E8E2D9]">
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-[#FAF7F2] transition-colors">
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium text-[#2D2D2D]">#{order.order_number}</p>
-                          {order.delivery_type === 'courier' && order.courier_company && order.courier_tracking_number && (
-                            <div className="mt-1">
-                              <p className="text-xs text-[#6B6B6B]">
-                                Courier: {COURIER_PROVIDERS.find(p => p.id === order.courier_company)?.name || order.courier_company}
-                              </p>
-                              {order.courier_tracking_url ? (
-                                <a
-                                  href={order.courier_tracking_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                                >
-                                  Track: {order.courier_tracking_number}
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                </a>
-                              ) : (
-                                <p className="text-xs text-[#6B6B6B]">AWB: {order.courier_tracking_number}</p>
-                              )}
-                            </div>
-                          )}
-                          {order.tracking_number && !order.delivery_type && (
-                            <p className="text-xs text-[#6B6B6B]">{order.tracking_number}</p>
-                          )}
-                          <p className="text-xs text-[#6B6B6B] mt-1">{formatDate(order.created_at)}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm text-[#2D2D2D]">{order.delivery_address?.name}</p>
-                          <p className="text-xs text-[#6B6B6B]">{order.delivery_address?.phone}</p>
-                          <p className="text-xs text-[#6B6B6B]">{order.delivery_address?.city}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-[#722F37]">₹{(order.amount / 100).toLocaleString('en-IN')}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getDeliveryStatusBadge(order.delivery_status)}`}>
-                            {order.delivery_status?.replace('_', ' ') || 'Pending'}
-                          </span>
-                          {/* Batch badge */}
-                          {order.batch_id && (
-                            <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 ml-1">
-                              Batch
-                            </span>
-                          )}
-                          {/* SLA / packing countdown for captured+unpacked orders */}
-                          {order.status === 'captured' && !order.packed_at && order.packing_deadline && (() => {
-                            const pack = formatCountdown(order.packing_deadline);
-                            const sla = formatSlaCountdown(order.sla_deadline);
-                            return (
-                              <div className="flex flex-col gap-0.5 mt-1">
-                                {pack.label && (
-                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${pack.color}`}>
-                                    {pack.label}
-                                  </span>
-                                )}
-                                {sla.label && (
-                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${sla.color}`}>
-                                    {sla.label}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                          {order.delivery_type && (
-                            <p className="text-xs text-[#6B6B6B] flex items-center gap-1">
-                              {order.delivery_type === 'courier' ? (
-                                <>
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                  </svg>
-                                  Courier
-                                </>
-                              ) : (
-                                <>
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                  </svg>
-                                  Local Partner
-                                </>
-                              )}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-2">
-                          {order.status === 'captured' && (!order.delivery_status || order.delivery_status === 'pending_assignment') && (
-                            <>
-                              <button
-                                onClick={() => openAssignModal(order)}
-                                className="text-sm text-blue-600 hover:text-blue-800 font-medium text-left"
-                              >
-                                Assign Partner
-                              </button>
-                              <button
-                                onClick={() => handleAutoAssign(order.id)}
-                                className="text-sm text-green-600 hover:text-green-800 font-medium text-left"
-                              >
-                                Auto-Assign
-                              </button>
-                            </>
-                          )}
-                          <Link
-                            href={`/admin/orders/${order.id}`}
-                            className="text-sm text-[#722F37] hover:text-[#8B3D47] font-medium"
-                          >
-                            View Details
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-            {/* Pagination */}
-            {pagination && pagination.totalPages > 1 && (
-              <Pagination
-                currentPage={pagination.page}
-                totalPages={pagination.totalPages}
-                onPageChange={setPage}
-                hasNext={pagination.hasNext}
-                hasPrev={pagination.hasPrev}
-                total={pagination.total}
-                showTotal={true}
-              />
-            )}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-md p-12 text-center border border-[#E8E2D9]">
-            <p className="text-[#6B6B6B]">No orders found</p>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
+            <PagBtn disabled={page === 1}          onClick={() => setPage(1)}>«</PagBtn>
+            <PagBtn disabled={page === 1}          onClick={() => setPage(p => p - 1)}>‹</PagBtn>
+            <span style={{ padding: '6px 14px', fontSize: 13, color: C.text }}>
+              Page {page} of {totalPages}
+            </span>
+            <PagBtn disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>›</PagBtn>
+            <PagBtn disabled={page === totalPages} onClick={() => setPage(totalPages)}>»</PagBtn>
           </div>
         )}
       </div>
 
-      {/* Assign Delivery Modal */}
-      {showAssignModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-[#722F37]">Assign Delivery</h3>
-                <p className="text-sm text-[#6B6B6B] mt-1">Order #{selectedOrder.order_number}</p>
-                <p className="text-sm text-[#6B6B6B]">
-                  Delivery to: {selectedOrder.delivery_address?.city} - {selectedOrder.delivery_address?.pincode}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowAssignModal(false)}
-                className="text-[#6B6B6B] hover:text-[#2D2D2D]"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Delivery Type Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-3">Delivery Method</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setDeliveryType('partner')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    deliveryType === 'partner'
-                      ? 'border-[#722F37] bg-[#722F37]/5'
-                      : 'border-[#E8E2D9] hover:border-[#722F37]/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      deliveryType === 'partner' ? 'border-[#722F37]' : 'border-[#E8E2D9]'
-                    }`}>
-                      {deliveryType === 'partner' && (
-                        <div className="w-3 h-3 rounded-full bg-[#722F37]"></div>
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-[#2D2D2D]">Local Partner</p>
-                      <p className="text-xs text-[#6B6B6B]">Within 15km radius</p>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setDeliveryType('courier')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    deliveryType === 'courier'
-                      ? 'border-[#722F37] bg-[#722F37]/5'
-                      : 'border-[#E8E2D9] hover:border-[#722F37]/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      deliveryType === 'courier' ? 'border-[#722F37]' : 'border-[#E8E2D9]'
-                    }`}>
-                      {deliveryType === 'courier' && (
-                        <div className="w-3 h-3 rounded-full bg-[#722F37]"></div>
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-[#2D2D2D]">Courier Service</p>
-                      <p className="text-xs text-[#6B6B6B]">Long distance orders</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Local Partner Form */}
-            {deliveryType === 'partner' && (
-              <>
-                {/* Auto-Assign Nearest button */}
-                <div className="mb-4 flex items-center gap-3">
-                  <button
-                    onClick={() => {
-                      if (selectedOrder) {
-                        setShowAssignModal(false);
-                        handleAutoAssign(selectedOrder.id);
-                      }
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    </svg>
-                    Auto-Assign Nearest
-                  </button>
-                  {sellerCoords && (
-                    <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded">
-                      Sorted by distance
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex-1 border-t border-[#E8E2D9]"></div>
-                  <span className="text-xs text-[#6B6B6B] font-medium">OR PICK MANUALLY</span>
-                  <div className="flex-1 border-t border-[#E8E2D9]"></div>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    Select Delivery Partner
-                    {!sellerCoords && getAvailablePartners().length < partners.length && (
-                      <span className="text-xs text-[#6B6B6B] ml-2">(Filtered by service area)</span>
-                    )}
-                  </label>
-                  <select
-                    value={selectedPartner}
-                    onChange={(e) => setSelectedPartner(e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  >
-                    <option value="">Choose a partner...</option>
-                    {getAvailablePartners().map((partner) => (
-                      <option key={partner.id} value={partner.id}>
-                        {partner.distance_km != null ? `[${partner.distance_km} km] ` : ''}
-                        {partner.name} — {partner.mobile} ({partner.vehicle_type || 'N/A'}) · {partner.availability_status}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    Estimated Delivery Date (Optional)
-                  </label>
-                  <input
-                    type="date"
-                    value={estimatedDeliveryDate}
-                    onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  />
-                </div>
-
-                {getAvailablePartners().length === 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                    <p className="text-yellow-800">
-                      No partners available for pincode {selectedOrder.delivery_address?.pincode}.
-                      You can still assign manually or add partners for this area.
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Courier Service Form */}
-            {deliveryType === 'courier' && (
-              <>
-                {/* Shiprocket Auto-Booking */}
-                <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
-                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-blue-900 mb-1">Shiprocket Auto-Booking</h4>
-                      <p className="text-sm text-blue-700 mb-3">
-                        Automatically generate AWB number, compare rates across 17+ couriers, and select the cheapest option
-                      </p>
-                      <button
-                        onClick={handleUseShiprocket}
-                        className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                        </svg>
-                        Use Shiprocket Auto-Booking
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Manual Courier Entry */}
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex-1 border-t border-[#E8E2D9]"></div>
-                    <span className="text-xs text-[#6B6B6B] font-medium">OR ENTER MANUALLY</span>
-                    <div className="flex-1 border-t border-[#E8E2D9]"></div>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    Courier Company <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={courierCompany}
-                    onChange={(e) => setCourierCompany(e.target.value)}
-                    className="w-full px-4 py-3 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  >
-                    <option value="">Choose a courier service...</option>
-                    {COURIER_PROVIDERS.map((provider) => (
-                      <option key={provider.id} value={provider.id}>
-                        {provider.name} - {provider.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    Tracking Number / AWB Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={courierTrackingNumber}
-                    onChange={(e) => setCourierTrackingNumber(e.target.value)}
-                    placeholder="Enter tracking or AWB number"
-                    className="w-full px-4 py-3 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  />
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    Expected Delivery Date (Optional)
-                  </label>
-                  <input
-                    type="date"
-                    value={courierExpectedDeliveryDate}
-                    onChange={(e) => setCourierExpectedDeliveryDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  />
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    Notes (Optional)
-                  </label>
-                  <textarea
-                    value={courierNotes}
-                    onChange={(e) => setCourierNotes(e.target.value)}
-                    placeholder="Add any special instructions or notes"
-                    rows={3}
-                    className="w-full px-4 py-3 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowAssignModal(false)}
-                className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAssignDelivery}
-                disabled={
-                  (deliveryType === 'partner' && !selectedPartner) ||
-                  (deliveryType === 'courier' && (!courierCompany || !courierTrackingNumber)) ||
-                  assigning
-                }
-                className="flex-1 bg-[#722F37] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#8B3D47] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {assigning ? 'Assigning...' : deliveryType === 'partner' ? 'Assign Partner' : 'Assign Courier'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Shiprocket Rate Comparison Modal */}
-      {showShiprocketModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-[#722F37] flex items-center gap-2">
-                  <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Shiprocket - Compare Couriers
-                </h3>
-                <p className="text-sm text-[#6B6B6B] mt-1">Order #{selectedOrder.order_number}</p>
-                <p className="text-sm text-[#6B6B6B]">
-                  Delivery to: {selectedOrder.delivery_address?.city} - {selectedOrder.delivery_address?.pincode}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowShiprocketModal(false);
-                  setAvailableCouriers([]);
-                  setSelectedCourierId(null);
-                }}
-                className="text-[#6B6B6B] hover:text-[#2D2D2D]"
-                disabled={creatingShipment}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {loadingRates ? (
-              <div className="text-center py-12">
-                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-[#6B6B6B]">Fetching courier rates from Shiprocket...</p>
-              </div>
-            ) : (
-              <>
-                {availableCouriers.length === 0 ? (
-                  <div className="text-center py-12">
-                    <svg className="w-16 h-16 text-[#6B6B6B] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                    </svg>
-                    <p className="text-[#6B6B6B]">No couriers available for this route</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm text-blue-800">
-                        <strong>{availableCouriers.length} couriers available</strong> - Select a courier or use the recommended option (cheapest)
-                      </p>
-                    </div>
-
-                    <div className="space-y-3 mb-6">
-                      {availableCouriers.map((courier, index) => (
-                        <button
-                          key={courier.courier_company_id}
-                          onClick={() => setSelectedCourierId(courier.courier_company_id)}
-                          className={`w-full p-4 border-2 rounded-lg transition-all text-left ${
-                            selectedCourierId === courier.courier_company_id
-                              ? 'border-blue-600 bg-blue-50'
-                              : 'border-[#E8E2D9] hover:border-blue-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedCourierId === courier.courier_company_id ? 'border-blue-600' : 'border-[#E8E2D9]'
-                              }`}>
-                                {selectedCourierId === courier.courier_company_id && (
-                                  <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                                )}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="font-semibold text-[#2D2D2D]">{courier.courier_name}</p>
-                                  {index === 0 && (
-                                    <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
-                                      Recommended
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-[#6B6B6B] mt-1">
-                                  Delivery: {courier.estimated_delivery_days} days
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xl font-bold text-[#722F37]">₹{courier.rate.toFixed(2)}</p>
-                              <p className="text-xs text-[#6B6B6B]">Freight: ₹{courier.freight_charge.toFixed(2)}</p>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                      <div className="flex gap-2">
-                        <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div className="text-sm text-yellow-800">
-                          <p className="font-medium mb-1">What will happen?</p>
-                          <ul className="list-disc list-inside space-y-1 text-xs">
-                            <li>Shipment will be created in Shiprocket</li>
-                            <li>AWB number will be auto-generated</li>
-                            <li>Pickup will be scheduled automatically</li>
-                            <li>Order will be updated with tracking details</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => {
-                          setShowShiprocketModal(false);
-                          setAvailableCouriers([]);
-                          setSelectedCourierId(null);
-                        }}
-                        className="flex-1 bg-gray-200 text-[#2D2D2D] py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                        disabled={creatingShipment}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleCreateShiprocketShipment}
-                        disabled={!selectedCourierId || creatingShipment}
-                        className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {creatingShipment ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Creating Shipment...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Create Shipment
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+      {/* Order Detail Drawer */}
+      {(drawerLoading || drawer) && (
+        <OrderDrawer
+          order={drawer}
+          loading={drawerLoading}
+          actionLoading={actionLoading}
+          onClose={() => { setDrawer(null); }}
+          onAction={action}
+          onCancel={handleCancel}
+        />
       )}
     </div>
+  );
+}
+
+// ─── Action Button ────────────────────────────────────────────────────────────
+
+function ActionBtn({
+  label, color, loading, onClick,
+}: { label: string; color: string; loading: boolean; onClick: () => void }) {
+  return (
+    <button
+      disabled={loading}
+      onClick={onClick}
+      style={{
+        fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+        border: `1px solid ${color}`, color, background: 'transparent',
+        cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .5 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function PagBtn({ disabled, onClick, children }: any) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e0e3',
+        background: disabled ? '#f9f9f9' : '#fff', cursor: disabled ? 'default' : 'pointer',
+        fontSize: 14, color: disabled ? '#ccc' : C.maroon,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Order Drawer ─────────────────────────────────────────────────────────────
+
+function OrderDrawer({
+  order, loading, actionLoading, onClose, onAction, onCancel,
+}: {
+  order:         OrderDetail | null;
+  loading:       boolean;
+  actionLoading: string | null;
+  onClose:       () => void;
+  onAction:      (id: string, ep: string, body?: object, msg?: string) => void;
+  onCancel:      (id: string) => void;
+}) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 100,
+        }}
+      />
+      {/* Drawer */}
+      <div style={{
+        position: 'fixed', right: 0, top: 0, bottom: 0, width: 560,
+        background: '#fff', zIndex: 101, overflowY: 'auto',
+        boxShadow: '-4px 0 24px rgba(0,0,0,.15)',
+      }}>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: C.muted }}>Loading…</div>
+        ) : order ? (
+          <DrawerContent
+            order={order}
+            actionLoading={actionLoading}
+            onClose={onClose}
+            onAction={onAction}
+            onCancel={onCancel}
+          />
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+function DrawerContent({ order, actionLoading, onClose, onAction, onCancel }: {
+  order: OrderDetail;
+  actionLoading: string | null;
+  onClose: () => void;
+  onAction: (id: string, ep: string, body?: object, msg?: string) => void;
+  onCancel: (id: string) => void;
+}) {
+  const addr = order.shippingAddress ?? {};
+  const stepIdx = STATUS_STEPS.indexOf(order.status);
+
+  return (
+    <div style={{ padding: '20px 24px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.maroon }}>{order.orderNumber}</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            <StatusBadge status={order.status} />
+            <RiskBadge riskStatus={order.riskStatus} riskScore={order.riskScore} />
+          </div>
+        </div>
+        <button onClick={onClose} style={{
+          background: 'none', border: 'none', fontSize: 22,
+          cursor: 'pointer', color: C.muted,
+        }}>✕</button>
+      </div>
+
+      <hr style={{ border: 'none', borderTop: `1px solid ${C.border}`, margin: '12px 0' }} />
+
+      {/* Status Timeline */}
+      <Section title="Status Timeline">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', padding: '4px 0' }}>
+          {STATUS_STEPS.map((s, i) => {
+            const done    = i <= stepIdx;
+            const current = i === stepIdx;
+            return (
+              <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < STATUS_STEPS.length - 1 ? 1 : 'none' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 60 }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: current ? C.gold : done ? C.maroon : '#e5e7eb',
+                    border: current ? `3px solid ${C.gold}` : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {done && !current && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                  </div>
+                  <div style={{
+                    fontSize: 9, marginTop: 3, textAlign: 'center',
+                    color: done ? C.maroon : C.muted, fontWeight: done ? 600 : 400,
+                    lineHeight: 1.2, maxWidth: 60,
+                  }}>
+                    {s.replace(/_/g, '\n')}
+                  </div>
+                </div>
+                {i < STATUS_STEPS.length - 1 && (
+                  <div style={{
+                    flex: 1, height: 2, background: i < stepIdx ? C.maroon : '#e5e7eb',
+                    minWidth: 8, marginBottom: 20,
+                  }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* Customer & Seller */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <InfoCard title="Customer">
+          <InfoRow label="Name"  value={order.customerName} />
+          <InfoRow label="Email" value={order.customerEmail} />
+          <InfoRow label="Phone" value={order.customerPhone} />
+          <InfoRow label="Address" value={[addr.house, addr.area, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')} />
+        </InfoCard>
+        <InfoCard title="Seller">
+          <InfoRow label="Name"  value={order.sellerName} />
+          <InfoRow label="Email" value={order.sellerEmail} />
+          <InfoRow label="Phone" value={order.sellerPhone} />
+        </InfoCard>
+      </div>
+
+      {/* Items */}
+      <Section title={`Items (${order.items.length})`}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: '#f9f5f7' }}>
+              {['Product', 'Qty', 'Unit Price', 'Total'].map(h => (
+                <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 11, color: C.muted, fontWeight: 600 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {order.items.map(item => (
+              <tr key={item.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                <td style={{ padding: '8px 10px' }}>
+                  <div style={{ fontWeight: 600 }}>{item.productName}</div>
+                  {item.sku && <div style={{ fontSize: 11, color: C.muted }}>SKU: {item.sku}</div>}
+                </td>
+                <td style={{ padding: '8px 10px', textAlign: 'center' }}>{item.quantity}</td>
+                <td style={{ padding: '8px 10px' }}>{fmtINR(item.unitPrice)}</td>
+                <td style={{ padding: '8px 10px', fontWeight: 600 }}>{fmtINR(item.totalPrice)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Section>
+
+      {/* Payment Breakdown */}
+      <Section title="Payment">
+        <PayRow label="Subtotal"       value={fmtINR(order.subtotal)} />
+        <PayRow label="Shipping"       value={fmtINR(order.shippingCharge)} />
+        <PayRow label="Total"          value={fmtINR(order.subtotal + order.shippingCharge)} bold />
+        <PayRow label="Platform Fee"   value={fmtINR(order.platformFee)} muted />
+        <PayRow label="PG Fee"         value={fmtINR(order.pgFee)} muted />
+        <PayRow label="Seller Payout"  value={fmtINR(order.sellerPayoutAmount)} />
+        <PayRow label="Payment Method" value={order.paymentMethod ?? 'N/A'} />
+      </Section>
+
+      {/* Risk Flags */}
+      {order.riskFlags.length > 0 && (
+        <Section title={`Risk Flags (score: ${order.riskScore})`}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {order.riskFlags.map(f => (
+              <div key={f.id} style={{
+                background: '#fee2e2', color: '#991b1b',
+                padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 600,
+              }}>
+                {f.flagType.replace(/_/g, ' ')}
+                {f.flagValue ? ` (${f.flagValue})` : ''}
+                {' '}+{f.scoreContribution}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Tracking */}
+      {(order.awbNumber || order.courierPartner) && (
+        <Section title="Tracking">
+          <InfoRow label="AWB"     value={order.awbNumber ?? '—'} />
+          <InfoRow label="Courier" value={order.courierPartner ?? '—'} />
+          {order.trackingUrl && (
+            <a
+              href={order.trackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: 13, color: C.gold, fontWeight: 600 }}
+            >
+              Track Shipment →
+            </a>
+          )}
+        </Section>
+      )}
+
+      {/* Admin Actions */}
+      <Section title="Admin Actions">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {(order.status === 'SELLER_NOTIFIED' || order.status === 'ACCEPTED') && (
+            <DrawerActionBtn
+              label="Nudge Seller"
+              color="#7c3aed"
+              loading={actionLoading === 'nudge-seller'}
+              onClick={() => onAction(order.id, 'nudge-seller', undefined, 'Seller nudged')}
+            />
+          )}
+          {(order.status === 'SELLER_NOTIFIED' || order.status === 'ACCEPTED') && (
+            <DrawerActionBtn
+              label="Extend SLA +1h"
+              color={C.gold}
+              loading={actionLoading === 'sla-extend'}
+              onClick={() => onAction(order.id, 'sla-extend', undefined, 'SLA extended +1h')}
+            />
+          )}
+          {order.riskStatus === 'HOLD' && (
+            <DrawerActionBtn
+              label="Approve (Clear Hold)"
+              color="#059669"
+              loading={actionLoading === 'approve-hold'}
+              onClick={() => onAction(order.id, 'approve-hold', undefined, 'Order approved')}
+            />
+          )}
+          {!['DELIVERED', 'CANCELLED', 'RETURNED'].includes(order.status) && (
+            <DrawerActionBtn
+              label="Cancel Order"
+              color="#dc2626"
+              loading={actionLoading === 'cancel'}
+              onClick={() => onCancel(order.id)}
+            />
+          )}
+        </div>
+      </Section>
+
+      {/* Status History */}
+      <Section title="History Log">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {order.statusHistory.map(h => (
+            <div key={h.id} style={{
+              borderLeft: `3px solid ${C.gold}`, paddingLeft: 12, fontSize: 12,
+            }}>
+              <div style={{ fontWeight: 700, color: C.maroon }}>
+                {h.fromStatus ? `${h.fromStatus} → ` : ''}{h.toStatus}
+                <span style={{ fontWeight: 400, color: C.muted, marginLeft: 8 }}>
+                  [{h.actorType}]
+                </span>
+              </div>
+              {h.note && <div style={{ color: C.text, marginTop: 2 }}>{h.note}</div>}
+              <div style={{ color: C.muted, marginTop: 2 }}>{fmtDate(h.createdAt)}</div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Payout */}
+      {order.payout && (
+        <Section title="Seller Payout">
+          <PayRow label="Gross Amount"       value={fmtINR(order.payout.grossAmount)} />
+          <PayRow label="Shipping Deduction" value={`-${fmtINR(order.payout.shippingDeduction)}`} muted />
+          <PayRow label="PG Fee Deduction"   value={`-${fmtINR(order.payout.pgFeeDeduction)}`} muted />
+          <PayRow label="Net Payout"         value={fmtINR(order.payout.netPayout)} bold />
+          <PayRow label="Status"             value={order.payout.status} />
+          {order.payout.payoutDate && (
+            <PayRow label="Payout Date" value={fmtDate(order.payout.payoutDate)} />
+          )}
+        </Section>
+      )}
+    </div>
+  );
+}
+
+// ─── Reusable Drawer Sub-components ──────────────────────────────────────────
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{
+        fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.muted,
+        textTransform: 'uppercase', marginBottom: 10,
+      }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: '#faf7f8', borderRadius: 8, padding: '12px 16px',
+      border: `1px solid ${C.border}`,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: .5, marginBottom: 8 }}>
+        {title.toUpperCase()}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 4, fontSize: 12 }}>
+      <span style={{ color: C.muted, minWidth: 52 }}>{label}:</span>
+      <span style={{ fontWeight: 600, color: C.text, wordBreak: 'break-word' }}>{value || '—'}</span>
+    </div>
+  );
+}
+
+function PayRow({ label, value, bold, muted }: {
+  label: string; value: string; bold?: boolean; muted?: boolean;
+}) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between',
+      padding: '4px 0', fontSize: 13, borderBottom: `1px solid ${C.border}`,
+    }}>
+      <span style={{ color: muted ? C.muted : C.text }}>{label}</span>
+      <span style={{ fontWeight: bold ? 700 : 500, color: bold ? C.maroon : C.text }}>{value}</span>
+    </div>
+  );
+}
+
+function DrawerActionBtn({ label, color, loading, onClick }: {
+  label: string; color: string; loading: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      disabled={loading}
+      onClick={onClick}
+      style={{
+        padding: '8px 16px', borderRadius: 8, border: `2px solid ${color}`,
+        background: loading ? '#f3f4f6' : color, color: '#fff',
+        fontWeight: 700, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer',
+        opacity: loading ? .6 : 1,
+      }}
+    >
+      {loading ? '…' : label}
+    </button>
   );
 }
