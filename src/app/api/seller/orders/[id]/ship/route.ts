@@ -17,10 +17,14 @@ export async function POST(
       return NextResponse.json({ error: 'sellerId is required' }, { status: 400 });
     }
 
-    // 1. Fetch order
+    // 1. Fetch order from spf_orders
     const { data: order, error: orderErr } = await supabaseAdmin
-      .from('spf_payment_orders')
-      .select('id, order_number, user_id, delivery_address, items, amount, payment_method, status, seller_id')
+      .from('spf_orders')
+      .select(`
+        id, order_number, customer_id, seller_id, status,
+        subtotal, shipping_charge, payment_method, shipping_address,
+        spf_order_items ( product_id, product_name, sku, quantity, unit_price )
+      `)
       .eq('id', orderId)
       .single();
 
@@ -29,7 +33,7 @@ export async function POST(
     }
 
     // Verify the seller owns this order
-    if (order.seller_id && order.seller_id !== sellerId) {
+    if (order.seller_id !== sellerId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -52,9 +56,9 @@ export async function POST(
       );
     }
 
-    // 3. Parse delivery address (stored as JSON in delivery_address column)
-    const addr = order.delivery_address as any;
-    const items = (order.items as any[]) || [];
+    // 3. Parse delivery address from shipping_address JSONB
+    const addr  = (order.shipping_address as any) || {};
+    const items = (order.spf_order_items as any[]) || [];
 
     // 4. Create shipment + auto-assign cheapest courier
     const shipmentResult = await createShipment({
@@ -64,19 +68,19 @@ export async function POST(
       billingName:   addr.name   || 'Customer',
       billingPhone:  addr.phone  || '',
       billingEmail:  addr.email  || '',
-      billingAddress: addr.addressLine1 || addr.address || '',
-      billingCity:   addr.city   || '',
-      billingState:  addr.state  || '',
+      billingAddress: addr.house || addr.address_line1 || '',
+      billingCity:   addr.city    || '',
+      billingState:  addr.state   || '',
       billingPincode: addr.pincode || '',
       items: items.map((item: any) => ({
-        name:         item.name  || item.productName || 'Product',
-        sku:          item.productId || item.sku || `SKU-${orderId.substring(0, 6)}`,
+        name:         item.product_name || item.name || 'Product',
+        sku:          item.sku || item.product_id || `SKU-${orderId.substring(0, 6)}`,
         units:        item.quantity || 1,
-        sellingPrice: item.price   || 0,
+        sellingPrice: Number(item.unit_price) || 0,
         hsn:          item.hsn,
       })),
-      paymentMethod: order.payment_method === 'cod' ? 'COD' : 'Prepaid',
-      subTotal:      order.amount / 100, // paisa → rupees
+      paymentMethod: order.payment_method === 'COD' ? 'COD' : 'Prepaid',
+      subTotal:      Number(order.subtotal) + Number(order.shipping_charge),
       weight,
       length,
       breadth,
@@ -117,11 +121,27 @@ export async function POST(
       .select('id')
       .single();
 
-    // 8. Update order status to 'shipped'
+    // 8. Update order status in spf_orders
+    const now = new Date().toISOString();
     await supabaseAdmin
-      .from('spf_payment_orders')
-      .update({ status: 'shipped', shipped_at: new Date().toISOString() })
+      .from('spf_orders')
+      .update({
+        status:          'READY_TO_SHIP',
+        awb_number:      shipmentResult.awbNumber   ?? null,
+        courier_partner: shipmentResult.courierName ?? null,
+        tracking_url:    `${process.env.NEXT_PUBLIC_SITE_URL || 'https://instafashionpoints.com'}/track/${shipmentResult.awbNumber}`,
+        updated_at:      now,
+      })
       .eq('id', orderId);
+
+    await supabaseAdmin.from('spf_order_status_history').insert({
+      order_id:    orderId,
+      from_status: order.status,
+      to_status:   'READY_TO_SHIP',
+      actor_type:  'SELLER',
+      actor_id:    sellerId,
+      note:        `Label generated. Courier: ${shipmentResult.courierName}. AWB: ${shipmentResult.awbNumber}`,
+    });
 
     // 9. Add initial tracking entry
     if (savedShipment?.id) {
