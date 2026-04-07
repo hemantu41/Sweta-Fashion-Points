@@ -13,9 +13,11 @@
  *   30–60  → SOFT_FLAG   → CONFIRM_WITH_WARNING
  *   61–99  → HOLD        → HOLD_FOR_REVIEW
  *   100    → REJECTED    → REJECT + trigger refund
+ *
+ * Uses Supabase (no Prisma/DATABASE_URL needed).
  */
 
-import prisma from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { redisGet, redisSetex } from '@/lib/redis';
 import crypto from 'crypto';
 
@@ -108,11 +110,9 @@ export interface RiskResult {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Internal types for raw query results
+// Internal types
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface CountRow          { count: bigint }
-interface PincodeRow        { rto_rate: string; is_cod_disabled: boolean }
 interface PincodeCacheEntry { rto_rate: number; is_cod_disabled: boolean }
 interface VpnCacheEntry     { is_vpn: boolean }
 interface IpApiResponse     { status: string; proxy: boolean; hosting: boolean }
@@ -185,13 +185,13 @@ function checkAmountMismatch(input: RiskCheckInput): RiskFlag | null {
 async function checkDuplicateTransaction(input: RiskCheckInput): Promise<RiskFlag | null> {
   if (!input.transactionId) return null;
 
-  const rows = await prisma.$queryRaw<CountRow[]>`
-    SELECT COUNT(*)::bigint AS count
-    FROM   spf_orders
-    WHERE  transaction_id = ${input.transactionId}
-      AND  id            != ${input.orderId}::uuid
-  `;
-  const dupeCount = Number(rows[0]?.count ?? 0);
+  const { count } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('transaction_id', input.transactionId)
+    .neq('id', input.orderId);
+
+  const dupeCount = count ?? 0;
   if (dupeCount === 0) return null;
 
   return {
@@ -208,14 +208,14 @@ async function checkDuplicateTransaction(input: RiskCheckInput): Promise<RiskFla
 async function checkCodNewCustomerHighValue(input: RiskCheckInput): Promise<RiskFlag | null> {
   if (input.paymentMethod !== 'COD' || input.orderValue <= 1500) return null;
 
-  const rows = await prisma.$queryRaw<CountRow[]>`
-    SELECT COUNT(*)::bigint AS count
-    FROM   spf_orders
-    WHERE  customer_id = ${input.customerId}::uuid
-      AND  id         != ${input.orderId}::uuid
-      AND  status NOT IN ('PENDING_PAYMENT','PAYMENT_FAILED','CANCELLED')
-  `;
-  const priorOrders = Number(rows[0]?.count ?? 0);
+  const { count } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('customer_id', input.customerId)
+    .neq('id', input.orderId)
+    .not('status', 'in', '(PENDING_PAYMENT,PAYMENT_FAILED,CANCELLED)');
+
+  const priorOrders = count ?? 0;
   if (priorOrders > 0) return null;
 
   return {
@@ -237,17 +237,17 @@ async function checkExcessUndeliveredCod(input: RiskCheckInput): Promise<RiskFla
   let undeliveredCount = await rGet<number>(cacheKey);
 
   if (undeliveredCount === null) {
-    const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+    const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
 
-    const rows = await prisma.$queryRaw<CountRow[]>`
-      SELECT COUNT(*)::bigint AS count
-      FROM   spf_orders
-      WHERE  payment_method = 'COD'
-        AND  status         IN ('CANCELLED','RETURN_INITIATED','RETURNED')
-        AND  created_at     > ${since30d}
-        AND  shipping_address->>'phone' = ${input.customerPhone}
-    `;
-    undeliveredCount = Number(rows[0]?.count ?? 0);
+    const { count } = await supabaseAdmin
+      .from('spf_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('payment_method', 'COD')
+      .in('status', ['CANCELLED', 'RETURN_INITIATED', 'RETURNED'])
+      .gte('created_at', since30d)
+      .filter('shipping_address->>phone', 'eq', input.customerPhone);
+
+    undeliveredCount = count ?? 0;
     await rSet(cacheKey, TTL.COD_HISTORY, undeliveredCount);
   }
 
@@ -272,15 +272,16 @@ async function checkHighRtoPincode(input: RiskCheckInput): Promise<RiskFlag | nu
   let cfg = await rGet<PincodeCacheEntry>(cacheKey);
 
   if (cfg === null) {
-    const rows = await prisma.$queryRaw<PincodeRow[]>`
-      SELECT rto_rate::text, is_cod_disabled
-      FROM   spf_pincode_risk_config
-      WHERE  pincode = ${input.pincode}
-    `;
-    if (rows.length > 0) {
+    const { data: row } = await supabaseAdmin
+      .from('spf_pincode_risk_config')
+      .select('rto_rate, is_cod_disabled')
+      .eq('pincode', input.pincode)
+      .maybeSingle();
+
+    if (row) {
       cfg = {
-        rto_rate:        parseFloat(rows[0].rto_rate),
-        is_cod_disabled: rows[0].is_cod_disabled,
+        rto_rate:        parseFloat(String(row.rto_rate)),
+        is_cod_disabled: (row as any).is_cod_disabled,
       };
     } else {
       cfg = { rto_rate: 0, is_cod_disabled: false };
@@ -325,20 +326,16 @@ async function checkMultiAccountDevice(input: RiskCheckInput): Promise<RiskFlag 
   let distinctAccounts = await rGet<number>(cacheKey);
 
   if (distinctAccounts === null) {
-    const since90d = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+    const since90d = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
 
-    // device_id is stored in the notes field as "device:{hash}" by the
-    // order creation route. Alternatively store it as a top-level column
-    // by adding: ALTER TABLE spf_orders ADD COLUMN IF NOT EXISTS device_id TEXT;
-    const rows = await prisma.$queryRaw<CountRow[]>`
-      SELECT COUNT(DISTINCT customer_id)::bigint AS count
-      FROM   spf_orders
-      WHERE  (notes LIKE ${'%device:' + input.deviceId + '%'}
-              OR shipping_address->>'device_id' = ${input.deviceId})
-        AND  created_at > ${since90d}
-        AND  id        != ${input.orderId}::uuid
-    `;
-    distinctAccounts = Number(rows[0]?.count ?? 0);
+    const { data: rows } = await supabaseAdmin
+      .from('spf_orders')
+      .select('customer_id')
+      .like('notes', `%device:${input.deviceId}%`)
+      .gte('created_at', since90d)
+      .neq('id', input.orderId);
+
+    distinctAccounts = new Set((rows ?? []).map((r: any) => r.customer_id)).size;
     await rSet(cacheKey, TTL.DEVICE_ACCTS, distinctAccounts);
   }
 
@@ -361,17 +358,17 @@ async function checkOrderVelocity(input: RiskCheckInput): Promise<RiskFlag | nul
   let orders24h = await rGet<number>(cacheKey);
 
   if (orders24h === null) {
-    const since24h = new Date(Date.now() - 24 * 3600 * 1000);
+    const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
-    const rows = await prisma.$queryRaw<CountRow[]>`
-      SELECT COUNT(*)::bigint AS count
-      FROM   spf_orders
-      WHERE  shipping_address->>'phone' = ${input.customerPhone}
-        AND  created_at  > ${since24h}
-        AND  status NOT IN ('PAYMENT_FAILED','CANCELLED')
-        AND  id          != ${input.orderId}::uuid
-    `;
-    orders24h = Number(rows[0]?.count ?? 0);
+    const { count } = await supabaseAdmin
+      .from('spf_orders')
+      .select('id', { count: 'exact', head: true })
+      .filter('shipping_address->>phone', 'eq', input.customerPhone)
+      .gte('created_at', since24h)
+      .not('status', 'in', '(PAYMENT_FAILED,CANCELLED)')
+      .neq('id', input.orderId);
+
+    orders24h = count ?? 0;
     await rSet(cacheKey, TTL.VELOCITY, orders24h);
   }
 
@@ -395,26 +392,25 @@ async function checkAddressAbuse(input: RiskCheckInput): Promise<RiskFlag | null
   let distinctCustomers = await rGet<number>(cacheKey);
 
   if (distinctCustomers === null) {
-    const since90d = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+    const since90d = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+    const normalizedInput = input.deliveryAddress.toLowerCase().trim().replace(/\s+/g, ' ');
 
-    // Match by pincode + normalised house+area hash stored in address JSONB
-    const rows = await prisma.$queryRaw<CountRow[]>`
-      SELECT COUNT(DISTINCT customer_id)::bigint AS count
-      FROM   spf_orders
-      WHERE  shipping_address->>'pincode' = ${input.pincode}
-        AND  MD5(
-               LOWER(TRIM(
-                 REGEXP_REPLACE(
-                   COALESCE(shipping_address->>'house','') || ' ' ||
-                   COALESCE(shipping_address->>'area' ,''),
-                   '\s+', ' ', 'g'
-                 )
-               ))
-             ) = MD5(LOWER(TRIM(${input.deliveryAddress})))
-        AND  created_at > ${since90d}
-        AND  id        != ${input.orderId}::uuid
-    `;
-    distinctCustomers = Number(rows[0]?.count ?? 0);
+    const { data: rows } = await supabaseAdmin
+      .from('spf_orders')
+      .select('customer_id, shipping_address')
+      .filter('shipping_address->>pincode', 'eq', input.pincode)
+      .gte('created_at', since90d)
+      .neq('id', input.orderId);
+
+    distinctCustomers = new Set(
+      (rows ?? []).filter((r: any) => {
+        const addr = r.shipping_address;
+        if (!addr) return false;
+        const rowAddr = `${addr.house ?? ''} ${addr.area ?? ''}`.toLowerCase().trim().replace(/\s+/g, ' ');
+        return rowAddr === normalizedInput;
+      }).map((r: any) => r.customer_id),
+    ).size;
+
     await rSet(cacheKey, TTL.ADDRESS_ACCTS, distinctCustomers);
   }
 
@@ -481,8 +477,7 @@ async function checkVpnProxy(input: RiskCheckInput): Promise<RiskFlag | null> {
 
 /**
  * Runs all 10 fraud checks in parallel, sums scores (capped at 100),
- * persists flags + updates order + upserts customer risk profile
- * — all in a single Prisma transaction.
+ * persists flags + updates order + upserts customer risk profile.
  */
 export async function runRiskChecks(input: RiskCheckInput): Promise<RiskResult> {
   // ── Run all checks in parallel (none depend on each other) ────────────────
@@ -515,64 +510,77 @@ export async function runRiskChecks(input: RiskCheckInput): Promise<RiskResult> 
   const status   = scoreToStatus(score);
   const decision = statusToDecision(status);
 
-  // ── Persist all writes atomically ─────────────────────────────────────────
-  await prisma.$transaction(async (tx) => {
-
-    // 1. Write one OrderRiskFlag row per triggered signal
+  // ── Persist all writes (non-fatal — never block order flow) ───────────────
+  try {
+    // 1. Write one risk flag row per triggered signal
     if (flags.length > 0) {
-      await tx.orderRiskFlag.createMany({
-        data: flags.map((f) => ({
-          orderId:           input.orderId,
-          flagType:          f.flagType as any,   // Prisma enum — cast until generate runs
-          flagValue:         f.flagValue,
-          scoreContribution: f.scoreContribution,
+      await supabaseAdmin.from('spf_order_risk_flags').insert(
+        flags.map((f) => ({
+          order_id:          input.orderId,
+          flag_type:         f.flagType,
+          flag_value:        f.flagValue,
+          score_contribution: f.scoreContribution,
         })),
-        skipDuplicates: true,
-      });
+      );
     }
 
     // 2. Update order.risk_score + order.risk_status
-    await tx.order.update({
-      where: { id: input.orderId },
-      data:  {
-        riskScore:  score,
-        riskStatus: status as any,
-      },
-    });
+    await supabaseAdmin
+      .from('spf_orders')
+      .update({
+        risk_score:  score,
+        risk_status: status,
+        updated_at:  new Date().toISOString(),
+      })
+      .eq('id', input.orderId);
 
-    // 3. Upsert customer risk profile (create on first order, increment on subsequent)
+    // 3. Upsert customer risk profile
     const isHoldOrReject = status === 'HOLD' || status === 'REJECTED';
-    await tx.customerRiskProfile.upsert({
-      where: { customerId: input.customerId },
-      create: {
-        customerId:          input.customerId,
-        totalCodOrders:      input.paymentMethod === 'COD' ? 1 : 0,
-        undeliveredCodCount: 0,
-        rtoCount:            0,
-        fraudHoldCount:      isHoldOrReject ? 1 : 0,
-        lastFraudHoldAt:     isHoldOrReject ? new Date() : null,
-        isBlocked:           status === 'REJECTED',
-        blockReason:         status === 'REJECTED'
-          ? `Auto-blocked at order placement: risk_score=${score}`
-          : null,
-      },
-      update: {
-        ...(input.paymentMethod === 'COD'
-          ? { totalCodOrders: { increment: 1 } }
-          : {}),
-        ...(isHoldOrReject
-          ? { fraudHoldCount: { increment: 1 }, lastFraudHoldAt: new Date() }
-          : {}),
-        ...(status === 'REJECTED'
-          ? {
-              isBlocked:   true,
-              blockReason: `Auto-blocked at order placement: risk_score=${score}`,
-            }
-          : {}),
-        lastUpdated: new Date(),
-      },
-    });
-  });
+
+    const { data: existingProfile } = await supabaseAdmin
+      .from('spf_customer_risk_profiles')
+      .select('total_cod_orders, fraud_hold_count, is_blocked, block_reason, last_fraud_hold_at')
+      .eq('customer_id', input.customerId)
+      .maybeSingle();
+
+    if (existingProfile) {
+      const updates: Record<string, any> = {
+        last_updated: new Date().toISOString(),
+      };
+      if (input.paymentMethod === 'COD') {
+        updates.total_cod_orders = (existingProfile.total_cod_orders ?? 0) + 1;
+      }
+      if (isHoldOrReject) {
+        updates.fraud_hold_count  = (existingProfile.fraud_hold_count ?? 0) + 1;
+        updates.last_fraud_hold_at = new Date().toISOString();
+      }
+      if (status === 'REJECTED') {
+        updates.is_blocked   = true;
+        updates.block_reason = `Auto-blocked at order placement: risk_score=${score}`;
+      }
+      await supabaseAdmin
+        .from('spf_customer_risk_profiles')
+        .update(updates)
+        .eq('customer_id', input.customerId);
+    } else {
+      await supabaseAdmin
+        .from('spf_customer_risk_profiles')
+        .insert({
+          customer_id:           input.customerId,
+          total_cod_orders:      input.paymentMethod === 'COD' ? 1 : 0,
+          undelivered_cod_count: 0,
+          rto_count:             0,
+          fraud_hold_count:      isHoldOrReject ? 1 : 0,
+          last_fraud_hold_at:    isHoldOrReject ? new Date().toISOString() : null,
+          is_blocked:            status === 'REJECTED',
+          block_reason:          status === 'REJECTED'
+            ? `Auto-blocked at order placement: risk_score=${score}`
+            : null,
+        });
+    }
+  } catch (persistErr: any) {
+    console.error('[RiskEngine] Persist error (non-fatal):', persistErr?.message);
+  }
 
   console.log(
     `[RiskEngine] orderId=${input.orderId} score=${score} status=${status} flags=[${flags.map(f => f.flagType).join(',')}]`

@@ -8,15 +8,16 @@
  *  4  Amount tamper check (PG amount vs computed total)
  *  5  Duplicate transaction guard
  *  6  Create order + items in DB  ─┐
- *  7  Run fraud / risk engine       │ atomic where possible
+ *  7  Run fraud / risk engine       │
  *  8  Notify seller                 │
  *  9  Write initial status history ─┘
  * 10  Return { orderId, orderNumber, status, estimatedDelivery }
+ *
+ * Uses Supabase (no Prisma/DATABASE_URL needed).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import prisma from '@/lib/prisma';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { runRiskChecks } from '@/lib/fraud/riskEngine';
 import { notify } from '@/lib/createNotification';
@@ -149,15 +150,16 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Step 2: Pincode serviceability ───────────────────────────────────────
-    const pincodeConfig = await prisma.pincodeRiskConfig.findUnique({
-      where:  { pincode: shippingAddress.pincode },
-      select: { isServiceable: true, isCodDisabled: true },
-    });
+    const { data: pincodeConfig } = await supabaseAdmin
+      .from('spf_pincode_risk_config')
+      .select('is_serviceable, is_cod_disabled')
+      .eq('pincode', shippingAddress.pincode)
+      .maybeSingle();
 
-    if (pincodeConfig?.isServiceable === false) {
+    if (pincodeConfig?.is_serviceable === false) {
       return apiErr('Delivery not available to this pincode', 'PINCODE_NOT_SERVICEABLE', 422);
     }
-    if (pincodeConfig?.isCodDisabled === true && paymentMethod === 'COD') {
+    if (pincodeConfig?.is_cod_disabled === true && paymentMethod === 'COD') {
       return apiErr('COD not available for this pincode', 'COD_DISABLED_PINCODE', 422);
     }
 
@@ -208,7 +210,7 @@ export async function POST(request: NextRequest) {
     const sellerId = [...sellerIds][0];
 
     // Build enriched line items + compute subtotal
-    let subtotal  = 0;
+    let subtotal = 0;
     const lineItems = items.map((item) => {
       const p         = productMap.get(item.productId)!;
       const unitPrice = r2(Number(p.price));
@@ -253,10 +255,11 @@ export async function POST(request: NextRequest) {
 
     // ── Step 5: Duplicate transaction guard ───────────────────────────────────
     if (transactionId) {
-      const dupe = await prisma.order.findFirst({
-        where:  { transactionId },
-        select: { id: true },
-      });
+      const { data: dupe } = await supabaseAdmin
+        .from('spf_orders')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .maybeSingle();
       if (dupe) {
         return apiErr('This transaction has already been processed', 'DUPLICATE_TRANSACTION', 409);
       }
@@ -273,11 +276,13 @@ export async function POST(request: NextRequest) {
       return apiErr('Customer not found', 'CUSTOMER_NOT_FOUND', 404);
     }
 
-    const riskProfile = await prisma.customerRiskProfile.findUnique({
-      where:  { customerId },
-      select: { isBlocked: true },
-    });
-    if (riskProfile?.isBlocked) {
+    const { data: riskProfile } = await supabaseAdmin
+      .from('spf_customer_risk_profiles')
+      .select('is_blocked')
+      .eq('customer_id', customerId)
+      .maybeSingle();
+
+    if (riskProfile?.is_blocked) {
       return apiErr(
         'Unable to place order at this time. Please contact support.',
         'CUSTOMER_BLOCKED',
@@ -285,109 +290,130 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Steps 6 + 9: Create order, items, and initial history atomically ──────
+    // ── Steps 6 + 9: Create order, items, and initial history ─────────────────
     const now           = new Date();
     const acceptanceSla = new Date(now.getTime() + 2 * 3600 * 1000); // +2 h
     const packingSla    = new Date(now.getTime() + 4 * 3600 * 1000); // +4 h
 
     // COD orders skip payment confirmation and go straight to CONFIRMED
-    const initialStatus: string = paymentMethod === 'COD' ? 'CONFIRMED' : 'PENDING_PAYMENT';
+    const initialStatus = paymentMethod === 'COD' ? 'CONFIRMED' : 'PENDING_PAYMENT';
 
     // Collision-safe order number (5 retries, ~1-in-billion chance per attempt)
     let orderNumber = makeOrderNumber();
     for (let i = 0; i < 5; i++) {
-      const conflict = await prisma.order.findUnique({
-        where:  { orderNumber },
-        select: { id: true },
-      });
+      const { data: conflict } = await supabaseAdmin
+        .from('spf_orders')
+        .select('id')
+        .eq('order_number', orderNumber)
+        .maybeSingle();
       if (!conflict) break;
       orderNumber = makeOrderNumber();
     }
 
-    const createdOrder = await prisma.$transaction(async (tx) => {
-      // ── 6a: Insert order ────────────────────────────────────────────────────
-      const order = await tx.order.create({
-        data: {
-          orderNumber,
-          customerId,
-          sellerId,
-          status:                initialStatus        as any,
-          paymentMethod:         paymentMethod        as any,
-          paymentStatus:         paymentMethod === 'COD' ? 'pending' : 'captured',
-          paymentGatewayRef:     paymentGatewayRef    ?? null,
-          transactionId:         transactionId        ?? null,
-          subtotal,
-          shippingCharge,
-          platformFee,
-          pgFee,
-          sellerPayoutAmount:    sellerPayout,
-          shippingAddress:       shippingAddress      as any,
-          // Store device fingerprint in notes until a dedicated column is added
-          notes:                 deviceId ? `device:${deviceId}` : null,
-          acceptanceSlaDeadline: acceptanceSla,
-          packingSlaDeadline:    packingSla,
-        },
-      });
+    // ── 6a: Insert order ─────────────────────────────────────────────────────
+    const { data: orderData, error: orderErr } = await supabaseAdmin
+      .from('spf_orders')
+      .insert({
+        order_number:            orderNumber,
+        customer_id:             customerId,
+        seller_id:               sellerId,
+        status:                  initialStatus,
+        payment_method:          paymentMethod,
+        payment_status:          paymentMethod === 'COD' ? 'pending' : 'captured',
+        payment_gateway_ref:     paymentGatewayRef    ?? null,
+        transaction_id:          transactionId        ?? null,
+        subtotal,
+        shipping_charge:         shippingCharge,
+        platform_fee:            platformFee,
+        pg_fee:                  pgFee,
+        seller_payout_amount:    sellerPayout,
+        shipping_address:        shippingAddress,
+        notes:                   deviceId ? `device:${deviceId}` : null,
+        acceptance_sla_deadline: acceptanceSla.toISOString(),
+        packing_sla_deadline:    packingSla.toISOString(),
+      })
+      .select('id, order_number, status')
+      .single();
 
-      // ── 6b: Insert line items ───────────────────────────────────────────────
-      await tx.orderItem.createMany({
-        data: lineItems.map((li) => ({ orderId: order.id, ...li })),
-      });
+    if (orderErr || !orderData) {
+      console.error('[OrderCreate] Order insert failed:', orderErr?.message);
+      return apiErr('Failed to create order', 'ORDER_CREATE_FAILED', 500);
+    }
 
-      // ── Step 9: Initial status history entry ────────────────────────────────
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId:    order.id,
-          fromStatus: null,
-          toStatus:   initialStatus as any,
-          actorType:  'SYSTEM'     as any,
-          actorId:    null,
-          note: paymentMethod === 'COD'
-            ? 'COD order confirmed automatically at placement'
-            : 'Order created — awaiting payment capture confirmation',
-        },
-      });
+    // ── 6b: Insert line items ─────────────────────────────────────────────────
+    const { error: itemsErr } = await supabaseAdmin
+      .from('spf_order_items')
+      .insert(lineItems.map((li) => ({
+        order_id:        orderData.id,
+        product_id:      li.productId,
+        variant_id:      li.variantId,
+        seller_id:       li.sellerId,
+        product_name:    li.productName,
+        variant_details: li.variantDetails,
+        quantity:        li.quantity,
+        unit_price:      li.unitPrice,
+        total_price:     li.totalPrice,
+      })));
 
-      return order;
+    if (itemsErr) {
+      console.error('[OrderCreate] Items insert failed:', itemsErr.message);
+      // Clean up orphaned order
+      await supabaseAdmin.from('spf_orders').delete().eq('id', orderData.id);
+      return apiErr('Failed to create order items', 'ORDER_ITEMS_FAILED', 500);
+    }
+
+    // ── Step 9: Initial status history ───────────────────────────────────────
+    await supabaseAdmin.from('spf_order_status_history').insert({
+      order_id:    orderData.id,
+      from_status: null,
+      to_status:   initialStatus,
+      actor_type:  'SYSTEM',
+      actor_id:    null,
+      note: paymentMethod === 'COD'
+        ? 'COD order confirmed automatically at placement'
+        : 'Order created — awaiting payment capture confirmation',
     });
 
     // ── Step 7: Fraud / risk engine ───────────────────────────────────────────
     const deliveryAddrStr = `${shippingAddress.house} ${shippingAddress.area}`;
 
-    const riskResult = await runRiskChecks({
-      orderId:          createdOrder.id,
-      customerId,
-      paymentMethod:    paymentMethod    as RiskPaymentMethod,
-      orderValue:       orderTotal,
-      transactionId,
-      pgAmount:         pgAmount ?? 0,
-      dbAmount:         orderTotal,
-      customerPhone:    (customer.phone as string | null) ?? shippingAddress.phone,
-      deliveryAddress:  deliveryAddrStr,
-      pincode:          shippingAddress.pincode,
-      deviceId,
-      ipAddress,
-      accountCreatedAt: new Date(customer.created_at as string),
-    });
+    let riskResult: { decision: string; score: number; status: string; flags: Array<{ flagType: string }> };
+    try {
+      riskResult = await runRiskChecks({
+        orderId:          orderData.id,
+        customerId,
+        paymentMethod:    paymentMethod    as RiskPaymentMethod,
+        orderValue:       orderTotal,
+        transactionId,
+        pgAmount:         pgAmount ?? 0,
+        dbAmount:         orderTotal,
+        customerPhone:    (customer.phone as string | null) ?? shippingAddress.phone,
+        deliveryAddress:  deliveryAddrStr,
+        pincode:          shippingAddress.pincode,
+        deviceId,
+        ipAddress,
+        accountCreatedAt: new Date(customer.created_at as string),
+      });
+    } catch (riskErr: any) {
+      console.error('[OrderCreate] Risk engine error (non-fatal):', riskErr?.message);
+      riskResult = { decision: 'AUTO_CONFIRM', score: 0, status: 'CLEAR', flags: [] };
+    }
 
     // ── Handle risk decision ─────────────────────────────────────────────────
     if (riskResult.decision === 'REJECT') {
-      // Auto-cancel the order and write history
-      await prisma.$transaction([
-        prisma.order.update({
-          where: { id: createdOrder.id },
-          data:  { status: 'CANCELLED' as any },
-        }),
-        prisma.orderStatusHistory.create({
-          data: {
-            orderId:    createdOrder.id,
-            fromStatus: initialStatus    as any,
-            toStatus:   'CANCELLED'      as any,
-            actorType:  'SYSTEM'         as any,
-            note:       `Auto-rejected by fraud engine — risk_score=${riskResult.score} flags=[${riskResult.flags.map((f) => f.flagType).join(', ')}]`,
-          },
-        }),
-      ]);
+      await supabaseAdmin
+        .from('spf_orders')
+        .update({ status: 'CANCELLED', updated_at: now.toISOString() })
+        .eq('id', orderData.id);
+
+      await supabaseAdmin.from('spf_order_status_history').insert({
+        order_id:    orderData.id,
+        from_status: initialStatus,
+        to_status:   'CANCELLED',
+        actor_type:  'SYSTEM',
+        actor_id:    null,
+        note:        `Auto-rejected by fraud engine — risk_score=${riskResult.score} flags=[${riskResult.flags.map((f) => f.flagType).join(', ')}]`,
+      });
 
       return apiErr(
         'Order could not be placed. Please contact support if you believe this is an error.',
@@ -397,20 +423,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (riskResult.decision === 'HOLD_FOR_REVIEW') {
-      // Order exists but seller is NOT notified until admin clears the hold
       const estimatedDelivery = new Date(now.getTime() + 5 * 86400 * 1000)
         .toISOString()
         .slice(0, 10);
 
       return NextResponse.json(
         {
-          orderId:           createdOrder.id,
-          orderNumber:       createdOrder.orderNumber,
-          status:            createdOrder.status,
+          orderId:           orderData.id,
+          orderNumber:       orderData.order_number,
+          status:            orderData.status,
           estimatedDelivery,
-          riskStatus:        riskResult.status,   // surface for support tooling
+          riskStatus:        riskResult.status,
         },
-        { status: 202 }, // 202 Accepted — under manual review
+        { status: 202 },
       );
     }
 
@@ -424,9 +449,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        orderId:           createdOrder.id,
-        orderNumber:       createdOrder.orderNumber,
-        status:            createdOrder.status,
+        orderId:           orderData.id,
+        orderNumber:       orderData.order_number,
+        status:            orderData.status,
         estimatedDelivery,
       },
       { status: 201 },
