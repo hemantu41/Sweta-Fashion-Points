@@ -97,8 +97,21 @@ export async function POST(
     }
 
     // 3. Parse delivery address from shipping_address JSONB
-    const addr  = (order.shipping_address as any) || {};
-    const items = (order.spf_order_items as any[]) || [];
+    const addr = (order.shipping_address as any) || {};
+
+    // Fetch items — fallback to direct query if join returned nothing
+    let items = (order.spf_order_items as any[]) || [];
+    if (items.length === 0) {
+      const { data: directItems } = await supabaseAdmin
+        .from('spf_order_items')
+        .select('product_id, product_name, sku, quantity, unit_price')
+        .eq('order_id', orderId);
+      items = directItems || [];
+    }
+
+    if (items.length === 0) {
+      return NextResponse.json({ error: 'Order has no items — cannot create shipment' }, { status: 400 });
+    }
 
     // Sanitise phone — Shiprocket needs exactly 10 digits, no country code
     const rawPhone   = String(addr.phone || '').replace(/\D/g, '');

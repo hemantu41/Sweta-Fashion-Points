@@ -41,10 +41,12 @@ interface ShiprocketShipmentRequest {
   order_date: string;
   pickup_location: string;
   billing_customer_name: string;
+  billing_last_name: string;
   billing_address: string;
   billing_city: string;
   billing_state: string;
   billing_pincode: string;
+  billing_country: string;
   billing_phone: string;
   billing_email?: string;
   shipping_is_billing: boolean;
@@ -585,15 +587,22 @@ export async function createShipment(orderData: {
   height: number;
 }) {
   // Step 1: Create order
+  // Shiprocket requires first + last name separately
+  const nameParts     = (orderData.billingName || 'Customer').trim().split(/\s+/);
+  const firstName     = nameParts[0] || 'Customer';
+  const lastName      = nameParts.slice(1).join(' ') || '.';
+
   const orderResult = await shiprocketService.createOrder({
     order_id:               orderData.orderId,
     order_date:             orderData.orderDate,
     pickup_location:        orderData.pickupLocation,
-    billing_customer_name:  orderData.billingName,
+    billing_customer_name:  firstName,
+    billing_last_name:      lastName,
     billing_address:        orderData.billingAddress,
     billing_city:           orderData.billingCity,
     billing_state:          orderData.billingState,
     billing_pincode:        orderData.billingPincode,
+    billing_country:        'India',
     billing_phone:          orderData.billingPhone,
     billing_email:          orderData.billingEmail || '',
     shipping_is_billing:    true,
