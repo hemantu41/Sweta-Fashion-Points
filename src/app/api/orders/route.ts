@@ -91,14 +91,30 @@ export async function GET(request: NextRequest) {
       packed_at:        o.packed_at    ?? null,
       shipped_at:       o.picked_up_at ?? null,
       created_at:       o.created_at,
-      // shipping_address stored as { name, phone, house, area, city, state, pincode }
-      delivery_address: o.shipping_address,
+      // Map shipping_address { name, phone, house, area, city, state, pincode }
+      // → delivery_address { name, phone, address_line1, address_line2, city, state, pincode }
+      delivery_address: o.shipping_address
+        ? {
+            name:          o.shipping_address.name    || '',
+            phone:         o.shipping_address.phone   || '',
+            address_line1: o.shipping_address.house   || o.shipping_address.address_line1 || '',
+            address_line2: o.shipping_address.area    || o.shipping_address.address_line2 || '',
+            city:          o.shipping_address.city    || '',
+            state:         o.shipping_address.state   || '',
+            pincode:       o.shipping_address.pincode || '',
+          }
+        : { name: '', phone: '', address_line1: '', address_line2: '', city: '', state: '', pincode: '' },
       items: (o.spf_order_items || []).map((item: any) => ({
         id:              item.id,
         product_id:      item.product_id,
         seller_id:       item.seller_id,
         product_name:    item.product_name,
-        name:            item.product_name,
+        name:            item.product_name || 'Product',
+        nameHi:          '',
+        image:           item.image_url || null,
+        category:        item.category  || null,
+        price:           Number(item.unit_price),
+        size:            item.variant_details?.size || null,
         variant_details: item.variant_details,
         sku:             item.sku,
         quantity:        item.quantity,

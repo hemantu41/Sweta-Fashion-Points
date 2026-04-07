@@ -302,10 +302,10 @@ export default function OrdersPage() {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-[#722F37]">
-                            ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                            ₹{((Number(item.price) || 0) * (item.quantity || 1)).toLocaleString('en-IN')}
                           </p>
                           <p className="text-xs text-[#6B6B6B] mt-1">
-                            ₹{item.price.toLocaleString('en-IN')} each
+                            ₹{(Number(item.price) || 0).toLocaleString('en-IN')} each
                           </p>
                         </div>
                       </div>
@@ -324,17 +324,23 @@ export default function OrdersPage() {
                     Delivery Address
                   </h4>
                   <div className="bg-[#F5F0E8] rounded-lg p-4">
-                    <p className="font-medium text-[#2D2D2D]">{order.delivery_address.name}</p>
-                    <p className="text-sm text-[#6B6B6B] mt-1">
-                      {order.delivery_address.address_line1}
-                      {order.delivery_address.address_line2 && `, ${order.delivery_address.address_line2}`}
-                    </p>
-                    <p className="text-sm text-[#6B6B6B]">
-                      {order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}
-                    </p>
-                    <p className="text-sm text-[#6B6B6B] mt-1">
-                      Phone: {order.delivery_address.phone}
-                    </p>
+                    {order.delivery_address ? (
+                      <>
+                        <p className="font-medium text-[#2D2D2D]">{order.delivery_address.name}</p>
+                        <p className="text-sm text-[#6B6B6B] mt-1">
+                          {order.delivery_address.address_line1}
+                          {order.delivery_address.address_line2 && `, ${order.delivery_address.address_line2}`}
+                        </p>
+                        <p className="text-sm text-[#6B6B6B]">
+                          {order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}
+                        </p>
+                        <p className="text-sm text-[#6B6B6B] mt-1">
+                          Phone: {order.delivery_address.phone}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-[#6B6B6B]">Address not available</p>
+                    )}
                   </div>
                 </div>
 
