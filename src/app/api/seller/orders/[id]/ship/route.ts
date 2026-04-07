@@ -17,49 +17,13 @@ export async function POST(
       return NextResponse.json({ error: 'sellerId is required' }, { status: 400 });
     }
 
-    // 0. Idempotency check — if a shipment already exists, regenerate label from existing shipment
-    const { data: existingShipment } = await supabaseAdmin
-      .from('spf_shipments')
-      .select('id, shipment_id, awb_number, courier_name, label_url')
-      .eq('order_id', orderId)
-      .maybeSingle();
-
-    if (existingShipment?.shipment_id) {
-      console.log('[Ship API] Shipment already exists, regenerating label for shipment_id:', existingShipment.shipment_id);
-      const labelResult = await generateLabel(existingShipment.shipment_id);
-
-      // Update label_url in DB if regeneration succeeded
-      if (labelResult.labelUrl) {
-        await supabaseAdmin
-          .from('spf_shipments')
-          .update({ label_url: labelResult.labelUrl })
-          .eq('id', existingShipment.id);
-      }
-
-      const { data: order } = await supabaseAdmin
-        .from('spf_orders')
-        .select('tracking_url')
-        .eq('id', orderId)
-        .single();
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          awbNumber:   existingShipment.awb_number,
-          courierName: existingShipment.courier_name,
-          labelUrl:    labelResult.labelUrl ?? existingShipment.label_url,
-          pickupDate:  null,
-          trackingUrl: order?.tracking_url ?? null,
-        },
-      });
-    }
-
-    // 1. Fetch order from spf_orders
+    // 1. Fetch order (awb_number included for idempotency check)
     const { data: order, error: orderErr } = await supabaseAdmin
       .from('spf_orders')
       .select(`
         id, order_number, customer_id, seller_id, status,
         subtotal, shipping_charge, payment_method, shipping_address,
+        awb_number, courier_partner, tracking_url,
         spf_order_items ( product_id, product_name, sku, quantity, unit_price )
       `)
       .eq('id', orderId)
@@ -72,6 +36,42 @@ export async function POST(
     // Verify the seller owns this order
     if (order.seller_id !== sellerId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    // Idempotency: if AWB already exists in spf_orders, shipment was already created.
+    // Try to regenerate label using the existing Shiprocket shipment_id from spf_shipments.
+    if (order.awb_number) {
+      console.log('[Ship API] AWB already exists, skipping Shiprocket order creation. AWB:', order.awb_number);
+
+      const { data: existingShipment } = await supabaseAdmin
+        .from('spf_shipments')
+        .select('id, shipment_id, label_url')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      let labelUrl: string | null = existingShipment?.label_url ?? null;
+
+      if (existingShipment?.shipment_id) {
+        const labelResult = await generateLabel(existingShipment.shipment_id);
+        if (labelResult.labelUrl) {
+          labelUrl = labelResult.labelUrl;
+          await supabaseAdmin
+            .from('spf_shipments')
+            .update({ label_url: labelUrl })
+            .eq('id', existingShipment.id);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          awbNumber:   order.awb_number,
+          courierName: order.courier_partner ?? null,
+          labelUrl,
+          pickupDate:  null,
+          trackingUrl: order.tracking_url ?? null,
+        },
+      });
     }
 
     // 2. Fetch seller's Shiprocket pickup location
