@@ -137,7 +137,7 @@ export async function POST(
       billingPincode: String(addr.pincode || '').replace(/\D/g, ''),
       items: items.map((item: any) => ({
         name:         String(item.product_name || item.name || 'Product').substring(0, 100),
-        sku:          String(item.sku || item.product_id || `SKU${orderId.substring(0, 6)}`).replace(/[^A-Za-z0-9_-]/g, ''),
+        sku:          String(item.sku || item.product_id || item.id || `SKU${orderId.substring(0, 6)}`).replace(/[^A-Za-z0-9_-]/g, '').substring(0, 40),
         units:        Number(item.quantity) || 1,
         sellingPrice: Number(item.unit_price) || 1,
       })),

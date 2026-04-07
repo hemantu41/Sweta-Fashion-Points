@@ -156,12 +156,17 @@ export async function POST(request: NextRequest) {
           } else if (newOrder) {
             console.log('[Verify Payment] raw items from spf_payment_orders:', JSON.stringify(items));
             if (items.length > 0) {
+              // item.id = p.id (UUID primary key of spf_productdetails)
+              // item.productId = p.product_id (non-UUID short ID — do NOT use for FK)
               const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
               const itemRows = items.map((item: any) => {
-                const productId = item.productId || item.id || '';
+                // Prefer item.id (UUID PK), fall back to item.productId only if it's a UUID
+                const candidateId = UUID_RE.test(item.id) ? item.id
+                  : UUID_RE.test(item.productId) ? item.productId
+                  : null;
                 return {
                   order_id:        newOrder.id,
-                  product_id:      UUID_RE.test(productId) ? productId : null,
+                  product_id:      candidateId,
                   seller_id:       item.sellerId || sellerId,
                   product_name:    item.name     || 'Product',
                   variant_details: item.size     ? { size: item.size } : null,
