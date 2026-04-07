@@ -40,7 +40,7 @@ export async function POST(
     // 2. Fetch seller's Shiprocket pickup location
     const { data: seller, error: sellerErr } = await supabaseAdmin
       .from('spf_sellers')
-      .select('id, business_name, business_email, business_phone, shiprocket_pickup_location, pickup_pincode, address_line1, city, state, pincode')
+      .select('id, business_name, business_email, business_phone, shiprocket_pickup_location, pickup_pincode, address_line1, address_line2, city, state, pincode')
       .eq('id', sellerId)
       .single();
 
@@ -52,12 +52,28 @@ export async function POST(
 
     // Auto-register pickup location in Shiprocket if not set yet
     if (!pickupLocation) {
-      const sellerAddress = seller.address_line1 || seller.city || '';
+      // Build a full address line — Shiprocket requires ≥10 chars with house/flat/road
+      const fullAddress = [seller.address_line1, seller.address_line2]
+        .map((s: any) => (s || '').trim())
+        .filter(Boolean)
+        .join(', ');
+
+      if (fullAddress.length < 10) {
+        return NextResponse.json(
+          {
+            error:
+              'Your business address is incomplete. Please update your seller profile with a full address ' +
+              '(house/flat/road number, at least 10 characters) before generating a label.',
+          },
+          { status: 400 },
+        );
+      }
+
       const regResult = await addPickupLocation({
         name:    seller.business_name    || 'Seller',
         email:   seller.business_email   || '',
         phone:   seller.business_phone   || '',
-        address: sellerAddress,
+        address: fullAddress,
         city:    seller.city             || '',
         state:   seller.state            || '',
         pincode: seller.pincode          || seller.pickup_pincode || '',
