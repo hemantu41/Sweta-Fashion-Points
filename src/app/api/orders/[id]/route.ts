@@ -52,7 +52,7 @@ export async function PUT(
     const now = new Date().toISOString();
 
     if (status === 'accepted') {
-      if (order.status !== 'SELLER_NOTIFIED') {
+      if (!['SELLER_NOTIFIED', 'CONFIRMED'].includes(order.status)) {
         return NextResponse.json(
           { error: `Order cannot be accepted — current status: ${order.status}` },
           { status: 400 },
@@ -79,7 +79,7 @@ export async function PUT(
       // Write status history
       await supabaseAdmin.from('spf_order_status_history').insert({
         order_id:   orderId,
-        from_status:'SELLER_NOTIFIED',
+        from_status: order.status,
         to_status:  'ACCEPTED',
         actor_type: 'SELLER',
         actor_id:   sellerId,
