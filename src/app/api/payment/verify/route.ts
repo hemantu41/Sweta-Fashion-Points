@@ -154,19 +154,32 @@ export async function POST(request: NextRequest) {
           if (orderInsertErr) {
             console.error('[Verify Payment] spf_orders insert error:', orderInsertErr.message);
           } else if (newOrder) {
+            console.log('[Verify Payment] raw items from spf_payment_orders:', JSON.stringify(items));
             if (items.length > 0) {
-              await supabaseAdmin.from('spf_order_items').insert(
-                items.map((item: any) => ({
+              const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+              const itemRows = items.map((item: any) => {
+                const productId = item.productId || item.id || '';
+                return {
                   order_id:        newOrder.id,
-                  product_id:      item.productId || item.id,
-                  seller_id:       item.sellerId  || sellerId,
-                  product_name:    item.name,
-                  variant_details: item.size ? { size: item.size } : null,
+                  product_id:      UUID_RE.test(productId) ? productId : null,
+                  seller_id:       item.sellerId || sellerId,
+                  product_name:    item.name     || 'Product',
+                  variant_details: item.size     ? { size: item.size } : null,
                   quantity:        Number(item.quantity) || 1,
                   unit_price:      Number(item.price)    || 0,
                   total_price:     Math.round(Number(item.price) * Number(item.quantity) * 100) / 100,
-                })),
-              );
+                };
+              }).filter((r: any) => r.product_id !== null);
+
+              console.log('[Verify Payment] inserting item rows:', JSON.stringify(itemRows));
+
+              const { error: itemsErr } = await supabaseAdmin
+                .from('spf_order_items')
+                .insert(itemRows);
+
+              if (itemsErr) {
+                console.error('[Verify Payment] spf_order_items insert error:', itemsErr.message);
+              }
             }
             await supabaseAdmin.from('spf_order_status_history').insert({
               order_id:    newOrder.id,
