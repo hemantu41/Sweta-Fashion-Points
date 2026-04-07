@@ -164,7 +164,10 @@ class ShiprocketService {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`Shiprocket API error: ${error.message || response.statusText}`);
+      const detail = error.errors
+        ? JSON.stringify(error.errors)
+        : error.message || response.statusText;
+      throw new Error(`Shiprocket API error: ${detail}`);
     }
 
     return response.json();

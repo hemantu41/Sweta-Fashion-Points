@@ -100,27 +100,43 @@ export async function POST(
     const addr  = (order.shipping_address as any) || {};
     const items = (order.spf_order_items as any[]) || [];
 
+    // Sanitise phone — Shiprocket needs exactly 10 digits, no country code
+    const rawPhone   = String(addr.phone || '').replace(/\D/g, '');
+    const phone10    = rawPhone.startsWith('91') && rawPhone.length === 12
+      ? rawPhone.slice(2)
+      : rawPhone.slice(-10);
+
+    // Shiprocket order_id must be unique; use order_number if available else UUID prefix
+    const srOrderId  = order.order_number
+      ? String(order.order_number).replace(/[^A-Za-z0-9_-]/g, '-').substring(0, 50)
+      : `IFP-${orderId.substring(0, 8).toUpperCase()}`;
+
+    const shipPayload = {
+      orderId:        srOrderId,
+      orderDate:      new Date().toISOString().split('T')[0],
+      pickupLocation: pickupLocation!,
+      billingName:    addr.name    || 'Customer',
+      billingPhone:   phone10,
+      billingEmail:   seller.business_email || 'noreply@instafashionpoints.com',
+      billingAddress: addr.house   || addr.address_line1 || addr.area || '',
+      billingCity:    addr.city    || '',
+      billingState:   addr.state   || '',
+      billingPincode: String(addr.pincode || '').replace(/\D/g, ''),
+      items: items.map((item: any) => ({
+        name:         String(item.product_name || item.name || 'Product').substring(0, 100),
+        sku:          String(item.sku || item.product_id || `SKU${orderId.substring(0, 6)}`).replace(/[^A-Za-z0-9_-]/g, ''),
+        units:        Number(item.quantity) || 1,
+        sellingPrice: Number(item.unit_price) || 1,
+      })),
+      paymentMethod: (order.payment_method === 'COD' ? 'COD' : 'Prepaid') as 'Prepaid' | 'COD',
+      subTotal:      Math.max(1, Number(order.subtotal) + Number(order.shipping_charge)),
+    };
+
+    console.log('[Ship API] Shiprocket payload:', JSON.stringify(shipPayload, null, 2));
+
     // 4. Create shipment + auto-assign cheapest courier
     const shipmentResult = await createShipment({
-      orderId:       `IFP-${orderId.substring(0, 8).toUpperCase()}`,
-      orderDate:     new Date().toISOString().split('T')[0],
-      pickupLocation,
-      billingName:   addr.name   || 'Customer',
-      billingPhone:  addr.phone  || '',
-      billingEmail:  addr.email  || '',
-      billingAddress: addr.house || addr.address_line1 || '',
-      billingCity:   addr.city    || '',
-      billingState:  addr.state   || '',
-      billingPincode: addr.pincode || '',
-      items: items.map((item: any) => ({
-        name:         item.product_name || item.name || 'Product',
-        sku:          item.sku || item.product_id || `SKU-${orderId.substring(0, 6)}`,
-        units:        item.quantity || 1,
-        sellingPrice: Number(item.unit_price) || 0,
-        hsn:          item.hsn,
-      })),
-      paymentMethod: order.payment_method === 'COD' ? 'COD' : 'Prepaid',
-      subTotal:      Number(order.subtotal) + Number(order.shipping_charge),
+      ...shipPayload,
       weight,
       length,
       breadth,
