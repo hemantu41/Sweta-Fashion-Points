@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { createShipment, generateLabel, schedulePickup } from '@/lib/shiprocket';
+import { createShipment, generateLabel, schedulePickup, addPickupLocation } from '@/lib/shiprocket';
 
 // POST /api/seller/orders/[id]/ship
 // Called when seller enters package dimensions and clicks "Generate Label & Schedule Pickup"
@@ -48,12 +48,36 @@ export async function POST(
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
 
-    const pickupLocation = seller.shiprocket_pickup_location;
+    let pickupLocation = seller.shiprocket_pickup_location as string | null;
+
+    // Auto-register pickup location in Shiprocket if not set yet
     if (!pickupLocation) {
-      return NextResponse.json(
-        { error: 'Pickup address not registered with Shiprocket. Contact admin.' },
-        { status: 400 }
-      );
+      const sellerAddress = seller.address_line1 || seller.city || '';
+      const regResult = await addPickupLocation({
+        name:    seller.business_name    || 'Seller',
+        email:   seller.business_email   || '',
+        phone:   seller.business_phone   || '',
+        address: sellerAddress,
+        city:    seller.city             || '',
+        state:   seller.state            || '',
+        pincode: seller.pincode          || seller.pickup_pincode || '',
+      });
+
+      if (!regResult.success || !regResult.pickupLocationName) {
+        console.error('[Ship API] Pickup registration failed:', regResult.error);
+        return NextResponse.json(
+          { error: 'Failed to register pickup address with Shiprocket: ' + regResult.error },
+          { status: 500 }
+        );
+      }
+
+      pickupLocation = regResult.pickupLocationName;
+
+      // Persist so we don't re-register on the next shipment
+      await supabaseAdmin
+        .from('spf_sellers')
+        .update({ shiprocket_pickup_location: pickupLocation })
+        .eq('id', sellerId);
     }
 
     // 3. Parse delivery address from shipping_address JSONB
