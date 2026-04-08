@@ -43,17 +43,31 @@ interface Order {
 }
 
 export default function OrdersPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login?callbackUrl=/orders');
-    }
-  }, [isAuthenticated, isLoading, router]);
+    if (isLoading) return;
+    if (isAuthenticated) return;
+
+    // localStorage is empty but iron-session may still be valid (e.g. browser cleared storage).
+    // Try to restore the session from the server before redirecting to login.
+    fetch('/api/auth/session')
+      .then(r => r.json())
+      .then(data => {
+        if (data.isLoggedIn && data.user) {
+          login(data.user); // restores localStorage and re-renders with user set
+        } else {
+          router.replace('/login?callbackUrl=/orders');
+        }
+      })
+      .catch(() => {
+        router.replace('/login?callbackUrl=/orders');
+      });
+  }, [isAuthenticated, isLoading, router, login]);
 
   useEffect(() => {
     if (user?.id) {
