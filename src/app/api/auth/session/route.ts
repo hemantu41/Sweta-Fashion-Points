@@ -9,15 +9,21 @@ export async function GET() {
   try {
     const session = await getSession();
 
-    if (!session.isLoggedIn || !session.mobile) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ isLoggedIn: false });
     }
 
-    const { data: user, error } = await supabase
-      .from('spf_users')
-      .select('id, name, email, mobile, location, is_admin')
-      .eq('mobile', session.mobile)
-      .maybeSingle();
+    // Look up user by userId (preferred) or fall back to mobile
+    let query = supabase.from('spf_users').select('id, name, email, mobile, location, is_admin');
+    if (session.userId) {
+      query = query.eq('id', session.userId) as typeof query;
+    } else if (session.mobile) {
+      query = query.eq('mobile', session.mobile) as typeof query;
+    } else {
+      return NextResponse.json({ isLoggedIn: false });
+    }
+
+    const { data: user, error } = await query.maybeSingle();
 
     if (error || !user) {
       return NextResponse.json({ isLoggedIn: false });

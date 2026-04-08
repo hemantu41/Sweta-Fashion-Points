@@ -53,21 +53,23 @@ export default function OrdersPage() {
     if (isLoading) return;
     if (isAuthenticated) return;
 
-    // localStorage is empty but iron-session may still be valid (e.g. browser cleared storage).
-    // Try to restore the session from the server before redirecting to login.
+    // localStorage is empty but iron-session may still be valid (middleware already blocked
+    // access if the session cookie was missing, so we must be here with a valid session).
+    // Try to restore user from server. Do NOT redirect to /login here — the middleware
+    // handles unauthorized access and a client-side redirect would cause a redirect loop
+    // (middleware bounces /login back to / when iron-session is valid).
     fetch('/api/auth/session')
       .then(r => r.json())
       .then(data => {
         if (data.isLoggedIn && data.user) {
-          login(data.user); // restores localStorage and re-renders with user set
+          login(data.user); // restores localStorage; triggers fetchOrders via [user] effect
         } else {
-          router.replace('/login?callbackUrl=/orders');
+          // Session truly gone — stop the spinner; middleware would have blocked if no cookie
+          setLoading(false);
         }
       })
-      .catch(() => {
-        router.replace('/login?callbackUrl=/orders');
-      });
-  }, [isAuthenticated, isLoading, router, login]);
+      .catch(() => setLoading(false));
+  }, [isAuthenticated, isLoading, login]);
 
   useEffect(() => {
     if (user?.id) {

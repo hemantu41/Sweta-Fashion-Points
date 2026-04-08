@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
 
     // ── Set iron-session cookie (30-day login) ─────────────────────────────
     const session = await getSession();
+    session.userId = user.id;
     session.mobile = mobile;
     session.isLoggedIn = true;
     await session.save();

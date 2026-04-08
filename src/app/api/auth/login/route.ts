@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Set iron-session cookie so middleware can protect routes
     const session = await getSession();
+    session.userId = user.id;
     session.mobile = user.mobile;
     session.isLoggedIn = true;
     await session.save();
