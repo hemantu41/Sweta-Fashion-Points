@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import QcPipeline, { QcStage } from '@/components/seller/QcPipeline';
@@ -43,13 +44,17 @@ const CATEGORIES = ['All', 'Clothes', 'Footwear', 'Beauty & Makeup', 'Sarees', '
 const STATUSES = ['All', 'approved', 'pending', 'under_review', 'rejected'];
 const STOCKS = ['All', 'In Stock', 'Low Stock', 'Out of Stock'];
 
-export default function ProductsPage() {
+function ProductsContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const f = searchParams.get('filter');
+    return STATUSES.includes(f || '') ? (f as string) : 'All';
+  });
   const [stockFilter, setStockFilter] = useState('All');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Product | null>(null);
@@ -237,5 +242,13 @@ export default function ProductsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-4 border-[#5B1A3A] border-t-transparent rounded-full animate-spin" /></div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }

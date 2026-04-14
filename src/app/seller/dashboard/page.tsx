@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import KpiCard from '@/components/seller/KpiCard';
 
@@ -75,6 +76,7 @@ function StatBar({ value, max = 100, color = '#5B1A3A' }: { value: number; max?:
 
 export default function SellerDashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
 
   const [seller, setSeller] = useState<Seller | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -197,6 +199,7 @@ export default function SellerDashboardPage() {
           subtitle={`${approved.length} approved & live`}
           trend={{ value: 'this month', positive: true }}
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>}
+          href="/seller/dashboard/products"
         />
         <KpiCard
           title="Approved & Live"
@@ -204,6 +207,7 @@ export default function SellerDashboardPage() {
           subtitle={`${approvalRate}% approval rate`}
           accent="#2E7D32"
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          href="/seller/dashboard/products?filter=approved"
         />
         <KpiCard
           title="Pending QC"
@@ -211,6 +215,7 @@ export default function SellerDashboardPage() {
           subtitle="Awaiting admin review"
           accent="#C49A3C"
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>}
+          href="/seller/dashboard/qc"
         />
         <KpiCard
           title="This Month Revenue"
@@ -218,16 +223,23 @@ export default function SellerDashboardPage() {
           subtitle={`₹${earnings.pending.toLocaleString('en-IN')} pending payout`}
           trend={{ value: 'vs last month', positive: true }}
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>}
+          href="/seller/dashboard/earnings"
         />
       </div>
 
       {/* ── Quick stats row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Order summary */}
-        <div className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm">
+        <div
+          className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-[#5B1A3A]/30 transition-all duration-300"
+          onClick={() => router.push('/seller/dashboard/orders')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => e.key === 'Enter' && router.push('/seller/dashboard/orders')}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Order Summary</h3>
-            <Link href="/seller/dashboard/orders" className="text-xs text-[#5B1A3A] hover:underline">View all →</Link>
+            <span className="text-xs text-[#5B1A3A] font-medium">View all →</span>
           </div>
           <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
             {[
@@ -251,10 +263,16 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Inventory */}
-        <div className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm">
+        <div
+          className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-[#5B1A3A]/30 transition-all duration-300"
+          onClick={() => router.push('/seller/dashboard/inventory')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => e.key === 'Enter' && router.push('/seller/dashboard/inventory')}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Inventory Status</h3>
-            <Link href="/seller/dashboard/products" className="text-xs text-[#5B1A3A] hover:underline">View all →</Link>
+            <span className="text-xs text-[#5B1A3A] font-medium">View all →</span>
           </div>
           <div className="grid grid-cols-2 gap-y-2 gap-x-4">
             {[
@@ -279,10 +297,16 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Earnings */}
-        <div className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm">
+        <div
+          className="bg-white rounded-xl border border-[#E8E0E4] p-5 shadow-sm cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-[#5B1A3A]/30 transition-all duration-300"
+          onClick={() => router.push('/seller/dashboard/earnings')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => e.key === 'Enter' && router.push('/seller/dashboard/earnings')}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Earnings Overview</h3>
-            <Link href="/seller/dashboard/earnings" className="text-xs text-[#5B1A3A] hover:underline">Details →</Link>
+            <span className="text-xs text-[#5B1A3A] font-medium">Details →</span>
           </div>
           <div className="space-y-2">
             {[
