@@ -1,12 +1,22 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { ProductCard } from '@/components';
-import { getNewArrivals } from '@/data/products';
 import { useLanguage } from '@/context/LanguageContext';
+import type { Product } from '@/data/products';
 
 export default function NewArrivalsPage() {
   const { language } = useLanguage();
-  const newArrivals = getNewArrivals();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/products?isNewArrival=true')
+      .then(res => res.json())
+      .then(data => setProducts(data.products || []))
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -31,9 +41,15 @@ export default function NewArrivalsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Products Grid */}
-        {newArrivals.length > 0 ? (
+        {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {newArrivals.map((product) => (
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl animate-pulse h-72" />
+            ))}
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
