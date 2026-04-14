@@ -2,12 +2,16 @@
 
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import Navbar from './Navbar';
 import Footer from './Footer';
 
 const authPaths = ['/login', '/signup'];
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+interface MainLayoutProps {
+  children: React.ReactNode;
+  navbar?: React.ReactNode;
+}
+
+export default function MainLayout({ children, navbar }: MainLayoutProps) {
   const { isAuthenticated, isLoading } = useAuth();
   const pathname = usePathname();
 
@@ -48,7 +52,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // For other pages, show full layout with navbar and footer
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
+      {navbar}
       <main className="flex-1">{children}</main>
       <Footer />
     </div>

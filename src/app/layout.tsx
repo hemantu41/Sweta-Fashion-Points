@@ -5,6 +5,7 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { AuthGuard, MainLayout } from "@/components";
+import SharedNavbar from "@/components/shared/Navbar";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -117,7 +118,7 @@ export default function RootLayout({
           <LanguageProvider>
             <CartProvider>
               <AuthGuard>
-                <MainLayout>{children}</MainLayout>
+                <MainLayout navbar={<SharedNavbar />}>{children}</MainLayout>
               </AuthGuard>
             </CartProvider>
           </LanguageProvider>
