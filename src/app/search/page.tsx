@@ -14,6 +14,18 @@ function SearchResults() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
+  const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/categories?level=1')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && Array.isArray(d.data)) {
+          setCategories(d.data.map((c: any) => ({ name: c.name, slug: c.slug })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -115,30 +127,23 @@ function SearchResults() {
               Try adjusting your search terms or browse our collections
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              <Link
-                href="/mens"
-                className="px-6 py-2.5 bg-[#F5F0E8] text-[#722F37] font-medium rounded-full hover:bg-[#E8E2D9] transition-colors"
-              >
-                Men's Collection
-              </Link>
-              <Link
-                href="/womens"
-                className="px-6 py-2.5 bg-[#F5F0E8] text-[#722F37] font-medium rounded-full hover:bg-[#E8E2D9] transition-colors"
-              >
-                Women's Collection
-              </Link>
-              <Link
-                href="/sarees"
-                className="px-6 py-2.5 bg-[#F5F0E8] text-[#722F37] font-medium rounded-full hover:bg-[#E8E2D9] transition-colors"
-              >
-                Sarees
-              </Link>
-              <Link
-                href="/kids"
-                className="px-6 py-2.5 bg-[#F5F0E8] text-[#722F37] font-medium rounded-full hover:bg-[#E8E2D9] transition-colors"
-              >
-                Kids Collection
-              </Link>
+              {(categories.length > 0
+                ? categories
+                : [
+                    { name: "Men's", slug: 'mens' },
+                    { name: "Women's", slug: 'womens' },
+                    { name: 'Sarees', slug: 'sarees' },
+                    { name: 'Kids', slug: 'kids' },
+                  ]
+              ).map(cat => (
+                <Link
+                  key={cat.slug}
+                  href={`/category/${cat.slug}`}
+                  className="px-6 py-2.5 bg-[#F5F0E8] text-[#722F37] font-medium rounded-full hover:bg-[#E8E2D9] transition-colors"
+                >
+                  {cat.name}
+                </Link>
+              ))}
             </div>
           </div>
         )}

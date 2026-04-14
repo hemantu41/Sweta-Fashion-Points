@@ -76,9 +76,16 @@ export async function GET(request: NextRequest) {
         query = query.is('deleted_at', null);
       }
       if (search) {
-        // Search in name, description, fabric, category, and subcategory
-        // Using .or() to search across multiple fields
-        query = query.or(`name.ilike.%${search}%,name_hi.ilike.%${search}%,description.ilike.%${search}%,description_hi.ilike.%${search}%,fabric.ilike.%${search}%,fabric_hi.ilike.%${search}%,category.ilike.%${search}%,sub_category.ilike.%${search}%`);
+        // Normalize search term: strip hyphens so "t-shirt" matches "tshirt" and vice versa
+        const searchNorm = search.replace(/-/g, '');
+        const fields = ['name', 'name_hi', 'description', 'description_hi', 'fabric', 'fabric_hi', 'category', 'sub_category', 'product_id'];
+        const conditions = fields.flatMap(f => {
+          const parts = [`${f}.ilike.%${search}%`];
+          // Add normalized variant only when it differs (e.g. "t-shirt" → "tshirt")
+          if (searchNorm !== search) parts.push(`${f}.ilike.%${searchNorm}%`);
+          return parts;
+        }).join(',');
+        query = query.or(conditions);
       }
 
       // IMPORTANT: Only show approved products for customer-facing queries
