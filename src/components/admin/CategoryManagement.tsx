@@ -3,12 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronRight, ChevronDown, Plus, Pencil, Search, X, Check } from 'lucide-react';
 
-interface NavbarPromo {
-  label: string;
-  title: string;
-  link: string;
-}
-
 interface Category {
   id: string;
   name: string;
@@ -20,11 +14,6 @@ interface Category {
   parentId?: string | null;
   level?: number;
   children?: Category[];
-  // Navbar fields (L1 only)
-  showInNavbar?: boolean;
-  navbarSortOrder?: number;
-  navbarIcon?: string;
-  navbarPromo?: NavbarPromo | null;
 }
 
 // Maps DB snake_case to component camelCase
@@ -40,10 +29,6 @@ function mapDBCategory(c: any): Category {
     parentId: c.parent_id,
     level: c.level,
     children: (c.children || []).map(mapDBCategory),
-    showInNavbar: c.show_in_navbar ?? false,
-    navbarSortOrder: c.navbar_sort_order ?? 0,
-    navbarIcon: c.navbar_icon ?? '',
-    navbarPromo: c.navbar_promo ?? null,
   };
 }
 
@@ -66,18 +51,6 @@ export default function CategoryManagement() {
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<ModalState>({ open: false, mode: 'add', level: 1 });
   const [form, setForm] = useState({ name: '', nameHindi: '', slug: '', displayOrder: 1, active: true });
-  // Inline navbar editing state per L1 category
-  const [navbarEditing, setNavbarEditing] = useState<Record<string, boolean>>({});
-  const [navbarDraft, setNavbarDraft] = useState<Record<string, {
-    showInNavbar: boolean;
-    navbarSortOrder: number;
-    navbarIcon: string;
-    promoLabel: string;
-    promoTitle: string;
-    promoLink: string;
-  }>>({});
-
-  const navbarCount = categories.filter(c => c.showInNavbar).length;
 
   const fetchCategories = useCallback(async () => {
     setLoading(true);
@@ -171,51 +144,13 @@ export default function CategoryManagement() {
     setModal({ open: false, mode: 'add', level: 1 });
   };
 
-  const openNavbarEditor = (cat: Category) => {
-    setNavbarDraft(prev => ({
-      ...prev,
-      [cat.id]: {
-        showInNavbar: cat.showInNavbar ?? false,
-        navbarSortOrder: cat.navbarSortOrder ?? 0,
-        navbarIcon: cat.navbarIcon ?? '',
-        promoLabel: cat.navbarPromo?.label ?? '',
-        promoTitle: cat.navbarPromo?.title ?? '',
-        promoLink: cat.navbarPromo?.link ?? '',
-      },
-    }));
-    setNavbarEditing(prev => ({ ...prev, [cat.id]: true }));
-  };
-
-  const saveNavbar = async (cat: Category) => {
-    const draft = navbarDraft[cat.id];
-    if (!draft) return;
-    const promoPayload =
-      draft.promoLabel || draft.promoTitle || draft.promoLink
-        ? { label: draft.promoLabel, title: draft.promoTitle, link: draft.promoLink }
-        : null;
-    try {
-      await fetch(`/api/admin/categories/${cat.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          show_in_navbar: draft.showInNavbar,
-          navbar_sort_order: draft.navbarSortOrder,
-          navbar_icon: draft.navbarIcon || null,
-          navbar_promo: promoPayload,
-        }),
-      });
-      await fetchCategories();
-    } catch { /* silent */ }
-    setNavbarEditing(prev => ({ ...prev, [cat.id]: false }));
-  };
-
   const searchLower = search.toLowerCase();
   const matchesSearch = (name: string) => !search || name.toLowerCase().includes(searchLower);
 
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-lg font-semibold text-gray-800">Category Management</h2>
           <p className="text-sm text-gray-500 mt-1">Manage the 3-level product category taxonomy</p>
@@ -226,15 +161,6 @@ export default function CategoryManagement() {
         >
           <Plus size={15} /> Add Level 1 Category
         </button>
-      </div>
-
-      {/* Live navbar count banner */}
-      <div className="flex items-center gap-2 mb-6 px-3 py-2 bg-[#5B1A3A]/5 border border-[#5B1A3A]/10 rounded-xl text-sm">
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#5B1A3A] text-white text-xs font-bold">{navbarCount}</span>
-        <span className="text-[#5B1A3A] font-medium">
-          {navbarCount === 1 ? '1 category' : `${navbarCount} categories`} showing in navbar
-        </span>
-        <span className="text-gray-400 text-xs ml-auto">Toggle &quot;Show in Navbar&quot; on any L1 row to change</span>
       </div>
 
       {/* Search */}
@@ -273,10 +199,6 @@ export default function CategoryManagement() {
               <span className={`flex-1 text-sm font-semibold ${l1.active ? 'text-gray-800' : 'text-gray-400 line-through'}`}>{l1.name}</span>
               <span className="text-xs text-gray-400 hidden md:block">{l1.children?.length || 0} subcategories</span>
               <span className="px-2 py-0.5 bg-[#C49A3C]/10 text-[#C49A3C] text-xs font-medium rounded-full">{l1.productCount} products</span>
-              {/* Navbar badge */}
-              {l1.showInNavbar && (
-                <span className="px-2 py-0.5 text-xs rounded-full font-medium bg-[#5B1A3A]/10 text-[#5B1A3A]">In Navbar</span>
-              )}
               <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${l1.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{l1.active ? 'Active' : 'Inactive'}</span>
               <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => openEdit(l1, 1)} className="px-2.5 py-1 border border-[#5B1A3A] text-[#5B1A3A] text-xs rounded-lg hover:bg-[#5B1A3A]/5">
@@ -285,109 +207,11 @@ export default function CategoryManagement() {
                 <button onClick={() => openAdd(2, l1.id)} className="px-2.5 py-1 border border-[#C49A3C] text-[#C49A3C] text-xs rounded-lg hover:bg-[#C49A3C]/5">
                   <Plus size={11} className="inline mr-1" />Subcategory
                 </button>
-                <button
-                  onClick={() => navbarEditing[l1.id] ? setNavbarEditing(p => ({ ...p, [l1.id]: false })) : openNavbarEditor(l1)}
-                  className="px-2.5 py-1 border border-[#5B1A3A]/40 text-[#5B1A3A] text-xs rounded-lg hover:bg-[#5B1A3A]/5"
-                >
-                  Navbar
-                </button>
                 <button onClick={() => toggleActive(l1.id, l1.active)} className={`text-xs ${l1.active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
                   {l1.active ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
             </div>
-
-            {/* Navbar inline editor for L1 */}
-            {navbarEditing[l1.id] && navbarDraft[l1.id] && (
-              <div className="mx-4 mb-3 p-4 bg-[#FAF7F8] border border-[#5B1A3A]/10 rounded-xl">
-                <p className="text-xs font-semibold text-[#5B1A3A] mb-3 uppercase tracking-wide">Navbar Settings — {l1.name}</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Show in navbar toggle */}
-                  <div className="col-span-2 flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-200">
-                    <span className="text-xs font-medium text-gray-700">Show in Navbar</span>
-                    <button
-                      onClick={() => setNavbarDraft(p => ({ ...p, [l1.id]: { ...p[l1.id], showInNavbar: !p[l1.id].showInNavbar } }))}
-                      className={`relative inline-flex w-9 h-5 rounded-full transition-colors ${navbarDraft[l1.id].showInNavbar ? 'bg-[#5B1A3A]' : 'bg-gray-300'}`}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${navbarDraft[l1.id].showInNavbar ? 'translate-x-4' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-                  {/* Sort order */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Sort Order</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={navbarDraft[l1.id].navbarSortOrder}
-                      onChange={e => setNavbarDraft(p => ({ ...p, [l1.id]: { ...p[l1.id], navbarSortOrder: parseInt(e.target.value) || 0 } }))}
-                      className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/30"
-                    />
-                  </div>
-                  {/* Icon name */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Icon Name (slug key)</label>
-                    <input
-                      type="text"
-                      value={navbarDraft[l1.id].navbarIcon}
-                      placeholder="e.g. women, men, kids"
-                      onChange={e => setNavbarDraft(p => ({ ...p, [l1.id]: { ...p[l1.id], navbarIcon: e.target.value } }))}
-                      className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/30"
-                    />
-                  </div>
-                  {/* Promo fields */}
-                  <div className="col-span-2">
-                    <p className="text-[10px] font-semibold text-[#C49A3C] uppercase tracking-wide mb-2">Promo Block (optional)</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-1">Label</label>
-                        <input
-                          type="text"
-                          value={navbarDraft[l1.id].promoLabel}
-                          placeholder="e.g. Trending"
-                          onChange={e => setNavbarDraft(p => ({ ...p, [l1.id]: { ...p[l1.id], promoLabel: e.target.value } }))}
-                          className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-1">Title</label>
-                        <input
-                          type="text"
-                          value={navbarDraft[l1.id].promoTitle}
-                          placeholder="e.g. New Summer Arrivals"
-                          onChange={e => setNavbarDraft(p => ({ ...p, [l1.id]: { ...p[l1.id], promoTitle: e.target.value } }))}
-                          className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/30"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="block text-[10px] text-gray-500 mb-1">Link</label>
-                        <input
-                          type="text"
-                          value={navbarDraft[l1.id].promoLink}
-                          placeholder="e.g. /category/women"
-                          onChange={e => setNavbarDraft(p => ({ ...p, [l1.id]: { ...p[l1.id], promoLink: e.target.value } }))}
-                          className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/30"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Save / Cancel */}
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => setNavbarEditing(p => ({ ...p, [l1.id]: false }))}
-                    className="px-3 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => saveNavbar(l1)}
-                    className="px-3 py-1.5 text-xs font-medium text-white bg-[#5B1A3A] rounded-lg hover:bg-[#7A2350] transition-colors"
-                  >
-                    Save Navbar Settings
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Level 2 Rows */}
             {expanded[l1.id] && l1.children?.filter(l2 => matchesSearch(l2.name) || l2.children?.some(l3 => matchesSearch(l3.name))).map(l2 => (
