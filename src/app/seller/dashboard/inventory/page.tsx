@@ -514,11 +514,12 @@ function DaysCell({ days, stock }: { days: number; stock: number }) {
 
 /* ─── SKU Table ──────────────────────────────────────────────────────────────── */
 
-function SkuTable({ product, tab, onStockSave, selectedRows, onToggleRow, onPause, onDelete }: {
+function SkuTable({ product, tab, onStockSave, selectedRows, onToggleRow, onPause, onDelete, onEdit }: {
   product: Product; tab: MainTab;
   onStockSave: (productId: string, val: number) => Promise<void>;
   selectedRows: Set<string>; onToggleRow: (rowId: string) => void;
   onPause: (id: string) => void; onDelete: (id: string) => void;
+  onEdit: (id: string) => void;
 }) {
   const rows = getSkuRows(product);
   const editable = tab === 'active';
@@ -606,7 +607,12 @@ function SkuTable({ product, tab, onStockSave, selectedRows, onToggleRow, onPaus
                 <td className="px-3 py-3 text-center">
                   {tab === 'active' && (
                     <div className="flex items-center justify-center gap-1">
-                      <button className="text-[11px] font-semibold text-[#5B1A3A] hover:underline">Edit</button>
+                      <button
+                        onClick={() => onEdit(row.productId)}
+                        className="text-[11px] font-semibold text-[#5B1A3A] hover:underline"
+                      >
+                        Edit
+                      </button>
                       <KebabMenu onPause={() => onPause(row.productId)} onDelete={() => onDelete(row.productId)} />
                     </div>
                   )}
@@ -766,7 +772,7 @@ export default function InventoryPage() {
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, stockQuantity: val } : p));
     try {
       const res = await fetch(`/api/products/${productId}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stockQuantity: val }),
       });
       if (!res.ok) throw new Error();
@@ -782,7 +788,7 @@ export default function InventoryPage() {
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, isActive: false } : p));
     try {
       const res = await fetch(`/api/products/${productId}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: false }),
       });
       if (!res.ok) throw new Error();
@@ -986,7 +992,8 @@ export default function InventoryPage() {
                   <SkuTable product={selectedProduct} tab={activeTab}
                     onStockSave={handleStockSave} selectedRows={selectedRows}
                     onToggleRow={rowId => setSelectedRows(prev => { const n = new Set(prev); n.has(rowId) ? n.delete(rowId) : n.add(rowId); return n; })}
-                    onPause={handlePause} onDelete={handleDelete} />
+                    onPause={handlePause} onDelete={handleDelete}
+                    onEdit={id => router.push(`/seller/dashboard/products/edit/${id}`)} />
                 </div>
                 {/* Block reason */}
                 {activeTab === 'blocked' && (

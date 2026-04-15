@@ -209,6 +209,48 @@ export async function PUT(
   }
 }
 
+// PATCH /api/products/[id] - Partial update for stock / active status
+// Used by seller inventory page — does NOT reset approval_status
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const update: Record<string, unknown> = {};
+    if (body.stockQuantity !== undefined) update.stock_quantity = body.stockQuantity;
+    if (body.isActive !== undefined)      update.is_active      = body.isActive;
+
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    }
+
+    update.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('spf_productdetails')
+      .update(update)
+      .eq('id', id)
+      .select('id, stock_quantity, is_active')
+      .single();
+
+    if (error) {
+      console.error('[Product API] PATCH error:', error);
+      return NextResponse.json({ error: 'Failed to update product' }, { status: 500 });
+    }
+
+    const { productCache } = await import('@/lib/cache');
+    productCache.clear();
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error('[Product API] PATCH error:', error);
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+  }
+}
+
 // DELETE /api/products/[id] - Soft delete product (Admin or Seller owner)
 export async function DELETE(
   request: NextRequest,
