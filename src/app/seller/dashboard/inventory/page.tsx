@@ -514,11 +514,12 @@ function DaysCell({ days, stock }: { days: number; stock: number }) {
 
 /* ─── SKU Table ──────────────────────────────────────────────────────────────── */
 
-function SkuTable({ product, tab, onStockSave, selectedRows, onToggleRow, onPause, onDelete, onEdit }: {
+function SkuTable({ product, tab, onStockSave, selectedRows, onToggleRow, onPause, onResume, onDelete, onEdit }: {
   product: Product; tab: MainTab;
   onStockSave: (productId: string, val: number) => Promise<void>;
   selectedRows: Set<string>; onToggleRow: (rowId: string) => void;
-  onPause: (id: string) => void; onDelete: (id: string) => void;
+  onPause: (id: string) => void; onResume: (id: string) => void;
+  onDelete: (id: string) => void;
   onEdit: (id: string) => void;
 }) {
   const rows = getSkuRows(product);
@@ -626,7 +627,9 @@ function SkuTable({ product, tab, onStockSave, selectedRows, onToggleRow, onPaus
                   )}
                   {tab === 'blocked' && <button className="text-[11px] font-semibold text-[#5B1A3A] hover:underline">View Details</button>}
                   {tab === 'paused' && (
-                    <button className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold border border-[#5B1A3A] text-[#5B1A3A] rounded-lg hover:bg-[#F5EDF2] mx-auto transition-colors">
+                    <button
+                      onClick={() => onResume(row.productId)}
+                      className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold border border-[#5B1A3A] text-[#5B1A3A] rounded-lg hover:bg-[#F5EDF2] mx-auto transition-colors">
                       <Play size={10} fill="#5B1A3A" /> Resume
                     </button>
                   )}
@@ -796,6 +799,22 @@ export default function InventoryPage() {
     } catch {
       if (orig) setProducts(prev => prev.map(p => p.id === productId ? orig : p));
       showToast('Failed to pause listing', 'error');
+    }
+  }
+
+  async function handleResume(productId: string) {
+    const orig = products.find(p => p.id === productId);
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, isActive: true } : p));
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: true }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('Listing is now live to customers');
+    } catch {
+      if (orig) setProducts(prev => prev.map(p => p.id === productId ? orig : p));
+      showToast('Failed to resume listing', 'error');
     }
   }
 
@@ -992,7 +1011,7 @@ export default function InventoryPage() {
                   <SkuTable product={selectedProduct} tab={activeTab}
                     onStockSave={handleStockSave} selectedRows={selectedRows}
                     onToggleRow={rowId => setSelectedRows(prev => { const n = new Set(prev); n.has(rowId) ? n.delete(rowId) : n.add(rowId); return n; })}
-                    onPause={handlePause} onDelete={handleDelete}
+                    onPause={handlePause} onResume={handleResume} onDelete={handleDelete}
                     onEdit={id => router.push(`/seller/dashboard/products/edit/${id}`)} />
                 </div>
                 {/* Block reason */}
