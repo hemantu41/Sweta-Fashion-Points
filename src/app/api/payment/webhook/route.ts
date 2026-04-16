@@ -182,7 +182,7 @@ async function calculateSellerEarnings(paymentOrder: any) {
         continue;
       }
 
-      const commissionPercentage = seller.commission_percentage || 10.0;
+      const commissionPercentage = seller.commission_percentage ?? 0;
       const totalItemPrice = parseFloat(item.price) * item.quantity;
       const commissionAmount = totalItemPrice * (commissionPercentage / 100);
       const sellerEarning = totalItemPrice - commissionAmount;

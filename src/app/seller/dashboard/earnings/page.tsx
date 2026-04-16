@@ -69,7 +69,7 @@ function CycleRow({ cycle, isFirst }: { cycle: SettlementCycle; isFirst: boolean
           <div className="grid grid-cols-3 gap-3 mb-3">
             {[
               { label: 'Gross Revenue', value: fmt(cycle.grossAmount), color: '#2E7D32' },
-              { label: 'Platform Fee (10%)', value: `– ${fmt(cycle.commissionAmount)}`, color: '#5B1A3A' },
+              { label: 'Platform Fee (0%)', value: `– ${fmt(cycle.commissionAmount)}`, color: '#5B1A3A' },
               { label: 'Net Payout', value: fmt(cycle.netAmount), color: '#1565C0' },
             ].map(item => (
               <div key={item.label} className="text-center">
@@ -159,7 +159,7 @@ export default function EarningsPage() {
         {[
           { label: 'Net Paid Out', value: summary.paid, bg: 'bg-white border border-[#E8E0E4]', tc: '#2E7D32' },
           { label: 'Pending Payout', value: summary.pending, bg: 'bg-amber-50 border border-amber-100', tc: '#C49A3C', note: `Next: ${formatDate(nextPayout)}` },
-          { label: 'Commission Deducted', value: summary.commission, bg: 'bg-red-50 border border-red-100', tc: '#5B1A3A', note: '10% platform fee' },
+          { label: 'Commission Deducted', value: summary.commission, bg: 'bg-red-50 border border-red-100', tc: '#5B1A3A', note: '0% platform fee' },
         ].map(c => (
           <div key={c.label} className={`rounded-xl p-4 shadow-sm ${c.bg}`}>
             <p className="text-xs text-gray-500 mb-1">{c.label}</p>

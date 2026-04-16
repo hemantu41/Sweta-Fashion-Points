@@ -44,8 +44,8 @@ export function formatDate(dateStr: string | Date): string {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** Commission rate — 10% platform fee */
-export const COMMISSION_RATE = 0.10;
+/** Commission rate — 0% platform fee */
+export const COMMISSION_RATE = 0;
 
 export function calculateSettlement(grossAmount: number) {
   const commissionAmount = Math.round(grossAmount * COMMISSION_RATE);
