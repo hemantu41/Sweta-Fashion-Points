@@ -1,53 +1,17 @@
 /**
  * GET /api/admin/orders/v2
- * Admin orders list — Prisma-based (spf_orders table).
+ * Admin orders list — Supabase-based (spf_orders table).
  *
  * Query params:
- *   tab      all | pending | accepted | ready | in-transit | delivered | sla-breach | flagged
+ *   tab      all | pending | accepted | ready | in-transit | delivered | sla-breach | sla-at-risk | flagged
  *   search   order number substring
  *   page     1-based page number (default 1)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { Prisma } from '@prisma/client';
 
 const PAGE_SIZE = 20;
-
-function tabWhere(tab: string, now: Date): Prisma.OrderWhereInput {
-  const warnCutoff = new Date(now.getTime() + 30 * 60 * 1000); // now + 30 min
-  switch (tab) {
-    case 'pending':
-      return { status: { in: ['CONFIRMED', 'SELLER_NOTIFIED'] as any } };
-    case 'accepted':
-      return { status: 'ACCEPTED' as any };
-    case 'ready':
-      return { status: { in: ['PACKED', 'READY_TO_SHIP', 'PICKUP_SCHEDULED'] as any } };
-    case 'in-transit':
-      return { status: { in: ['IN_TRANSIT', 'OUT_FOR_DELIVERY'] as any } };
-    case 'delivered':
-      return { status: 'DELIVERED' as any };
-    case 'sla-breach':
-      return {
-        OR: [
-          { status: 'SELLER_NOTIFIED' as any, acceptanceSlaDeadline: { lte: now } },
-          { status: 'ACCEPTED' as any,        packingSlaDeadline:    { lte: now } },
-        ],
-      };
-    case 'sla-at-risk':
-      return {
-        OR: [
-          { status: 'SELLER_NOTIFIED' as any, acceptanceSlaDeadline: { gt: now, lte: warnCutoff } },
-          { status: 'ACCEPTED' as any,        packingSlaDeadline:    { gt: now, lte: warnCutoff } },
-        ],
-      };
-    case 'flagged':
-      return { riskStatus: { in: ['HOLD', 'SOFT_FLAG'] as any } };
-    default:
-      return {};
-  }
-}
 
 export const dynamic = 'force-dynamic';
 
@@ -57,76 +21,111 @@ export async function GET(request: NextRequest) {
     const tab    = searchParams.get('tab')  ?? 'all';
     const search = (searchParams.get('search') ?? '').trim();
     const page   = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-    const now    = new Date();
+    const now    = new Date().toISOString();
+    const warnCutoff = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const offset = (page - 1) * PAGE_SIZE;
 
-    const where: Prisma.OrderWhereInput = {
-      ...tabWhere(tab, now),
-      ...(search
-        ? {
-            OR: [
-              { orderNumber: { contains: search, mode: 'insensitive' } },
-              { customerId:  { contains: search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    };
+    // Build base queries
+    let countQ = supabaseAdmin
+      .from('spf_orders')
+      .select('*', { count: 'exact', head: true });
 
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip:    (page - 1) * PAGE_SIZE,
-        take:    PAGE_SIZE,
-        select: {
-          id:                    true,
-          orderNumber:           true,
-          status:                true,
-          riskStatus:            true,
-          riskScore:             true,
-          customerId:            true,
-          sellerId:              true,
-          paymentMethod:         true,
-          subtotal:              true,
-          shippingCharge:        true,
-          acceptanceSlaDeadline: true,
-          packingSlaDeadline:    true,
-          awbNumber:             true,
-          courierPartner:        true,
-          createdAt:             true,
-          _count: { select: { items: true } },
-        },
-      }),
-      prisma.order.count({ where }),
+    let dataQ = supabaseAdmin
+      .from('spf_orders')
+      .select(`
+        id, order_number, status, risk_status, risk_score,
+        customer_id, seller_id, payment_method, subtotal, shipping_charge,
+        acceptance_sla_deadline, packing_sla_deadline,
+        awb_number, courier_partner, created_at,
+        spf_order_items(id)
+      `);
+
+    // Tab filtering
+    switch (tab) {
+      case 'pending':
+        countQ = countQ.in('status', ['CONFIRMED', 'SELLER_NOTIFIED']);
+        dataQ  = dataQ.in('status',  ['CONFIRMED', 'SELLER_NOTIFIED']);
+        break;
+      case 'accepted':
+        countQ = countQ.eq('status', 'ACCEPTED');
+        dataQ  = dataQ.eq('status',  'ACCEPTED');
+        break;
+      case 'ready':
+        countQ = countQ.in('status', ['PACKED', 'READY_TO_SHIP', 'PICKUP_SCHEDULED']);
+        dataQ  = dataQ.in('status',  ['PACKED', 'READY_TO_SHIP', 'PICKUP_SCHEDULED']);
+        break;
+      case 'in-transit':
+        countQ = countQ.in('status', ['IN_TRANSIT', 'OUT_FOR_DELIVERY']);
+        dataQ  = dataQ.in('status',  ['IN_TRANSIT', 'OUT_FOR_DELIVERY']);
+        break;
+      case 'delivered':
+        countQ = countQ.eq('status', 'DELIVERED');
+        dataQ  = dataQ.eq('status',  'DELIVERED');
+        break;
+      case 'sla-breach': {
+        const f = `and(status.eq.SELLER_NOTIFIED,acceptance_sla_deadline.lte.${now}),and(status.eq.ACCEPTED,packing_sla_deadline.lte.${now})`;
+        countQ = countQ.or(f);
+        dataQ  = dataQ.or(f);
+        break;
+      }
+      case 'sla-at-risk': {
+        const f = `and(status.eq.SELLER_NOTIFIED,acceptance_sla_deadline.gt.${now},acceptance_sla_deadline.lte.${warnCutoff}),and(status.eq.ACCEPTED,packing_sla_deadline.gt.${now},packing_sla_deadline.lte.${warnCutoff})`;
+        countQ = countQ.or(f);
+        dataQ  = dataQ.or(f);
+        break;
+      }
+      case 'flagged':
+        countQ = countQ.in('risk_status', ['HOLD', 'SOFT_FLAG']);
+        dataQ  = dataQ.in('risk_status',  ['HOLD', 'SOFT_FLAG']);
+        break;
+    }
+
+    // Search filter
+    if (search) {
+      countQ = countQ.ilike('order_number', `%${search}%`);
+      dataQ  = dataQ.ilike('order_number',  `%${search}%`);
+    }
+
+    // Execute in parallel
+    const [countResult, dataResult] = await Promise.all([
+      countQ,
+      dataQ
+        .order('created_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1),
     ]);
 
-    // Batch-fetch customer names from Supabase
-    const customerIds = [...new Set(orders.map(o => o.customerId))];
-    const { data: customers } = await supabaseAdmin
-      .from('spf_users')
-      .select('id, full_name, email')
-      .in('id', customerIds.length ? customerIds : ['__none__']);
+    if (dataResult.error) throw dataResult.error;
+
+    const total  = countResult.count ?? 0;
+    const orders = dataResult.data ?? [];
+
+    // Batch-fetch customer names
+    const customerIds = [...new Set(orders.map((o: any) => o.customer_id))].filter(Boolean);
+    const { data: customers } = customerIds.length
+      ? await supabaseAdmin.from('spf_users').select('id, full_name, email').in('id', customerIds)
+      : { data: [] };
 
     const customerMap = new Map((customers ?? []).map((c: any) => [c.id, c]));
 
-    const rows = orders.map(o => ({
+    const rows = orders.map((o: any) => ({
       id:                    o.id,
-      orderNumber:           o.orderNumber,
+      orderNumber:           o.order_number,
       status:                o.status,
-      riskStatus:            o.riskStatus,
-      riskScore:             o.riskScore,
-      customerId:            o.customerId,
-      customerName:          customerMap.get(o.customerId)?.full_name ?? '—',
-      customerEmail:         customerMap.get(o.customerId)?.email ?? '—',
-      paymentMethod:         o.paymentMethod,
+      riskStatus:            o.risk_status,
+      riskScore:             o.risk_score ?? 0,
+      customerId:            o.customer_id,
+      customerName:          customerMap.get(o.customer_id)?.full_name ?? '—',
+      customerEmail:         customerMap.get(o.customer_id)?.email ?? '—',
+      paymentMethod:         o.payment_method,
       subtotal:              Number(o.subtotal),
-      shippingCharge:        Number(o.shippingCharge),
-      total:                 Number(o.subtotal) + Number(o.shippingCharge),
-      acceptanceSlaDeadline: o.acceptanceSlaDeadline,
-      packingSlaDeadline:    o.packingSlaDeadline,
-      awbNumber:             o.awbNumber,
-      courierPartner:        o.courierPartner,
-      createdAt:             o.createdAt,
-      itemCount:             o._count.items,
+      shippingCharge:        Number(o.shipping_charge),
+      total:                 Number(o.subtotal) + Number(o.shipping_charge),
+      acceptanceSlaDeadline: o.acceptance_sla_deadline,
+      packingSlaDeadline:    o.packing_sla_deadline,
+      awbNumber:             o.awb_number,
+      courierPartner:        o.courier_partner,
+      createdAt:             o.created_at,
+      itemCount:             Array.isArray(o.spf_order_items) ? o.spf_order_items.length : 0,
     }));
 
     return NextResponse.json({

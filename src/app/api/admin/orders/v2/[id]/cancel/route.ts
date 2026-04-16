@@ -1,10 +1,11 @@
 /**
  * POST /api/admin/orders/v2/[id]/cancel
  * Admin cancels an order. Body: { reason?: string }
+ * Uses Supabase directly (no Prisma/DATABASE_URL needed).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const NON_CANCELLABLE = ['DELIVERED', 'RETURNED', 'CANCELLED'];
 
@@ -17,36 +18,40 @@ export async function POST(
     const body   = await req.json().catch(() => ({}));
     const reason = (body.reason as string | undefined)?.trim() || undefined;
 
-    const order = await prisma.order.findUnique({
-      where:  { id },
-      select: { status: true },
-    });
+    const { data: order, error: fetchErr } = await supabaseAdmin
+      .from('spf_orders')
+      .select('status')
+      .eq('id', id)
+      .single();
 
-    if (!order) {
+    if (fetchErr || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (NON_CANCELLABLE.includes(order.status)) {
+    if (NON_CANCELLABLE.includes((order as any).status)) {
       return NextResponse.json(
-        { error: `Cannot cancel an order with status ${order.status}` },
+        { error: `Cannot cancel an order with status ${(order as any).status}` },
         { status: 400 },
       );
     }
 
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id },
-        data:  { status: 'CANCELLED' as any },
-      }),
-      prisma.orderStatusHistory.create({
-        data: {
-          orderId:    id,
-          fromStatus: order.status as any,
-          toStatus:   'CANCELLED' as any,
-          actorType:  'ADMIN',
-          note:       reason ? `Admin cancelled: ${reason}` : 'Cancelled by admin',
-        },
-      }),
+    const now = new Date().toISOString();
+
+    await Promise.all([
+      supabaseAdmin
+        .from('spf_orders')
+        .update({ status: 'CANCELLED', updated_at: now })
+        .eq('id', id),
+      supabaseAdmin
+        .from('spf_order_status_history')
+        .insert({
+          order_id:    id,
+          from_status: (order as any).status,
+          to_status:   'CANCELLED',
+          actor_type:  'ADMIN',
+          note:        reason ? `Admin cancelled: ${reason}` : 'Cancelled by admin',
+          created_at:  now,
+        }),
     ]);
 
     return NextResponse.json({ ok: true });

@@ -1,10 +1,11 @@
 /**
  * POST /api/admin/orders/v2/[id]/nudge-seller
  * Sends an SLA warning email to the seller (bypasses Redis dedup guard).
+ * Uses Supabase directly (no Prisma/DATABASE_URL needed).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notifySellerSlaWarning } from '@/lib/notifications/sellerNotify';
 
 export async function POST(
@@ -14,36 +15,39 @@ export async function POST(
   try {
     const { id } = await params;
 
-    const order = await prisma.order.findUnique({
-      where:  { id },
-      select: { status: true },
-    });
+    const { data: order, error: fetchErr } = await supabaseAdmin
+      .from('spf_orders')
+      .select('status')
+      .eq('id', id)
+      .single();
 
-    if (!order) {
+    if (fetchErr || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    const status = (order as any).status;
     const NUDGEABLE = ['CONFIRMED', 'SELLER_NOTIFIED', 'ACCEPTED'];
-    if (!NUDGEABLE.includes(order.status)) {
+    if (!NUDGEABLE.includes(status)) {
       return NextResponse.json(
-        { error: `Cannot nudge seller for order with status ${order.status}` },
+        { error: `Cannot nudge seller for order with status ${status}` },
         { status: 400 },
       );
     }
 
-    const slaType = order.status === 'ACCEPTED' ? 'PACKING' : 'ACCEPTANCE';
+    const slaType = status === 'ACCEPTED' ? 'PACKING' : 'ACCEPTANCE';
     await notifySellerSlaWarning(id, slaType);
 
-    // Log the nudge in status history
-    await prisma.orderStatusHistory.create({
-      data: {
-        orderId:   id,
-        fromStatus: order.status as any,
-        toStatus:   order.status as any,
-        actorType: 'ADMIN',
-        note:      `Admin manually sent seller nudge (${slaType} SLA reminder)`,
-      },
-    });
+    const now = new Date().toISOString();
+    await supabaseAdmin
+      .from('spf_order_status_history')
+      .insert({
+        order_id:    id,
+        from_status: status,
+        to_status:   status,
+        actor_type:  'ADMIN',
+        note:        `Admin manually sent seller nudge (${slaType} SLA reminder)`,
+        created_at:  now,
+      });
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

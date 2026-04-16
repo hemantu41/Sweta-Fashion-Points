@@ -1,10 +1,11 @@
 /**
  * POST /api/admin/orders/v2/[id]/sla-extend
  * Extends the active SLA deadline by 1 hour.
+ * Uses Supabase directly (no Prisma/DATABASE_URL needed).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -15,25 +16,26 @@ export async function POST(
   try {
     const { id } = await params;
 
-    const order = await prisma.order.findUnique({
-      where:  { id },
-      select: { status: true, acceptanceSlaDeadline: true, packingSlaDeadline: true },
-    });
+    const { data: order, error: fetchErr } = await supabaseAdmin
+      .from('spf_orders')
+      .select('status, acceptance_sla_deadline, packing_sla_deadline')
+      .eq('id', id)
+      .single();
 
-    if (!order) {
+    if (fetchErr || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    let updates: Record<string, Date> = {};
+    const o = order as any;
+    let updateField: string | null = null;
+    let newDeadline: string | null = null;
 
-    if (order.status === 'SELLER_NOTIFIED' && order.acceptanceSlaDeadline) {
-      updates.acceptanceSlaDeadline = new Date(
-        order.acceptanceSlaDeadline.getTime() + ONE_HOUR_MS,
-      );
-    } else if (order.status === 'ACCEPTED' && order.packingSlaDeadline) {
-      updates.packingSlaDeadline = new Date(
-        order.packingSlaDeadline.getTime() + ONE_HOUR_MS,
-      );
+    if (o.status === 'SELLER_NOTIFIED' && o.acceptance_sla_deadline) {
+      updateField  = 'acceptance_sla_deadline';
+      newDeadline  = new Date(new Date(o.acceptance_sla_deadline).getTime() + ONE_HOUR_MS).toISOString();
+    } else if (o.status === 'ACCEPTED' && o.packing_sla_deadline) {
+      updateField  = 'packing_sla_deadline';
+      newDeadline  = new Date(new Date(o.packing_sla_deadline).getTime() + ONE_HOUR_MS).toISOString();
     } else {
       return NextResponse.json(
         { error: 'No active SLA deadline to extend for this order status' },
@@ -41,17 +43,23 @@ export async function POST(
       );
     }
 
-    await prisma.$transaction([
-      prisma.order.update({ where: { id }, data: updates }),
-      prisma.orderStatusHistory.create({
-        data: {
-          orderId:    id,
-          fromStatus: order.status as any,
-          toStatus:   order.status as any,
-          actorType:  'ADMIN',
-          note:       'Admin extended SLA deadline by 1 hour',
-        },
-      }),
+    const now = new Date().toISOString();
+
+    await Promise.all([
+      supabaseAdmin
+        .from('spf_orders')
+        .update({ [updateField]: newDeadline, updated_at: now })
+        .eq('id', id),
+      supabaseAdmin
+        .from('spf_order_status_history')
+        .insert({
+          order_id:    id,
+          from_status: o.status,
+          to_status:   o.status,
+          actor_type:  'ADMIN',
+          note:        'Admin extended SLA deadline by 1 hour',
+          created_at:  now,
+        }),
     ]);
 
     return NextResponse.json({ ok: true });
