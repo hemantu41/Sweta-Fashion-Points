@@ -130,7 +130,7 @@ export default function SellerDashboardPage() {
     })();
   }, [user?.id, user?.sellerId]);
 
-  const approved = products.filter(p => p.approvalStatus === 'approved');
+  const approved = products.filter(p => p.approvalStatus === 'approved' && p.isActive);
   const pending = products.filter(p => p.approvalStatus === 'pending' || p.approvalStatus === 'under_review');
   const inStock = products.filter(p => p.stockQuantity > 5);
   const lowStock = products.filter(p => p.stockQuantity > 0 && p.stockQuantity <= 5);
