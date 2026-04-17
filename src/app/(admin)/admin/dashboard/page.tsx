@@ -414,7 +414,10 @@ function CataloguePage() {
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const filtered = products.filter(p => {
-    const catMatch = catFilter === 'all' || p.category === catFilter;
+    // Products uploaded by sellers store category as UUID; admin/bulk uploads store it as name.
+    // Check both so the filter works regardless of which format was used.
+    const catId = liveCategories.find(c => c.name === catFilter)?.id;
+    const catMatch = catFilter === 'all' || p.category === catFilter || p.category === catId;
     const statusMatch = statusFilter === 'all' || p.approvalStatus === statusFilter;
     const pidMatch = !productIdSearch.trim() ||
       (p.productId || '').toLowerCase().includes(productIdSearch.trim().toLowerCase());
