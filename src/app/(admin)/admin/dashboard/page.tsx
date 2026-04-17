@@ -851,14 +851,101 @@ function CataloguePage() {
 
 function PaymentsPage() {
   const { t } = useAdminLang();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [payTab, setPayTab] = useState<'settlements' | 'gst' | 'reconciliation'>('settlements');
+  const [earnings, setEarnings] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalGross: 0, totalPending: 0, totalPaid: 0, totalDisputed: 0, count: 0 });
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
+  // Payout modal state
+  const [payoutRows, setPayoutRows] = useState<any[]>([]);
+  const [utrInput, setUtrInput] = useState('');
+  const [payDateInput, setPayDateInput] = useState(new Date().toISOString().split('T')[0]);
+  const [payoutLoading, setPayoutLoading] = useState(false);
 
-  const totalCollected = MOCK_PAYMENTS.reduce((s, p) => s + p.amount, 0);
-  const gstCollected = Math.round(totalCollected * 0.05);
-  const pendingAmount = MOCK_PAYMENTS.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0);
+  // Dispute modal state
+  const [disputeRow, setDisputeRow] = useState<any | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeLoading, setDisputeLoading] = useState(false);
+
+  const fetchSettlements = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/payments/settlements?adminUserId=${user.id}&status=${statusFilter}`);
+      const data = await res.json();
+      if (res.ok) {
+        setEarnings(data.earnings || []);
+        setStats(data.stats || { totalGross: 0, totalPending: 0, totalPaid: 0, totalDisputed: 0, count: 0 });
+      }
+    } catch { /* keep empty */ }
+    finally { setLoading(false); }
+  }, [user?.id, statusFilter]);
+
+  useEffect(() => { fetchSettlements(); }, [fetchSettlements]);
+
+  const gstEstimate = Math.round(stats.totalGross * 0.05 / 1.05);
+
+  async function handlePayout() {
+    if (!utrInput.trim()) { toast.error('UTR number is required'); return; }
+    if (!user?.id) return;
+    setPayoutLoading(true);
+    try {
+      const res = await fetch('/api/admin/payments/settlements', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminUserId: user.id,
+          earningIds: payoutRows.map(r => r.id),
+          action: 'pay',
+          utr: utrInput.trim(),
+          paymentDate: payDateInput,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      toast.success(`${data.updated} earning(s) marked as paid (UTR: ${utrInput.trim()})`);
+      setPayoutRows([]);
+      setUtrInput('');
+      fetchSettlements();
+    } catch (err: any) {
+      toast.error(err.message || 'Payout failed');
+    } finally { setPayoutLoading(false); }
+  }
+
+  async function handleDispute() {
+    if (!disputeRow || !disputeReason.trim()) { toast.error('Reason is required'); return; }
+    if (!user?.id) return;
+    setDisputeLoading(true);
+    try {
+      const res = await fetch('/api/admin/payments/settlements', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminUserId: user.id,
+          earningIds: [disputeRow.id],
+          action: 'dispute',
+          reason: disputeReason.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      toast.success('Dispute raised — earning flagged for review');
+      setDisputeRow(null);
+      setDisputeReason('');
+      fetchSettlements();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to raise dispute');
+    } finally { setDisputeLoading(false); }
+  }
+
+  const statusBadge = (s: string) => {
+    if (s === 'paid' || s === 'settled') return 'bg-green-100 text-green-700';
+    if (s === 'pending') return 'bg-yellow-100 text-yellow-700';
+    if (s === 'disputed') return 'bg-red-100 text-red-600';
+    return 'bg-gray-100 text-gray-500';
+  };
 
   if (loading) return <div className="space-y-4"><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[1,2,3,4].map(i => <StatCardSkeleton key={i} />)}</div><TableSkeleton /></div>;
 
@@ -875,15 +962,15 @@ function PaymentsPage() {
         </div>
       </div>
 
-      {/* Stats row */}
+      {/* Stats row — real DB data */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <StatCard title={t('pay.totalCollected')} value={formatINR(totalCollected)} icon={<IndianRupee size={20} />} color="#C49A3C" />
-        <StatCard title={t('pay.sellerPayouts')} value={formatINR(totalCollected)} icon={<Users size={20} />} color="#5B1A3A" />
-        <StatCard title="GST Collected" value={formatINR(gstCollected)} icon={<ClipboardCheck size={20} />} color="#6366f1" />
-        <StatCard title={t('pay.pendingSettlement')} value={formatINR(pendingAmount)} icon={<Clock size={20} />} color="#f59e0b" />
+        <StatCard title={t('pay.totalCollected')} value={formatINR(stats.totalGross)} icon={<IndianRupee size={20} />} color="#C49A3C" />
+        <StatCard title={t('pay.sellerPayouts')} value={formatINR(stats.totalPaid)} icon={<Users size={20} />} color="#5B1A3A" />
+        <StatCard title="GST Estimate (5%)" value={formatINR(gstEstimate)} icon={<ClipboardCheck size={20} />} color="#6366f1" />
+        <StatCard title={t('pay.pendingSettlement')} value={formatINR(stats.totalPending)} icon={<Clock size={20} />} color="#f59e0b" />
       </div>
 
-      {/* Sub-tabs: Settlements | GST Export | Reconciliation */}
+      {/* Sub-tabs */}
       <div className="flex flex-wrap gap-2 mb-5">
         {(['settlements', 'gst', 'reconciliation'] as const).map(tab => (
           <button key={tab} onClick={() => setPayTab(tab)}
@@ -895,57 +982,200 @@ function PaymentsPage() {
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* ── Settlements tab ── */}
       {payTab === 'settlements' && (
         <>
-          {/* Settlement table */}
-          <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#FAF7F8] border-b border-[rgba(196,154,60,0.06)]">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.date')}</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.orderId')}</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Seller</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Gross</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.commission')}</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Net</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_PAYMENTS.map(p => (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className="px-4 py-3 text-xs text-gray-500">{new Date(p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{p.order_id}</td>
-                    <td className="px-4 py-3 text-gray-600">{p.seller_name}</td>
-                    <td className="px-4 py-3 font-semibold">{formatINR(p.amount)}</td>
-                    <td className="px-4 py-3 text-[#C49A3C] font-medium">₹0</td>
-                    <td className="px-4 py-3 font-semibold text-gray-800">{formatINR(p.seller_payout)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium
-                        ${p.status === 'settled' ? 'bg-green-100 text-green-700' :
-                          p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-600'}`}>
-                        {t(`pay.${p.status}`)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Status filter + payout action */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {['all', 'pending', 'paid', 'disputed'].map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors
+                  ${statusFilter === s
+                    ? s === 'pending' ? 'bg-amber-500 text-white border-amber-500'
+                    : s === 'paid' ? 'bg-green-600 text-white border-green-600'
+                    : s === 'disputed' ? 'bg-red-500 text-white border-red-500'
+                    : 'bg-gray-700 text-white border-gray-700'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+            <span className="ml-auto text-xs text-gray-400">{earnings.length} records</span>
+            {payoutRows.length > 0 && (
+              <button
+                onClick={() => { setUtrInput(''); setPayDateInput(new Date().toISOString().split('T')[0]); }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-xs font-medium hover:opacity-90 transition-colors">
+                <Send size={13} />
+                Record Payout ({payoutRows.length} selected)
+              </button>
+            )}
           </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-3 mt-4">
-            <button className="px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
-              onClick={() => toast.success('Razorpay payout initiated (sandbox)')}>
-              Razorpay Payout (Sandbox)
-            </button>
-            <button className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors"
-              onClick={() => toast('Dispute ticket opened', { icon: '📝' })}>
-              Raise Dispute
-            </button>
+          {/* Payout info banner */}
+          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg mb-3 text-[11px] text-blue-700">
+            <IndianRupee size={13} className="mt-0.5 flex-shrink-0" />
+            <span>
+              <strong>How to pay:</strong> Transfer the net amount to the seller&apos;s bank account via NEFT/IMPS/UPI.
+              Then select the rows and click &quot;Record Payout&quot; to enter the UTR and mark them as paid.
+            </span>
           </div>
+
+          {/* Settlement table */}
+          {earnings.length === 0 ? (
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-12 text-center">
+              <IndianRupee size={32} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-sm text-gray-400">No settlement records found</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-[#FAF7F8] border-b border-[rgba(196,154,60,0.06)]">
+                      <th className="px-3 py-3 w-8">
+                        <input type="checkbox"
+                          checked={payoutRows.length === earnings.filter(e => e.payment_status === 'pending').length && earnings.some(e => e.payment_status === 'pending')}
+                          onChange={e => setPayoutRows(e.target.checked ? earnings.filter(r => r.payment_status === 'pending') : [])}
+                          className="accent-[#5B1A3A]" />
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.date')}</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Order</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Seller</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Item</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Gross</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Commission</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Net Payout</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">UTR</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{t('pay.status')}</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {earnings.map(e => {
+                      const isSelected = payoutRows.some(r => r.id === e.id);
+                      return (
+                        <tr key={e.id}
+                          className={`border-b border-gray-50 transition-colors ${isSelected ? 'bg-[#F5EDF2]' : 'hover:bg-gray-50/50'}`}>
+                          <td className="px-3 py-3">
+                            {e.payment_status === 'pending' && (
+                              <input type="checkbox" checked={isSelected}
+                                onChange={ev => setPayoutRows(prev => ev.target.checked ? [...prev, e] : prev.filter(r => r.id !== e.id))}
+                                className="accent-[#5B1A3A]" />
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                            {e.order_date ? new Date(e.order_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-gray-800 text-xs">{e.order_number || e.order_id?.slice(0, 8) || '—'}</td>
+                          <td className="px-4 py-3 text-gray-600 text-xs">{e.seller_name}</td>
+                          <td className="px-4 py-3 text-gray-500 text-xs max-w-[140px] truncate">{e.item_name || '—'}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-xs">{formatINR(Number(e.total_item_price))}</td>
+                          <td className="px-4 py-3 text-right text-[#C49A3C] text-xs">{formatINR(Number(e.commission_amount || 0))}</td>
+                          <td className="px-4 py-3 text-right font-bold text-gray-900 text-xs">{formatINR(Number(e.seller_earning))}</td>
+                          <td className="px-4 py-3 text-xs font-mono text-gray-400">
+                            {e.payment_reference || <span className="text-gray-200">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusBadge(e.payment_status)}`}>
+                              {e.payment_status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {e.payment_status === 'pending' && (
+                              <button
+                                onClick={() => { setDisputeRow(e); setDisputeReason(''); }}
+                                className="text-[10px] font-medium text-amber-600 hover:text-amber-800 whitespace-nowrap">
+                                Raise Dispute
+                              </button>
+                            )}
+                            {e.payment_status === 'disputed' && e.payment_notes && (
+                              <span className="text-[10px] text-red-400 max-w-[120px] truncate block" title={e.payment_notes}>
+                                {e.payment_notes}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── Payout Modal ── */}
+          {payoutRows.length > 0 && utrInput !== undefined && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+              onClick={() => setPayoutRows([])}>
+              <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-800">Record Manual Payout</h3>
+                  <button onClick={() => setPayoutRows([])} className="p-1 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+                </div>
+
+                <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600 space-y-1">
+                  <p><strong>{payoutRows.length}</strong> earning record(s) selected</p>
+                  <p>Total net payout: <strong className="text-gray-900">{formatINR(payoutRows.reduce((s, r) => s + Number(r.seller_earning || 0), 0))}</strong></p>
+                  <p className="text-gray-400 mt-1">Sellers: {[...new Set(payoutRows.map(r => r.seller_name))].join(', ')}</p>
+                </div>
+
+                {/* Bank details for single seller */}
+                {[...new Set(payoutRows.map(r => r.seller_id))].length === 1 && payoutRows[0].bank_account_number && (
+                  <div className="p-3 bg-[#F5EDF2] rounded-lg text-xs space-y-0.5">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Seller Bank Details</p>
+                    <p className="font-medium text-gray-800">{payoutRows[0].bank_account_name || '—'}</p>
+                    <p className="font-mono text-gray-700">{payoutRows[0].bank_account_number}</p>
+                    <p className="text-gray-500">IFSC: {payoutRows[0].bank_ifsc || '—'}</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">UTR / Reference Number <span className="text-red-500">*</span></label>
+                  <input value={utrInput} onChange={e => setUtrInput(e.target.value)}
+                    placeholder="e.g. UTIBR2026041800001"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Payment Date</label>
+                  <input type="date" value={payDateInput} onChange={e => setPayDateInput(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
+                </div>
+                <button onClick={handlePayout} disabled={payoutLoading || !utrInput.trim()}
+                  className="w-full py-2.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                  {payoutLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  Confirm & Mark as Paid
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Dispute Modal ── */}
+          {disputeRow && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+              onClick={() => setDisputeRow(null)}>
+              <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-gray-800">Raise Dispute</h3>
+                  <button onClick={() => setDisputeRow(null)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+                </div>
+                <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-xs space-y-0.5">
+                  <p className="font-medium text-gray-800">{disputeRow.seller_name}</p>
+                  <p className="text-gray-500">Order: {disputeRow.order_number || disputeRow.order_id?.slice(0, 8)}</p>
+                  <p className="text-gray-500">Amount: <strong>{formatINR(Number(disputeRow.seller_earning))}</strong></p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Dispute Reason <span className="text-red-500">*</span></label>
+                  <textarea value={disputeReason} onChange={e => setDisputeReason(e.target.value)} rows={3}
+                    placeholder="e.g. COD collected by delivery partner but not remitted, amount mismatch…"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 resize-none" />
+                </div>
+                <button onClick={handleDispute} disabled={disputeLoading || !disputeReason.trim()}
+                  className="w-full py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                  {disputeLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                  Flag as Disputed
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
