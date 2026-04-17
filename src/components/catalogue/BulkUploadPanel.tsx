@@ -6,6 +6,7 @@ import Papa from 'papaparse';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { useAdminLang } from '@/components/dashboard/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 
 // ─── CSV row schema ───────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ Kids Party Frock,Kids' Wear,Dress,899,749,5,"2Y,4Y,6Y,8Y","Pink,Yellow",Sparkle 
 
 export default function BulkUploadPanel() {
   const { t } = useAdminLang();
+  const { user } = useAuth();
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -115,13 +117,28 @@ export default function BulkUploadPanel() {
   const handleUpload = async () => {
     const validRows = rows.filter(r => r.valid && r.parsed);
     if (validRows.length === 0) return;
+    if (!user?.id) { toast.error('Not authenticated'); return; }
 
     setUploading(true);
-    // In production, POST to /api/admin/products/bulk
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    toast.success(`${validRows.length} ${t('bulk.productsUploaded')}`);
-    setRows([]);
-    setUploading(false);
+    try {
+      const res = await fetch('/api/admin/products/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          products: validRows.map(r => r.parsed),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      toast.success(`${data.inserted} ${t('bulk.productsUploaded')}`);
+      setRows([]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      toast.error(message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const validCount = rows.filter(r => r.valid).length;

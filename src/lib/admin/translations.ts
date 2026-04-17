@@ -299,6 +299,7 @@ const T = {
 
     // Catalogue sub-tabs
     'cat.products': 'Products',
+    'cat.singleUpload': 'Single Upload',
     'cat.bulkUpload': 'Bulk Upload',
     'cat.qcApproval': 'QC Approval',
 
@@ -605,6 +606,7 @@ const T = {
 
     // Catalogue sub-tabs
     'cat.products': 'प्रोडक्ट',
+    'cat.singleUpload': 'सिंगल अपलोड',
     'cat.bulkUpload': 'बल्क अपलोड',
     'cat.qcApproval': 'QC अनुमोदन',
 
