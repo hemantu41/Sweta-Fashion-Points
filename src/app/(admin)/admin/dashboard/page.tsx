@@ -38,7 +38,6 @@ import {
 import NDRActionModal from '@/components/ndr/NDRActionModal';
 import CODVerificationBadge from '@/components/ndr/CODVerificationBadge';
 import BulkUploadPanel from '@/components/catalogue/BulkUploadPanel';
-import QCApprovalPanel from '@/components/catalogue/QCApprovalPanel';
 import UserManagement from '@/components/user-management/UserManagement';
 import ReturnAnalytics from '@/components/return-analytics/ReturnAnalytics';
 import SellerManagement from '@/components/seller-management/SellerManagement';
@@ -368,7 +367,7 @@ function OrdersPage() {
 function CataloguePage() {
   const { t, lang } = useAdminLang();
   const { user } = useAuth();
-  const [catTab, setCatTab] = useState<'products' | 'bulk' | 'qc'>('products');
+  const [catTab, setCatTab] = useState<'products' | 'bulk'>('products');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -457,12 +456,11 @@ function CataloguePage() {
 
       {/* Sub-tabs: Products | Bulk Upload | QC Approval */}
       <div className="flex flex-wrap gap-2 mb-5">
-        {(['products', 'bulk', 'qc'] as const).map(tab => (
+        {(['products', 'bulk'] as const).map(tab => (
           <button key={tab} onClick={() => setCatTab(tab)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
               ${catTab === tab ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {tab === 'products' ? t('cat.products') :
-             tab === 'bulk' ? t('cat.bulkUpload') : t('cat.qcApproval')}
+            {tab === 'products' ? t('cat.products') : t('cat.bulkUpload')}
           </button>
         ))}
       </div>
@@ -600,8 +598,6 @@ function CataloguePage() {
       )}
 
       {catTab === 'bulk' && <BulkUploadPanel />}
-
-      {catTab === 'qc' && <QCApprovalPanel onApproved={fetchProducts} />}
     </div>
   );
 }
