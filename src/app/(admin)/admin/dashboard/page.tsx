@@ -376,12 +376,12 @@ function CataloguePage() {
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
+  const [liveCategories, setLiveCategories] = useState<{ id: string; name: string }[]>([]);
   const [mrp, setMrp] = useState('');
   const [gstSlab, setGstSlab] = useState('5');
   const [newProductName, setNewProductName] = useState('');
-  const [newProductCategory, setNewProductCategory] = useState('Sarees');
+  const [newProductCategory, setNewProductCategory] = useState('');
   const [saving, setSaving] = useState(false);
-  const categories = ['all', 'Sarees', "Men's Wear", "Women's Wear", "Kids' Wear", 'Accessories', 'Footwear'];
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -394,6 +394,21 @@ function CataloguePage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Fetch active L1 categories from the category tree
+  useEffect(() => {
+    fetch('/api/categories?level=1&active=true')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && Array.isArray(d.data)) {
+          const cats = d.data.map((c: any) => ({ id: c.id, name: c.name }));
+          setLiveCategories(cats);
+          if (!newProductCategory && cats.length > 0) setNewProductCategory(cats[0].name);
+        }
+      })
+      .catch(() => {/* silent */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
@@ -475,13 +490,18 @@ function CataloguePage() {
       {/* Tab content */}
       {catTab === 'products' && (
         <>
-          {/* Category filter */}
+          {/* Category filter — only active categories from the tree */}
           <div className="flex flex-wrap gap-2 mb-3">
-            {categories.map(c => (
-              <button key={c} onClick={() => setCatFilter(c)}
+            <button onClick={() => setCatFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                ${catFilter === 'all' ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              {t('cat.all')}
+            </button>
+            {liveCategories.map(c => (
+              <button key={c.id} onClick={() => setCatFilter(c.name)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-                  ${catFilter === c ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                {c === 'all' ? t('cat.all') : c}
+                  ${catFilter === c.name ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {c.name}
               </button>
             ))}
           </div>
@@ -504,30 +524,40 @@ function CataloguePage() {
           </div>
 
           {/* Search by Product ID + Seller Name */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg bg-white flex-1 min-w-[180px]">
-              <Search size={13} className="text-gray-400 flex-shrink-0" />
-              <input
-                value={productIdSearch}
-                onChange={e => setProductIdSearch(e.target.value)}
-                placeholder="Search by Product ID…"
-                className="flex-1 outline-none text-xs text-gray-700 placeholder:text-gray-300 bg-transparent"
-              />
-              {productIdSearch && (
-                <button onClick={() => setProductIdSearch('')}><X size={11} className="text-gray-400 hover:text-gray-600" /></button>
-              )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-[11px] font-medium text-gray-500 mb-1">Search by Product ID</label>
+              <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg bg-white focus-within:border-[#C49A3C] focus-within:ring-2 focus-within:ring-[#C49A3C]/20 transition-all">
+                <Search size={13} className="text-gray-400 flex-shrink-0" />
+                <input
+                  value={productIdSearch}
+                  onChange={e => setProductIdSearch(e.target.value)}
+                  placeholder="e.g. PRD-001, ADMIN-123…"
+                  className="flex-1 outline-none text-sm text-gray-800 placeholder:text-gray-400 bg-transparent"
+                />
+                {productIdSearch && (
+                  <button onClick={() => setProductIdSearch('')} className="text-gray-400 hover:text-gray-700">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg bg-white flex-1 min-w-[180px]">
-              <Search size={13} className="text-gray-400 flex-shrink-0" />
-              <input
-                value={sellerSearch}
-                onChange={e => setSellerSearch(e.target.value)}
-                placeholder="Search by Seller Name…"
-                className="flex-1 outline-none text-xs text-gray-700 placeholder:text-gray-300 bg-transparent"
-              />
-              {sellerSearch && (
-                <button onClick={() => setSellerSearch('')}><X size={11} className="text-gray-400 hover:text-gray-600" /></button>
-              )}
+            <div>
+              <label className="block text-[11px] font-medium text-gray-500 mb-1">Search by Seller Name</label>
+              <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg bg-white focus-within:border-[#C49A3C] focus-within:ring-2 focus-within:ring-[#C49A3C]/20 transition-all">
+                <Search size={13} className="text-gray-400 flex-shrink-0" />
+                <input
+                  value={sellerSearch}
+                  onChange={e => setSellerSearch(e.target.value)}
+                  placeholder="e.g. Ravi Textiles…"
+                  className="flex-1 outline-none text-sm text-gray-800 placeholder:text-gray-400 bg-transparent"
+                />
+                {sellerSearch && (
+                  <button onClick={() => setSellerSearch('')} className="text-gray-400 hover:text-gray-700">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -768,7 +798,7 @@ function CataloguePage() {
                   value={newProductCategory}
                   onChange={e => setNewProductCategory(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20">
-                  {categories.filter(c => c !== 'all').map(c => <option key={c}>{c}</option>)}
+                  {liveCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
 
                 {/* GST auto-calculator */}
