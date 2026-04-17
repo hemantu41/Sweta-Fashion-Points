@@ -367,22 +367,79 @@ function OrdersPage() {
 
 function CataloguePage() {
   const { t, lang } = useAdminLang();
+  const { user } = useAuth();
   const [catTab, setCatTab] = useState<'products' | 'bulk' | 'qc'>('products');
   const [catFilter, setCatFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<any[]>([]);
   const [mrp, setMrp] = useState('');
   const [gstSlab, setGstSlab] = useState('5');
-  const categories = ['all', 'Sarees', "Men's Wear", "Women's Wear", "Kids' Wear"];
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState('Sarees');
+  const [saving, setSaving] = useState(false);
+  const categories = ['all', 'Sarees', "Men's Wear", "Women's Wear", "Kids' Wear", 'Accessories', 'Footwear'];
 
-  useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/products?includeAllStatuses=true');
+      const data = await res.json();
+      setProducts(data.products || []);
+    } catch {
+      // keep empty
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const filtered = catFilter === 'all'
-    ? MOCK_PRODUCTS
-    : MOCK_PRODUCTS.filter(p => p.category === catFilter);
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  const filtered = products.filter(p => {
+    const catMatch = catFilter === 'all' || p.category === catFilter;
+    const statusMatch = statusFilter === 'all' || p.approvalStatus === statusFilter;
+    return catMatch && statusMatch;
+  });
 
   const gstAmount = mrp ? (parseFloat(mrp) * parseFloat(gstSlab) / 100).toFixed(2) : '0';
   const sellingPrice = mrp ? (parseFloat(mrp) + parseFloat(gstAmount)).toFixed(0) : '0';
+
+  async function handleAddProduct() {
+    if (!newProductName.trim() || !mrp) {
+      toast.error('Product name and price are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          product: {
+            productId: `ADMIN-${Date.now()}`,
+            name: newProductName,
+            category: newProductCategory,
+            price: parseFloat(sellingPrice) || parseFloat(mrp),
+            originalPrice: parseFloat(mrp) || undefined,
+            isActive: true,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add product');
+      toast.success('Product added and live!');
+      setShowModal(false);
+      setNewProductName('');
+      setMrp('');
+      fetchProducts();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add product');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading) return <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[1,2,3,4,5,6].map(i => <CardSkeleton key={i} />)}</div>;
 
@@ -413,8 +470,8 @@ function CataloguePage() {
       {/* Tab content */}
       {catTab === 'products' && (
         <>
-          {/* Category tabs */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          {/* Category filter */}
+          <div className="flex flex-wrap gap-2 mb-3">
             {categories.map(c => (
               <button key={c} onClick={() => setCatFilter(c)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
@@ -424,36 +481,64 @@ function CataloguePage() {
             ))}
           </div>
 
-          {/* Product card grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map(p => (
-              <div key={p.id} className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden hover:shadow-md transition-all">
-                <div className="h-36 bg-gray-100 flex items-center justify-center text-gray-400">
-                  <Package size={40} />
-                </div>
-                <div className="p-4">
-                  <p className="text-sm font-semibold text-gray-800 line-clamp-1">{lang === 'hi' && p.name_hi ? p.name_hi : p.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{p.category}</p>
-                  <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-base font-bold text-gray-900">{formatINR(p.price)}</span>
-                    {p.original_price && (
-                      <span className="text-xs text-gray-400 line-through">{formatINR(p.original_price)}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                      ${p.approval_status === 'approved' ? 'bg-green-100 text-green-700' :
-                        p.approval_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-600'}`}>
-                      {p.approval_status}
-                    </span>
-                    <span className="text-xs text-gray-400">Stock: {p.stock ?? 0}</span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-1">{p.seller_name}</p>
-                </div>
-              </div>
+          {/* Status filter */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {[
+              { key: 'all',      label: 'All Status',  cls: 'bg-gray-700 text-white border-gray-700' },
+              { key: 'approved', label: 'Approved',    cls: 'bg-green-600 text-white border-green-600' },
+              { key: 'pending',  label: 'Pending',     cls: 'bg-amber-500 text-white border-amber-500' },
+              { key: 'rejected', label: 'Rejected',    cls: 'bg-red-500 text-white border-red-500' },
+            ].map(s => (
+              <button key={s.key} onClick={() => setStatusFilter(s.key)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors
+                  ${statusFilter === s.key ? s.cls : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}>
+                {s.label}
+              </button>
             ))}
+            <span className="ml-auto text-xs text-gray-400">{filtered.length} products</span>
           </div>
+
+          {/* Product card grid */}
+          {filtered.length === 0 ? (
+            <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-12 text-center">
+              <Package size={32} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-sm text-gray-400">No products found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map(p => (
+                <div key={p.id} className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden hover:shadow-md transition-all">
+                  {p.mainImage ? (
+                    <img src={p.mainImage} alt={p.name} className="w-full h-36 object-cover" />
+                  ) : (
+                    <div className="h-36 bg-gray-100 flex items-center justify-center text-gray-400">
+                      <Package size={40} />
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="text-sm font-semibold text-gray-800 line-clamp-1">{lang === 'hi' && p.nameHi ? p.nameHi : p.name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{p.category}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
+                    <div className="flex items-baseline gap-2 mt-2">
+                      <span className="text-base font-bold text-gray-900">{formatINR(p.price)}</span>
+                      {p.originalPrice && p.originalPrice > p.price && (
+                        <span className="text-xs text-gray-400 line-through">{formatINR(p.originalPrice)}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                        ${p.approvalStatus === 'approved' ? 'bg-green-100 text-green-700' :
+                          p.approvalStatus === 'pending'  ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-600'}`}>
+                        {p.approvalStatus}
+                      </span>
+                      <span className="text-xs text-gray-400">Stock: {p.stockQuantity ?? 0}</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">{p.seller?.businessName || '—'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Add Product Modal */}
           {showModal && (
@@ -463,15 +548,23 @@ function CataloguePage() {
                   <h3 className="text-lg font-semibold text-gray-800">{t('cat.addProduct')}</h3>
                   <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
                 </div>
-                <input placeholder="Product Name" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
-                <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20">
+                <input
+                  placeholder="Product Name *"
+                  value={newProductName}
+                  onChange={e => setNewProductName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
+                />
+                <select
+                  value={newProductCategory}
+                  onChange={e => setNewProductCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20">
                   {categories.filter(c => c !== 'all').map(c => <option key={c}>{c}</option>)}
                 </select>
 
                 {/* GST auto-calculator */}
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">MRP (₹)</label>
+                    <label className="text-xs text-gray-500 mb-1 block">MRP (₹) *</label>
                     <input type="number" value={mrp} onChange={e => setMrp(e.target.value)} placeholder="999"
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
                   </div>
@@ -492,13 +585,13 @@ function CataloguePage() {
                   </div>
                 </div>
                 <p className="text-[10px] text-gray-400">GST: ₹{gstAmount} ({gstSlab}%)</p>
+                <p className="text-[10px] text-blue-500">Admin-created products go live immediately — no QC queue.</p>
 
-                <input placeholder="Images (drag & drop)" className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 text-center" />
-                <input placeholder="Deliverable Pincodes (comma separated)" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20" />
-
-                <button className="w-full py-2.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
-                  onClick={() => { setShowModal(false); toast.success('Product added!'); }}>
-                  {t('cat.addProduct')}
+                <button
+                  className="w-full py-2.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors disabled:opacity-50"
+                  onClick={handleAddProduct}
+                  disabled={saving}>
+                  {saving ? 'Adding…' : t('cat.addProduct')}
                 </button>
               </div>
             </div>
@@ -508,7 +601,7 @@ function CataloguePage() {
 
       {catTab === 'bulk' && <BulkUploadPanel />}
 
-      {catTab === 'qc' && <QCApprovalPanel />}
+      {catTab === 'qc' && <QCApprovalPanel onApproved={fetchProducts} />}
     </div>
   );
 }
