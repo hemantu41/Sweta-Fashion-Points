@@ -370,7 +370,10 @@ function CataloguePage() {
   const [catTab, setCatTab] = useState<'products' | 'bulk'>('products');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [productIdSearch, setProductIdSearch] = useState('');
+  const [sellerSearch, setSellerSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
   const [mrp, setMrp] = useState('');
@@ -398,7 +401,11 @@ function CataloguePage() {
   const filtered = products.filter(p => {
     const catMatch = catFilter === 'all' || p.category === catFilter;
     const statusMatch = statusFilter === 'all' || p.approvalStatus === statusFilter;
-    return catMatch && statusMatch;
+    const pidMatch = !productIdSearch.trim() ||
+      (p.productId || '').toLowerCase().includes(productIdSearch.trim().toLowerCase());
+    const sellerMatch = !sellerSearch.trim() ||
+      (p.seller?.businessName || '').toLowerCase().includes(sellerSearch.trim().toLowerCase());
+    return catMatch && statusMatch && pidMatch && sellerMatch;
   });
 
   const gstAmount = mrp ? (parseFloat(mrp) * parseFloat(gstSlab) / 100).toFixed(2) : '0';
@@ -480,7 +487,7 @@ function CataloguePage() {
           </div>
 
           {/* Status filter */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             {[
               { key: 'all',      label: 'All Status',  cls: 'bg-gray-700 text-white border-gray-700' },
               { key: 'approved', label: 'Approved',    cls: 'bg-green-600 text-white border-green-600' },
@@ -496,6 +503,34 @@ function CataloguePage() {
             <span className="ml-auto text-xs text-gray-400">{filtered.length} products</span>
           </div>
 
+          {/* Search by Product ID + Seller Name */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg bg-white flex-1 min-w-[180px]">
+              <Search size={13} className="text-gray-400 flex-shrink-0" />
+              <input
+                value={productIdSearch}
+                onChange={e => setProductIdSearch(e.target.value)}
+                placeholder="Search by Product ID…"
+                className="flex-1 outline-none text-xs text-gray-700 placeholder:text-gray-300 bg-transparent"
+              />
+              {productIdSearch && (
+                <button onClick={() => setProductIdSearch('')}><X size={11} className="text-gray-400 hover:text-gray-600" /></button>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg bg-white flex-1 min-w-[180px]">
+              <Search size={13} className="text-gray-400 flex-shrink-0" />
+              <input
+                value={sellerSearch}
+                onChange={e => setSellerSearch(e.target.value)}
+                placeholder="Search by Seller Name…"
+                className="flex-1 outline-none text-xs text-gray-700 placeholder:text-gray-300 bg-transparent"
+              />
+              {sellerSearch && (
+                <button onClick={() => setSellerSearch('')}><X size={11} className="text-gray-400 hover:text-gray-600" /></button>
+              )}
+            </div>
+          </div>
+
           {/* Product card grid */}
           {filtered.length === 0 ? (
             <div className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-12 text-center">
@@ -505,7 +540,9 @@ function CataloguePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map(p => (
-                <div key={p.id} className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden hover:shadow-md transition-all">
+                <div key={p.id}
+                  onClick={() => setSelectedProduct(p)}
+                  className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] overflow-hidden hover:shadow-md hover:border-[rgba(196,154,60,0.25)] transition-all cursor-pointer">
                   {p.mainImage ? (
                     <img src={p.mainImage} alt={p.name} className="w-full h-36 object-cover" />
                   ) : (
@@ -535,6 +572,181 @@ function CataloguePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Product Detail Modal */}
+          {selectedProduct && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              onClick={() => setSelectedProduct(null)}>
+              <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}>
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+                  <h3 className="text-base font-semibold text-gray-800 line-clamp-1">{selectedProduct.name}</h3>
+                  <button onClick={() => setSelectedProduct(null)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                    <X size={18} className="text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-5">
+                  {/* Image gallery */}
+                  {(selectedProduct.images?.length > 0 || selectedProduct.mainImage) ? (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {(selectedProduct.images?.length > 0 ? selectedProduct.images : [selectedProduct.mainImage]).map((img: string, i: number) => (
+                        <img key={i} src={img} alt={`img-${i}`}
+                          className={`rounded-xl object-cover flex-shrink-0 ${i === 0 ? 'w-48 h-48' : 'w-24 h-24'}`} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-36 bg-gray-100 rounded-xl flex items-center justify-center text-gray-300">
+                      <Package size={48} />
+                    </div>
+                  )}
+
+                  {/* Status + active badge */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold
+                      ${selectedProduct.approvalStatus === 'approved' ? 'bg-green-100 text-green-700' :
+                        selectedProduct.approvalStatus === 'pending'  ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-600'}`}>
+                      {selectedProduct.approvalStatus}
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold
+                      ${selectedProduct.isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {selectedProduct.isActive ? 'Live' : 'Inactive'}
+                    </span>
+                    {selectedProduct.isNewArrival && (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">New Arrival</span>
+                    )}
+                    {selectedProduct.isBestSeller && (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Best Seller</span>
+                    )}
+                  </div>
+
+                  {/* Core details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Product ID</p>
+                      <p className="text-xs font-mono text-gray-700">{selectedProduct.productId || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Category</p>
+                      <p className="text-xs text-gray-700">
+                        {selectedProduct.category}{selectedProduct.subCategory ? ` › ${selectedProduct.subCategory}` : ''}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Selling Price</p>
+                      <p className="text-sm font-bold text-gray-900">{formatINR(selectedProduct.price)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">MRP</p>
+                      <p className="text-sm text-gray-600">
+                        {selectedProduct.originalPrice ? formatINR(selectedProduct.originalPrice) : '—'}
+                        {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
+                          <span className="ml-1.5 text-[10px] text-green-600 font-semibold">
+                            {Math.round((1 - selectedProduct.price / selectedProduct.originalPrice) * 100)}% off
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Stock</p>
+                      <p className={`text-xs font-semibold ${selectedProduct.stockQuantity === 0 ? 'text-red-600' : selectedProduct.stockQuantity <= 10 ? 'text-amber-600' : 'text-gray-800'}`}>
+                        {selectedProduct.stockQuantity ?? 0} units
+                        {selectedProduct.stockQuantity === 0 && ' · Out of Stock'}
+                        {selectedProduct.stockQuantity > 0 && selectedProduct.stockQuantity <= 10 && ' · Low Stock'}
+                      </p>
+                    </div>
+                    {selectedProduct.fabric && (
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Fabric</p>
+                        <p className="text-xs text-gray-700">{selectedProduct.fabric}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {selectedProduct.description && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Description</p>
+                      <p className="text-xs text-gray-600 leading-relaxed">{selectedProduct.description}</p>
+                    </div>
+                  )}
+
+                  {/* Sizes */}
+                  {selectedProduct.sizes?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Sizes</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedProduct.sizes.map((s: string) => (
+                          <span key={s} className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Colors */}
+                  {selectedProduct.colors?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Colors</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProduct.colors.map((c: any, i: number) => {
+                          const name = typeof c === 'string' ? c : c?.name || '';
+                          const hex  = typeof c === 'object' ? c?.hex : undefined;
+                          return (
+                            <div key={i} className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                              {hex && <span className="w-3 h-3 rounded-full border border-gray-200 flex-shrink-0" style={{ background: hex }} />}
+                              <span className="text-xs text-gray-700">{name}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rejection reason */}
+                  {selectedProduct.rejectionReason && (
+                    <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+                      <p className="text-[10px] text-red-500 uppercase tracking-wide mb-0.5">Rejection Reason</p>
+                      <p className="text-xs text-red-700">{selectedProduct.rejectionReason}</p>
+                    </div>
+                  )}
+
+                  {/* Seller info */}
+                  {selectedProduct.seller && (
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Seller</p>
+                      <p className="text-sm font-semibold text-gray-800">{selectedProduct.seller.businessName || '—'}</p>
+                      {(selectedProduct.seller.city || selectedProduct.seller.state) && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {[selectedProduct.seller.city, selectedProduct.seller.state].filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                      {selectedProduct.seller.businessPhone && (
+                        <p className="text-xs text-gray-400 mt-0.5">{selectedProduct.seller.businessPhone}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="flex items-center gap-6 pt-2 border-t border-gray-100">
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Created</p>
+                      <p className="text-xs text-gray-500">
+                        {selectedProduct.createdAt
+                          ? new Date(selectedProduct.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Seller ID</p>
+                      <p className="text-xs font-mono text-gray-400">{selectedProduct.sellerId || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
