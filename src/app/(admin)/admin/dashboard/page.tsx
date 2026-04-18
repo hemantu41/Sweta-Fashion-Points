@@ -1322,14 +1322,31 @@ function PaymentsPage() {
 
 function AnalyticsPage() {
   const { t } = useAdminLang();
+  const { user } = useAuth();
   const [period, setPeriod] = useState('week');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
+  // Revenue chart — real data
+  const [revenueData, setRevenueData]       = useState<{ date: string; revenue: number; orders: number }[]>([]);
+  const [revenueSummary, setRevenueSummary] = useState({ totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 });
+  const [revenueLoading, setRevenueLoading] = useState(true);
+
+  const fetchRevenue = useCallback(async (p: string) => {
+    if (!user?.id) return;
+    setRevenueLoading(true);
+    try {
+      const res  = await fetch(`/api/admin/analytics/revenue?adminUserId=${user.id}&period=${p}`);
+      const data = await res.json();
+      if (res.ok) {
+        setRevenueData(data.data || []);
+        setRevenueSummary(data.summary || { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 });
+      }
+    } catch { /* keep empty */ }
+    finally { setRevenueLoading(false); }
+  }, [user?.id]);
+
+  useEffect(() => { fetchRevenue(period); }, [fetchRevenue, period]);
 
   const RETURN_COLORS = ['#ef4444', '#f59e0b', '#6366f1', '#8b5cf6', '#64748b'];
-
-  if (loading) return <div className="space-y-6"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ChartSkeleton /><ChartSkeleton /></div><TableSkeleton /></div>;
 
   return (
     <div>
@@ -1346,21 +1363,90 @@ function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Revenue trend line chart */}
+      {/* Revenue trend — real DB data */}
       <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5 mb-6">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('analytics.revenue')}</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={MOCK_REVENUE}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={(v: number) => `₹${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-              <Line type="monotone" dataKey="revenue" stroke="#C49A3C" strokeWidth={2} dot={{ fill: '#C49A3C', r: 4 }} />
-              <Line type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+        {/* Header with summary stats */}
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">{t('analytics.revenue')}</h3>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {period === 'week' ? 'Last 7 days (daily)' : period === 'month' ? 'Last 30 days (daily)' : 'Last 13 weeks (weekly)'}
+            </p>
+          </div>
+          <div className="flex gap-5">
+            <div className="text-right">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Revenue</p>
+              <p className="text-base font-bold text-gray-800">{revenueLoading ? '—' : formatINR(revenueSummary.totalRevenue)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Orders</p>
+              <p className="text-base font-bold text-gray-800">{revenueLoading ? '—' : revenueSummary.totalOrders}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Avg Order</p>
+              <p className="text-base font-bold text-gray-800">{revenueLoading ? '—' : formatINR(revenueSummary.avgOrderValue)}</p>
+            </div>
+          </div>
         </div>
+
+        {/* Chart */}
+        {revenueLoading ? (
+          <div className="h-64 flex items-center justify-center">
+            <Loader2 size={24} className="animate-spin text-gray-300" />
+          </div>
+        ) : revenueData.length === 0 ? (
+          <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+            <p className="text-sm">No orders found for this period</p>
+            <p className="text-xs mt-1">Orders will appear here once customers place them</p>
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  interval={period === 'month' ? 4 : 0}
+                />
+                <YAxis
+                  yAxisId="revenue"
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  tickFormatter={(v: number) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`}
+                  width={52}
+                />
+                <YAxis
+                  yAxisId="orders"
+                  orientation="right"
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  width={30}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  formatter={(v: number, name: string) =>
+                    name === 'revenue'
+                      ? [`₹${v.toLocaleString('en-IN')}`, 'Revenue']
+                      : [v, 'Orders']
+                  }
+                />
+                <Line yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#C49A3C" strokeWidth={2.5} dot={{ fill: '#C49A3C', r: 3 }} activeDot={{ r: 5 }} name="revenue" />
+                <Line yAxisId="orders"  type="monotone" dataKey="orders"  stroke="#5B1A3A" strokeWidth={2}   dot={{ fill: '#5B1A3A', r: 3 }} activeDot={{ r: 5 }} name="orders"  strokeDasharray="4 2" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Legend */}
+        {!revenueLoading && revenueData.length > 0 && (
+          <div className="flex items-center gap-5 mt-3 justify-end">
+            <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <span className="w-6 h-0.5 bg-[#C49A3C] rounded inline-block" /> Revenue (left axis)
+            </span>
+            <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <span className="w-6 h-0.5 bg-[#5B1A3A] rounded inline-block" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#5B1A3A 0,#5B1A3A 4px,transparent 4px,transparent 6px)' }} /> Orders (right axis)
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
