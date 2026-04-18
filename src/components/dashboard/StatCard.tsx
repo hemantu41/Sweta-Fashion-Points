@@ -8,11 +8,21 @@ interface StatCardProps {
   change?: number;
   icon: React.ReactNode;
   color: string;
+  onClick?: () => void;
+  active?: boolean;
 }
 
-export default function StatCard({ title, value, change, icon, color }: StatCardProps) {
+export default function StatCard({ title, value, change, icon, color, onClick, active }: StatCardProps) {
   return (
-    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-[14px] border shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-5 transition-all duration-300
+        ${onClick ? 'cursor-pointer select-none' : ''}
+        ${active
+          ? 'border-[#5B1A3A] ring-2 ring-[#5B1A3A]/10 shadow-lg -translate-y-0.5'
+          : 'border-[rgba(196,154,60,0.08)] hover:shadow-lg hover:-translate-y-0.5'
+        }`}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{title}</p>

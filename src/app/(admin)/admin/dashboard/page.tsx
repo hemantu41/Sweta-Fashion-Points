@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import {
@@ -885,7 +885,37 @@ function PaymentsPage() {
 
   useEffect(() => { fetchSettlements(); }, [fetchSettlements]);
 
-  const gstEstimate = Math.round(stats.totalGross * 0.05 / 1.05);
+  const tcsAmount = Math.round(stats.totalGross * 0.01);
+
+  // Drilldown: which stat card is expanded
+  type DrilldownType = 'collected' | 'payouts' | 'tcs' | 'pending';
+  const [drilldown, setDrilldown] = useState<DrilldownType | null>(null);
+  function toggleDrilldown(type: DrilldownType) {
+    setDrilldown(prev => prev === type ? null : type);
+  }
+
+  // Seller-wise breakdown for whichever card is active
+  const drilldownRows = useMemo(() => {
+    if (!drilldown) return [];
+    const map = new Map<string, { sellerName: string; count: number; amount: number }>();
+    const filtered = drilldown === 'payouts'
+      ? earnings.filter(e => ['paid', 'settled'].includes(e.payment_status || ''))
+      : drilldown === 'pending'
+        ? earnings.filter(e => e.payment_status === 'pending')
+        : earnings; // collected + tcs use all rows
+    filtered.forEach(e => {
+      const key = e.seller_id || 'unknown';
+      const row = map.get(key) ?? { sellerName: e.seller_name || '—', count: 0, amount: 0 };
+      row.count += 1;
+      row.amount += drilldown === 'collected'
+        ? Number(e.total_item_price || 0)
+        : drilldown === 'tcs'
+          ? Number(e.total_item_price || 0) * 0.01
+          : Number(e.seller_earning || 0);
+      map.set(key, row);
+    });
+    return Array.from(map.values()).sort((a, b) => b.amount - a.amount);
+  }, [drilldown, earnings]);
 
   async function handlePayout() {
     if (!utrInput.trim()) { toast.error('UTR number is required'); return; }
@@ -962,13 +992,109 @@ function PaymentsPage() {
         </div>
       </div>
 
-      {/* Stats row — real DB data */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <StatCard title={t('pay.totalCollected')} value={formatINR(stats.totalGross)} icon={<IndianRupee size={20} />} color="#C49A3C" />
-        <StatCard title={t('pay.sellerPayouts')} value={formatINR(stats.totalPaid)} icon={<Users size={20} />} color="#5B1A3A" />
-        <StatCard title="GST Estimate (5%)" value={formatINR(gstEstimate)} icon={<ClipboardCheck size={20} />} color="#6366f1" />
-        <StatCard title={t('pay.pendingSettlement')} value={formatINR(stats.totalPending)} icon={<Clock size={20} />} color="#f59e0b" />
+      {/* Stats row — real DB data, each card is clickable */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+        <StatCard
+          title={t('pay.totalCollected')}
+          value={formatINR(stats.totalGross)}
+          icon={<IndianRupee size={20} />}
+          color="#C49A3C"
+          onClick={() => toggleDrilldown('collected')}
+          active={drilldown === 'collected'}
+        />
+        <StatCard
+          title={t('pay.sellerPayouts')}
+          value={formatINR(stats.totalPaid)}
+          icon={<Users size={20} />}
+          color="#5B1A3A"
+          onClick={() => toggleDrilldown('payouts')}
+          active={drilldown === 'payouts'}
+        />
+        <StatCard
+          title="TCS (1%)"
+          value={formatINR(tcsAmount)}
+          icon={<ClipboardCheck size={20} />}
+          color="#6366f1"
+          onClick={() => toggleDrilldown('tcs')}
+          active={drilldown === 'tcs'}
+        />
+        <StatCard
+          title={t('pay.pendingSettlement')}
+          value={formatINR(stats.totalPending)}
+          icon={<Clock size={20} />}
+          color="#f59e0b"
+          onClick={() => toggleDrilldown('pending')}
+          active={drilldown === 'pending'}
+        />
       </div>
+
+      {/* Drilldown panel — shown below cards when one is active */}
+      {drilldown && (
+        <div className="mb-4 bg-white rounded-xl border border-[rgba(196,154,60,0.12)] overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">
+                {drilldown === 'collected' && 'Total Collected — Seller Breakdown'}
+                {drilldown === 'payouts' && 'Seller Payouts — Paid Settlements'}
+                {drilldown === 'tcs' && 'TCS (1%) — Seller-wise Breakdown'}
+                {drilldown === 'pending' && 'Pending Settlement — Seller Breakdown'}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {drilldown === 'tcs'
+                  ? `Total TCS to deposit to govt: ${formatINR(tcsAmount)} — file via GSTR-8`
+                  : `${drilldownRows.length} seller(s)`}
+              </p>
+            </div>
+            <button onClick={() => setDrilldown(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+          {drilldownRows.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-gray-400 text-center">No data for this filter.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Seller</th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      {drilldown === 'tcs' ? 'Gross Sales' : 'Items'}
+                    </th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      {drilldown === 'collected' ? 'Amount Collected'
+                        : drilldown === 'payouts' ? 'Amount Paid'
+                        : drilldown === 'tcs' ? 'TCS (1%)'
+                        : 'Pending Amount'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {drilldownRows.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <td className="px-4 py-2.5 font-medium text-gray-800">{row.sellerName}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-500">
+                        {drilldown === 'tcs'
+                          ? formatINR(row.amount / 0.01)
+                          : row.count}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-gray-800">{formatINR(Math.round(row.amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 border-t border-gray-200">
+                    <td className="px-4 py-2.5 text-xs font-semibold text-gray-700">Total</td>
+                    <td className="px-4 py-2.5" />
+                    <td className="px-4 py-2.5 text-right text-sm font-bold text-gray-800">
+                      {formatINR(Math.round(drilldownRows.reduce((s, r) => s + r.amount, 0)))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Sub-tabs */}
       <div className="flex flex-wrap gap-2 mb-5">
