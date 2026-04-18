@@ -1305,7 +1305,7 @@ function PaymentsPage() {
         </>
       )}
 
-      {payTab === 'gst' && <GSTExportPanel />}
+      {payTab === 'gst' && <GSTExportPanel earnings={earnings} />}
 
       {payTab === 'reconciliation' && (
         <ReconciliationTable
