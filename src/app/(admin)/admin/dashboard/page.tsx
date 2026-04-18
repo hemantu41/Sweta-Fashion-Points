@@ -1309,9 +1309,9 @@ function PaymentsPage() {
 
       {payTab === 'reconciliation' && (
         <ReconciliationTable
-          onRaiseDispute={(stl) => {
-            toast.success(`Dispute raised for ${stl.order_id} — shortfall ${formatINR(stl.difference)}`);
-          }}
+          earnings={earnings}
+          adminUserId={user?.id}
+          onRefresh={fetchSettlements}
         />
       )}
     </div>
