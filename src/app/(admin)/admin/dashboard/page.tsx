@@ -8,7 +8,8 @@ import {
   RotateCcw, ClipboardCheck, Eye, PackageCheck, Truck, MessageCircle,
   Send, Plus, X, Search, CheckCircle, Upload, Clock, MapPin,
   Shield, Smartphone, Mail, Bell as BellIcon, Globe, Save,
-  Printer, FileText, Download, Loader2,
+  Printer, FileText, Download, Loader2, AlertTriangle, Filter,
+  ChevronRight, RefreshCw, Tag, Flag,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -32,7 +33,7 @@ import { StatCardSkeleton, ChartSkeleton, TableSkeleton, CardSkeleton } from '@/
 import { formatINR, formatNumber, ORDER_STATUS_COLORS, getDistanceBadge } from '@/lib/admin/constants';
 import {
   MOCK_STATS, MOCK_REVENUE, MOCK_ORDERS, MOCK_PRODUCTS,
-  MOCK_PAYMENTS, MOCK_TICKETS, MOCK_WA_LOGS,
+  MOCK_PAYMENTS, MOCK_WA_LOGS,
   MOCK_GROWTH_SUGGESTIONS,
 } from '@/lib/admin/mockData';
 import NDRActionModal from '@/components/ndr/NDRActionModal';
@@ -1595,74 +1596,553 @@ function AnalyticsPage() {
 
 // ─── Module 6: Support ──────────────────────────────────────────────────────
 
-function SupportPage() {
-  const { t } = useAdminLang();
-  const [loading, setLoading] = useState(true);
+// ─── Support: shared types ───────────────────────────────────────────────────
 
-  useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
+interface SupportTicket {
+  id: string;
+  ticket_number: string;
+  subject: string;
+  message: string;
+  category: string;
+  priority: string;
+  status: string;
+  raised_by_type: string;
+  raised_by_name: string;
+  related_order_number: string | null;
+  sla_deadline: string;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  sla_breached?: boolean;
+}
 
-  const getSLAProgress = (createdAt: string) => {
-    const hoursElapsed = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
-    return Math.min(100, (hoursElapsed / 24) * 100);
+interface TicketComment {
+  id: string;
+  ticket_id: string;
+  author_type: string;
+  author_name: string;
+  message: string;
+  is_internal: boolean;
+  created_at: string;
+}
+
+// ─── Support: colour / label helpers ────────────────────────────────────────
+
+const STATUS_META: Record<string, { label: string; cls: string }> = {
+  open:              { label: 'Open',            cls: 'bg-blue-100 text-blue-700' },
+  in_progress:       { label: 'In Progress',     cls: 'bg-yellow-100 text-yellow-700' },
+  waiting_on_seller: { label: 'Waiting Seller',  cls: 'bg-purple-100 text-purple-700' },
+  resolved:          { label: 'Resolved',         cls: 'bg-green-100 text-green-700' },
+  closed:            { label: 'Closed',           cls: 'bg-gray-100 text-gray-600' },
+};
+
+const PRIORITY_META: Record<string, { dot: string; label: string }> = {
+  low:      { dot: 'bg-gray-400',   label: 'Low' },
+  medium:   { dot: 'bg-yellow-500', label: 'Medium' },
+  high:     { dot: 'bg-red-500',    label: 'High' },
+  critical: { dot: 'bg-red-700',    label: 'Critical' },
+};
+
+function slaProgressFn(createdAt: string, deadline: string) {
+  const total   = new Date(deadline).getTime() - new Date(createdAt).getTime();
+  const elapsed = Date.now()                   - new Date(createdAt).getTime();
+  return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+}
+
+function slaTimeLabelFn(deadline: string) {
+  const diffMs  = new Date(deadline).getTime() - Date.now();
+  const diffHrs = Math.abs(diffMs) / (1000 * 60 * 60);
+  if (diffMs >= 0) return diffHrs < 1 ? `${Math.round(diffHrs * 60)}m left` : `${Math.round(diffHrs)}h left`;
+  return diffHrs < 24 ? `${Math.round(diffHrs)}h overdue` : `${Math.round(diffHrs / 24)}d overdue`;
+}
+
+// ─── Support: ticket detail / comment modal ──────────────────────────────────
+
+function TicketDetailModal({
+  ticket, adminUserId, adminName, onClose, onRefresh,
+}: {
+  ticket: SupportTicket;
+  adminUserId: string;
+  adminName: string;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const [comments, setComments]     = useState<TicketComment[]>([]);
+  const [commentsLoading, setCL]    = useState(true);
+  const [reply, setReply]           = useState('');
+  const [isInternal, setIsInternal] = useState(false);
+  const [sending, setSending]       = useState(false);
+  const [statusChanging, setSC]     = useState(false);
+
+  const fetchComments = useCallback(async () => {
+    setCL(true);
+    try {
+      const res  = await fetch(`/api/admin/support/tickets/${ticket.id}/comments?adminUserId=${adminUserId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setComments(data.comments || []);
+    } catch { /* silent */ }
+    setCL(false);
+  }, [ticket.id, adminUserId]);
+
+  useEffect(() => { fetchComments(); }, [fetchComments]);
+
+  const handleSend = async () => {
+    if (!reply.trim()) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/api/admin/support/tickets/${ticket.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminUserId, authorName: adminName, message: reply.trim(), isInternal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setReply('');
+      setComments(prev => [...prev, data.comment]);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send');
+    }
+    setSending(false);
   };
 
-  if (loading) return <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><CardSkeleton /><div className="lg:col-span-2"><TableSkeleton /></div></div>;
+  const changeStatus = async (status: string) => {
+    setSC(true);
+    try {
+      const res = await fetch(`/api/admin/support/tickets/${ticket.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminUserId, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Status → ${STATUS_META[status]?.label}`);
+      onRefresh();
+      // Refresh comments to show system note
+      fetchComments();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update');
+    }
+    setSC(false);
+  };
+
+  const slaP = slaProgressFn(ticket.created_at, ticket.sla_deadline);
+  const slaC = ticket.sla_breached ? '#ef4444' : slaP >= 70 ? '#f59e0b' : '#22c55e';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 border-b border-gray-100">
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_META[ticket.status]?.cls}`}>
+                {STATUS_META[ticket.status]?.label}
+              </span>
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <span className={`w-2 h-2 rounded-full inline-block ${PRIORITY_META[ticket.priority]?.dot}`} />
+                {PRIORITY_META[ticket.priority]?.label}
+              </span>
+              {ticket.sla_breached && (
+                <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+                  <AlertTriangle size={11} /> SLA Breached
+                </span>
+              )}
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{ticket.subject}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {ticket.raised_by_name} · {ticket.category} · {new Date(ticket.created_at).toLocaleDateString()}
+              {ticket.related_order_number && ` · Order ${ticket.related_order_number}`}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 flex-shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* SLA bar */}
+        {!['resolved', 'closed'].includes(ticket.status) && (
+          <div className="px-5 pt-3 pb-1">
+            <div className="flex items-center gap-2">
+              <Clock size={11} className="text-gray-400" />
+              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${slaP}%`, backgroundColor: slaC }} />
+              </div>
+              <span className="text-[11px] font-medium" style={{ color: slaC }}>
+                {slaTimeLabelFn(ticket.sla_deadline)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Status actions */}
+        {!['resolved', 'closed'].includes(ticket.status) && (
+          <div className="px-5 pt-3 flex flex-wrap gap-2">
+            {Object.entries(STATUS_META)
+              .filter(([s]) => s !== ticket.status && s !== 'closed')
+              .map(([s, meta]) => (
+                <button
+                  key={s}
+                  disabled={statusChanging}
+                  onClick={() => changeStatus(s)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors
+                    ${meta.cls} border-current opacity-80 hover:opacity-100 disabled:opacity-40`}
+                >
+                  → {meta.label}
+                </button>
+              ))}
+            <button
+              disabled={statusChanging}
+              onClick={() => changeStatus('closed')}
+              className="px-2.5 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+            >
+              Close ticket
+            </button>
+          </div>
+        )}
+
+        {/* Comment thread */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          {commentsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 size={20} className="animate-spin text-gray-300" />
+            </div>
+          ) : comments.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-6">No comments yet</p>
+          ) : comments.map(c => (
+            <div
+              key={c.id}
+              className={`flex gap-2 ${c.author_type === 'system' ? 'justify-center' : ''}`}
+            >
+              {c.author_type === 'system' ? (
+                <span className="text-[11px] text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                  {c.message}
+                </span>
+              ) : (
+                <div className={`max-w-[80%] ${c.author_type === 'admin' ? 'ml-auto' : ''}`}>
+                  <div className={`px-3 py-2 rounded-xl text-sm
+                    ${c.is_internal
+                      ? 'bg-amber-50 border border-amber-200 text-amber-900'
+                      : c.author_type === 'admin'
+                        ? 'bg-[#5B1A3A] text-white'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                    {c.message}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-0.5 px-1">
+                    {c.author_name}
+                    {c.is_internal && ' · internal note'}
+                    · {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Reply box */}
+        {!['closed'].includes(ticket.status) && (
+          <div className="p-4 border-t border-gray-100">
+            <div className="flex items-start gap-2">
+              <textarea
+                value={reply}
+                onChange={e => setReply(e.target.value)}
+                placeholder="Type a reply…"
+                rows={2}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSend(); }}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none
+                  focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20 focus:border-[#C49A3C]/40"
+              />
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={handleSend}
+                  disabled={sending || !reply.trim()}
+                  className="p-2.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-lg
+                    hover:from-[#4A1530] hover:to-[#6A1E45] disabled:opacity-50 transition-colors"
+                >
+                  {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                </button>
+                <button
+                  onClick={() => setIsInternal(p => !p)}
+                  title="Toggle internal note"
+                  className={`p-2.5 rounded-lg border transition-colors text-xs
+                    ${isInternal ? 'bg-amber-100 border-amber-300 text-amber-700' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}
+                >
+                  <Flag size={14} />
+                </button>
+              </div>
+            </div>
+            {isInternal && (
+              <p className="text-[10px] text-amber-600 mt-1">Internal note — not visible to seller</p>
+            )}
+            <p className="text-[10px] text-gray-400 mt-1">Ctrl+Enter to send</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Module 6: Support ───────────────────────────────────────────────────────
+
+function SupportPage() {
+  const { user } = useAuth();
+  const [tickets, setTickets]         = useState<SupportTicket[]>([]);
+  const [stats, setStats]             = useState({ open: 0, inProgress: 0, slaBreached: 0, resolvedToday: 0, total: 0 });
+  const [loading, setLoading]         = useState(true);
+  const [selected, setSelected]       = useState<SupportTicket | null>(null);
+  const [showCreate, setShowCreate]   = useState(false);
+
+  // Filters
+  const [filterStatus,   setFilterStatus]   = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [filterBy,       setFilterBy]       = useState('all'); // raised_by_type
+  const [search,         setSearch]         = useState('');
+
+  const fetchTickets = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ adminUserId: user.id });
+      if (filterStatus   !== 'all') params.set('status',       filterStatus);
+      if (filterCategory !== 'all') params.set('category',     filterCategory);
+      if (filterPriority !== 'all') params.set('priority',     filterPriority);
+      if (filterBy       !== 'all') params.set('raisedByType', filterBy);
+
+      const res  = await fetch(`/api/admin/support/tickets?${params}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setTickets(data.tickets || []);
+      setStats(data.stats || { open: 0, inProgress: 0, slaBreached: 0, resolvedToday: 0, total: 0 });
+    } catch { /* silent */ }
+    setLoading(false);
+  }, [user?.id, filterStatus, filterCategory, filterPriority, filterBy]);
+
+  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+
+  const displayed = useMemo(() => {
+    if (!search.trim()) return tickets;
+    const q = search.toLowerCase();
+    return tickets.filter(t =>
+      t.subject.toLowerCase().includes(q) ||
+      t.ticket_number.toLowerCase().includes(q) ||
+      t.raised_by_name.toLowerCase().includes(q) ||
+      (t.related_order_number || '').toLowerCase().includes(q),
+    );
+  }, [tickets, search]);
+
+  const adminName = user?.email || 'Admin';
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">{t('support.title')}</h2>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-lg font-semibold text-gray-800">Support Tickets</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchTickets}
+            className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            onClick={() => setShowCreate(p => !p)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350]
+              text-white rounded-lg text-sm font-medium hover:from-[#4A1530] hover:to-[#6A1E45] transition-colors"
+          >
+            <Plus size={14} /> New Ticket
+          </button>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+        {[
+          { label: 'Open',          value: stats.open,          color: '#3b82f6', icon: <MessageCircle size={16} /> },
+          { label: 'In Progress',   value: stats.inProgress,    color: '#f59e0b', icon: <Clock size={16} /> },
+          { label: 'SLA Breached',  value: stats.slaBreached,   color: '#ef4444', icon: <AlertTriangle size={16} /> },
+          { label: 'Resolved Today',value: stats.resolvedToday, color: '#22c55e', icon: <CheckCircle size={16} /> },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-500">{s.label}</span>
+              <span style={{ color: s.color }}>{s.icon}</span>
+            </div>
+            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Raise ticket form */}
-        <div>
-          <SupportTicketWidget />
+        {/* Left column: create + filters */}
+        <div className="space-y-4">
+          {showCreate && (
+            <SupportTicketWidget onTicketCreated={() => { setShowCreate(false); fetchTickets(); }} />
+          )}
+
+          {/* Filters */}
+          <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-4 space-y-3">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
+              <Filter size={13} /> Filters
+            </div>
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search tickets…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs
+                  focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
+              />
+            </div>
+            {[
+              { label: 'Status', value: filterStatus, set: setFilterStatus,
+                opts: ['all','open','in_progress','waiting_on_seller','resolved','closed'] },
+              { label: 'Category', value: filterCategory, set: setFilterCategory,
+                opts: ['all','order','payment','product','delivery','seller','other'] },
+              { label: 'Priority', value: filterPriority, set: setFilterPriority,
+                opts: ['all','low','medium','high','critical'] },
+              { label: 'Raised by', value: filterBy, set: setFilterBy,
+                opts: ['all','admin','seller'] },
+            ].map(f => (
+              <div key={f.label}>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide">{f.label}</label>
+                <select
+                  value={f.value}
+                  onChange={e => f.set(e.target.value)}
+                  className="mt-0.5 w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white
+                    focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/20"
+                >
+                  {f.opts.map(o => (
+                    <option key={o} value={o}>
+                      {o === 'all' ? 'All' : o.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+            <button
+              onClick={() => { setFilterStatus('all'); setFilterCategory('all'); setFilterPriority('all'); setFilterBy('all'); setSearch(''); }}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 py-1"
+            >
+              Clear filters
+            </button>
+          </div>
         </div>
 
-        {/* Ticket list with SLA */}
+        {/* Right column: ticket list */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('support.ticketList')}</h3>
-            <div className="space-y-3">
-              {MOCK_TICKETS.map(ticket => {
-                const slaPercent = getSLAProgress(ticket.created_at);
-                const slaColor = slaPercent >= 80 ? '#ef4444' : slaPercent >= 50 ? '#f59e0b' : '#22c55e';
-                return (
-                  <div key={ticket.id} className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0
-                          ${ticket.priority === 'high' ? 'bg-red-500' :
-                            ticket.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`} />
-                        <p className="text-sm font-medium text-gray-800">{ticket.subject}</p>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium
-                        ${ticket.status === 'open' ? 'bg-blue-100 text-blue-700' :
-                          ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'}`}>
-                        {ticket.status === 'in_progress' ? t('support.inProgress') :
-                         ticket.status === 'open' ? t('support.open') : t('support.resolved')}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-2">{ticket.id} · {ticket.category} · {ticket.user_name}</p>
-
-                    {/* SLA progress bar */}
-                    {ticket.status !== 'resolved' && (
-                      <div className="flex items-center gap-2">
-                        <Clock size={12} className="text-gray-400" />
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${slaPercent}%`, backgroundColor: slaColor }} />
-                        </div>
-                        <span className="text-[10px] font-medium" style={{ color: slaColor }}>
-                          {Math.round(24 - (slaPercent / 100 * 24))}h left
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-800">
+                Tickets
+                <span className="ml-2 text-xs font-normal text-gray-400">({displayed.length})</span>
+              </h3>
             </div>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => (
+                  <div key={i} className="h-[88px] bg-gray-50 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : displayed.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <MessageCircle size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No tickets found</p>
+                <p className="text-xs mt-1">Try adjusting your filters</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {displayed.map(ticket => {
+                  const slaP = slaProgressFn(ticket.created_at, ticket.sla_deadline);
+                  const slaC = ticket.sla_breached ? '#ef4444' : slaP >= 70 ? '#f59e0b' : '#22c55e';
+                  const isDone = ['resolved', 'closed'].includes(ticket.status);
+
+                  return (
+                    <button
+                      key={ticket.id}
+                      onClick={() => setSelected(ticket)}
+                      className="w-full text-left p-4 rounded-xl border border-gray-100 hover:border-[#C49A3C]/30
+                        hover:shadow-sm transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_META[ticket.priority]?.dot}`} />
+                          <p className="text-sm font-medium text-gray-800 truncate">{ticket.subject}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${STATUS_META[ticket.status]?.cls}`}>
+                            {STATUS_META[ticket.status]?.label}
+                          </span>
+                          <ChevronRight size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[11px] text-gray-400 mb-2">
+                        <span className="font-mono">{ticket.ticket_number}</span>
+                        <span>·</span>
+                        <Tag size={10} />
+                        <span>{ticket.category}</span>
+                        <span>·</span>
+                        <span>{ticket.raised_by_name}</span>
+                        {ticket.related_order_number && (
+                          <>
+                            <span>·</span>
+                            <span>{ticket.related_order_number}</span>
+                          </>
+                        )}
+                      </div>
+
+                      {!isDone && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${slaP}%`, backgroundColor: slaC }} />
+                          </div>
+                          <span className="text-[10px] font-medium flex-shrink-0" style={{ color: slaC }}>
+                            {ticket.sla_breached
+                              ? <span className="flex items-center gap-0.5"><AlertTriangle size={10} /> {slaTimeLabelFn(ticket.sla_deadline)}</span>
+                              : slaTimeLabelFn(ticket.sla_deadline)
+                            }
+                          </span>
+                        </div>
+                      )}
+                      {isDone && ticket.resolved_at && (
+                        <p className="text-[11px] text-green-600">
+                          Resolved {new Date(ticket.resolved_at).toLocaleDateString()}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Detail modal */}
+      {selected && user?.id && (
+        <TicketDetailModal
+          ticket={selected}
+          adminUserId={user.id}
+          adminName={adminName}
+          onClose={() => setSelected(null)}
+          onRefresh={() => {
+            fetchTickets();
+            // Re-fetch the selected ticket so header badges update
+            fetch(`/api/admin/support/tickets?adminUserId=${user.id}`)
+              .then(r => r.json())
+              .then(data => {
+                const updated = (data.tickets || []).find((t: SupportTicket) => t.id === selected.id);
+                if (updated) setSelected(updated);
+              })
+              .catch(() => {});
+          }}
+        />
+      )}
     </div>
   );
 }
