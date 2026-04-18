@@ -32,7 +32,7 @@ import { StatCardSkeleton, ChartSkeleton, TableSkeleton, CardSkeleton } from '@/
 import { formatINR, formatNumber, ORDER_STATUS_COLORS, getDistanceBadge } from '@/lib/admin/constants';
 import {
   MOCK_STATS, MOCK_REVENUE, MOCK_ORDERS, MOCK_PRODUCTS,
-  MOCK_PAYMENTS, MOCK_TICKETS, MOCK_WA_LOGS, MOCK_ANALYTICS,
+  MOCK_PAYMENTS, MOCK_TICKETS, MOCK_WA_LOGS,
   MOCK_GROWTH_SUGGESTIONS,
 } from '@/lib/admin/mockData';
 import NDRActionModal from '@/components/ndr/NDRActionModal';
@@ -1344,9 +1344,31 @@ function AnalyticsPage() {
     finally { setRevenueLoading(false); }
   }, [user?.id]);
 
-  useEffect(() => { fetchRevenue(period); }, [fetchRevenue, period]);
+  // Overview charts — category revenue, order status, delivery zones
+  const [categoryRevenue, setCategoryRevenue] = useState<{ name: string; revenue: number; units: number }[]>([]);
+  const [orderStatus,     setOrderStatus]     = useState<{ status: string; count: number; fill: string }[]>([]);
+  const [deliveryZones,   setDeliveryZones]   = useState<{ pincode: string; city: string; orders: number; revenue: number; avgOrderValue: number }[]>([]);
+  const [overviewLoading, setOverviewLoading] = useState(true);
 
-  const RETURN_COLORS = ['#ef4444', '#f59e0b', '#6366f1', '#8b5cf6', '#64748b'];
+  const fetchOverview = useCallback(async (p: string) => {
+    if (!user?.id) return;
+    setOverviewLoading(true);
+    try {
+      const res  = await fetch(`/api/admin/analytics/overview?adminUserId=${user.id}&period=${p}`);
+      const data = await res.json();
+      if (res.ok) {
+        setCategoryRevenue(data.categoryRevenue || []);
+        setOrderStatus(data.orderStatus || []);
+        setDeliveryZones(data.deliveryZones || []);
+      }
+    } catch { /* keep empty */ }
+    finally { setOverviewLoading(false); }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchRevenue(period);
+    fetchOverview(period);
+  }, [fetchRevenue, fetchOverview, period]);
 
   return (
     <div>
@@ -1450,72 +1472,122 @@ function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Category horizontal bar chart */}
+        {/* Category Revenue — horizontal bar chart */}
         <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('analytics.categoryWise')}</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={MOCK_ANALYTICS.topCategories} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={(v: number) => `₹${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#374151' }} width={90} />
-                <Tooltip formatter={(v: number) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-                <Bar dataKey="revenue" fill="#C49A3C" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-800">{t('analytics.categoryWise')}</h3>
+            {!overviewLoading && categoryRevenue.length > 0 && (
+              <span className="text-[10px] text-gray-400">{categoryRevenue.length} categor{categoryRevenue.length === 1 ? 'y' : 'ies'}</span>
+            )}
           </div>
+          {overviewLoading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 size={22} className="animate-spin text-gray-300" />
+            </div>
+          ) : categoryRevenue.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-sm text-gray-400">No sales data for this period</div>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={categoryRevenue} layout="vertical" margin={{ left: 0, right: 16 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }}
+                    tickFormatter={(v: number) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#374151' }} width={95} />
+                  <Tooltip formatter={(v: number, name: string) =>
+                    name === 'revenue' ? [`₹${v.toLocaleString('en-IN')}`, 'Revenue'] : [v, 'Units sold']
+                  } />
+                  <Bar dataKey="revenue" fill="#C49A3C" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
-        {/* Returns donut chart */}
+        {/* Order Status Breakdown — donut chart */}
         <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">Returns Analysis</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={MOCK_ANALYTICS.returnReasons} cx="50%" cy="45%" innerRadius={55} outerRadius={80}
-                  paddingAngle={3} dataKey="count" nameKey="reason">
-                  {MOCK_ANALYTICS.returnReasons.map((_, i) => <Cell key={i} fill={RETURN_COLORS[i]} />)}
-                </Pie>
-                <Tooltip />
-                <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-800">Order Status Breakdown</h3>
+            {!overviewLoading && orderStatus.length > 0 && (
+              <span className="text-[10px] text-gray-400">
+                {orderStatus.reduce((s, r) => s + r.count, 0)} total orders
+              </span>
+            )}
           </div>
+          {overviewLoading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 size={22} className="animate-spin text-gray-300" />
+            </div>
+          ) : orderStatus.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-sm text-gray-400">No orders for this period</div>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={orderStatus}
+                    cx="50%" cy="45%"
+                    innerRadius={55} outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="count"
+                    nameKey="status"
+                  >
+                    {orderStatus.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number, name: string) => [v, name]} />
+                  <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Delivery zone table */}
+      {/* Delivery Zones — real data table */}
       <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">{t('delivery.title')}</h3>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500">Pincode</th>
-              <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500">District</th>
-              <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500">{t('analytics.orders')}</th>
-              <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500">Avg Delivery</th>
-              <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500">{t('orders.status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_ANALYTICS.deliveryZones.map(z => (
-              <tr key={z.pincode} className="border-b border-gray-50">
-                <td className="px-3 py-2 font-medium">{z.pincode}</td>
-                <td className="px-3 py-2 text-gray-600">{z.district}</td>
-                <td className="px-3 py-2">{z.orders}</td>
-                <td className="px-3 py-2">{z.avgDeliveryHrs}h</td>
-                <td className="px-3 py-2">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium
-                    ${z.avgDeliveryHrs <= 8 ? 'bg-green-100 text-green-700' :
-                      z.avgDeliveryHrs <= 16 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-600'}`}>
-                    {z.avgDeliveryHrs <= 8 ? 'Fast' : z.avgDeliveryHrs <= 16 ? 'Slow' : 'Very Slow'}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">{t('delivery.title')}</h3>
+            <p className="text-[10px] text-gray-400 mt-0.5">Top delivery zones by order volume</p>
+          </div>
+          {!overviewLoading && deliveryZones.length > 0 && (
+            <span className="text-[10px] text-gray-400">{deliveryZones.length} zone(s)</span>
+          )}
+        </div>
+        {overviewLoading ? (
+          <div className="py-10 flex items-center justify-center">
+            <Loader2 size={22} className="animate-spin text-gray-300" />
+          </div>
+        ) : deliveryZones.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">No delivery data for this period</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">#</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Pincode</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">City</th>
+                  <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Orders</th>
+                  <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Revenue</th>
+                  <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Avg Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deliveryZones.map((z, i) => (
+                  <tr key={z.pincode} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
+                    <td className="px-3 py-2.5 font-mono font-medium text-gray-800">{z.pincode}</td>
+                    <td className="px-3 py-2.5 text-gray-600">{z.city}</td>
+                    <td className="px-3 py-2.5 text-right font-medium text-gray-800">{z.orders}</td>
+                    <td className="px-3 py-2.5 text-right font-medium text-gray-800">{formatINR(z.revenue)}</td>
+                    <td className="px-3 py-2.5 text-right text-gray-500">{formatINR(z.avgOrderValue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
