@@ -23,12 +23,12 @@ async function resolveSellerInfo(userId: string) {
 // ── GET ──────────────────────────────────────────────────────────────────────
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id: ticketId } = await params;
     const { searchParams } = new URL(request.url);
-    const userId   = searchParams.get('userId');
-    const ticketId = params.id;
+    const userId = searchParams.get('userId');
 
     if (!userId) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 });
@@ -39,7 +39,6 @@ export async function GET(
       return NextResponse.json({ error: 'Seller account not found' }, { status: 404 });
     }
 
-    // Verify ticket belongs to this seller
     const { data: ticket } = await supabaseAdmin
       .from('spf_support_tickets')
       .select('raised_by_id')
@@ -50,7 +49,6 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Filter out internal (admin-only) notes
     const { data: comments, error } = await supabaseAdmin
       .from('spf_ticket_comments')
       .select('*')
@@ -62,7 +60,7 @@ export async function GET(
 
     return NextResponse.json({ comments: comments || [] });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal error';
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
     console.error('[seller/support/comments GET]', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -71,11 +69,11 @@ export async function GET(
 // ── POST ─────────────────────────────────────────────────────────────────────
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const ticketId = params.id;
-    const body     = await request.json();
+    const { id: ticketId } = await params;
+    const body = await request.json();
     const { userId, message } = body;
 
     if (!userId || !message?.trim()) {
@@ -87,7 +85,6 @@ export async function POST(
       return NextResponse.json({ error: 'Seller account not found' }, { status: 404 });
     }
 
-    // Verify ticket belongs to this seller and is not closed
     const { data: ticket } = await supabaseAdmin
       .from('spf_support_tickets')
       .select('id, status, raised_by_id')
@@ -116,7 +113,6 @@ export async function POST(
 
     if (error) throw error;
 
-    // If status was waiting_on_seller, bump back to in_progress automatically
     if (ticket.status === 'waiting_on_seller') {
       await supabaseAdmin
         .from('spf_support_tickets')
@@ -132,7 +128,6 @@ export async function POST(
         is_internal: true,
       });
     } else {
-      // Just bump updated_at
       await supabaseAdmin
         .from('spf_support_tickets')
         .update({ updated_at: new Date().toISOString() })
@@ -141,7 +136,7 @@ export async function POST(
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal error';
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
     console.error('[seller/support/comments POST]', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }

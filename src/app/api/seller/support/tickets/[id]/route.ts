@@ -21,10 +21,10 @@ async function resolveSellerInfo(userId: string) {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const ticketId = params.id;
+    const { id: ticketId } = await params;
     const body     = await request.json();
     const { userId, action } = body; // action: 'reopen'
 
@@ -37,7 +37,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Seller account not found' }, { status: 404 });
     }
 
-    // Verify the ticket belongs to this seller
     const { data: ticket } = await supabaseAdmin
       .from('spf_support_tickets')
       .select('id, status, category, priority, raised_by_id')
@@ -54,7 +53,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Only resolved or closed tickets can be re-opened' }, { status: 400 });
     }
 
-    // Re-open: reset status, clear resolved_at, extend SLA by same category/priority
     const newSla = computeSlaDeadline(ticket.category, ticket.priority);
 
     const { data: updated, error } = await supabaseAdmin
@@ -71,7 +69,6 @@ export async function PATCH(
 
     if (error) throw error;
 
-    // System comment
     await supabaseAdmin.from('spf_ticket_comments').insert({
       ticket_id:   ticketId,
       author_type: 'system',
@@ -83,7 +80,7 @@ export async function PATCH(
 
     return NextResponse.json({ ticket: updated });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal error';
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
     console.error('[seller/support/tickets PATCH]', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }

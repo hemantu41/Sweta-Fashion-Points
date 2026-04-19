@@ -23,10 +23,10 @@ async function verifyAdmin(id: string) {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const ticketId = params.id;
+    const { id: ticketId } = await params;
     const body = await request.json();
     const { adminUserId, status, priority, action } = body;
 
@@ -147,7 +147,9 @@ export async function PATCH(
 
     return NextResponse.json({ ticket });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal error';
+    const message = err instanceof Error
+      ? err.message
+      : (err as any)?.message ?? JSON.stringify(err);
     console.error('[admin/support/tickets PATCH]', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }

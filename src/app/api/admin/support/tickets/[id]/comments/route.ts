@@ -21,12 +21,12 @@ async function verifyAdmin(id: string) {
 // ── GET ──────────────────────────────────────────────────────────────────────
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id: ticketId } = await params;
     const { searchParams } = new URL(request.url);
     const adminUserId = searchParams.get('adminUserId');
-    const ticketId   = params.id;
 
     if (!adminUserId) {
       return NextResponse.json({ error: 'adminUserId required' }, { status: 400 });
@@ -45,7 +45,7 @@ export async function GET(
 
     return NextResponse.json({ comments: comments || [] });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal error';
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
     console.error('[support/comments GET]', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -54,10 +54,10 @@ export async function GET(
 // ── POST ─────────────────────────────────────────────────────────────────────
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const ticketId = params.id;
+    const { id: ticketId } = await params;
     const body = await request.json();
     const { adminUserId, authorName, message, isInternal } = body;
 
@@ -116,7 +116,7 @@ export async function POST(
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal error';
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
     console.error('[support/comments POST]', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
