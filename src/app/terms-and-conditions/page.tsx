@@ -74,7 +74,6 @@ export default function TermsAndConditionsPage() {
               </h2>
               <ul className="list-disc pl-6 space-y-2 text-[#2D2D2D]">
                 <li>{language === 'hi' ? 'हम भारत भर में डिलीवरी करते हैं' : 'We deliver across India'}</li>
-                <li>{language === 'hi' ? 'हैदराबाद के भीतर स्थानीय डिलीवरी (15 किमी): 1-2 दिन' : 'Local delivery within Hyderabad (15km): 1-2 days'}</li>
                 <li>{language === 'hi' ? 'कूरियर डिलीवरी (बाकी भारत): 5-7 व्यावसायिक दिन' : 'Courier delivery (Rest of India): 5-7 business days'}</li>
                 <li>{language === 'hi' ? 'डिलीवरी समय अनुमानित है और गारंटीकृत नहीं है' : 'Delivery times are estimated and not guaranteed'}</li>
               </ul>

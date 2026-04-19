@@ -102,17 +102,7 @@ export default function ReturnPolicyPage() {
                 {language === 'hi' ? '4. रिटर्न शिपिंग' : '4. Return Shipping'}
               </h2>
               <div className="space-y-3 text-[#2D2D2D]">
-                <p>
-                  <strong>{language === 'hi' ? 'स्थानीय रिटर्न (हैदराबाद के भीतर 15 किमी):' : 'Local Returns (Within 15km of Hyderabad):'}</strong>
-                </p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>{language === 'hi' ? 'मुफ्त पिकअप सेवा उपलब्ध है' : 'Free pickup service available'}</li>
-                  <li>{language === 'hi' ? 'हमारे डिलीवरी पार्टनर उत्पाद एकत्र करेंगे' : 'Our delivery partner will collect the product'}</li>
-                </ul>
-
-                <p className="mt-4">
-                  <strong>{language === 'hi' ? 'अन्य स्थान:' : 'Other Locations:'}</strong>
-                </p>
                 <ul className="list-disc pl-6 space-y-2">
                   <li>{language === 'hi' ? 'ग्राहक को रिटर्न शिपिंग की व्यवस्था करनी होगी' : 'Customer must arrange return shipping'}</li>
                   <li>
