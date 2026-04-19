@@ -19,7 +19,7 @@ export async function GET(
     // ── Public cache check (L1 memory → L2 Redis) ──────────────────────────
     if (isPublicView) {
       const cacheKey = `pub:product:${id}`;
-      const cached = await publicCacheGet<Record<string, unknown>>(cacheKey, 600);
+      const cached = await publicCacheGet<Record<string, unknown>>(cacheKey, 1800);
       if (cached) {
         return NextResponse.json({ product: cached }, {
           headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
@@ -119,7 +119,7 @@ export async function GET(
     // ── Populate public cache (fire-and-forget) ─────────────────────────────
     if (isPublicView && product.approval_status === 'approved' && product.is_active) {
       const cacheKey = `pub:product:${id}`;
-      publicCacheSet(cacheKey, transformedProduct, 600).catch(() => {});
+      publicCacheSet(cacheKey, transformedProduct, 1800).catch(() => {});
     }
 
     const cacheHeaders = isPublicView

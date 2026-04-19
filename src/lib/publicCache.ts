@@ -59,7 +59,7 @@ function memDelByGlob(pattern: string): void {
 export async function publicGet<T>(
   key: string,
   fetcher: () => Promise<T>,
-  ttlSeconds = 600,
+  ttlSeconds = 1800,
 ): Promise<T> {
   // L1 — sub-millisecond on warm instances
   const l1 = memGet<T>(key);
@@ -94,7 +94,7 @@ export async function publicGet<T>(
  * Read from cache only (L1 → L2). Returns null on miss.
  * Use this when you need to control the "not found" path yourself.
  */
-export async function publicCacheGet<T>(key: string, ttlSeconds = 600): Promise<T | null> {
+export async function publicCacheGet<T>(key: string, ttlSeconds = 1800): Promise<T | null> {
   const l1 = memGet<T>(key);
   if (l1 !== null) return l1;
 
@@ -112,7 +112,7 @@ export async function publicCacheGet<T>(key: string, ttlSeconds = 600): Promise<
 /**
  * Write to both tiers.
  */
-export async function publicCacheSet(key: string, data: unknown, ttlSeconds = 600): Promise<void> {
+export async function publicCacheSet(key: string, data: unknown, ttlSeconds = 1800): Promise<void> {
   memSet(key, data, ttlSeconds);
   await redisSetex(key, ttlSeconds, JSON.stringify(data));
 }
