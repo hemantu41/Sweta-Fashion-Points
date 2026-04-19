@@ -20,19 +20,15 @@ import { AdminLanguageProvider, useAdminLang } from '@/components/dashboard/Lang
 import Sidebar from '@/components/dashboard/Sidebar';
 import TopBar from '@/components/dashboard/TopBar';
 import StatCard from '@/components/dashboard/StatCard';
-import RevenueChart from '@/components/dashboard/RevenueChart';
 import OrdersTable from '@/components/dashboard/OrdersTable';
-import DeliveryHeatmap from '@/components/dashboard/DeliveryHeatmap';
 import GrowthSuggestions from '@/components/dashboard/GrowthSuggestions';
-import WhatsAppNotifPanel from '@/components/dashboard/WhatsAppNotifPanel';
 import SupportTicketWidget from '@/components/dashboard/SupportTicketWidget';
-import AccountHealthWidget from '@/components/dashboard/AccountHealthWidget';
 import GSTExportPanel from '@/components/payments/GSTExportPanel';
 import ReconciliationTable from '@/components/payments/ReconciliationTable';
 import { StatCardSkeleton, ChartSkeleton, TableSkeleton, CardSkeleton } from '@/components/dashboard/Skeleton';
 import { formatINR, formatNumber, ORDER_STATUS_COLORS, getDistanceBadge } from '@/lib/admin/constants';
 import {
-  MOCK_STATS, MOCK_REVENUE, MOCK_ORDERS, MOCK_PRODUCTS,
+  MOCK_STATS, MOCK_ORDERS, MOCK_PRODUCTS,
   MOCK_PAYMENTS, MOCK_WA_LOGS,
   MOCK_GROWTH_SUGGESTIONS,
 } from '@/lib/admin/mockData';
@@ -45,6 +41,142 @@ import SellerManagement from '@/components/seller-management/SellerManagement';
 import CategoryManagement from '@/components/admin/CategoryManagement';
 import type { AdminPage, Order, NDRRecord } from '@/types/admin';
 
+// ─── Admin Seller Health Widget ─────────────────────────────────────────────
+
+interface SellerHealthRow {
+  id: string;
+  name: string;
+  score: number;
+  totalOrders: number;
+  cancellationRate: number;
+  returnRate: number;
+}
+
+function AdminHealthWidget({ onNavigate }: { onNavigate: (page: AdminPage) => void }) {
+  const { user } = useAuth();
+  const [data, setData] = useState<{
+    averageScore: number;
+    sellersBelow50: SellerHealthRow[];
+    totalSellers: number;
+    sellerScores: SellerHealthRow[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showBelow50, setShowBelow50] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`/api/admin/sellers/health-summary?adminUserId=${user.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setData(d); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [user?.id]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-6 animate-pulse">
+        <div className="h-5 w-52 bg-[#E8E0E4] rounded mb-6" />
+        <div className="flex items-center gap-8">
+          <div className="w-44 h-44 bg-[#F5EDF2] rounded-full flex-shrink-0" />
+          <div className="flex-1 space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-10 bg-[#F5EDF2] rounded-lg" />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const score = data?.averageScore ?? 100;
+  const below50 = data?.sellersBelow50 ?? [];
+  const total = data?.totalSellers ?? 0;
+
+  const scoreColor = score >= 80 ? '#C49A3C' : score >= 50 ? '#f59e0b' : '#ef4444';
+  const scoreLabel = score >= 80 ? 'Good' : score >= 50 ? 'Needs Attention' : 'Critical';
+
+  return (
+    <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800">Platform Account Health</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Average across {total} approved seller{total !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {below50.length > 0 && (
+            <button
+              onClick={() => setShowBelow50(p => !p)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+            >
+              <AlertTriangle size={13} />
+              {below50.length} seller{below50.length !== 1 ? 's' : ''} below 50%
+            </button>
+          )}
+          <button
+            onClick={() => onNavigate('sellers')}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#F5EDF2] text-[#5B1A3A] hover:bg-[#EDD9E5] transition-colors"
+          >
+            View all sellers
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center gap-6">
+        {/* Score gauge */}
+        <div className="relative w-40 h-40 flex-shrink-0">
+          <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#F5EDF2" strokeWidth="12" />
+            <circle
+              cx="60" cy="60" r="50"
+              fill="none"
+              stroke={scoreColor}
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeDasharray={`${(score / 100) * 314} 314`}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-3xl font-bold" style={{ color: scoreColor }}>{score}</span>
+            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: scoreColor }}>{scoreLabel}</span>
+          </div>
+        </div>
+
+        {/* Summary stats */}
+        <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            { label: 'Total Sellers', value: total, color: '#5B1A3A' },
+            { label: 'Healthy (≥80)', value: (data?.sellerScores as SellerHealthRow[] | undefined)?.filter(s => s.score >= 80).length ?? 0, color: '#C49A3C' },
+            { label: 'At Risk (<50)', value: below50.length, color: below50.length > 0 ? '#ef4444' : '#10b981' },
+          ].map(stat => (
+            <div key={stat.label} className="p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500">{stat.label}</p>
+              <p className="text-xl font-bold mt-0.5" style={{ color: stat.color }}>{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Below 50 list */}
+      {showBelow50 && below50.length > 0 && (
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Sellers Needing Immediate Attention</p>
+          <div className="space-y-2">
+            {below50.map(seller => (
+              <div key={seller.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{seller.name}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {seller.totalOrders} orders · {seller.cancellationRate}% cancelled · {seller.returnRate}% returned
+                  </p>
+                </div>
+                <span className="text-lg font-bold text-red-600">{seller.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Module 1: Dashboard Home ───────────────────────────────────────────────
 
 function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }) {
@@ -52,8 +184,17 @@ function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(MOCK_STATS);
-  const [revenueData, setRevenueData] = useState(MOCK_REVENUE);
   const [orders, setOrders] = useState(MOCK_ORDERS);
+
+  // Revenue trend (same source as Analytics page)
+  const [revPeriod, setRevPeriod] = useState('week');
+  const [revenueData, setRevenueData] = useState<{ date: string; revenue: number; orders: number }[]>([]);
+  const [revSummary, setRevSummary] = useState({ totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 });
+  const [revLoading, setRevLoading] = useState(true);
+
+  // Category split (from analytics overview)
+  const [categoryRevenue, setCategoryRevenue] = useState<{ name: string; revenue: number; units: number }[]>([]);
+  const [overviewLoading, setOverviewLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -65,13 +206,41 @@ function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }
         ]);
         if (statsRes && !statsRes.error) setStats(statsRes);
         if (ordersRes && Array.isArray(ordersRes) && ordersRes.length > 0) setOrders(ordersRes);
-      } catch {
-        // Fallback to mock data — already set as default
-      }
+      } catch { /* keep mock defaults */ }
       setLoading(false);
     };
     loadData();
   }, [user?.id]);
+
+  const fetchRevenue = useCallback(async (period: string) => {
+    if (!user?.id) return;
+    setRevLoading(true);
+    try {
+      const res  = await fetch(`/api/admin/analytics/revenue?adminUserId=${user.id}&period=${period}`);
+      const data = await res.json();
+      if (res.ok) {
+        setRevenueData(data.data || []);
+        setRevSummary(data.summary || { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 });
+      }
+    } catch { /* keep empty */ }
+    finally { setRevLoading(false); }
+  }, [user?.id]);
+
+  const fetchOverview = useCallback(async (period: string) => {
+    if (!user?.id) return;
+    setOverviewLoading(true);
+    try {
+      const res  = await fetch(`/api/admin/analytics/overview?adminUserId=${user.id}&period=${period}`);
+      const data = await res.json();
+      if (res.ok) setCategoryRevenue(data.categoryRevenue || []);
+    } catch { /* keep empty */ }
+    finally { setOverviewLoading(false); }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchRevenue(revPeriod);
+    fetchOverview(revPeriod);
+  }, [fetchRevenue, fetchOverview, revPeriod]);
 
   if (loading) {
     return (
@@ -79,14 +248,9 @@ function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1,2,3,4].map(i => <StatCardSkeleton key={i} />)}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2"><ChartSkeleton /></div>
-          <CardSkeleton />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TableSkeleton />
-          <CardSkeleton />
-        </div>
+        <ChartSkeleton />
+        <ChartSkeleton />
+        <TableSkeleton />
       </div>
     );
   }
@@ -134,19 +298,110 @@ function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }
         />
       </div>
 
-      {/* Account Health Score — full width */}
-      <AccountHealthWidget />
+      {/* Row 2: Platform Account Health (all sellers average) */}
+      <AdminHealthWidget onNavigate={onNavigate} />
 
-      {/* Row 2: RevenueChart + GrowthSuggestions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <RevenueChart data={revenueData} />
+      {/* Row 3: Revenue Trend — same as Analytics page */}
+      <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">Revenue Trend</h3>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {revPeriod === 'week' ? 'Last 7 days (daily)' : revPeriod === 'month' ? 'Last 30 days (daily)' : 'Last 13 weeks (weekly)'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-4">
+              <div className="text-right">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Revenue</p>
+                <p className="text-sm font-bold text-gray-800">{revLoading ? '—' : formatINR(revSummary.totalRevenue)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Orders</p>
+                <p className="text-sm font-bold text-gray-800">{revLoading ? '—' : revSummary.totalOrders}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Avg Order</p>
+                <p className="text-sm font-bold text-gray-800">{revLoading ? '—' : formatINR(revSummary.avgOrderValue)}</p>
+              </div>
+            </div>
+            <div className="flex gap-1.5">
+              {(['week', 'month', 'quarter'] as const).map(p => (
+                <button key={p} onClick={() => setRevPeriod(p)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors
+                    ${revPeriod === p ? 'bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <GrowthSuggestions />
+        {revLoading ? (
+          <div className="h-56 flex items-center justify-center">
+            <Loader2 size={24} className="animate-spin text-gray-300" />
+          </div>
+        ) : revenueData.length === 0 ? (
+          <div className="h-56 flex flex-col items-center justify-center text-gray-400">
+            <p className="text-sm">No orders found for this period</p>
+            <p className="text-xs mt-1">Orders will appear here once customers place them</p>
+          </div>
+        ) : (
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} interval={revPeriod === 'month' ? 4 : 0} />
+                <YAxis yAxisId="revenue" tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  tickFormatter={(v: number) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`} width={52} />
+                <YAxis yAxisId="orders" orientation="right" tick={{ fontSize: 11, fill: '#9ca3af' }} width={30} allowDecimals={false} />
+                <Tooltip formatter={(v: number, name: string) =>
+                  name === 'revenue' ? [`₹${v.toLocaleString('en-IN')}`, 'Revenue'] : [v, 'Orders']} />
+                <Line yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#C49A3C" strokeWidth={2.5} dot={{ fill: '#C49A3C', r: 3 }} activeDot={{ r: 5 }} name="revenue" />
+                <Line yAxisId="orders"  type="monotone" dataKey="orders"  stroke="#5B1A3A" strokeWidth={2}   dot={{ fill: '#5B1A3A', r: 3 }} activeDot={{ r: 5 }} name="orders" strokeDasharray="4 2" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        {!revLoading && revenueData.length > 0 && (
+          <div className="flex items-center gap-5 mt-2 justify-end">
+            <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <span className="w-6 h-0.5 bg-[#C49A3C] rounded inline-block" /> Revenue
+            </span>
+            <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <span className="w-6 h-0.5 bg-[#5B1A3A] rounded inline-block"
+                style={{ backgroundImage: 'repeating-linear-gradient(90deg,#5B1A3A 0,#5B1A3A 4px,transparent 4px,transparent 6px)' }} /> Orders
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Row 3: Recent orders + DeliveryHeatmap */}
+      {/* Row 4: Category Split + Recent Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Category Revenue */}
+        <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] p-5">
+          <h3 className="text-sm font-semibold text-gray-800 mb-4">Category Split</h3>
+          {overviewLoading ? (
+            <div className="h-56 flex items-center justify-center"><Loader2 size={22} className="animate-spin text-gray-300" /></div>
+          ) : categoryRevenue.length === 0 ? (
+            <div className="h-56 flex items-center justify-center text-sm text-gray-400">No sales data for this period</div>
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={categoryRevenue} layout="vertical" margin={{ left: 0, right: 16 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }}
+                    tickFormatter={(v: number) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#374151' }} width={95} />
+                  <Tooltip formatter={(v: number, name: string) =>
+                    name === 'revenue' ? [`₹${v.toLocaleString('en-IN')}`, 'Revenue'] : [v, 'Units sold']} />
+                  <Bar dataKey="revenue" fill="#C49A3C" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Recent Orders */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">{t('dash.recentOrders')}</h3>
@@ -154,14 +409,10 @@ function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }
           </div>
           <OrdersTable orders={orders} compact />
         </div>
-        <DeliveryHeatmap />
       </div>
 
-      {/* Row 4: WhatsApp + Support */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WhatsAppNotifPanel />
-        <SupportTicketWidget />
-      </div>
+      {/* Row 5: New Support Ticket — navigates to Support section after submission */}
+      <SupportTicketWidget onNavigate={onNavigate} />
     </div>
   );
 }

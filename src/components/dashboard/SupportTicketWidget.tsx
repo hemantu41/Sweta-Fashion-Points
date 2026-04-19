@@ -11,9 +11,10 @@ const PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
 
 interface Props {
   onTicketCreated?: () => void;
+  onNavigate?: (page: string) => void;
 }
 
-export default function SupportTicketWidget({ onTicketCreated }: Props) {
+export default function SupportTicketWidget({ onTicketCreated, onNavigate }: Props) {
   const { t } = useAdminLang();
   const { user } = useAuth();
   const [subject, setSubject]   = useState('');
@@ -56,13 +57,17 @@ export default function SupportTicketWidget({ onTicketCreated }: Props) {
       onTicketCreated?.();
 
       setTimeout(() => {
-        setSubject('');
-        setMessage('');
-        setOrderNo('');
-        setCategory('order');
-        setPriority('medium');
-        setSubmitted(false);
-      }, 3000);
+        if (onNavigate) {
+          onNavigate('support');
+        } else {
+          setSubject('');
+          setMessage('');
+          setOrderNo('');
+          setCategory('order');
+          setPriority('medium');
+          setSubmitted(false);
+        }
+      }, 2000);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to create ticket');
     } finally {
