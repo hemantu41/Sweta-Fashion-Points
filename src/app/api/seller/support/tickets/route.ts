@@ -11,12 +11,13 @@ export const dynamic = 'force-dynamic';
 
 async function resolveSellerInfo(userId: string) {
   // Look up the seller row linked to this user account
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('spf_sellers')
-    .select('id, business_name, email')
+    .select('id, business_name, business_email')
     .eq('user_id', userId)
     .maybeSingle();
-  return data as { id: string; business_name: string; email: string } | null;
+  if (error) console.error('[resolveSellerInfo]', error.message);
+  return data as { id: string; business_name: string; business_email: string } | null;
 }
 
 // ── GET ──────────────────────────────────────────────────────────────────────

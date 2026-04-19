@@ -65,14 +65,14 @@ interface OrderSummary {
 async function fetchSellerInfo(sellerId: string): Promise<SellerInfo | null> {
   const { data } = await supabaseAdmin
     .from('spf_sellers')
-    .select('business_name, email, phone')
+    .select('business_name, business_email, phone')
     .eq('id', sellerId)
     .maybeSingle();
   if (!data) return null;
   return {
-    email:        (data as any).email        ?? '',
-    businessName: (data as any).business_name ?? 'Seller',
-    phone:        (data as any).phone        ?? '',
+    email:        (data as any).business_email ?? '',
+    businessName: (data as any).business_name  ?? 'Seller',
+    phone:        (data as any).phone          ?? '',
   };
 }
 

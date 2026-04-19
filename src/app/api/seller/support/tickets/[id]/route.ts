@@ -10,11 +10,12 @@ import { computeSlaDeadline } from '@/lib/support/sla';
 export const dynamic = 'force-dynamic';
 
 async function resolveSellerInfo(userId: string) {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('spf_sellers')
     .select('id, business_name')
     .eq('user_id', userId)
     .maybeSingle();
+  if (error) console.error('[resolveSellerInfo]', error.message);
   return data as { id: string; business_name: string } | null;
 }
 
