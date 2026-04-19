@@ -1802,6 +1802,38 @@ function TicketDetailModal({
           </div>
         )}
 
+        {/* Re-open button for resolved/closed tickets */}
+        {['resolved', 'closed'].includes(ticket.status) && (
+          <div className="px-5 pt-3">
+            <button
+              disabled={statusChanging}
+              onClick={async () => {
+                setSC(true);
+                try {
+                  const res = await fetch(`/api/admin/support/tickets/${ticket.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adminUserId, action: 'reopen' }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error);
+                  toast.success('Ticket re-opened');
+                  onRefresh();
+                  fetchComments();
+                } catch (err: unknown) {
+                  toast.error(err instanceof Error ? err.message : 'Failed to re-open');
+                }
+                setSC(false);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                border border-[#5B1A3A]/30 text-[#5B1A3A] hover:bg-[#5B1A3A]/5 transition-colors disabled:opacity-40"
+            >
+              <RefreshCw size={12} />
+              Re-open ticket
+            </button>
+          </div>
+        )}
+
         {/* Comment thread */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {commentsLoading ? (

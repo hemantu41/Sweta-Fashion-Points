@@ -24,6 +24,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/seller/dashboard/returns': { title: 'Returns & RTO', subtitle: 'Monitor returns and track return shipments' },
   '/seller/dashboard/inventory': { title: 'My Catalogue & Stock', subtitle: 'Manage your listings, variants and stock levels' },
   '/seller/dashboard/health': { title: 'Seller Health', subtitle: 'Your seller performance score' },
+  '/seller/dashboard/support': { title: 'Support', subtitle: 'Raise and track your support requests' },
   '/seller/dashboard/settings': { title: 'Settings', subtitle: 'Manage your seller account' },
 };
 

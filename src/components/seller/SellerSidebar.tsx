@@ -52,6 +52,7 @@ const ICONS = {
   health:     'M22 12h-4l-3 9L9 3l-3 9H2',
   settings:   'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z',
   inventory:  'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2 M9 5a2 2 0 002 2h2a2 2 0 002-2 M9 5a2 2 0 012-2h2a2 2 0 012 2 M9 12h6 M9 16h4',
+  support:    'M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M12 12h.01M6.343 17.657a9 9 0 010-12.728M9.172 14.828a5 5 0 010-7.072',
   chevron:    'M9 18l6-6-6-6',
 };
 
@@ -91,6 +92,7 @@ export default function SellerSidebar({ sellerName, healthScore, orderBadge, pro
     { label: 'Analytics',    href: '/seller/dashboard/analytics', icon: <Icon d={ICONS.analytics} /> },
     { label: 'Reviews',      href: '/seller/dashboard/reviews',   icon: <Icon d={ICONS.reviews} /> },
     { label: 'Seller Health',href: '/seller/dashboard/health',    icon: <Icon d={ICONS.health} /> },
+    { label: 'Support',      href: '/seller/dashboard/support',   icon: <Icon d={ICONS.support} /> },
     { label: 'Settings',     href: '/seller/dashboard/settings',  icon: <Icon d={ICONS.settings} /> },
   ];
 

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { notifySellerTicketUpdate } from '@/lib/notifications/sellerNotify';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +74,7 @@ export async function POST(
     // Verify ticket exists
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('spf_support_tickets')
-      .select('id, status')
+      .select('id, status, raised_by_type, raised_by_id, ticket_number, subject')
       .eq('id', ticketId)
       .single();
 
@@ -101,6 +102,17 @@ export async function POST(
       .from('spf_support_tickets')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', ticketId);
+
+    // Email seller when admin sends a public (non-internal) reply to a seller-raised ticket
+    if (!isInternal && ticket.raised_by_type === 'seller' && ticket.raised_by_id) {
+      notifySellerTicketUpdate({
+        ticketId,
+        ticketNumber:  ticket.ticket_number,
+        subject:       ticket.subject,
+        sellerId:      ticket.raised_by_id,
+        adminMessage:  message.trim(),
+      }).catch(() => {}); // fire-and-forget
+    }
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (err: unknown) {
