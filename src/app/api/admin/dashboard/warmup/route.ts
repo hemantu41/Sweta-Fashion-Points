@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { migrateAdminDataToCache } from '@/lib/adminCache';
+import { migrateAdminDataToCache, invalidateAdminCache } from '@/lib/adminCache';
 
 // POST /api/admin/dashboard/warmup
 // Called on admin login — migrates all admin data from Supabase to Redis.
@@ -24,6 +24,9 @@ export async function POST(request: NextRequest) {
     if (!user?.is_admin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Clear stale stats cache first so the fresh count is always used
+    await invalidateAdminCache('stats');
 
     // Fire-and-forget: don't await — return immediately
     migrateAdminDataToCache().catch(err =>

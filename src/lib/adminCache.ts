@@ -97,6 +97,7 @@ export async function migrateAdminDataToCache(): Promise<void> {
     const [
       totalOrdersRes,
       todayOrdersRes,
+      returnedOrdersRes,
       recentOrdersRes,
       productsRes,
       pendingProductsRes,
@@ -105,21 +106,31 @@ export async function migrateAdminDataToCache(): Promise<void> {
       paymentsRes,
       weekRevenueRes,
     ] = await Promise.all([
-      // 1. Total orders count
+      // 1. Total orders count — spf_orders matches the Orders page
       supabaseAdmin
-        .from('spf_payment_orders')
+        .from('spf_orders')
         .select('id', { count: 'exact', head: true }),
 
       // 2. Today's orders count
       supabaseAdmin
-        .from('spf_payment_orders')
+        .from('spf_orders')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', todayStart),
 
-      // 3. Recent 50 orders with details
+      // 3. Returned orders count for real return rate
       supabaseAdmin
-        .from('spf_payment_orders')
-        .select('id, order_number, status, items, total_amount, delivery_address, payment_method, created_at, updated_at')
+        .from('spf_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'RETURNED'),
+
+      // 4. Recent 50 orders with details
+      supabaseAdmin
+        .from('spf_orders')
+        .select(`
+          id, order_number, status, subtotal, shipping_charge,
+          shipping_address, payment_method, created_at, updated_at,
+          spf_order_items(id, product_name, quantity, unit_price)
+        `)
         .order('created_at', { ascending: false })
         .limit(50),
 
@@ -193,24 +204,25 @@ export async function migrateAdminDataToCache(): Promise<void> {
       sum + (Number(p.seller_earning) || 0), 0
     );
 
-    // Returned/cancelled orders for return rate
-    const deliveredOrders = orders.filter((o: Record<string, unknown>) => o.status === 'delivered').length;
-    const returnedOrders = orders.filter((o: Record<string, unknown>) =>
-      o.status === 'returned' || o.status === 'cancelled'
-    ).length;
-    const returnRate = deliveredOrders > 0
-      ? Math.round((returnedOrders / (deliveredOrders + returnedOrders)) * 100 * 10) / 10
+    // Return rate from DB counts (accurate, not limited to recent 50)
+    const totalOrderCount = totalOrdersRes.count || 0;
+    const returnedOrderCount = returnedOrdersRes.count || 0;
+    const returnRate = totalOrderCount > 0
+      ? Math.round((returnedOrderCount / totalOrderCount) * 1000) / 10
       : 0;
 
     const activeProducts = products.filter((p: Record<string, unknown>) => p.is_active).length;
     const activeSellers = sellers.filter((s: Record<string, unknown>) => s.status === 'approved').length;
 
     const avgOrderValue = orders.length > 0
-      ? Math.round(orders.reduce((s: number, o: Record<string, unknown>) => s + (Number(o.total_amount) || 0), 0) / orders.length)
+      ? Math.round(orders.reduce((s: number, o: Record<string, unknown>) => {
+          const total = Number(o.subtotal || 0) + Number(o.shipping_charge || 0);
+          return s + total;
+        }, 0) / orders.length)
       : 0;
 
     const stats = {
-      totalOrders: totalOrdersRes.count || 0,
+      totalOrders: totalOrderCount,
       todayOrders: todayOrdersRes.count || 0,
       totalRevenue,
       todayRevenue,
@@ -232,25 +244,25 @@ export async function migrateAdminDataToCache(): Promise<void> {
       spf_sellers: undefined,
     }));
 
-    // Flatten orders with customer info from delivery_address
+    // Flatten orders with customer info from shipping_address (spf_orders schema)
     const flatOrders = orders.map((o: Record<string, unknown>) => {
-      const addr = o.delivery_address as Record<string, unknown> | null;
-      const items = (o.items as Array<Record<string, unknown>>) || [];
+      const addr = o.shipping_address as Record<string, unknown> | null;
+      const items = (o.spf_order_items as Array<Record<string, unknown>>) || [];
       return {
         id: o.id,
         order_id: o.order_number || o.id,
         customer_name: (addr?.name as string) || 'Customer',
-        customer_mobile: (addr?.mobile as string) || '',
+        customer_mobile: (addr?.phone as string) || '',
         pincode: (addr?.pincode as string) || '',
-        district: (addr?.city as string) || (addr?.district as string) || '',
+        district: (addr?.city as string) || '',
         items: items.map(i => ({
-          product_id: i.product_id || '',
-          name: i.name || i.product_name || '',
+          product_id: '',
+          name: (i.product_name as string) || '',
           quantity: Number(i.quantity) || 1,
-          price: Number(i.price) || 0,
-          size: (i.size as string) || '',
+          price: Number(i.unit_price) || 0,
+          size: '',
         })),
-        total: Number(o.total_amount) || 0,
+        total: Number(o.subtotal || 0) + Number(o.shipping_charge || 0),
         status: o.status || 'pending',
         payment_mode: o.payment_method || 'cod',
         created_at: o.created_at,
