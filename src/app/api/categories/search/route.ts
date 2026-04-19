@@ -10,11 +10,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Build OR clauses: exact substring + fuzzy vowel-wildcard fallback
+    const orClauses = [`name.ilike.%${q}%`, `name_hindi.ilike.%${q}%`];
+    if (q.length >= 4) {
+      const fuzzy = q.replace(/[aeiou]+/gi, '%');
+      if (fuzzy !== q) orClauses.push(`name.ilike.%${fuzzy}%`, `name_hindi.ilike.%${fuzzy}%`);
+    }
+
     const { data, error } = await supabaseAdmin
       .from('spf_categories')
       .select('id,name,name_hindi,slug,parent_id,level,icon')
       .eq('is_active', true)
-      .or(`name.ilike.%${q}%,name_hindi.ilike.%${q}%`)
+      .or(orClauses.join(','))
       .order('level', { ascending: true })
       .limit(15);
 

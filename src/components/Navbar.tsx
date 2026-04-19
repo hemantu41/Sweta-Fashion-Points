@@ -23,8 +23,6 @@ export default function Navbar() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-
   // Close menus when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -78,11 +76,11 @@ export default function Navbar() {
     }
     searchDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/products?search=${encodeURIComponent(value.trim())}&limit=6`);
+        const res = await fetch(`/api/categories/search?q=${encodeURIComponent(value.trim())}`);
         const data = await res.json();
-        const prods = (data.products || []).slice(0, 6);
-        setSuggestions(prods);
-        setShowDropdown(prods.length > 0);
+        const cats = (data.data || []).slice(0, 7);
+        setSuggestions(cats);
+        setShowDropdown(cats.length > 0);
       } catch {
         setSuggestions([]);
         setShowDropdown(false);
@@ -128,48 +126,33 @@ export default function Navbar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
 
-              {/* Autocomplete Dropdown */}
+              {/* Category Autocomplete Dropdown */}
               {showDropdown && suggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden">
-                  {suggestions.map(product => {
-                    const img = product.mainImage;
-                    const isCloudinary = img && !img.startsWith('/') && !img.startsWith('http');
-                    const imgSrc = isCloudinary
-                      ? `https://res.cloudinary.com/${cloudName}/image/upload/w_80,h_80,c_fill/${img}`
-                      : img;
-                    return (
-                      <Link
-                        key={product.id}
-                        href={`/product/${product.productId || product.id}`}
-                        onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); }}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
-                      >
-                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                          {imgSrc ? (
-                            <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-lg">🛍️</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#2D2D2D] truncate">{product.name}</p>
-                          <p className="text-xs text-[#6B6B6B] capitalize">{product.subCategory || product.category}</p>
-                        </div>
-                        <span className="text-sm font-bold text-[#722F37] flex-shrink-0">
-                          ₹{product.price?.toLocaleString('en-IN')}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                  <button
-                    type="submit"
-                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#F5F0E8] text-sm text-[#722F37] font-medium hover:bg-[#E8E2D9] transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    See all results for &ldquo;{searchQuery}&rdquo;
-                  </button>
+                  <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">
+                    Categories
+                  </p>
+                  {suggestions.map(cat => (
+                    <Link
+                      key={cat.id}
+                      href={`/category/${cat.slug}`}
+                      onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); }}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
+                        <span className="text-lg">{cat.icon || '🛍️'}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
+                        {cat.breadcrumb && cat.breadcrumb !== cat.name && (
+                          <p className="text-xs text-[#6B6B6B]">{cat.breadcrumb}</p>
+                        )}
+                      </div>
+                      <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
@@ -619,48 +602,33 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
 
-                {/* Autocomplete Dropdown - Mobile */}
+                {/* Category Autocomplete Dropdown - Mobile */}
                 {showDropdown && suggestions.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden">
-                    {suggestions.map(product => {
-                      const img = product.mainImage;
-                      const isCloudinary = img && !img.startsWith('/') && !img.startsWith('http');
-                      const imgSrc = isCloudinary
-                        ? `https://res.cloudinary.com/${cloudName}/image/upload/w_80,h_80,c_fill/${img}`
-                        : img;
-                      return (
-                        <Link
-                          key={product.id}
-                          href={`/product/${product.productId || product.id}`}
-                          onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); setIsMenuOpen(false); }}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
-                        >
-                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                            {imgSrc ? (
-                              <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-lg">🛍️</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#2D2D2D] truncate">{product.name}</p>
-                            <p className="text-xs text-[#6B6B6B] capitalize">{product.subCategory || product.category}</p>
-                          </div>
-                          <span className="text-sm font-bold text-[#722F37] flex-shrink-0">
-                            ₹{product.price?.toLocaleString('en-IN')}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                    <button
-                      type="submit"
-                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#F5F0E8] text-sm text-[#722F37] font-medium hover:bg-[#E8E2D9] transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      See all results for &ldquo;{searchQuery}&rdquo;
-                    </button>
+                    <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">
+                      Categories
+                    </p>
+                    {suggestions.map(cat => (
+                      <Link
+                        key={cat.id}
+                        href={`/category/${cat.slug}`}
+                        onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); setIsMenuOpen(false); }}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
+                          <span className="text-lg">{cat.icon || '🛍️'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
+                          {cat.breadcrumb && cat.breadcrumb !== cat.name && (
+                            <p className="text-xs text-[#6B6B6B]">{cat.breadcrumb}</p>
+                          )}
+                        </div>
+                        <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    ))}
                   </div>
                 )}
               </div>
