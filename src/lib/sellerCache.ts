@@ -21,7 +21,7 @@ import { redisGet, redisSetex, redisDel, redisDelPattern, SELLER_CACHE_TTL } fro
 
 // ─── Key helpers ────────────────────────────────────────────────────────────
 
-export type SellerCacheKey = 'profile' | 'products' | 'inventory' | 'orders' | 'pricing' | 'analytics';
+export type SellerCacheKey = 'profile' | 'products' | 'inventory' | 'orders' | 'pricing' | 'analytics' | 'reviews';
 
 export function sellerKey(sellerId: string, type: SellerCacheKey): string {
   return `seller:${sellerId}:${type}`;
@@ -78,8 +78,8 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
 
     console.log(`[SellerCache] Starting cache migration for seller ${sellerId}...`);
 
-    // Fetch all data in parallel
-    const [profileRes, productsRes, ordersRes, analyticsRes] = await Promise.all([
+    // Fetch all data in parallel (7 concurrent queries)
+    const [profileRes, productsRes, ordersRes, analyticsRes, reviewsRes] = await Promise.all([
       // 1. Seller profile + user info
       supabaseAdmin
         .from('spf_sellers')
@@ -99,13 +99,24 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
         .eq('seller_id', sellerId)
         .is('deleted_at', null),
 
-      // 3. Recent 90-day orders where seller is involved
+      // 3. Orders from spf_orders — same table/shape as the orders API route
       supabaseAdmin
-        .from('spf_payment_orders')
-        .select('id, order_number, status, items, delivery_address, created_at, payment_completed_at, packed_at')
-        .contains('items', [{ seller_id: sellerId }])
-        .gte('created_at', ninetyDaysAgo.toISOString())
-        .order('created_at', { ascending: false }),
+        .from('spf_orders')
+        .select(`
+          id, order_number, seller_id, customer_id, status,
+          subtotal, shipping_charge,
+          acceptance_sla_deadline, packing_sla_deadline,
+          packed_at, picked_up_at, delivered_at,
+          shipping_address, created_at,
+          awb_number, courier_partner, tracking_url,
+          spf_order_items (
+            id, product_id, seller_id, product_name,
+            variant_details, sku, quantity, unit_price, total_price
+          )
+        `)
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false })
+        .limit(300),
 
       // 4. Raw earnings rows for analytics (last 90 days)
       supabaseAdmin
@@ -114,6 +125,14 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
         .eq('seller_id', sellerId)
         .gte('order_date', ninetyDaysAgoStr)
         .order('order_date', { ascending: false }),
+
+      // 5. All seller reviews (incl. seller responses) — used by reviews page
+      supabaseAdmin
+        .from('spf_reviews')
+        .select('*, spf_seller_responses(*)')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false })
+        .limit(200),
     ]);
 
     const products = productsRes.data || [];
@@ -137,7 +156,7 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
       priceRange: p.price_range,
     }));
 
-    // Store all 6 keys in Redis in parallel
+    // Store all 7 keys in Redis in parallel
     await Promise.all([
       redisSetex(sellerKey(sellerId, 'profile'),   TTL, JSON.stringify(profileRes.data || null)),
       redisSetex(sellerKey(sellerId, 'products'),  TTL, JSON.stringify(products)),
@@ -145,9 +164,10 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
       redisSetex(sellerKey(sellerId, 'orders'),    TTL, JSON.stringify(ordersRes.data || [])),
       redisSetex(sellerKey(sellerId, 'pricing'),   TTL, JSON.stringify(pricing)),
       redisSetex(sellerKey(sellerId, 'analytics'), TTL, JSON.stringify(analyticsRes.data || [])),
+      redisSetex(sellerKey(sellerId, 'reviews'),   TTL, JSON.stringify(reviewsRes.data || [])),
     ]);
 
-    console.log(`[SellerCache] ✅ Migrated 6 keys for seller ${sellerId} (TTL: ${TTL}s)`);
+    console.log(`[SellerCache] ✅ Migrated 7 keys for seller ${sellerId} (TTL: ${TTL}s)`);
   } catch (err) {
     // Never block login — fail silently
     console.error(`[SellerCache] ❌ Migration failed for seller ${sellerId}:`, err);

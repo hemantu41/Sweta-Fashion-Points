@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
 import { getSession } from '@/lib/session';
+import { migrateSellerDataToCache } from '@/lib/sellerCache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,6 +95,12 @@ export async function POST(request: NextRequest) {
     session.mobile = user.mobile;
     session.isLoggedIn = true;
     await session.save();
+
+    // Fire-and-forget: warm Redis cache for approved sellers
+    // Runs in background — does not delay the login response
+    if (seller && sellerInfo.sellerStatus === 'approved') {
+      migrateSellerDataToCache(seller.id).catch(() => {});
+    }
 
     // Return user without password
     const { password: _, is_admin, user_type, ...userWithoutPassword } = user;

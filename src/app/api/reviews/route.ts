@@ -1,29 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { z } from 'zod';
+import { sellerCacheGet, sellerCacheSet, invalidateSellerKeys } from '@/lib/sellerCache';
 
 // ─── GET /api/reviews ───────────────────────────────────────────────────────
 // Public endpoint — fetch reviews with filtering + pagination
 
+// Helper: compute stats + paginated response from a full reviews array
+function buildReviewsResponse(
+  all: any[],
+  filter: string,
+  page: number,
+  limit: number,
+) {
+  const offset = (page - 1) * limit;
+
+  // Filter
+  let filtered = [...all];
+  if (filter === 'negative') {
+    filtered = filtered.filter(
+      r => r.rating <= 2 && (!r.spf_seller_responses || r.spf_seller_responses.length === 0),
+    );
+  } else if (['1', '2', '3', '4', '5'].includes(filter)) {
+    filtered = filtered.filter(r => r.rating === parseInt(filter));
+  }
+
+  // Stats (always from the full unfiltered array)
+  const ratings = all.map(r => r.rating);
+  const totalCount = ratings.length;
+  const averageRating = totalCount > 0
+    ? +(ratings.reduce((a, b) => a + b, 0) / totalCount).toFixed(1)
+    : 0;
+  const ratingBreakdown: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  ratings.forEach(r => { ratingBreakdown[r] = (ratingBreakdown[r] || 0) + 1; });
+  const pendingResponses = all.filter(
+    r => r.rating <= 2 && (!r.spf_seller_responses || r.spf_seller_responses.length === 0),
+  ).length;
+
+  // Paginate + strip buyer email
+  const paginated = filtered.slice(offset, offset + limit);
+  const safeReviews = paginated.map(({ buyer_email, ...rest }: any) => rest);
+
+  return { reviews: safeReviews, totalCount, filteredCount: filtered.length, averageRating, ratingBreakdown, pendingResponses, page, limit };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const filter = searchParams.get('filter') || 'all';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '10')));
+    const filter   = searchParams.get('filter') || 'all';
+    const page     = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit    = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '10')));
     const sellerId = searchParams.get('sellerId');
-    const offset = (page - 1) * limit;
 
-    // Build query
+    // ── Seller query: cache-first via Redis ──────────────────────────────────
+    if (sellerId) {
+      // Try Redis cache
+      let allSellerReviews = await sellerCacheGet<any[]>(sellerId, 'reviews');
+
+      if (allSellerReviews === null) {
+        // Cache miss — fetch ALL reviews for this seller in one query (up to 200)
+        const { data } = await supabaseAdmin
+          .from('spf_reviews')
+          .select('*, spf_seller_responses(*)')
+          .eq('seller_id', sellerId)
+          .order('created_at', { ascending: false })
+          .limit(200);
+
+        allSellerReviews = data || [];
+        // Populate cache for next 30 min (fire-and-forget)
+        sellerCacheSet(sellerId, 'reviews', allSellerReviews).catch(() => {});
+      }
+
+      return NextResponse.json(buildReviewsResponse(allSellerReviews, filter, page, limit));
+    }
+
+    // ── Public / admin query: no cache (unfiltered cross-seller data) ────────
+    const offset = (page - 1) * limit;
     let query = supabaseAdmin
       .from('spf_reviews')
       .select('*, spf_seller_responses(*)', { count: 'exact' });
 
-    if (sellerId) {
-      query = query.eq('seller_id', sellerId);
-    }
-
-    // Apply filter
     if (filter === 'negative') {
       query = query.lte('rating', 2);
     } else if (['1', '2', '3', '4', '5'].includes(filter)) {
@@ -39,44 +95,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 });
     }
 
-    // Get all reviews for stats (unfiltered for this seller)
-    let statsQuery = supabaseAdmin.from('spf_reviews').select('rating');
-    if (sellerId) statsQuery = statsQuery.eq('seller_id', sellerId);
-    const { data: allReviews } = await statsQuery;
-
+    const { data: allReviews } = await supabaseAdmin.from('spf_reviews').select('rating');
     const ratings = (allReviews || []).map(r => r.rating);
     const totalCount = ratings.length;
     const averageRating = totalCount > 0 ? +(ratings.reduce((a, b) => a + b, 0) / totalCount).toFixed(1) : 0;
-
     const ratingBreakdown: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     ratings.forEach(r => { ratingBreakdown[r] = (ratingBreakdown[r] || 0) + 1; });
-
-    // Count reviews needing response (rating <= 2, no seller response)
     const pendingResponses = (reviews || []).filter(
-      r => r.rating <= 2 && (!r.spf_seller_responses || r.spf_seller_responses.length === 0)
+      r => r.rating <= 2 && (!r.spf_seller_responses || r.spf_seller_responses.length === 0),
     ).length;
-
-    // For "negative" filter, only return those without responses
     let finalReviews = reviews || [];
     if (filter === 'negative') {
-      finalReviews = finalReviews.filter(
-        r => !r.spf_seller_responses || r.spf_seller_responses.length === 0
-      );
+      finalReviews = finalReviews.filter(r => !r.spf_seller_responses || r.spf_seller_responses.length === 0);
     }
-
-    // Strip buyer email from public response
     const safeReviews = finalReviews.map(({ buyer_email, ...rest }) => rest);
 
-    return NextResponse.json({
-      reviews: safeReviews,
-      totalCount,
-      filteredCount: count || 0,
-      averageRating,
-      ratingBreakdown,
-      pendingResponses,
-      page,
-      limit,
-    });
+    return NextResponse.json({ reviews: safeReviews, totalCount, filteredCount: count || 0, averageRating, ratingBreakdown, pendingResponses, page, limit });
+
   } catch (err) {
     console.error('[Reviews API] Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -176,6 +211,9 @@ export async function POST(request: NextRequest) {
       console.error('[Reviews API] POST error:', error);
       return NextResponse.json({ error: 'Failed to submit review' }, { status: 500 });
     }
+
+    // Invalidate seller's reviews cache so dashboard sees the new review immediately
+    invalidateSellerKeys(data.sellerId, 'reviews').catch(() => {});
 
     return NextResponse.json({ success: true, review }, { status: 201 });
   } catch (err) {
