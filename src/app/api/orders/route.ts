@@ -108,6 +108,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const PRIVATE_CC = 'private, max-age=30, stale-while-revalidate=1800';
+
     // ── Seller query: cache-first via Redis ──────────────────────────────────
     if (sellerId) {
       const cached = await sellerCacheGet<any[]>(sellerId, 'orders');
@@ -117,7 +119,7 @@ export async function GET(request: NextRequest) {
           success: true,
           orders: cached.map(transformOrder),
           fromCache: true,
-        });
+        }, { headers: { 'Cache-Control': PRIVATE_CC } });
       }
 
       // Cache miss — fetch from DB
@@ -142,7 +144,7 @@ export async function GET(request: NextRequest) {
         success: true,
         orders: (data || []).map(transformOrder),
         fromCache: false,
-      });
+      }, { headers: { 'Cache-Control': PRIVATE_CC } });
     }
 
     // ── Buyer query: always live (order history is personal, low traffic) ────

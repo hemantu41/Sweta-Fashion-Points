@@ -69,12 +69,14 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');
 
+    const PRIVATE_CC = 'private, max-age=30, stale-while-revalidate=1800';
+
     // ── Cache-first (serves 7d/30d/90d from the same cached 90-day dataset) ─
     const cachedEarnings = await sellerCacheGet<any[]>(sellerId, 'analytics');
     if (cachedEarnings !== null) {
       return NextResponse.json(
         buildAnalyticsResponse(sellerId, cachedEarnings, days),
-        { headers: { 'X-Cache': 'HIT' } }
+        { headers: { 'X-Cache': 'HIT', 'Cache-Control': PRIVATE_CC } }
       );
     }
 
@@ -114,7 +116,7 @@ export async function GET(
         .sort((a, b) => b.value - a.value).slice(0, 6);
     }
 
-    return NextResponse.json(response, { headers: { 'X-Cache': 'MISS' } });
+    return NextResponse.json(response, { headers: { 'X-Cache': 'MISS', 'Cache-Control': PRIVATE_CC } });
   } catch (error: any) {
     console.error('[Seller Analytics API] Error:', error);
     return NextResponse.json({ error: 'Failed to fetch analytics', details: error.message }, { status: 500 });

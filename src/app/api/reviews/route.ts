@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
     const limit    = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '10')));
     const sellerId = searchParams.get('sellerId');
 
+    const PRIVATE_CC = 'private, max-age=30, stale-while-revalidate=1800';
+
     // ── Seller query: cache-first via Redis ──────────────────────────────────
     if (sellerId) {
       // Try Redis cache
@@ -71,7 +73,10 @@ export async function GET(request: NextRequest) {
         sellerCacheSet(sellerId, 'reviews', allSellerReviews).catch(() => {});
       }
 
-      return NextResponse.json(buildReviewsResponse(allSellerReviews, filter, page, limit));
+      return NextResponse.json(
+        buildReviewsResponse(allSellerReviews, filter, page, limit),
+        { headers: { 'Cache-Control': PRIVATE_CC } },
+      );
     }
 
     // ── Public / admin query: no cache (unfiltered cross-seller data) ────────

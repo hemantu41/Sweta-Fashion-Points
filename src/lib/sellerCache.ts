@@ -19,6 +19,31 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { redisGet, redisSetex, redisDel, redisDelPattern, SELLER_CACHE_TTL } from '@/lib/redis';
 
+// ─── L1: In-memory cache ─────────────────────────────────────────────────────
+// Keeps a hot copy of each seller's data inside the serverless instance.
+// Sub-millisecond reads for warm instances; falls back to Redis (L2) on cold start.
+
+interface MemEntry { data: unknown; expiresAt: number; }
+const mem = new Map<string, MemEntry>();
+
+function memGet<T>(key: string): T | null {
+  const e = mem.get(key);
+  if (!e) return null;
+  if (Date.now() > e.expiresAt) { mem.delete(key); return null; }
+  return e.data as T;
+}
+
+function memSet(key: string, data: unknown, ttlSeconds: number): void {
+  mem.set(key, { data, expiresAt: Date.now() + ttlSeconds * 1000 });
+}
+
+function memDelGlob(pattern: string): void {
+  const re = new RegExp(
+    '^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$',
+  );
+  for (const key of mem.keys()) { if (re.test(key)) mem.delete(key); }
+}
+
 // ─── Key helpers ────────────────────────────────────────────────────────────
 
 export type SellerCacheKey = 'profile' | 'products' | 'inventory' | 'orders' | 'pricing' | 'analytics' | 'reviews';
@@ -29,36 +54,53 @@ export function sellerKey(sellerId: string, type: SellerCacheKey): string {
 
 // ─── Read / Write ────────────────────────────────────────────────────────────
 
-/** Cache-first read. Returns parsed JSON or null (triggers DB fallback). */
+/** Cache-first read: L1 (memory) → L2 (Redis) → null */
 export async function sellerCacheGet<T>(sellerId: string, type: SellerCacheKey): Promise<T | null> {
-  const raw = await redisGet(sellerKey(sellerId, type));
+  const key = sellerKey(sellerId, type);
+
+  // L1 — sub-millisecond on warm instances
+  const l1 = memGet<T>(key);
+  if (l1 !== null) {
+    console.log(`[SellerCache] L1 hit: ${key}`);
+    return l1;
+  }
+
+  // L2 — Redis (~30 ms, shared across instances)
+  const raw = await redisGet(key);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as T;
+    const parsed = JSON.parse(raw) as T;
+    memSet(key, parsed, SELLER_CACHE_TTL); // warm L1 for next request
+    console.log(`[SellerCache] L2 hit: ${key}`);
+    return parsed;
   } catch {
     return null;
   }
 }
 
-/** Write to cache with 30-min TTL. Fails silently. */
+/** Write to both L1 (memory) and L2 (Redis) with 30-min TTL. */
 export async function sellerCacheSet(sellerId: string, type: SellerCacheKey, data: unknown): Promise<void> {
-  await redisSetex(sellerKey(sellerId, type), SELLER_CACHE_TTL, JSON.stringify(data));
+  const key = sellerKey(sellerId, type);
+  memSet(key, data, SELLER_CACHE_TTL);
+  await redisSetex(key, SELLER_CACHE_TTL, JSON.stringify(data));
 }
 
 // ─── Invalidation ────────────────────────────────────────────────────────────
 
-/** Delete specific cache keys for a seller (e.g. after product update). */
+/** Delete specific cache keys from L1 + L2 (e.g. after product update). */
 export async function invalidateSellerKeys(sellerId: string, ...types: SellerCacheKey[]): Promise<void> {
   if (types.length === 0) return;
   const keys = types.map(t => sellerKey(sellerId, t));
-  await redisDel(...keys);
+  keys.forEach(k => mem.delete(k));    // L1
+  await redisDel(...keys);             // L2
   console.log(`[SellerCache] Invalidated keys for seller ${sellerId}:`, types.join(', '));
 }
 
-/** Delete ALL cached data for a seller (e.g. on logout). */
+/** Delete ALL cached data for a seller from L1 + L2 (e.g. on logout). */
 export async function clearAllSellerCache(sellerId: string): Promise<void> {
-  const count = await redisDelPattern(`seller:${sellerId}:*`);
-  console.log(`[SellerCache] Cleared ${count} keys for seller ${sellerId}`);
+  memDelGlob(`seller:${sellerId}:*`);  // L1
+  const count = await redisDelPattern(`seller:${sellerId}:*`); // L2
+  console.log(`[SellerCache] Cleared ${count} Redis keys for seller ${sellerId}`);
 }
 
 // ─── Migration (called fire-and-forget on login) ─────────────────────────────
@@ -69,8 +111,6 @@ export async function clearAllSellerCache(sellerId: string): Promise<void> {
  * Fails silently on any error.
  */
 export async function migrateSellerDataToCache(sellerId: string): Promise<void> {
-  const TTL = SELLER_CACHE_TTL;
-
   try {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -156,18 +196,18 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
       priceRange: p.price_range,
     }));
 
-    // Store all 7 keys in Redis in parallel
+    // Store all 7 keys in both L1 (memory) and L2 (Redis) in parallel
     await Promise.all([
-      redisSetex(sellerKey(sellerId, 'profile'),   TTL, JSON.stringify(profileRes.data || null)),
-      redisSetex(sellerKey(sellerId, 'products'),  TTL, JSON.stringify(products)),
-      redisSetex(sellerKey(sellerId, 'inventory'), TTL, JSON.stringify(inventory)),
-      redisSetex(sellerKey(sellerId, 'orders'),    TTL, JSON.stringify(ordersRes.data || [])),
-      redisSetex(sellerKey(sellerId, 'pricing'),   TTL, JSON.stringify(pricing)),
-      redisSetex(sellerKey(sellerId, 'analytics'), TTL, JSON.stringify(analyticsRes.data || [])),
-      redisSetex(sellerKey(sellerId, 'reviews'),   TTL, JSON.stringify(reviewsRes.data || [])),
+      sellerCacheSet(sellerId, 'profile',   profileRes.data || null),
+      sellerCacheSet(sellerId, 'products',  products),
+      sellerCacheSet(sellerId, 'inventory', inventory),
+      sellerCacheSet(sellerId, 'orders',    ordersRes.data || []),
+      sellerCacheSet(sellerId, 'pricing',   pricing),
+      sellerCacheSet(sellerId, 'analytics', analyticsRes.data || []),
+      sellerCacheSet(sellerId, 'reviews',   reviewsRes.data || []),
     ]);
 
-    console.log(`[SellerCache] ✅ Migrated 7 keys for seller ${sellerId} (TTL: ${TTL}s)`);
+    console.log(`[SellerCache] ✅ Migrated 7 keys for seller ${sellerId} (TTL: ${SELLER_CACHE_TTL}s)`);
   } catch (err) {
     // Never block login — fail silently
     console.error(`[SellerCache] ❌ Migration failed for seller ${sellerId}:`, err);

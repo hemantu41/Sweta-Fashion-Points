@@ -18,6 +18,7 @@ export async function GET(
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // ── Cache-first (only for default unfiltered requests) ─────────────────
+    const PRIVATE_CC = 'private, max-age=30, stale-while-revalidate=1800';
     const isDefaultQuery = !paymentStatus && !startDate && !endDate && limit === 100 && offset === 0;
     if (isDefaultQuery) {
       const cachedEarnings = await sellerCacheGet<any[]>(sellerId, 'analytics');
@@ -31,7 +32,7 @@ export async function GET(
           total: cachedEarnings.length,
           summary: { totalEarnings: total, totalCommission: commission, pendingEarnings: pending, paidEarnings: paid },
           fromCache: true,
-        }, { headers: { 'X-Cache': 'HIT' } });
+        }, { headers: { 'X-Cache': 'HIT', 'Cache-Control': PRIVATE_CC } });
       }
     }
 
@@ -82,7 +83,7 @@ export async function GET(
       total: count || 0,
       summary: { totalEarnings, totalCommission, pendingEarnings, paidEarnings },
       fromCache: false,
-    }, { headers: { 'X-Cache': 'MISS' } });
+    }, { headers: { 'X-Cache': 'MISS', 'Cache-Control': PRIVATE_CC } });
   } catch (error: any) {
     console.error('[Seller Earnings API] GET Error:', error);
     return NextResponse.json(
