@@ -40,7 +40,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return <>{children}</>;
   }
 
-  // Seller pages have their own custom nav and footer
+  // Seller dashboard has its own layout (sidebar + topbar) — no Navbar/Footer
+  if (pathname?.startsWith('/seller/dashboard')) {
+    return <>{children}</>;
+  }
+
+  // Seller landing/register pages have their own layout
   if (pathname === '/seller' || pathname === '/seller/register') {
     return <>{children}</>;
   }
