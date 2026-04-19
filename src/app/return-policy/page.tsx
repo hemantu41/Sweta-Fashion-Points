@@ -70,8 +70,8 @@ export default function ReturnPolicyPage() {
                 <ol className="list-decimal pl-6 space-y-3 text-[#2D2D2D]">
                   <li>
                     {language === 'hi'
-                      ? 'support@fashionpoints.co.in पर ईमेल करें या +91 82941 53256 पर कॉल करें'
-                      : 'Email us at support@fashionpoints.co.in or call +91 82941 53256'}
+                      ? 'info@instafashionpoints.com पर ईमेल करें या +91 82941 53256 पर कॉल करें'
+                      : 'Email us at info@instafashionpoints.com or call +91 82941 53256'}
                   </li>
                   <li>
                     {language === 'hi'
@@ -103,7 +103,7 @@ export default function ReturnPolicyPage() {
               </h2>
               <div className="space-y-3 text-[#2D2D2D]">
                 <p>
-                  <strong>{language === 'hi' ? 'स्थानीय रिटर्न (Amas, Gaya के भीतर 15 किमी):' : 'Local Returns (Within 15km of Amas, Gaya):'}</strong>
+                  <strong>{language === 'hi' ? 'स्थानीय रिटर्न (हैदराबाद के भीतर 15 किमी):' : 'Local Returns (Within 15km of Hyderabad):'}</strong>
                 </p>
                 <ul className="list-disc pl-6 space-y-2">
                   <li>{language === 'hi' ? 'मुफ्त पिकअप सेवा उपलब्ध है' : 'Free pickup service available'}</li>
@@ -131,8 +131,8 @@ export default function ReturnPolicyPage() {
               <div className="bg-[#722F37] bg-opacity-10 rounded-lg p-4 mt-4 border border-[#722F37]">
                 <p className="text-[#722F37] font-semibold">
                   {language === 'hi'
-                    ? '📦 रिटर्न पता: Insta Fashion Points, Amas, Gaya, Bihar - 824219'
-                    : '📦 Return Address: Insta Fashion Points, Amas, Gaya, Bihar - 824219'}
+                    ? '📦 रिटर्न पता: Insta Fashion Points, Hyderabad, Telangana – 500032'
+                    : '📦 Return Address: Insta Fashion Points, Hyderabad, Telangana – 500032'}
                 </p>
               </div>
             </section>
@@ -280,7 +280,7 @@ export default function ReturnPolicyPage() {
                     : 'For any questions regarding returns, please contact us:'}
                 </p>
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? '📧 ईमेल:' : '📧 Email:'}</strong> support@fashionpoints.co.in
+                  <strong>{language === 'hi' ? '📧 ईमेल:' : '📧 Email:'}</strong> info@instafashionpoints.com
                 </p>
                 <p className="mb-2">
                   <strong>{language === 'hi' ? '📞 फोन:' : '📞 Phone:'}</strong> +91 82941 53256
@@ -292,7 +292,7 @@ export default function ReturnPolicyPage() {
                     : 'Monday - Saturday, 10:00 AM - 6:00 PM'}
                 </p>
                 <p>
-                  <strong>{language === 'hi' ? '📍 पता:' : '📍 Address:'}</strong> Amas, Gaya, Bihar - 824219
+                  <strong>{language === 'hi' ? '📍 पता:' : '📍 Address:'}</strong> Hyderabad, Telangana – 500032
                 </p>
               </div>
             </section>

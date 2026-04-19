@@ -29,8 +29,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'Insta Fashion Points में आपका स्वागत है। fashionpoints.co.in ("वेबसाइट") का उपयोग करके, आप इन नियमों और शर्तों से बाध्य होने के लिए सहमत हैं। कृपया सावधानीपूर्वक पढ़ें।'
-                  : 'Welcome to Insta Fashion Points. By using fashionpoints.co.in ("Website"), you agree to be bound by these Terms and Conditions. Please read carefully.'}
+                  ? 'Insta Fashion Points में आपका स्वागत है। instafashionpoints.com ("वेबसाइट") का उपयोग करके, आप इन नियमों और शर्तों से बाध्य होने के लिए सहमत हैं। कृपया सावधानीपूर्वक पढ़ें।'
+                  : 'Welcome to Insta Fashion Points. By using instafashionpoints.com ("Website"), you agree to be bound by these Terms and Conditions. Please read carefully.'}
               </p>
             </section>
 
@@ -74,7 +74,7 @@ export default function TermsAndConditionsPage() {
               </h2>
               <ul className="list-disc pl-6 space-y-2 text-[#2D2D2D]">
                 <li>{language === 'hi' ? 'हम भारत भर में डिलीवरी करते हैं' : 'We deliver across India'}</li>
-                <li>{language === 'hi' ? 'Amas, Gaya के भीतर स्थानीय डिलीवरी (15 किमी): 1-2 दिन' : 'Local delivery within Amas, Gaya (15km): 1-2 days'}</li>
+                <li>{language === 'hi' ? 'हैदराबाद के भीतर स्थानीय डिलीवरी (15 किमी): 1-2 दिन' : 'Local delivery within Hyderabad (15km): 1-2 days'}</li>
                 <li>{language === 'hi' ? 'कूरियर डिलीवरी (बाकी भारत): 5-7 व्यावसायिक दिन' : 'Courier delivery (Rest of India): 5-7 business days'}</li>
                 <li>{language === 'hi' ? 'डिलीवरी समय अनुमानित है और गारंटीकृत नहीं है' : 'Delivery times are estimated and not guaranteed'}</li>
               </ul>
@@ -152,16 +152,16 @@ export default function TermsAndConditionsPage() {
               </h2>
               <div className="bg-[#F0EDE8] rounded-lg p-6 text-[#2D2D2D]">
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? 'पता:' : 'Address:'}</strong> Amas, Gaya, Bihar - 824219
+                  <strong>{language === 'hi' ? 'पता:' : 'Address:'}</strong> Hyderabad, Telangana – 500032
                 </p>
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? 'ईमेल:' : 'Email:'}</strong> support@fashionpoints.co.in
+                  <strong>{language === 'hi' ? 'ईमेल:' : 'Email:'}</strong> info@instafashionpoints.com
                 </p>
                 <p className="mb-2">
                   <strong>{language === 'hi' ? 'फोन:' : 'Phone:'}</strong> +91 82941 53256
                 </p>
                 <p>
-                  <strong>{language === 'hi' ? 'वेबसाइट:' : 'Website:'}</strong> fashionpoints.co.in
+                  <strong>{language === 'hi' ? 'वेबसाइट:' : 'Website:'}</strong> instafashionpoints.com
                 </p>
               </div>
             </section>
@@ -172,8 +172,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'ये नियम और शर्तें भारत के कानूनों द्वारा शासित होंगी। किसी भी विवाद के मामले में, Gaya, Bihar की अदालतों का विशेष क्षेत्राधिकार होगा।'
-                  : 'These Terms and Conditions shall be governed by the laws of India. In case of any dispute, the courts of Gaya, Bihar shall have exclusive jurisdiction.'}
+                  ? 'ये नियम और शर्तें भारत के कानूनों द्वारा शासित होंगी। किसी भी विवाद के मामले में, हैदराबाद, तेलंगाना की अदालतों का विशेष क्षेत्राधिकार होगा।'
+                  : 'These Terms and Conditions shall be governed by the laws of India. In case of any dispute, the courts of Hyderabad, Telangana shall have exclusive jurisdiction.'}
               </p>
             </section>
 
