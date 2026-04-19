@@ -115,20 +115,39 @@ function getBannerLink(banner: Banner, tree: CategoryNode[]): string {
 
 export default function BannerCarousel() {
   const { language } = useLanguage();
-  const { tree } = useCategories();
+  const { tree, loading } = useCategories();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   // Key increments each time a slide becomes active — forces animation classes to restart
   const [slideKey, setSlideKey] = useState(0);
 
+  // Only show category banners whose L1 category exists in the live tree.
+  // Welcome banner (no catKeyword) always shows.
+  // While the tree is still loading, show only the welcome banner to avoid flicker.
+  const visibleBanners = loading
+    ? banners.filter((b) => !b.catKeyword)
+    : banners.filter((b) => {
+        if (!b.catKeyword) return true;
+        return tree.some((node) =>
+          node.name.toLowerCase().includes(b.catKeyword!.toLowerCase())
+        );
+      });
+
+  // Clamp currentSlide whenever visibleBanners length shrinks
+  useEffect(() => {
+    if (currentSlide >= visibleBanners.length) {
+      setCurrentSlide(0);
+    }
+  }, [visibleBanners.length, currentSlide]);
+
   useEffect(() => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % banners.length);
+      setCurrentSlide((prev) => (prev + 1) % visibleBanners.length);
       setSlideKey((k) => k + 1);
     }, 6000);
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, visibleBanners.length]);
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
@@ -137,14 +156,14 @@ export default function BannerCarousel() {
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
-  const nextSlide = () => goToSlide((currentSlide + 1) % banners.length);
-  const prevSlide = () => goToSlide((currentSlide - 1 + banners.length) % banners.length);
+  const nextSlide = () => goToSlide((currentSlide + 1) % visibleBanners.length);
+  const prevSlide = () => goToSlide((currentSlide - 1 + visibleBanners.length) % visibleBanners.length);
 
   return (
     <section className="relative w-full">
       <div className="relative h-[500px] sm:h-[600px] md:h-[700px] overflow-hidden">
 
-        {banners.map((banner, index) => {
+        {visibleBanners.map((banner, index) => {
           const isActive = index === currentSlide;
           return (
             <div
@@ -177,11 +196,11 @@ export default function BannerCarousel() {
                     {language === 'hi' ? banner.tagHi : banner.tag}
                   </span>
 
-                  {/* Heading */}
+                  {/* Heading — brand maroon with strong shadow for contrast on photo backgrounds */}
                   <h2
                     key={`title-${slideKey}-${banner.id}`}
-                    className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-white leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
-                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 2px 12px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.95)' }}
+                    className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-[#722F37] leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
+                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 0 40px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.4)' }}
                   >
                     {language === 'hi' ? banner.titleHi : banner.title}
                   </h2>
@@ -234,7 +253,7 @@ export default function BannerCarousel() {
 
         {/* Progress indicators — aligned with text left padding */}
         <div className="absolute bottom-6 left-8 sm:left-14 lg:left-24 z-30 flex gap-2 items-center">
-          {banners.map((_, index) => (
+          {visibleBanners.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
