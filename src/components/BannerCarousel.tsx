@@ -208,21 +208,10 @@ export default function BannerCarousel() {
                   {/* Subtitle */}
                   <p
                     key={`sub-${slideKey}-${banner.id}`}
-                    className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 mb-8 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
+                    className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
                   >
                     {language === 'hi' ? banner.subtitleHi : banner.subtitle}
                   </p>
-
-                  {/* CTA button — rounded, brand color, hover animation */}
-                  <span
-                    key={`cta-${slideKey}-${banner.id}`}
-                    className={`banner-cta self-start inline-flex items-center gap-2.5 px-8 py-3.5 bg-white text-[#1A1A1A] text-[11px] font-semibold tracking-[0.18em] uppercase rounded-full shadow-lg transition-all duration-300 hover:bg-[#722F37] hover:text-white hover:shadow-xl hover:-translate-y-0.5 ${isActive ? '' : 'opacity-0'}`}
-                  >
-                    {language === 'hi' ? 'अभी खरीदें' : 'Shop Now'}
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </span>
                 </div>
               </Link>
             </div>
