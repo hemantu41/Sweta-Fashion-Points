@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { useCategories, type CategoryNode } from '@/hooks/useCategories';
 
 interface Banner {
   id: string;
@@ -14,6 +15,7 @@ interface Banner {
   tagHi: string;
   link: string;
   bgImage: string;
+  catKeyword?: string; // used to find matching L1 category slug dynamically
 }
 
 const banners: Banner[] = [
@@ -21,8 +23,8 @@ const banners: Banner[] = [
     id: 'welcome',
     title: 'Your Style,\nYour Story',
     titleHi: 'आपकी शैली,\nआपकी कहानी',
-    subtitle: 'Amas, Gaya, Bihar',
-    subtitleHi: 'अमास, गया, बिहार',
+    subtitle: 'Premium Fashion for Everyone',
+    subtitleHi: 'हर किसी के लिए प्रीमियम फैशन',
     tag: 'Welcome',
     tagHi: 'स्वागत',
     link: '/',
@@ -38,6 +40,7 @@ const banners: Banner[] = [
     tagHi: 'पुरुष',
     link: '/mens',
     bgImage: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'men',
   },
   {
     id: 'womens',
@@ -49,6 +52,7 @@ const banners: Banner[] = [
     tagHi: 'महिला',
     link: '/womens',
     bgImage: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'women',
   },
   {
     id: 'sarees',
@@ -60,6 +64,7 @@ const banners: Banner[] = [
     tagHi: 'साड़ी',
     link: '/sarees',
     bgImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'saree',
   },
   {
     id: 'kids',
@@ -71,6 +76,7 @@ const banners: Banner[] = [
     tagHi: 'बच्चे',
     link: '/kids',
     bgImage: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'kid',
   },
   {
     id: 'beauty',
@@ -82,6 +88,7 @@ const banners: Banner[] = [
     tagHi: 'ब्यूटी',
     link: '/makeup',
     bgImage: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'beauty',
   },
   {
     id: 'footwear',
@@ -93,11 +100,22 @@ const banners: Banner[] = [
     tagHi: 'जूते',
     link: '/footwear',
     bgImage: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'footwear',
   },
 ];
 
+// Resolves the banner link to a live category-tree page when possible.
+// Searches L1 nodes whose name contains the keyword; falls back to banner.link.
+function getBannerLink(banner: Banner, tree: CategoryNode[]): string {
+  if (!banner.catKeyword || tree.length === 0) return banner.link;
+  const kw = banner.catKeyword.toLowerCase();
+  const match = tree.find((node) => node.name.toLowerCase().includes(kw));
+  return match ? `/category/${match.slug}` : banner.link;
+}
+
 export default function BannerCarousel() {
   const { language } = useLanguage();
+  const { tree } = useCategories();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   // Key increments each time a slide becomes active — forces animation classes to restart
@@ -143,12 +161,12 @@ export default function BannerCarousel() {
               />
 
               {/* Dark gradient — left-heavy for text legibility */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/10 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15 pointer-events-none" />
               {/* Bottom fade for indicator readability */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
               {/* Clickable text area */}
-              <Link href={banner.link} className="absolute inset-0">
+              <Link href={getBannerLink(banner, tree)} className="absolute inset-0">
                 <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
 
                   {/* Collection tag */}
@@ -163,7 +181,7 @@ export default function BannerCarousel() {
                   <h2
                     key={`title-${slideKey}-${banner.id}`}
                     className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-white leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
-                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
+                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 2px 12px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.95)' }}
                   >
                     {language === 'hi' ? banner.titleHi : banner.title}
                   </h2>
