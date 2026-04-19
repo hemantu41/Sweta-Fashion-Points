@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -18,12 +18,21 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const { tree: navTree } = useCategories();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  // Close user menu when clicking outside
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+  // Close menus when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
+      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -59,8 +68,31 @@ export default function Navbar() {
     setIsUserMenuOpen(false);
   };
 
+  const handleSearchInput = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (value.trim().length < 2) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(value.trim())}&limit=6`);
+        const data = await res.json();
+        const prods = (data.products || []).slice(0, 6);
+        setSuggestions(prods);
+        setShowDropdown(prods.length > 0);
+      } catch {
+        setSuggestions([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowDropdown(false);
     if (searchQuery.trim()) {
       window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
     }
@@ -77,11 +109,13 @@ export default function Navbar() {
 
           {/* Search Bar - Desktop */}
           <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-md mx-6">
-            <div className="relative w-full">
+            <div className="relative w-full" ref={searchContainerRef}>
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
+                onKeyDown={(e) => { if (e.key === 'Escape') setShowDropdown(false); }}
                 placeholder="Search for products..."
                 className="w-full px-4 py-2.5 pl-11 pr-4 bg-[#F5F0E8] border border-[#E8E2D9] rounded-full text-sm text-[#2D2D2D] placeholder-[#6B6B6B] focus:outline-none focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
               />
@@ -93,6 +127,51 @@ export default function Navbar() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+
+              {/* Autocomplete Dropdown */}
+              {showDropdown && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden">
+                  {suggestions.map(product => {
+                    const img = product.mainImage;
+                    const isCloudinary = img && !img.startsWith('/') && !img.startsWith('http');
+                    const imgSrc = isCloudinary
+                      ? `https://res.cloudinary.com/${cloudName}/image/upload/w_80,h_80,c_fill/${img}`
+                      : img;
+                    return (
+                      <Link
+                        key={product.id}
+                        href={`/product/${product.productId || product.id}`}
+                        onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); }}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                      >
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
+                          {imgSrc ? (
+                            <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-lg">🛍️</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#2D2D2D] truncate">{product.name}</p>
+                          <p className="text-xs text-[#6B6B6B] capitalize">{product.subCategory || product.category}</p>
+                        </div>
+                        <span className="text-sm font-bold text-[#722F37] flex-shrink-0">
+                          ₹{product.price?.toLocaleString('en-IN')}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#F5F0E8] text-sm text-[#722F37] font-medium hover:bg-[#E8E2D9] transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    See all results for &ldquo;{searchQuery}&rdquo;
+                  </button>
+                </div>
+              )}
             </div>
           </form>
 
@@ -526,7 +605,8 @@ export default function Navbar() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setShowDropdown(false); }}
                   placeholder="Search for products..."
                   className="w-full px-4 py-3 pl-11 pr-4 bg-[#F5F0E8] border border-[#E8E2D9] rounded-full text-sm text-[#2D2D2D] placeholder-[#6B6B6B] focus:outline-none focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                 />
@@ -538,6 +618,51 @@ export default function Navbar() {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
+
+                {/* Autocomplete Dropdown - Mobile */}
+                {showDropdown && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden">
+                    {suggestions.map(product => {
+                      const img = product.mainImage;
+                      const isCloudinary = img && !img.startsWith('/') && !img.startsWith('http');
+                      const imgSrc = isCloudinary
+                        ? `https://res.cloudinary.com/${cloudName}/image/upload/w_80,h_80,c_fill/${img}`
+                        : img;
+                      return (
+                        <Link
+                          key={product.id}
+                          href={`/product/${product.productId || product.id}`}
+                          onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); setIsMenuOpen(false); }}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                        >
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
+                            {imgSrc ? (
+                              <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-lg">🛍️</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#2D2D2D] truncate">{product.name}</p>
+                            <p className="text-xs text-[#6B6B6B] capitalize">{product.subCategory || product.category}</p>
+                          </div>
+                          <span className="text-sm font-bold text-[#722F37] flex-shrink-0">
+                            ₹{product.price?.toLocaleString('en-IN')}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                    <button
+                      type="submit"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#F5F0E8] text-sm text-[#722F37] font-medium hover:bg-[#E8E2D9] transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      See all results for &ldquo;{searchQuery}&rdquo;
+                    </button>
+                  </div>
+                )}
               </div>
             </form>
 

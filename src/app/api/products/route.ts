@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive');
     const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
     const search = searchParams.get('search'); // NEW: Search query
+    const limit = searchParams.get('limit');   // Optional result limit (e.g. autocomplete)
     const userLat = searchParams.get('userLat');   // Location-based filter
     const userLng = searchParams.get('userLng');   // Location-based filter
     // Note: _t parameter is ignored for cache key (used only for browser cache busting)
@@ -76,9 +77,30 @@ export async function GET(request: NextRequest) {
         query = query.is('deleted_at', null);
       }
       if (search) {
-        // Search in name, description, fabric, category, and subcategory
-        // Using .or() to search across multiple fields
-        query = query.or(`name.ilike.%${search}%,name_hi.ilike.%${search}%,description.ilike.%${search}%,description_hi.ilike.%${search}%,fabric.ilike.%${search}%,fabric_hi.ilike.%${search}%,category.ilike.%${search}%,sub_category.ilike.%${search}%`);
+        // Strategy 1: Exact substring match across all searchable fields (includes product_id)
+        const orClauses: string[] = [
+          `name.ilike.%${search}%`,
+          `name_hi.ilike.%${search}%`,
+          `description.ilike.%${search}%`,
+          `description_hi.ilike.%${search}%`,
+          `fabric.ilike.%${search}%`,
+          `fabric_hi.ilike.%${search}%`,
+          `category.ilike.%${search}%`,
+          `sub_category.ilike.%${search}%`,
+          `product_id.ilike.%${search}%`,
+        ];
+
+        // Strategy 2: Fuzzy typo-tolerance — replace vowel groups with SQL wildcard %
+        // e.g. "tshart" → "tsh%rt" → matches "tshirts"
+        // Only applies to terms ≥4 chars that contain vowels
+        if (search.length >= 4) {
+          const fuzzy = search.replace(/[aeiou]+/gi, '%');
+          if (fuzzy !== search) {
+            orClauses.push(`name.ilike.%${fuzzy}%`, `name_hi.ilike.%${fuzzy}%`);
+          }
+        }
+
+        query = query.or(orClauses.join(','));
       }
 
       // IMPORTANT: Only show approved products for customer-facing queries
@@ -90,6 +112,10 @@ export async function GET(request: NextRequest) {
         // Customer-facing queries should also exclude deleted products
         query = query.is('deleted_at', null);
       }
+
+      // Apply optional limit (used by autocomplete dropdown)
+      const lim = limit ? parseInt(limit) : 0;
+      if (lim > 0) query = query.limit(lim);
 
       const { data: products, error } = await query.order('created_at', { ascending: false });
 
