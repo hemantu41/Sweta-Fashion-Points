@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { notifySellerTicketUpdate } from '@/lib/notifications/sellerNotify';
+import { notifySellerTicketUpdate } from '@/lib/notifications/ticketNotify';
 
 export const dynamic = 'force-dynamic';
 
