@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    // Serve WebP / AVIF instead of JPEG/PNG — typically 30-50 % smaller
+    formats: ['image/avif', 'image/webp'],
+    // Cache optimised images in Next.js image server for 30 days
+    // (browser re-validates via ETag, so stale images are never shown)
+    minimumCacheTTL: 2592000,
     remotePatterns: [
       {
         protocol: 'https',
@@ -15,6 +20,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '*.supabase.co',
+        pathname: '/**',
+      },
+      {
+        // Banner carousel background images
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
         pathname: '/**',
       },
     ],

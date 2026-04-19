@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { invalidateSellerKeys } from '@/lib/sellerCache';
+import { publicCacheGet, publicCacheSet, publicInvalidate, publicDel } from '@/lib/publicCache';
 
 // GET /api/products/[id] - Fetch single product by ID
 export async function GET(
@@ -9,6 +10,22 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Determine if this is a public (customer) request — no seller/admin params
+    const sellerIdParam = request.nextUrl.searchParams.get('sellerId');
+    const adminView = request.nextUrl.searchParams.get('adminView') === 'true';
+    const isPublicView = !sellerIdParam && !adminView;
+
+    // ── Public cache check (L1 memory → L2 Redis) ──────────────────────────
+    if (isPublicView) {
+      const cacheKey = `pub:product:${id}`;
+      const cached = await publicCacheGet<Record<string, unknown>>(cacheKey, 600);
+      if (cached) {
+        return NextResponse.json({ product: cached }, {
+          headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+        });
+      }
+    }
 
     const PRODUCT_SELECT = `
         *,
@@ -54,11 +71,7 @@ export async function GET(
     }
 
     // Allow sellers to view their own products regardless of approval status
-    const sellerIdParam = request.nextUrl.searchParams.get('sellerId');
     const isSellerViewingOwnProduct = sellerIdParam && product.seller_id === sellerIdParam;
-
-    // Allow admin to view any product regardless of approval/active status
-    const adminView = request.nextUrl.searchParams.get('adminView') === 'true';
 
     // Only show approved and active products to customers
     if (!adminView && !isSellerViewingOwnProduct && (product.approval_status !== 'approved' || !product.is_active)) {
@@ -103,7 +116,17 @@ export async function GET(
       } : null,
     };
 
-    return NextResponse.json({ product: transformedProduct });
+    // ── Populate public cache (fire-and-forget) ─────────────────────────────
+    if (isPublicView && product.approval_status === 'approved' && product.is_active) {
+      const cacheKey = `pub:product:${id}`;
+      publicCacheSet(cacheKey, transformedProduct, 600).catch(() => {});
+    }
+
+    const cacheHeaders = isPublicView
+      ? { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' }
+      : { 'Cache-Control': 'private, no-store' };
+
+    return NextResponse.json({ product: transformedProduct }, { headers: cacheHeaders });
   } catch (error) {
     console.error('[Product API] Error:', error);
     return NextResponse.json(
@@ -184,9 +207,9 @@ export async function PUT(
       );
     }
 
-    // Clear product cache so customers see updated status immediately
-    const { productCache } = await import('@/lib/cache');
-    productCache.clear();
+    // Invalidate public cache (product listings + this product detail)
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${id}`).catch(() => {});
 
     // Invalidate seller Redis cache for products + inventory + pricing
     if (updatedProduct?.seller_id) {
@@ -241,8 +264,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update product' }, { status: 500 });
     }
 
-    const { productCache } = await import('@/lib/cache');
-    productCache.clear();
+    // Invalidate public cache (stock change is immediately visible to customers)
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${id}`).catch(() => {});
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
@@ -384,9 +408,9 @@ export async function DELETE(
       }
     }
 
-    // Clear in-memory product cache
-    const { productCache } = await import('@/lib/cache');
-    productCache.clear();
+    // Invalidate public cache (product listings + this product detail)
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${productId}`).catch(() => {});
 
     // Invalidate seller Redis cache for products + inventory + pricing
     if (product?.seller_id) {

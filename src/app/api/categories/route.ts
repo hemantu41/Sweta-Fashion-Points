@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
     if (tree) {
       const cacheKey = 'tree';
       const cached = await categoryCacheGet<any[]>(cacheKey);
-      if (cached) return NextResponse.json({ success: true, data: cached, source: 'cache' });
+      const CDN_TREE = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600' };
+      if (cached) return NextResponse.json({ success: true, data: cached, source: 'cache' }, { headers: CDN_TREE });
 
       const { data, error } = await supabaseAdmin
         .from('spf_categories')
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       if (error) throw error;
       const treeData = buildTree(data as DBCategory[]);
       await categoryCacheSet(cacheKey, treeData);
-      return NextResponse.json({ success: true, data: treeData, source: 'db' });
+      return NextResponse.json({ success: true, data: treeData, source: 'db' }, { headers: CDN_TREE });
     }
 
     // ── Find by slug ──
@@ -72,10 +73,10 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Filtered query ──
-    // Build cache key from params
+    const CDN_FILTER = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' };
     const cacheKey = `filter:${level || 'all'}:${parentId || 'root'}:${activeOnly}`;
     const cached = await categoryCacheGet<DBCategory[]>(cacheKey);
-    if (cached) return NextResponse.json({ success: true, data: cached, source: 'cache' });
+    if (cached) return NextResponse.json({ success: true, data: cached, source: 'cache' }, { headers: CDN_FILTER });
 
     let query = supabaseAdmin
       .from('spf_categories')
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     await categoryCacheSet(cacheKey, data);
-    return NextResponse.json({ success: true, data, source: 'db' });
+    return NextResponse.json({ success: true, data, source: 'db' }, { headers: CDN_FILTER });
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to fetch categories';
