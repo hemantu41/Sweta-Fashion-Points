@@ -47,7 +47,7 @@ import type { AdminPage, Order, NDRRecord } from '@/types/admin';
 
 // ─── Module 1: Dashboard Home ───────────────────────────────────────────────
 
-function DashboardHome() {
+function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }) {
   const { t } = useAdminLang();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -102,12 +102,36 @@ function DashboardHome() {
         </div>
       </div>
 
-      {/* Row 1: 4 StatCards */}
+      {/* Row 1: 4 StatCards — all clickable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title={t('dash.totalOrders')} value={formatNumber(stats.totalOrders)} change={12} icon={<ShoppingCart size={20} />} color="#5B1A3A" />
-        <StatCard title={t('dash.totalRevenue')} value={formatINR(stats.totalRevenue)} change={15} icon={<IndianRupee size={20} />} color="#C49A3C" />
-        <StatCard title={t('dash.pendingApprovals')} value={String(stats.pendingApprovals)} icon={<ClipboardCheck size={20} />} color="#f59e0b" />
-        <StatCard title={t('dash.returnRate')} value={`${stats.returnRate}%`} change={-1.5} icon={<RotateCcw size={20} />} color="#ef4444" />
+        <StatCard
+          title={t('dash.totalOrders')}
+          value={formatNumber(stats.totalOrders)}
+          icon={<ShoppingCart size={20} />}
+          color="#5B1A3A"
+          onClick={() => onNavigate('orders')}
+        />
+        <StatCard
+          title={t('dash.totalRevenue')}
+          value={formatINR(stats.totalRevenue)}
+          icon={<IndianRupee size={20} />}
+          color="#C49A3C"
+          onClick={() => onNavigate('payments')}
+        />
+        <StatCard
+          title={t('dash.pendingApprovals')}
+          value={String(stats.pendingApprovals)}
+          icon={<ClipboardCheck size={20} />}
+          color="#f59e0b"
+          onClick={() => window.location.href = '/admin/qc'}
+        />
+        <StatCard
+          title={t('dash.returnRate')}
+          value={`${stats.returnRate}%`}
+          icon={<RotateCcw size={20} />}
+          color="#ef4444"
+          onClick={() => onNavigate('returns')}
+        />
       </div>
 
       {/* Account Health Score — full width */}
@@ -126,7 +150,7 @@ function DashboardHome() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">{t('dash.recentOrders')}</h3>
-            <button className="text-xs text-[#C49A3C] font-medium hover:underline">{t('dash.viewAll')}</button>
+            <button onClick={() => onNavigate('orders')} className="text-xs text-[#C49A3C] font-medium hover:underline">{t('dash.viewAll')}</button>
           </div>
           <OrdersTable orders={orders} compact />
         </div>
@@ -2629,7 +2653,7 @@ function DashboardContent() {
       case 'returns': return <ReturnAnalytics />;
       case 'categories': return <CategoryManagement />;
       case 'settings': return <SettingsPage />;
-      default: return <DashboardHome />;
+      default: return <DashboardHome onNavigate={setActivePage} />;
     }
   };
 
