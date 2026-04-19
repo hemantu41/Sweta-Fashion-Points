@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
     // edge cache without hitting the origin — achieving near-zero latency.
     const cacheHeaders = isPublicQuery
       ? { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' }
-      : { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=1800' };
+      : { 'Cache-Control': 'private, no-store' };
 
     return NextResponse.json({ products: transformedProducts }, { headers: cacheHeaders });
   } catch (error) {

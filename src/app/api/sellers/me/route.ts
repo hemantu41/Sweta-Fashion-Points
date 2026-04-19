@@ -19,8 +19,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const PRIVATE_CC = 'private, max-age=30, stale-while-revalidate=1800';
-
     // ── Cache-first: check Redis if we already have sellerId ──────────────
     if (sellerId) {
       const cached = await sellerCacheGet<any>(sellerId, 'profile');
@@ -47,7 +45,7 @@ export async function GET(request: NextRequest) {
             createdAt: s.created_at, updatedAt: s.updated_at, user: s.user,
           },
           fromCache: true,
-        }, { headers: { 'Cache-Control': PRIVATE_CC } });
+        });
       }
     }
 
@@ -134,7 +132,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       seller: transformedSeller,
-    }, { headers: { 'Cache-Control': PRIVATE_CC } });
+    });
   } catch (error) {
     console.error('Get seller me error:', error);
     return NextResponse.json(
