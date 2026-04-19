@@ -101,22 +101,19 @@ export default function ReturnPolicyPage() {
               <h2 className="text-2xl font-bold text-[#722F37] mb-4">
                 {language === 'hi' ? '4. रिटर्न शिपिंग' : '4. Return Shipping'}
               </h2>
-              <div className="space-y-3 text-[#2D2D2D]">
-                <ul className="list-disc pl-6 space-y-2">
-                <ul className="list-disc pl-6 space-y-2">
-                  <li>{language === 'hi' ? 'ग्राहक को रिटर्न शिपिंग की व्यवस्था करनी होगी' : 'Customer must arrange return shipping'}</li>
-                  <li>
-                    {language === 'hi'
-                      ? 'दोषपूर्ण/क्षतिग्रस्त उत्पादों के लिए, हम शिपिंग शुल्क वापस करेंगे'
-                      : 'For defective/damaged products, we will reimburse shipping charges'}
-                  </li>
-                  <li>
-                    {language === 'hi'
-                      ? 'मन बदलने पर, ग्राहक शिपिंग शुल्क वहन करता है'
-                      : 'For change of mind, customer bears shipping charges'}
-                  </li>
-                </ul>
-              </div>
+              <ul className="list-disc pl-6 space-y-2 text-[#2D2D2D]">
+                <li>{language === 'hi' ? 'ग्राहक को रिटर्न शिपिंग की व्यवस्था करनी होगी' : 'Customer must arrange return shipping'}</li>
+                <li>
+                  {language === 'hi'
+                    ? 'दोषपूर्ण/क्षतिग्रस्त उत्पादों के लिए, हम शिपिंग शुल्क वापस करेंगे'
+                    : 'For defective/damaged products, we will reimburse shipping charges'}
+                </li>
+                <li>
+                  {language === 'hi'
+                    ? 'मन बदलने पर, ग्राहक शिपिंग शुल्क वहन करता है'
+                    : 'For change of mind, customer bears shipping charges'}
+                </li>
+              </ul>
 
               <div className="bg-[#722F37] bg-opacity-10 rounded-lg p-4 mt-4 border border-[#722F37]">
                 <p className="text-[#722F37] font-semibold">
