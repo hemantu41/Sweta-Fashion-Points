@@ -5,7 +5,7 @@
  */
 import { redisGet, redisSetex, redisDelPattern } from '@/lib/redis';
 
-export const CATEGORY_CACHE_TTL = 1800;
+export const CATEGORY_CACHE_TTL = 300; // 5 minutes
 
 export function categoryKey(type: string): string {
   return `categories:${type}`;

@@ -109,4 +109,4 @@ export async function redisDelPattern(pattern: string): Promise<number> {
   }
 }
 
-export const SELLER_CACHE_TTL = 1800; // 30 minutes
+export const SELLER_CACHE_TTL = 300; // 5 minutes

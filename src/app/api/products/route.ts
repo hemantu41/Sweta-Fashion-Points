@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
     // Use two-tier public cache (L1 memory → L2 Redis → DB) for public queries.
     // Search / location / seller / admin queries always hit the DB directly.
     let transformedProducts = isPublicQuery
-      ? await publicGet(cacheKey, fetchProducts, 1800)
+      ? await publicGet(cacheKey, fetchProducts, 300)
       : await fetchProducts();
 
     // Apply 35 km distance filter when user coordinates are provided

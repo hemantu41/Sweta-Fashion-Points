@@ -2,7 +2,7 @@
  * Seller Redis Cache Layer — Insta Fashion Points
  *
  * Key namespace:  seller:{sellerId}:{dataType}
- * TTL:            1800 seconds (30 minutes)
+ * TTL:            300 seconds (5 minutes)
  *
  * Data types cached:
  *   profile    → seller profile + user info from spf_sellers + spf_users
