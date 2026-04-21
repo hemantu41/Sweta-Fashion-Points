@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { addPickupLocation } from '@/lib/shiprocket';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 // Log a seller status change to history
 async function logStatusHistory(
@@ -235,6 +236,7 @@ export async function PUT(
           }
         })();
 
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller approved successfully' });
       }
 
@@ -254,6 +256,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'rejected', userId, reason);
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller rejected' });
       }
 
@@ -273,6 +276,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'suspended', userId, reason);
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller suspended' });
       }
 
@@ -293,6 +297,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, 'Reactivated by admin');
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller reactivated successfully' });
       }
     }
@@ -347,6 +352,7 @@ export async function PUT(
       );
     }
 
+    invalidateSellerKeys(sellerId, 'profile').catch(() => {});
     return NextResponse.json({
       success: true,
       message: 'Seller updated successfully',
@@ -393,6 +399,7 @@ export async function DELETE(
       );
     }
 
+    invalidateSellerKeys(sellerId, 'profile').catch(() => {});
     return NextResponse.json({
       success: true,
       message: 'Seller deleted successfully',

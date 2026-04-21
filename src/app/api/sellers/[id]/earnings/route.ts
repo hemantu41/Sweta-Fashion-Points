@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sellerCacheGet, sellerCacheSet } from '@/lib/sellerCache';
+import { sellerCacheGet, sellerCacheSet, invalidateSellerKeys } from '@/lib/sellerCache';
 
 // GET /api/sellers/[id]/earnings - Fetch seller earnings with filters
 export async function GET(
@@ -139,6 +139,7 @@ export async function PUT(
 
     if (error) throw error;
 
+    invalidateSellerKeys(sellerId, 'analytics').catch(() => {});
     return NextResponse.json({
       success: true,
       message: `${data.length} earning(s) updated to ${paymentStatus}`,
