@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { publicInvalidate } from '@/lib/publicCache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,6 +75,9 @@ export async function POST(request: NextRequest) {
       .select('id');
 
     if (error) throw error;
+
+    // Invalidate public product listings so new products are visible to buyers immediately
+    publicInvalidate('pub:products:*').catch(() => {});
 
     return NextResponse.json({ inserted: data?.length ?? 0 });
   } catch (err: unknown) {

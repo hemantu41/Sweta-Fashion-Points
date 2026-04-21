@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { productCache } from '@/lib/cache';
 import { sendEmail } from '@/lib/email';
 import { invalidateSellerKeys } from '@/lib/sellerCache';
+import { publicInvalidate, publicDel } from '@/lib/publicCache';
 import { productApprovedEmail, productRejectedEmail } from '@/lib/emailTemplates/productEmails';
 
 // GET /api/admin/products/review - Fetch products pending approval
@@ -111,6 +112,10 @@ export async function PUT(request: NextRequest) {
 
     // Invalidate seller's Redis cache so they see the updated status immediately
     invalidateSellerKeys(product.seller_id, 'products', 'inventory', 'pricing').catch(() => {});
+
+    // Invalidate public product cache so buyers see the change immediately
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${product.id}`).catch(() => {});
 
     // ── Send email + in-app notification (non-blocking) ──
     void (async () => {

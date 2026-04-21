@@ -4,6 +4,7 @@ import { getProductByIdAdmin, rejectProduct } from '@/lib/qc/db';
 import { dispatchQCNotification } from '@/lib/qc/notify';
 import { VALID_REASON_IDS } from '@/lib/qc/constants';
 import type { RejectionReasonId, Severity } from '@/types/qc.types';
+import { publicInvalidate, publicDel } from '@/lib/publicCache';
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
@@ -118,6 +119,10 @@ export async function POST(request: NextRequest) {
 
     const notifyFired = notifyResults.filter((r) => r.status === 'sent').map((r) => r.event);
     const notifyFailed = notifyResults.filter((r) => r.status === 'failed').map((r) => r.event);
+
+    // Invalidate public product cache so rejected product is removed from buyer view immediately
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${product.id}`).catch(() => {});
 
     return NextResponse.json({
       success: true,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getProductByIdAdmin, approveProduct } from '@/lib/qc/db';
 import { dispatchQCNotification } from '@/lib/qc/notify';
+import { publicInvalidate, publicDel } from '@/lib/publicCache';
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 
@@ -80,6 +81,10 @@ export async function POST(request: NextRequest) {
 
     const notifyFired = notifyResults.filter((r) => r.status === 'sent').map((r) => r.event);
     const notifyFailed = notifyResults.filter((r) => r.status === 'failed').map((r) => r.event);
+
+    // Invalidate public product cache so buyers see the approved product immediately
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${product.id}`).catch(() => {});
 
     return NextResponse.json({
       success: true,
