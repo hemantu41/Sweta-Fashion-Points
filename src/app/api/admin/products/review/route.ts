@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { productCache } from '@/lib/cache';
 import { sendEmail } from '@/lib/email';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 import { productApprovedEmail, productRejectedEmail } from '@/lib/emailTemplates/productEmails';
 
 // GET /api/admin/products/review - Fetch products pending approval
@@ -107,6 +108,9 @@ export async function PUT(request: NextRequest) {
     // Clear product cache after approval/rejection
     productCache.clear();
     console.log('[Admin Product Review API] Cache cleared after product approval/rejection');
+
+    // Invalidate seller's Redis cache so they see the updated status immediately
+    invalidateSellerKeys(product.seller_id, 'products', 'inventory', 'pricing').catch(() => {});
 
     // ── Send email + in-app notification (non-blocking) ──
     void (async () => {

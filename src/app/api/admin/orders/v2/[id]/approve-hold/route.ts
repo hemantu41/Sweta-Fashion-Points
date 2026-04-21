@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 export async function POST(
   _req: NextRequest,
@@ -16,7 +17,7 @@ export async function POST(
 
     const { data: order, error: fetchErr } = await supabaseAdmin
       .from('spf_orders')
-      .select('status, risk_status')
+      .select('status, risk_status, seller_id')
       .eq('id', id)
       .single();
 
@@ -50,6 +51,9 @@ export async function POST(
           created_at:  now,
         }),
     ]);
+
+    // Invalidate seller's orders cache so they see the hold clearance immediately
+    invalidateSellerKeys(o.seller_id, 'orders').catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

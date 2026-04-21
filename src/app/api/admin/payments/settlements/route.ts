@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,9 +125,13 @@ export async function PATCH(request: NextRequest) {
       .from('spf_seller_earnings')
       .update(updateData)
       .in('id', earningIds)
-      .select('id');
+      .select('id, seller_id');
 
     if (error) throw error;
+
+    // Invalidate analytics cache for each affected seller (fire-and-forget)
+    const sellerIds = [...new Set((data || []).map((r: any) => r.seller_id).filter(Boolean))];
+    sellerIds.forEach(sid => invalidateSellerKeys(sid, 'analytics').catch(() => {}));
 
     return NextResponse.json({ updated: data?.length ?? 0 });
   } catch (err: unknown) {

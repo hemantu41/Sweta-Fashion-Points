@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -18,7 +19,7 @@ export async function POST(
 
     const { data: order, error: fetchErr } = await supabaseAdmin
       .from('spf_orders')
-      .select('status, acceptance_sla_deadline, packing_sla_deadline')
+      .select('status, seller_id, acceptance_sla_deadline, packing_sla_deadline')
       .eq('id', id)
       .single();
 
@@ -61,6 +62,9 @@ export async function POST(
           created_at:  now,
         }),
     ]);
+
+    // Invalidate seller's orders cache so they see the updated SLA deadline immediately
+    invalidateSellerKeys(o.seller_id, 'orders').catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

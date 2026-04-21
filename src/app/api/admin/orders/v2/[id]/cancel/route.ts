@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 const NON_CANCELLABLE = ['DELIVERED', 'RETURNED', 'CANCELLED'];
 
@@ -20,7 +21,7 @@ export async function POST(
 
     const { data: order, error: fetchErr } = await supabaseAdmin
       .from('spf_orders')
-      .select('status')
+      .select('status, seller_id')
       .eq('id', id)
       .single();
 
@@ -53,6 +54,9 @@ export async function POST(
           created_at:  now,
         }),
     ]);
+
+    // Invalidate seller's orders cache so they see the cancellation immediately
+    invalidateSellerKeys((order as any).seller_id, 'orders').catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
