@@ -12,7 +12,6 @@
  * └─────────────────────────────────────────────────────────────────┘
  */
 
-import prisma from '@/lib/prisma';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendEmail } from '@/lib/email';
 
@@ -65,47 +64,55 @@ interface OrderSummary {
 async function fetchSellerInfo(sellerId: string): Promise<SellerInfo | null> {
   const { data } = await supabaseAdmin
     .from('spf_sellers')
-    .select('business_name, business_email, phone')
+    .select('business_name, business_email, business_phone')
     .eq('id', sellerId)
     .maybeSingle();
   if (!data) return null;
   return {
-    email:        (data as any).business_email ?? '',
-    businessName: (data as any).business_name  ?? 'Seller',
-    phone:        (data as any).phone          ?? '',
+    email:        (data as any).business_email  ?? '',
+    businessName: (data as any).business_name   ?? 'Seller',
+    phone:        (data as any).business_phone  ?? '',
   };
 }
 
 async function fetchOrderSummary(orderId: string): Promise<OrderSummary | null> {
-  const order = await prisma.order.findUnique({
-    where:   { id: orderId },
-    include: { items: true },
-  });
+  const { data: order } = await supabaseAdmin
+    .from('spf_orders')
+    .select(`
+      id, order_number, seller_id, subtotal, shipping_charge,
+      shipping_address, awb_number, acceptance_sla_deadline, packing_sla_deadline,
+      spf_order_items ( product_name, quantity, total_price )
+    `)
+    .eq('id', orderId)
+    .single();
+
   if (!order) return null;
 
-  const addr = order.shippingAddress as { name?: string } | null;
-  const total = Number(order.subtotal) + Number(order.shippingCharge);
+  const o     = order as any;
+  const addr  = o.shipping_address as { name?: string } | null;
+  const total = Number(o.subtotal) + Number(o.shipping_charge);
+  const items = o.spf_order_items || [];
 
-  const itemsHtml = order.items.map((item) => `
+  const itemsHtml = items.map((item: any) => `
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid ${C.border};">${item.productName}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid ${C.border};">${item.product_name}</td>
       <td style="padding:8px 12px;border-bottom:1px solid ${C.border};text-align:center;">${item.quantity}</td>
       <td style="padding:8px 12px;border-bottom:1px solid ${C.border};text-align:right;">
-        ₹${Number(item.totalPrice).toLocaleString('en-IN')}
+        ₹${Number(item.total_price).toLocaleString('en-IN')}
       </td>
     </tr>`).join('');
 
   return {
-    id:          order.id,
-    orderNumber: order.orderNumber,
+    id:           o.id,
+    orderNumber:  o.order_number,
     total,
-    itemCount:   order.items.length,
+    itemCount:    items.length,
     itemsHtml,
     customerName: addr?.name ?? 'Customer',
-    sellerId:    order.sellerId,
-    awbNumber:   order.awbNumber,
-    acceptanceDeadline: order.acceptanceSlaDeadline,
-    packingDeadline:    order.packingSlaDeadline,
+    sellerId:     o.seller_id,
+    awbNumber:    o.awb_number ?? null,
+    acceptanceDeadline: o.acceptance_sla_deadline ? new Date(o.acceptance_sla_deadline) : null,
+    packingDeadline:    o.packing_sla_deadline    ? new Date(o.packing_sla_deadline)    : null,
   };
 }
 
