@@ -46,10 +46,8 @@ export default function CheckoutPage() {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login?callbackUrl=/checkout');
-      return;
-    }
+    // Auth is enforced by middleware — no client-side redirect needed.
+    // Only load addresses once the user object is available.
     if (user?.id) {
       fetchAddresses();
       setFormData(prev => ({
@@ -58,7 +56,7 @@ export default function CheckoutPage() {
         phone: user.mobile || '',
       }));
     }
-  }, [user, isAuthenticated, isLoading, router]);
+  }, [user]);
 
   useEffect(() => {
     if (mounted && items.length === 0) {
@@ -150,16 +148,6 @@ export default function CheckoutPage() {
     }));
     router.push(`/payment?method=${selectedPayment}`);
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) return null;
 
   if (isFetching) {
     return (

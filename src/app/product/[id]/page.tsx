@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -98,6 +98,7 @@ export default function ProductDetailPage() {
   const params    = useParams();
   const rawId     = params?.id;
   const productId = Array.isArray(rawId) ? rawId[0] : rawId ?? '';
+  const router    = useRouter();
 
   const { addToCart } = useCart();
 
@@ -165,6 +166,13 @@ export default function ProductDetailPage() {
     addToCart(product as any, selectedSize || undefined);
     setCartMsg('Added to cart!');
     setTimeout(() => setCartMsg(''), 2500);
+  }
+
+  // ── Buy Now — add to cart then go straight to checkout ───────────────────
+  function handleBuyNow() {
+    if (!product) return;
+    addToCart(product as any, selectedSize || undefined);
+    router.push('/checkout');
   }
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -596,7 +604,7 @@ export default function ProductDetailPage() {
                 Add to cart
               </button>
               <button
-                onClick={handleAddToCart}
+                onClick={handleBuyNow}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   padding: 12, borderRadius: 8,
