@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createShipment, generateLabel, schedulePickup, addPickupLocation } from '@/lib/shiprocket';
+import { notifySellerPickupScheduled } from '@/lib/notifications/sellerNotify';
 
 // POST /api/seller/orders/[id]/ship
 // Called when seller enters package dimensions and clicks "Generate Label & Schedule Pickup"
@@ -257,6 +258,9 @@ export async function POST(
         description: `Shipment created. Courier: ${shipmentResult.courierName}. AWB: ${shipmentResult.awbNumber}`,
       });
     }
+
+    // 10. Email seller about scheduled pickup — fire-and-forget
+    void notifySellerPickupScheduled(orderId);
 
     return NextResponse.json({
       success: true,

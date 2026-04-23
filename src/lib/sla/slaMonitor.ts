@@ -2,9 +2,9 @@
  * SLA Monitor — scans active orders every 15 minutes (via /api/cron/sla-check).
  *
  * SLA rules:
- *   ACCEPTANCE SLA: Seller must accept within 2 hrs of order CONFIRMATION.
+ *   ACCEPTANCE SLA: Seller must accept within 24 hrs of order CONFIRMATION.
  *                   Status tracked: SELLER_NOTIFIED → acceptance_sla_deadline
- *   PACKING SLA:    Seller must pack within 4 hrs of acceptance.
+ *   PACKING SLA:    Seller must pack within 48 hrs of order placement.
  *                   Status tracked: ACCEPTED        → packing_sla_deadline
  *
  * Actions:
@@ -12,7 +12,6 @@
  *   Deadline passed         → auto-cancel, notify seller + customer, refund if prepaid
  */
 
-import prisma from '@/lib/prisma';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { redisGet, redisSetex } from '@/lib/redis';
 import {
@@ -42,79 +41,63 @@ export interface SlaCheckResult {
  * Safe to call multiple times — Redis flags prevent duplicate warnings.
  */
 export async function checkAllActiveSLAs(): Promise<SlaCheckResult> {
-  const now         = new Date();
-  const warnCutoff  = new Date(now.getTime() + WARN_WINDOW_MS); // now + 30 min
+  const now        = new Date();
+  const warnCutoff = new Date(now.getTime() + WARN_WINDOW_MS); // now + 30 min
 
   let warned   = 0;
   let breached = 0;
 
-  // ── Acceptance SLA: orders waiting for seller to accept ───────────────────
-  const [acceptWarn, acceptBreach] = await Promise.all([
-    // Warning window: deadline is within 30 min but hasn't passed yet
-    prisma.order.findMany({
-      where: {
-        status:                'SELLER_NOTIFIED' as any,
-        acceptanceSlaDeadline: { gt: now, lte: warnCutoff },
-      },
-      select: { id: true, orderNumber: true, acceptanceSlaDeadline: true },
-    }),
-    // Breached: deadline has already passed
-    prisma.order.findMany({
-      where: {
-        status:                'SELLER_NOTIFIED' as any,
-        acceptanceSlaDeadline: { lte: now },
-      },
-      select: {
-        id: true, orderNumber: true, customerId: true,
-        transactionId: true, paymentMethod: true,
-        subtotal: true, shippingCharge: true,
-      },
-    }),
-  ]);
+  // ── Acceptance SLA: warning window ────────────────────────────────────────
+  const { data: acceptWarn } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id, order_number, acceptance_sla_deadline')
+    .eq('status', 'SELLER_NOTIFIED')
+    .gt('acceptance_sla_deadline', now.toISOString())
+    .lte('acceptance_sla_deadline', warnCutoff.toISOString());
 
-  // ── Packing SLA: orders accepted but not yet packed ───────────────────────
-  const [packWarn, packBreach] = await Promise.all([
-    prisma.order.findMany({
-      where: {
-        status:              'ACCEPTED' as any,
-        packingSlaDeadline:  { gt: now, lte: warnCutoff },
-      },
-      select: { id: true, orderNumber: true, packingSlaDeadline: true },
-    }),
-    prisma.order.findMany({
-      where: {
-        status:             'ACCEPTED' as any,
-        packingSlaDeadline: { lte: now },
-      },
-      select: {
-        id: true, orderNumber: true, customerId: true,
-        transactionId: true, paymentMethod: true,
-        subtotal: true, shippingCharge: true,
-      },
-    }),
-  ]);
+  // ── Acceptance SLA: breached ──────────────────────────────────────────────
+  const { data: acceptBreach } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id, order_number, customer_id, transaction_id, payment_method, subtotal, shipping_charge')
+    .eq('status', 'SELLER_NOTIFIED')
+    .lte('acceptance_sla_deadline', now.toISOString());
+
+  // ── Packing SLA: warning window ───────────────────────────────────────────
+  const { data: packWarn } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id, order_number, packing_sla_deadline')
+    .eq('status', 'ACCEPTED')
+    .gt('packing_sla_deadline', now.toISOString())
+    .lte('packing_sla_deadline', warnCutoff.toISOString());
+
+  // ── Packing SLA: breached ─────────────────────────────────────────────────
+  const { data: packBreach } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id, order_number, customer_id, transaction_id, payment_method, subtotal, shipping_charge')
+    .eq('status', 'ACCEPTED')
+    .lte('packing_sla_deadline', now.toISOString());
 
   const totalChecked =
-    acceptWarn.length + acceptBreach.length +
-    packWarn.length   + packBreach.length;
+    (acceptWarn?.length ?? 0) + (acceptBreach?.length ?? 0) +
+    (packWarn?.length   ?? 0) + (packBreach?.length   ?? 0);
 
   // ── Send warnings ─────────────────────────────────────────────────────────
-  for (const order of acceptWarn) {
+  for (const order of acceptWarn ?? []) {
     const sent = await sendWarningOnce(order.id, 'ACCEPTANCE');
     if (sent) warned++;
   }
-  for (const order of packWarn) {
+  for (const order of packWarn ?? []) {
     const sent = await sendWarningOnce(order.id, 'PACKING');
     if (sent) warned++;
   }
 
   // ── Handle breaches ───────────────────────────────────────────────────────
-  for (const order of acceptBreach) {
-    await handleSlaBreached(order, 'ACCEPTANCE');
+  for (const order of acceptBreach ?? []) {
+    await handleSlaBreached(order as BreachOrder, 'ACCEPTANCE');
     breached++;
   }
-  for (const order of packBreach) {
-    await handleSlaBreached(order, 'PACKING');
+  for (const order of packBreach ?? []) {
+    await handleSlaBreached(order as BreachOrder, 'PACKING');
     breached++;
   }
 
@@ -144,13 +127,13 @@ async function sendWarningOnce(orderId: string, slaType: SlaType): Promise<boole
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface BreachOrder {
-  id:            string;
-  orderNumber:   string;
-  customerId:    string;
-  transactionId: string | null;
-  paymentMethod: string | null;
-  subtotal:      any; // Prisma Decimal
-  shippingCharge:any;
+  id:             string;
+  order_number:   string;
+  customer_id:    string;
+  transaction_id: string | null;
+  payment_method: string | null;
+  subtotal:       any;
+  shipping_charge:any;
 }
 
 async function handleSlaBreached(order: BreachOrder, slaType: SlaType): Promise<void> {
@@ -162,50 +145,48 @@ async function handleSlaBreached(order: BreachOrder, slaType: SlaType): Promise<
 
   console.log(`[SLAMonitor] SLA BREACH orderId=${order.id} type=${slaType}`);
 
-  // ── 1. Cancel the order + write history ────────────────────────────────────
   const note = slaType === 'ACCEPTANCE'
-    ? 'Auto-cancelled: seller did not accept within 2-hour SLA window'
-    : 'Auto-cancelled: seller did not pack within 4-hour SLA window';
+    ? 'Auto-cancelled: seller did not accept within 24-hour SLA window'
+    : 'Auto-cancelled: seller did not pack within 48-hour SLA window';
 
-  await prisma.$transaction([
-    prisma.order.update({
-      where: { id: order.id },
-      data:  { status: 'CANCELLED' as any },
-    }),
-    prisma.orderStatusHistory.create({
-      data: {
-        orderId:    order.id,
-        fromStatus: slaType === 'ACCEPTANCE' ? 'SELLER_NOTIFIED' as any : 'ACCEPTED' as any,
-        toStatus:   'CANCELLED' as any,
-        actorType:  'SYSTEM'   as any,
-        note,
-      },
-    }),
-  ]);
+  // ── 1. Cancel the order ────────────────────────────────────────────────────
+  await supabaseAdmin
+    .from('spf_orders')
+    .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+    .eq('id', order.id);
 
-  // ── 2. Notify seller ────────────────────────────────────────────────────────
+  // ── 2. Write status history ────────────────────────────────────────────────
+  await supabaseAdmin.from('spf_order_status_history').insert({
+    order_id:    order.id,
+    from_status: slaType === 'ACCEPTANCE' ? 'SELLER_NOTIFIED' : 'ACCEPTED',
+    to_status:   'CANCELLED',
+    actor_type:  'SYSTEM',
+    note,
+  });
+
+  // ── 3. Notify seller ────────────────────────────────────────────────────────
   await notifySellerSlaBreached(order.id, slaType);
 
-  // ── 3. Notify customer + trigger refund ────────────────────────────────────
-  const isPrepaid = order.paymentMethod !== null && order.paymentMethod !== 'COD';
-  const orderTotal = Number(order.subtotal) + Number(order.shippingCharge);
+  // ── 4. Notify customer + trigger refund ────────────────────────────────────
+  const isPrepaid  = order.payment_method !== null && order.payment_method !== 'COD';
+  const orderTotal = Number(order.subtotal) + Number(order.shipping_charge);
 
-  const customerEmail = await getCustomerEmail(order.customerId);
+  const customerEmail = await getCustomerEmail(order.customer_id);
   if (customerEmail) {
     await notifyCustomerOrderCancelled(
       order.id,
       customerEmail,
-      order.orderNumber,
+      order.order_number,
       orderTotal,
       isPrepaid,
     );
   }
 
-  if (isPrepaid && order.transactionId) {
-    await triggerPgRefund(order.transactionId, Math.round(orderTotal * 100));
+  if (isPrepaid && order.transaction_id) {
+    await triggerPgRefund(order.transaction_id, Math.round(orderTotal * 100));
   }
 
-  // ── 4. Increment seller penalty count ─────────────────────────────────────
+  // ── 5. Increment seller penalty count ─────────────────────────────────────
   await incrementSellerPenalty(order.id);
 }
 
@@ -232,7 +213,6 @@ async function triggerPgRefund(paymentId: string, amountPaise: number): Promise<
   }
 
   try {
-    // Using fetch directly (avoids Razorpay SDK import overhead in cron)
     const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
     const res = await fetch(
       `https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/refund`,
@@ -264,27 +244,28 @@ async function triggerPgRefund(paymentId: string, amountPaise: number): Promise<
 
 async function incrementSellerPenalty(orderId: string): Promise<void> {
   try {
-    // Fetch sellerId from the order
-    const order = await prisma.order.findUnique({
-      where:  { id: orderId },
-      select: { sellerId: true },
-    });
-    if (!order) return;
+    const { data: order } = await supabaseAdmin
+      .from('spf_orders')
+      .select('seller_id')
+      .eq('id', orderId)
+      .single();
 
-    // Increment penalty_count on spf_sellers (column may not exist yet — graceful)
-    await supabaseAdmin.rpc('increment_seller_penalty', { p_seller_id: order.sellerId })
+    if (!order) return;
+    const sellerId = (order as any).seller_id;
+
+    await supabaseAdmin
+      .rpc('increment_seller_penalty', { p_seller_id: sellerId })
       .then(({ error }) => {
         if (error) {
           // RPC not found → fall back to raw increment
           return supabaseAdmin
             .from('spf_sellers')
             .update({ penalty_count: supabaseAdmin.rpc('coalesce_plus', {} as any) } as any)
-            .eq('id', order.sellerId);
+            .eq('id', sellerId);
         }
       })
       .catch(() => {
-        // Column or RPC does not exist yet — log and move on
-        console.warn(`[SLAMonitor] Could not increment penalty for seller ${order.sellerId} (column may not exist yet)`);
+        console.warn(`[SLAMonitor] Could not increment penalty for seller ${sellerId} (column may not exist yet)`);
       });
   } catch (err: any) {
     console.warn('[SLAMonitor] incrementSellerPenalty:', err?.message);

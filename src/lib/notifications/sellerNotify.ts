@@ -218,7 +218,7 @@ export async function notifySellerNewOrder(orderId: string): Promise<void> {
     const body = `
       <p style="color:${C.text};font-size:15px;margin:0 0 20px;">
         Hello <strong>${seller.businessName}</strong>,<br/>
-        A new order has been placed. Please accept it within 2 hours to avoid auto-cancellation.
+        A new order has been placed. Please accept it within 24 hours to avoid auto-cancellation.
       </p>
       <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:20px;">
         ${infoRow('Order Number', order.orderNumber)}
@@ -251,7 +251,7 @@ export async function notifySellerNewOrder(orderId: string): Promise<void> {
       </div>
       <div style="background:${C.warnBg};border-left:4px solid ${C.warn};padding:12px 16px;border-radius:4px;margin-bottom:24px;">
         <span style="font-size:13px;color:${C.warn};font-weight:600;">
-          ⏱ Accept deadline: ${deadline} — Missed deadline will auto-cancel the order.
+          ⏱ Accept deadline: ${deadline} — Missing this deadline will auto-cancel the order.
         </span>
       </div>
       ${ctaButton('Accept Order on Dashboard →', DASHBOARD_URL)}`;
@@ -340,8 +340,8 @@ export async function notifySellerSlaBreached(
     if (!seller?.email) return;
 
     const reason = slaType === 'ACCEPTANCE'
-      ? 'You did not accept the order within the 2-hour window.'
-      : 'The order was not packed within the 4-hour window after acceptance.';
+      ? 'You did not accept the order within the 24-hour window.'
+      : 'The order was not packed within the 48-hour window after acceptance.';
 
     const body = `
       <div style="background:${C.dangerBg};border:2px solid ${C.danger};border-radius:8px;padding:20px;text-align:center;margin-bottom:24px;">
@@ -476,6 +476,96 @@ export async function notifyCustomerOrderCancelled(
     });
   } catch (err: any) {
     console.error('[sellerNotify] notifyCustomerOrderCancelled error:', err?.message);
+  }
+}
+
+/**
+ * Notify the customer when their order is confirmed (email only).
+ * Called immediately after order creation / payment capture.
+ */
+export async function notifyCustomerNewOrder(orderId: string): Promise<void> {
+  try {
+    const order = await fetchOrderSummary(orderId);
+    if (!order) return;
+
+    // Fetch customer email
+    const { data: orderRow } = await supabaseAdmin
+      .from('spf_orders')
+      .select('customer_id, payment_method')
+      .eq('id', orderId)
+      .single();
+
+    if (!orderRow) return;
+    const o = orderRow as any;
+
+    const { data: userRow } = await supabaseAdmin
+      .from('spf_users')
+      .select('email')
+      .eq('id', o.customer_id)
+      .maybeSingle();
+
+    const customerEmail = (userRow as any)?.email as string | undefined;
+    if (!customerEmail) {
+      console.warn(`[sellerNotify] No email for customer ${o.customer_id}`);
+      return;
+    }
+
+    const paymentLabel = o.payment_method === 'COD' ? 'Cash on Delivery' : 'Online Payment';
+    const estimatedDelivery = new Date(Date.now() + 5 * 86400 * 1000).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+    });
+
+    const body = `
+      <p style="color:${C.text};font-size:15px;margin:0 0 20px;">
+        Hello <strong>${order.customerName}</strong>,<br/>
+        Thank you for your order! We have received it and the seller will confirm it shortly.
+      </p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:20px;">
+        ${infoRow('Order Number', order.orderNumber)}
+        ${infoRow('Order Total', `₹${order.total.toLocaleString('en-IN')}`)}
+        ${infoRow('Payment', paymentLabel)}
+        ${infoRow('Est. Delivery', estimatedDelivery)}
+      </table>
+      <div style="background:${C.altBg};border-radius:8px;padding:16px;margin-bottom:24px;">
+        <div style="font-size:13px;font-weight:700;color:${C.maroon};margin-bottom:10px;">
+          Your Items (${order.itemCount})
+        </div>
+        <table cellpadding="0" cellspacing="0" style="width:100%;">
+          <thead>
+            <tr style="background:${C.maroon};">
+              <th style="padding:8px 12px;color:#fff;text-align:left;font-size:12px;">Product</th>
+              <th style="padding:8px 12px;color:#fff;text-align:center;font-size:12px;">Qty</th>
+              <th style="padding:8px 12px;color:#fff;text-align:right;font-size:12px;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>${order.itemsHtml}</tbody>
+          <tfoot>
+            <tr style="background:${C.bg};">
+              <td colspan="2" style="padding:10px 12px;font-weight:700;font-size:13px;">Total</td>
+              <td style="padding:10px 12px;font-weight:700;font-size:14px;text-align:right;color:${C.maroon};">
+                ₹${order.total.toLocaleString('en-IN')}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div style="background:${C.successBg};border-left:4px solid ${C.success};padding:12px 16px;border-radius:4px;margin-bottom:24px;">
+        <span style="font-size:13px;color:${C.success};font-weight:600;">
+          ✅ Order placed successfully! You will receive shipping updates once dispatched.
+        </span>
+      </div>
+      ${ctaButton('Track Your Order →', `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com'}/orders`)}
+      <p style="font-size:12px;color:${C.muted};text-align:center;">
+        Questions? Contact <a href="mailto:support@instafashionpoints.com" style="color:${C.maroon};">support@instafashionpoints.com</a>
+      </p>`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Order Confirmed #${order.orderNumber} — Insta Fashion Points`,
+      html:    emailShell(C.maroon, '🛍 Order Confirmed!', 'Thank you for shopping with us', body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerNewOrder error:', err?.message);
   }
 }
 

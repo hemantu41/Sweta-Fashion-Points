@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { notifySellerNewOrder, notifyCustomerNewOrder } from '@/lib/notifications/sellerNotify';
 
 interface VerifyPaymentRequest {
   razorpay_order_id: string;
@@ -145,8 +146,8 @@ export async function POST(request: NextRequest) {
               pg_fee:                  0,
               seller_payout_amount:    subtotal,
               shipping_address:        shippingAddress,
-              acceptance_sla_deadline: new Date(now.getTime() + 2 * 3600 * 1000).toISOString(),
-              packing_sla_deadline:    new Date(now.getTime() + 4 * 3600 * 1000).toISOString(),
+              acceptance_sla_deadline: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+              packing_sla_deadline:    new Date(now.getTime() + 48 * 3600 * 1000).toISOString(),
             })
             .select('id')
             .single();
@@ -194,6 +195,10 @@ export async function POST(request: NextRequest) {
               actor_id:    null,
               note:        'Payment captured via Razorpay',
             });
+
+            // Email notifications to seller + customer — fire-and-forget
+            void notifySellerNewOrder(newOrder.id);
+            void notifyCustomerNewOrder(newOrder.id);
           }
         } else {
           console.warn('[Verify Payment] No sellerId in items — spf_orders insert skipped');

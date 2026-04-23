@@ -21,6 +21,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { runRiskChecks } from '@/lib/fraud/riskEngine';
 import { notify } from '@/lib/createNotification';
+import { notifySellerNewOrder, notifyCustomerNewOrder } from '@/lib/notifications/sellerNotify';
 import type { PaymentMethod as RiskPaymentMethod } from '@/lib/fraud/riskEngine';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -292,8 +293,8 @@ export async function POST(request: NextRequest) {
 
     // ── Steps 6 + 9: Create order, items, and initial history ─────────────────
     const now           = new Date();
-    const acceptanceSla = new Date(now.getTime() + 2 * 3600 * 1000); // +2 h
-    const packingSla    = new Date(now.getTime() + 4 * 3600 * 1000); // +4 h
+    const acceptanceSla = new Date(now.getTime() + 24 * 3600 * 1000); // +24 h
+    const packingSla    = new Date(now.getTime() + 48 * 3600 * 1000); // +48 h from order placement
 
     // COD orders skip payment confirmation and go straight to CONFIRMED
     const initialStatus = paymentMethod === 'COD' ? 'CONFIRMED' : 'PENDING_PAYMENT';
@@ -441,6 +442,12 @@ export async function POST(request: NextRequest) {
 
     // ── Step 8: Notify seller (CLEAR or SOFT_FLAG only) ───────────────────────
     void notify.newOrder(sellerId, orderNumber, orderTotal);
+    // Email notifications — fire-and-forget (COD orders are immediately CONFIRMED;
+    // prepaid orders are notified after payment capture in /api/payment/verify)
+    if (paymentMethod === 'COD') {
+      void notifySellerNewOrder(orderData.id);
+      void notifyCustomerNewOrder(orderData.id);
+    }
 
     // ── Step 10: Return success ───────────────────────────────────────────────
     const estimatedDelivery = new Date(now.getTime() + 5 * 86400 * 1000)
