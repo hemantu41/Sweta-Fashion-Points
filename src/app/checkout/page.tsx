@@ -55,14 +55,12 @@ export default function CheckoutPage() {
         name: user.name || '',
         phone: user.mobile || '',
       }));
+    } else if (!isLoading) {
+      // Auth finished loading but no Supabase user (session may be stale).
+      // Middleware already verified iron-session is valid, so just unblock the page.
+      setIsFetching(false);
     }
-  }, [user]);
-
-  useEffect(() => {
-    if (mounted && items.length === 0) {
-      router.push('/cart');
-    }
-  }, [mounted, items.length, router]);
+  }, [user, isLoading]);
 
   useEffect(() => {
     if (!isFetching && addresses.length === 0) {
@@ -153,6 +151,22 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (mounted && items.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] flex flex-col items-center justify-center gap-4 px-4">
+        <div className="text-6xl">🛒</div>
+        <h2 className="text-2xl font-bold text-[#2D2D2D]">Your cart is empty</h2>
+        <p className="text-[#6B6B6B]">Add some items before checking out.</p>
+        <a
+          href="/"
+          className="mt-2 px-8 py-3 bg-[#722F37] text-white font-semibold rounded-full hover:bg-[#5a252c] transition-colors"
+        >
+          Continue Shopping
+        </a>
       </div>
     );
   }
