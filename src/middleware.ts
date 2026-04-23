@@ -34,9 +34,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Already logged in → skip /login
+  // Already logged in → skip /login; honour callbackUrl if present
   if (isLoginPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/', request.url));
+    const raw = request.nextUrl.searchParams.get('callbackUrl') || '/';
+    // Security: only allow same-origin relative paths to prevent open-redirect
+    const safe = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+    return NextResponse.redirect(new URL(safe, request.url));
   }
 
   return NextResponse.next();
