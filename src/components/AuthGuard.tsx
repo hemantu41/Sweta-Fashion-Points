@@ -33,7 +33,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated && isProtected(pathname)) {
       router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
     } else if (isAuthenticated && AUTH_ONLY_PATHS.includes(pathname)) {
-      router.replace('/');
+      // Redirect to callbackUrl if present and safe, otherwise home.
+      // This prevents the home-page flash when a user logs in from
+      // /login?callbackUrl=/checkout — AuthGuard now goes straight there.
+      const params = new URLSearchParams(
+        typeof window !== 'undefined' ? window.location.search : ''
+      );
+      const cb = params.get('callbackUrl') || '';
+      const safe = cb.startsWith('/') && !cb.startsWith('//') ? cb : '/';
+      router.replace(safe);
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 
