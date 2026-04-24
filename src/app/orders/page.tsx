@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CldImage } from 'next-cloudinary';
 
 interface OrderItem {
@@ -285,12 +286,21 @@ export default function OrdersPage() {
                   </h4>
                   <div className="space-y-4">
                     {order.items.map((item, index) => {
-                      const isCloudinary = item.image && !item.image.startsWith('/') && !item.image.startsWith('http');
+                      const isCloudinaryId = item.image && !item.image.startsWith('/') && !item.image.startsWith('http');
+                      const isFullUrl = item.image && item.image.startsWith('http');
                       return (
                         <div key={index} className="flex gap-4 items-start pb-4 border-b border-gray-100 last:border-0 last:pb-0">
                           <div className="relative w-20 h-20 bg-[#F5F0E8] rounded-lg overflow-hidden flex-shrink-0">
-                            {isCloudinary ? (
+                            {isCloudinaryId ? (
                               <CldImage
+                                src={item.image}
+                                alt={item.name}
+                                fill
+                                className="object-cover"
+                                sizes="80px"
+                              />
+                            ) : isFullUrl ? (
+                              <Image
                                 src={item.image}
                                 alt={item.name}
                                 fill
