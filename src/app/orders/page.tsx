@@ -27,6 +27,8 @@ interface Order {
   status: string;
   delivery_status?: string;
   tracking_number?: string;
+  awb_number?: string;
+  courier_partner?: string;
   items: OrderItem[];
   delivery_address: {
     name: string;
@@ -252,9 +254,10 @@ export default function OrdersPage() {
                           Paid on {formatDate(order.payment_completed_at)}
                         </p>
                       )}
-                      {order.tracking_number && (
+                      {order.awb_number && (
                         <p className="text-sm text-[#6B6B6B] mt-1">
-                          Tracking: <span className="font-medium text-[#722F37]">{order.tracking_number}</span>
+                          AWB: <span className="font-medium text-[#722F37]">{order.awb_number}</span>
+                          {order.courier_partner && <span className="text-[#6B6B6B]"> · {order.courier_partner}</span>}
                         </p>
                       )}
                     </div>
@@ -370,9 +373,9 @@ export default function OrdersPage() {
                         </p>
                       )}
                     </div>
-                    {order.status === 'captured' && (
+                    {order.awb_number ? (
                       <Link
-                        href={`/orders/${order.id}/track`}
+                        href={`/track/${order.awb_number}`}
                         className="inline-flex items-center gap-2 bg-[#722F37] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#8B3D47] transition-colors text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -380,7 +383,14 @@ export default function OrdersPage() {
                         </svg>
                         Track Order
                       </Link>
-                    )}
+                    ) : order.status === 'captured' ? (
+                      <span className="inline-flex items-center gap-2 text-[#6B6B6B] text-sm">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Awaiting Shipment
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>
