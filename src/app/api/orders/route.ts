@@ -33,7 +33,8 @@ function mapStatus(status: string): string {
 }
 
 // Shared transform: raw spf_orders row → dashboard-compatible shape
-function transformOrder(o: any) {
+// productMap: product_id → { main_image, category } fetched separately
+function transformOrder(o: any, productMap: Map<string, { main_image: string | null; category: string | null }> = new Map()) {
   return {
     id:               o.id,
     order_number:     o.order_number,
@@ -62,24 +63,37 @@ function transformOrder(o: any) {
           pincode:       o.shipping_address.pincode || '',
         }
       : { name: '', phone: '', address_line1: '', address_line2: '', city: '', state: '', pincode: '' },
-    items: (o.spf_order_items || []).map((item: any) => ({
-      id:              item.id,
-      product_id:      item.product_id,
-      seller_id:       item.seller_id,
-      product_name:    item.product_name,
-      name:            item.product_name || 'Product',
-      nameHi:          '',
-      image:           item.image_url || null,
-      category:        item.category  || null,
-      price:           Number(item.unit_price),
-      size:            item.variant_details?.size || null,
-      variant_details: item.variant_details,
-      sku:             item.sku,
-      quantity:        item.quantity,
-      unit_price:      Number(item.unit_price),
-      total_price:     Number(item.total_price),
-    })),
+    items: (o.spf_order_items || []).map((item: any) => {
+      const product = productMap.get(item.product_id);
+      return {
+        id:              item.id,
+        product_id:      item.product_id,
+        seller_id:       item.seller_id,
+        product_name:    item.product_name,
+        name:            item.product_name || 'Product',
+        nameHi:          '',
+        image:           item.image_url || product?.main_image || null,
+        category:        item.category  || product?.category   || null,
+        price:           Number(item.unit_price),
+        size:            item.variant_details?.size || null,
+        variant_details: item.variant_details,
+        sku:             item.sku,
+        quantity:        item.quantity,
+        unit_price:      Number(item.unit_price),
+        total_price:     Number(item.total_price),
+      };
+    }),
   };
+}
+
+// Fetch product images+categories for a list of product UUIDs
+async function fetchProductMap(productIds: string[]): Promise<Map<string, { main_image: string | null; category: string | null }>> {
+  if (productIds.length === 0) return new Map();
+  const { data } = await supabaseAdmin
+    .from('spf_productdetails')
+    .select('id, main_image, category')
+    .in('id', productIds);
+  return new Map((data || []).map((p: any) => [p.id, { main_image: p.main_image || null, category: p.category || null }]));
 }
 
 const ORDER_SELECT = `
@@ -113,9 +127,11 @@ export async function GET(request: NextRequest) {
       const cached = await sellerCacheGet<any[]>(sellerId, 'orders');
       if (cached !== null) {
         console.log(`[Orders API] Redis cache HIT for seller ${sellerId}`);
+        const productIds = cached.flatMap((o: any) => (o.spf_order_items || []).map((i: any) => i.product_id)).filter(Boolean);
+        const productMap = await fetchProductMap([...new Set<string>(productIds)]);
         return NextResponse.json({
           success: true,
-          orders: cached.map(transformOrder),
+          orders: cached.map((o: any) => transformOrder(o, productMap)),
           fromCache: true,
         });
       }
@@ -138,9 +154,12 @@ export async function GET(request: NextRequest) {
       // Populate cache (fire-and-forget)
       sellerCacheSet(sellerId, 'orders', data || []).catch(() => {});
 
+      const productIds = (data || []).flatMap((o: any) => (o.spf_order_items || []).map((i: any) => i.product_id)).filter(Boolean);
+      const productMap = await fetchProductMap([...new Set<string>(productIds)]);
+
       return NextResponse.json({
         success: true,
-        orders: (data || []).map(transformOrder),
+        orders: (data || []).map((o: any) => transformOrder(o, productMap)),
         fromCache: false,
       });
     }
@@ -160,7 +179,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, orders: (data || []).map(transformOrder) });
+    const productIds = (data || []).flatMap((o: any) => (o.spf_order_items || []).map((i: any) => i.product_id)).filter(Boolean);
+    const productMap = await fetchProductMap([...new Set<string>(productIds)]);
+
+    return NextResponse.json({ success: true, orders: (data || []).map((o: any) => transformOrder(o, productMap)) });
 
   } catch (err: any) {
     console.error('[Orders API] Error:', err?.message);
