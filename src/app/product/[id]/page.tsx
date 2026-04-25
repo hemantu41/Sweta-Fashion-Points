@@ -34,6 +34,14 @@ interface Product {
   stockQuantity: number;
   isNewArrival: boolean;
   isBestSeller: boolean;
+  seller?: {
+    id: string;
+    businessName: string;
+    businessNameHi?: string;
+    city?: string;
+    state?: string;
+    businessPhone?: string;
+  } | null;
 }
 
 // ─── Image URL helper ─────────────────────────────────────────────────────────
@@ -55,6 +63,9 @@ function hashId(id: string): number {
 }
 function mockRating(id: string)      { return +(3.5 + (hashId(id) % 20) / 10).toFixed(1); }
 function mockReviewCount(id: string) { return 50 + (hashId(id + 'r') % 950); }
+function mockStat(id: string, salt: string, min: number, max: number) {
+  return min + (hashId(id + salt) % (max - min));
+}
 
 // ─── Tiny SVG helper ──────────────────────────────────────────────────────────
 
@@ -779,6 +790,29 @@ export default function ProductDetailPage() {
                       <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.7 }}>{product.description}</p>
                     </div>
                   )}
+
+                  {/* Care & Wash */}
+                  <div style={{ borderTop: `1px solid ${C.border}` }}>
+                    <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Care &amp; Wash</span>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <tbody>
+                        {[
+                          { k: 'Wash',              v: 'Hand wash or gentle machine wash' },
+                          { k: 'Dry',               v: 'Shade dry only' },
+                          { k: 'Iron',              v: 'Medium heat · Do not iron on print' },
+                          { k: 'Bleach',            v: 'Do not bleach' },
+                          { k: 'Country of origin', v: 'India' },
+                        ].map(({ k, v }) => (
+                          <tr key={k} style={{ borderBottom: `1px solid ${C.subtle}` }}>
+                            <td style={{ fontSize: 13, color: C.muted, padding: '9px 16px', width: '44%' }}>{k}</td>
+                            <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 16px' }}>{v}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               );
             })()}
@@ -808,61 +842,144 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* ── Product details + Care & wash ───────────────────────────────────── */}
+      {/* ── Seller Information ───────────────────────────────────────────────── */}
       <div style={{ background: '#fff', borderTop: `0.5px solid ${C.border}` }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_1fr]">
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px', fontFamily: 'var(--font-playfair)' }}>
+            Sold By
+          </h2>
+          {product.seller ? (() => {
+            const sid = product.seller!.id;
+            const sellerRating  = +(3.5 + (hashId(sid) % 20) / 10).toFixed(1);
+            const ratingCount   = mockStat(sid, 'rat', 120, 4800);
+            const followers     = mockStat(sid, 'fol', 50,  1200);
+            const productCount  = mockStat(sid, 'prd', 10,  280);
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', background: C.cream }}>
+                {/* Left: avatar + info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  {/* Avatar circle */}
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: C.maroonPale, border: `2px solid ${C.maroon}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: C.maroon }}>
+                      {product.seller!.businessName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.text }}>{product.seller!.businessName}</p>
+                    {(product.seller!.city || product.seller!.state) && (
+                      <p style={{ margin: '2px 0 8px', fontSize: 12, color: C.muted }}>
+                        {[product.seller!.city, product.seller!.state].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                    {/* Stats row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: C.green, borderRadius: 4, padding: '2px 7px' }}>
+                          <Svg d={I.star} size={10} fill="#fff" stroke="none" />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{sellerRating}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{ratingCount.toLocaleString()}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>Ratings</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{followers.toLocaleString()}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>Followers</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{productCount}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>Products</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Right: View Shop button */}
+                <button style={{ padding: '9px 22px', borderRadius: 8, border: `1.5px solid ${C.maroon}`, background: 'transparent', color: C.maroon, fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  View Shop
+                </button>
+              </div>
+            );
+          })() : (
+            <p style={{ fontSize: 13, color: C.muted }}>Seller information not available.</p>
+          )}
+        </div>
+      </div>
 
-            {/* Left: Product details */}
-            <div className="md:pr-8">
-              <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
-                Product details
-              </h2>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <tbody>
-                  {[
-                    { k: 'Category', v: [product.category, product.subCategory].filter(Boolean).join(' / ') || '—' },
-                    { k: 'Fabric',   v: product.fabric   || '—' },
-                    { k: 'Fit',      v: product.fit      || '—' },
-                    { k: 'Collar',   v: product.collar   || '—' },
-                    { k: 'Pattern',  v: product.pattern  || '—' },
-                    { k: 'Occasion', v: product.occasion || '—' },
-                  ].map(({ k, v }) => (
-                    <tr key={k} style={{ borderBottom: `0.5px solid ${C.subtle}` }}>
-                      <td style={{ fontSize: 13, color: C.muted, padding: '9px 0', width: '44%' }}>{k}</td>
-                      <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 0', textAlign: 'right' }}>{v}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* ── Product Ratings & Reviews ────────────────────────────────────────── */}
+      <div style={{ background: C.cream, borderTop: `0.5px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 20px', fontFamily: 'var(--font-playfair)' }}>
+            Product Ratings &amp; Reviews
+          </h2>
+
+          {/* Rating summary + breakdown */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'flex-start', marginBottom: 28 }}>
+
+            {/* Big number */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 100 }}>
+              <span style={{ fontSize: 52, fontWeight: 900, color: C.text, lineHeight: 1, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+                {rating.toFixed(1)}
+              </span>
+              <div style={{ display: 'flex', gap: 3, marginTop: 8 }}>
+                {[1,2,3,4,5].map(s => (
+                  <svg key={s} width={16} height={16} viewBox="0 0 24 24" fill={s <= Math.round(rating) ? C.gold : C.border} stroke="none">
+                    <path d={I.star} />
+                  </svg>
+                ))}
+              </div>
+              <span style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>
+                {reviewCount.toLocaleString()} ratings
+              </span>
             </div>
 
-            {/* Vertical divider — desktop only */}
-            <div className="hidden md:block" style={{ background: C.border }} />
-
-            {/* Right: Care & wash */}
-            <div className="md:pl-8 mt-8 md:mt-0">
-              <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
-                Care &amp; wash
-              </h2>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <tbody>
-                  {[
-                    { k: 'Wash',              v: 'Hand wash or gentle machine wash' },
-                    { k: 'Dry',               v: 'Shade dry only' },
-                    { k: 'Iron',              v: 'Medium heat · Do not iron on print' },
-                    { k: 'Bleach',            v: 'Do not bleach' },
-                    { k: 'Country of origin', v: 'India' },
-                  ].map(({ k, v }) => (
-                    <tr key={k} style={{ borderBottom: `0.5px solid ${C.subtle}` }}>
-                      <td style={{ fontSize: 13, color: C.muted, padding: '9px 0', width: '44%' }}>{k}</td>
-                      <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 0', textAlign: 'right' }}>{v}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Breakdown bars */}
+            <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {(['Excellent','Very Good','Good','Average','Poor'] as const).map((label, i) => {
+                const star = 5 - i;
+                // Weight: higher stars get higher %
+                const weights = [55, 25, 11, 6, 3];
+                const pct = weights[i];
+                return (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 12, color: C.muted, width: 68, flexShrink: 0 }}>{label}</span>
+                    <div style={{ flex: 1, height: 6, background: C.border, borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: star >= 4 ? C.green : star === 3 ? C.gold : C.red }} />
+                    </div>
+                    <span style={{ fontSize: 12, color: C.muted, width: 30, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
+                  </div>
+                );
+              })}
             </div>
+          </div>
 
+          {/* Mock review cards — TODO: replace with real spf_reviews data */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { name: 'Meenakshi S.',  stars: 5, text: 'Absolutely love this product! The quality is outstanding and delivery was super fast. Highly recommend.' },
+              { name: 'Rahul T.',      stars: 4, text: 'Good product, matches the description. Fabric is comfortable. Slightly slow delivery but overall happy.' },
+              { name: 'Priya Verma',   stars: 5, text: 'Perfect fit, exactly as shown. The seller was responsive and packaging was very good.' },
+            ].map(({ name, stars, text }) => (
+              <div key={name} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  {/* Avatar */}
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.maroonPale, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.maroon }}>{name.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</p>
+                    <div style={{ display: 'flex', gap: 2, marginTop: 2 }}>
+                      {[1,2,3,4,5].map(s => (
+                        <svg key={s} width={12} height={12} viewBox="0 0 24 24" fill={s <= stars ? C.gold : C.border} stroke="none">
+                          <path d={I.star} />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
