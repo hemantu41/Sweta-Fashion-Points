@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import MultiImageUpload from '@/components/MultiImageUpload';
+import { useCategories, type CategoryNode } from '@/hooks/useCategories';
 
 export default function AddProductPage() {
   const { user } = useAuth();
@@ -11,12 +12,27 @@ export default function AddProductPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // ── Dynamic category tree ──────────────────────────────────────────────────
+  const { tree } = useCategories();
+  const [catIds, setCatIds] = useState({ l1: '', l2: '', l3: '' });
+
+  const l1Nodes: CategoryNode[] = useMemo(() => tree, [tree]);
+  const l2Nodes: CategoryNode[] = useMemo(() => {
+    if (!catIds.l1) return [];
+    return l1Nodes.find(n => n.id === catIds.l1)?.children ?? [];
+  }, [l1Nodes, catIds.l1]);
+  const l3Nodes: CategoryNode[] = useMemo(() => {
+    if (!catIds.l2) return [];
+    return l2Nodes.find(n => n.id === catIds.l2)?.children ?? [];
+  }, [l2Nodes, catIds.l2]);
+
+  const l1Node = useMemo(() => l1Nodes.find(n => n.id === catIds.l1) ?? null, [l1Nodes, catIds.l1]);
+  const l2Node = useMemo(() => l2Nodes.find(n => n.id === catIds.l2) ?? null, [l2Nodes, catIds.l2]);
+
   const [formData, setFormData] = useState({
     productId: '',
     name: '',
     nameHi: '',
-    category: 'mens',
-    subCategory: '',
     price: '',
     originalPrice: '',
     priceRange: 'mid',
@@ -29,13 +45,6 @@ export default function AddProductPage() {
     isNewArrival: false,
     isBestSeller: false,
   });
-
-  const subCategories = {
-    mens: ['jeans', 'shirts', 'tshirts', 'ethnic'],
-    womens: ['daily', 'party', 'ethnic', 'seasonal'],
-    sarees: ['daily', 'party', 'wedding', 'festival'],
-    kids: ['0-3', '4-7', '8-12'],
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,8 +61,11 @@ export default function AddProductPage() {
             productId: formData.productId,
             name: formData.name,
             nameHi: formData.nameHi,
-            category: formData.category,
-            subCategory: formData.subCategory,
+            category: l1Node?.slug || l1Node?.name || '',
+            subCategory: l2Node?.slug || l2Node?.name || '',
+            l1CategoryId: catIds.l1 || null,
+            l2CategoryId: catIds.l2 || null,
+            l3CategoryId: catIds.l3 || null,
             price: parseInt(formData.price),
             originalPrice: formData.originalPrice ? parseInt(formData.originalPrice) : undefined,
             priceRange: formData.priceRange,
@@ -147,36 +159,55 @@ export default function AddProductPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Category <span className="text-red-500">*</span>
+                  Category (L1) <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value, subCategory: '' })}
+                  value={catIds.l1}
+                  onChange={(e) => setCatIds({ l1: e.target.value, l2: '', l3: '' })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                 >
-                  <option value="mens">Men's</option>
-                  <option value="womens">Women's</option>
-                  <option value="sarees">Sarees</option>
-                  <option value="kids">Kids</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                  Sub-Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.subCategory}
-                  onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                >
-                  <option value="">Select Sub-Category</option>
-                  {subCategories[formData.category as keyof typeof subCategories].map(sub => (
-                    <option key={sub} value={sub}>{sub}</option>
+                  <option value="">Select Category</option>
+                  {l1Nodes.map(n => (
+                    <option key={n.id} value={n.id}>{n.name}</option>
                   ))}
                 </select>
               </div>
+              {l2Nodes.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                    Sub-Category (L2) <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={catIds.l2}
+                    onChange={(e) => setCatIds(prev => ({ ...prev, l2: e.target.value, l3: '' }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  >
+                    <option value="">Select Sub-Category</option>
+                    {l2Nodes.map(n => (
+                      <option key={n.id} value={n.id}>{n.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {l3Nodes.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                    Type (L3)
+                  </label>
+                  <select
+                    value={catIds.l3}
+                    onChange={(e) => setCatIds(prev => ({ ...prev, l3: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  >
+                    <option value="">Select Type (optional)</option>
+                    {l3Nodes.map(n => (
+                      <option key={n.id} value={n.id}>{n.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
