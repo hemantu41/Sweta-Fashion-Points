@@ -60,7 +60,8 @@ const sareeCategories: SareeCategory[] = [
 
 function resolveLink(tree: CategoryNode[], l1Kw: string, subKw: string, fallback: string): string {
   if (tree.length === 0) return fallback;
-  const l1 = tree.find(n => n.name.toLowerCase().includes(l1Kw.toLowerCase()));
+  const re = new RegExp(`\\b${l1Kw}\\b`, 'i');
+  const l1 = tree.find(n => re.test(n.name) || re.test(n.slug));
   if (!l1) return fallback;
   if (subKw) {
     const l2 = (l1.children || []).find(n => n.name.toLowerCase().includes(subKw.toLowerCase()));
