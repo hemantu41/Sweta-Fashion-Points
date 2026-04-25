@@ -452,13 +452,6 @@ export default function ProductDetailPage() {
                 {product.name}
               </h1>
 
-              {/* Subtitle */}
-              {(product.fabric || product.fit || product.subCategory) && (
-                <p style={{ fontSize: 13, color: C.muted, margin: '5px 0 0', lineHeight: 1.5 }}>
-                  {[product.fabric, product.fit, product.subCategory].filter(Boolean).join(' · ')}
-                </p>
-              )}
-
               {/* Rating row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: C.green, borderRadius: 4, padding: '3px 9px' }}>
