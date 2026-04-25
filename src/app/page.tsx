@@ -1,6 +1,6 @@
 'use client';
 
-import { LocationSection, BannerCarousel, MensCollectionSection, WomensCollectionSection, SareesCollectionSection, KidsCollectionSection, BeautyMakeupCollectionSection, FootwearCollectionSection } from '@/components';
+import { BannerCarousel, MensCollectionSection, WomensCollectionSection, SareesCollectionSection, KidsCollectionSection, BeautyMakeupCollectionSection, FootwearCollectionSection } from '@/components';
 
 export default function Home() {
   return (
@@ -25,9 +25,6 @@ export default function Home() {
 
       {/* Footwear Collection Section - Footwear categories */}
       <FootwearCollectionSection />
-
-      {/* Location Section */}
-      <LocationSection />
     </>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { useCategories, type CategoryNode } from '@/hooks/useCategories';
 
 interface MensCategory {
   id: string;
@@ -62,8 +63,21 @@ const mensCategories: MensCategory[] = [
   },
 ];
 
+function resolveLink(tree: CategoryNode[], l1Kw: string, subKw: string, fallback: string): string {
+  if (tree.length === 0) return fallback;
+  const l1 = tree.find(n => n.name.toLowerCase().includes(l1Kw.toLowerCase()));
+  if (!l1) return fallback;
+  if (subKw) {
+    const l2 = (l1.children || []).find(n => n.name.toLowerCase().includes(subKw.toLowerCase()));
+    if (l2) return `/category/${l2.slug}`;
+  }
+  return `/category/${l1.slug}`;
+}
+
 export default function MensCollectionSection() {
   const { language } = useLanguage();
+  const { tree } = useCategories();
+  const subKeywords: Record<string, string> = { shirts: 'shirt', tshirts: 'shirt', jeans: 'jean', shorts: 'short' };
 
   return (
     <section className="relative py-20 bg-white overflow-hidden">
@@ -95,7 +109,7 @@ export default function MensCollectionSection() {
           {mensCategories.map((category, index) => (
             <Link
               key={category.id}
-              href={category.link}
+              href={resolveLink(tree, 'men', subKeywords[category.id] || '', category.link)}
               className="group flex flex-col items-center"
               style={{ animationDelay: `${index * 100}ms` }}
             >
