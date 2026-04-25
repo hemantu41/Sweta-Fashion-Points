@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { supabase } from '@/lib/supabase';
+import { sellerCacheGet, sellerCacheSet } from '@/lib/sellerCache';
 
 // GET /api/sellers/me - Get current user's seller profile
 // Supports ?userId=<uid> OR ?sellerId=<sid> (admin use-case)
@@ -16,6 +17,36 @@ export async function GET(request: NextRequest) {
         { error: 'User ID or Seller ID required' },
         { status: 400 }
       );
+    }
+
+    // ── Cache-first: check Redis if we already have sellerId ──────────────
+    if (sellerId) {
+      const cached = await sellerCacheGet<any>(sellerId, 'profile');
+      if (cached) {
+        // Reconstruct the same camelCase shape from cached raw seller row
+        const s = cached;
+        return NextResponse.json({
+          success: true,
+          seller: {
+            id: s.id, userId: s.user_id, businessName: s.business_name,
+            businessNameHi: s.business_name_hi, gstin: s.gstin, pan: s.pan,
+            businessEmail: s.business_email, businessPhone: s.business_phone,
+            addressLine1: s.address_line1, addressLine2: s.address_line2,
+            city: s.city, state: s.state, pincode: s.pincode,
+            bankAccountName: s.bank_account_name, bankAccountNumber: s.bank_account_number,
+            bankIfsc: s.bank_ifsc, bankName: s.bank_name, status: s.status,
+            approvedBy: s.approved_by, approvedAt: s.approved_at,
+            rejectionReason: s.rejection_reason, suspensionReason: s.suspension_reason,
+            reactivationRequest: s.reactivation_request, reactivationRequestedAt: s.reactivation_requested_at,
+            commissionPercentage: s.commission_percentage, isActive: s.is_active,
+            latitude: s.latitude != null ? Number(s.latitude) : null,
+            longitude: s.longitude != null ? Number(s.longitude) : null,
+            documents: s.documents, notes: s.notes,
+            createdAt: s.created_at, updatedAt: s.updated_at, user: s.user,
+          },
+          fromCache: true,
+        });
+      }
     }
 
     let query = supabaseAdmin
@@ -94,6 +125,9 @@ export async function GET(request: NextRequest) {
       updatedAt: seller.updated_at,
       user: seller.user,
     };
+
+    // Write to Redis cache for future requests (background, non-blocking)
+    sellerCacheSet(seller.id, 'profile', seller).catch(() => {});
 
     return NextResponse.json({
       success: true,

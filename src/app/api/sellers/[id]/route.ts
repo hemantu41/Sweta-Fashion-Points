@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sellerCache } from '@/lib/cache';
+import { addPickupLocation } from '@/lib/shiprocket';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 // Log a seller status change to history
 async function logStatusHistory(
@@ -201,7 +202,41 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, updateData.reason);
-        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
+
+        // Register pickup address with Shiprocket (non-blocking)
+        void (async () => {
+          try {
+            const { data: sellerData } = await supabaseAdmin
+              .from('spf_sellers')
+              .select('business_name, business_email, business_phone, address_line1, city, state, pincode, pickup_pincode')
+              .eq('id', sellerId)
+              .single();
+
+            if (sellerData) {
+              const pickupResult = await addPickupLocation({
+                name: sellerData.business_name || 'Seller',
+                email: sellerData.business_email || '',
+                phone: sellerData.business_phone || '',
+                address: sellerData.address_line1 || '',
+                city: sellerData.city || '',
+                state: sellerData.state || '',
+                pincode: sellerData.pickup_pincode || sellerData.pincode || '',
+              });
+
+              if (pickupResult.success && pickupResult.pickupLocationName) {
+                await supabaseAdmin
+                  .from('spf_sellers')
+                  .update({ shiprocket_pickup_location: pickupResult.pickupLocationName })
+                  .eq('id', sellerId);
+                console.log(`[Seller Approve] Registered Shiprocket pickup: ${pickupResult.pickupLocationName} for seller ${sellerId}`);
+              }
+            }
+          } catch (err: any) {
+            console.error('[Seller Approve] Shiprocket pickup registration failed (non-fatal):', err?.message);
+          }
+        })();
+
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller approved successfully' });
       }
 
@@ -221,7 +256,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'rejected', userId, reason);
-        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller rejected' });
       }
 
@@ -241,7 +276,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'suspended', userId, reason);
-        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller suspended' });
       }
 
@@ -262,7 +297,7 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, 'Reactivated by admin');
-        sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
+        invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller reactivated successfully' });
       }
     }
@@ -317,7 +352,7 @@ export async function PUT(
       );
     }
 
-    sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
+    invalidateSellerKeys(sellerId, 'profile').catch(() => {});
     return NextResponse.json({
       success: true,
       message: 'Seller updated successfully',
@@ -364,7 +399,7 @@ export async function DELETE(
       );
     }
 
-    sellerCache.clear().catch(e => console.warn('[Sellers API] Cache clear failed:', e));
+    invalidateSellerKeys(sellerId, 'profile').catch(() => {});
     return NextResponse.json({
       success: true,
       message: 'Seller deleted successfully',

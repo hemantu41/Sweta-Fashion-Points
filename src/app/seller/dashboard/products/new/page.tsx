@@ -180,169 +180,6 @@ export default function SellerAddProductPage() {
   const [newColor, setNewColor] = useState({ name: '', hex: '#000000' });
   const [newSize, setNewSize] = useState('');
 
-  // AI Title Generator state
-  const [aiQuestion, setAiQuestion] = useState<{
-    tab: ProductTab;
-    text: string;
-    field: string;
-    options: string[];
-  } | null>(null);
-  const [aiAnswer, setAiAnswer] = useState('');
-
-  // Word banks for smart title generation
-  const clothesStyleBank: Record<string, string[]> = {
-    jeans:    ['Slim Fit', 'Straight Cut', 'Classic', 'Relaxed', 'Tapered', 'Stretch', 'Distressed'],
-    shirts:   ['Formal', 'Casual Oxford', 'Linen Blend', 'Checked', 'Striped', 'Solid Colour', 'Mandarin Collar'],
-    tshirts:  ['Graphic Print', 'Plain Round Neck', 'Polo', 'V-Neck', 'Oversized', 'Fitted Crew'],
-    shorts:   ['Cargo', 'Athletic', 'Chino', 'Drawstring', 'Bermuda', 'Lounge'],
-    daily:    ['Everyday', 'Casual', 'Breezy', 'Simple Chic', 'Flowy', 'Comfortable'],
-    party:    ['Elegant', 'Glamorous', 'Chic', 'Dazzling', 'Festive', 'Statement'],
-    ethnic:   ['Traditional', 'Heritage', 'Embroidered', 'Printed Block', 'Classic Ethnic'],
-    seasonal: ['Lightweight Summer', 'Warm Knit', 'Monsoon Ready', 'Spring Blossom'],
-    wedding:  ['Bridal Silk', 'Wedding Celebration', 'Occasion Wear', 'Royal Zari'],
-    festival: ['Festive Celebration', 'Heritage Weave', 'Traditional Printed'],
-    '0-3':    ['Soft Newborn', 'Gentle Touch', 'Cozy Baby', 'Organic Cotton'],
-    '4-7':    ['Colourful Kids', 'Fun Print', 'Active Play', 'Comfy Everyday'],
-    '8-12':   ['Cool Junior', 'Sporty', 'Trendy Kids', 'Casual School Wear'],
-  };
-  const footwearStyleBank: Record<string, string[]> = {
-    'casual-shoes':  ['Urban Casual', 'Everyday Comfort', 'Weekend Walk', 'Laid-Back'],
-    'formal-shoes':  ['Classic Oxford', 'Executive Derby', 'Premium Formal', 'Boardroom'],
-    'sports-shoes':  ['Performance Athletic', 'Training Pro', 'Active Run', 'Sport Fit'],
-    'sandals':        ['Open-Toe Strappy', 'Comfort Strap', 'Easy Slip-On', 'Summer Breeze'],
-    'slippers':       ['Indoor Cloud Cushion', 'Plush Soft', 'Home Comfort', 'Cosy Slide'],
-    'boots':          ['Ankle Classic', 'Chelsea Style', 'Rugged Combat', 'Bold Statement'],
-    'heels':          ['Block Heel Chic', 'Stiletto Glam', 'Kitten Heel Subtle', 'Wedge Comfort'],
-    'flats':          ['Ballet Flat', 'Point Toe Classic', 'Comfort Everyday', 'Slip-On Flat'],
-  };
-  const beautyStyleBank: Record<string, Record<string, string[]>> = {
-    skincare: {
-      moisturizer: ['Deep Hydrating', 'Nourishing', 'Daily Glow', 'Ultra-Rich', 'Lightweight'],
-      cleanser:    ['Gentle Foaming', 'Deep Pore', 'Brightening', 'Soothing Purifying'],
-      serum:       ['Vitamin C Glow', 'Anti-Aging Repair', 'Brightening', 'Hyaluronic Boost'],
-      'face-wash': ['Oil Control', 'Brightening Foam', 'Hydrating Gel', 'Purifying'],
-      sunscreen:   ['Broad Spectrum SPF', 'Matte Finish', 'Invisible Shield', 'Lightweight'],
-      'face-mask': ['Hydrating Sheet', 'Clay Detox', 'Brightening Overnight', 'Glow Infusion'],
-      toner:       ['Balancing Rose', 'Hydrating', 'Pore-Minimising', 'Glow-Boosting'],
-      scrub:       ['Exfoliating', 'Brightening Coffee', 'Walnut Shell', 'Gentle Renewal'],
-    },
-    makeup: {
-      lipstick:   ['Velvet Matte', 'Satin Finish', 'Long-Stay Bold', 'Creamy Luxe'],
-      foundation: ['Full Coverage Matte', 'Dewy Glow', 'Lightweight Breathable', 'Buildable'],
-      eyeliner:   ['Precision Waterproof', 'Smudge-Proof', 'Liquid Liner', 'Kajal-Style'],
-      mascara:    ['Volume Boost', 'Lengthening Curl', 'Waterproof Drama', 'Lash Filler'],
-      blush:      ['Natural Flush', 'Peachy Coral Glow', 'Rose Gold Tint', 'Buildable Colour'],
-      eyeshadow:  ['Shimmer Palette', 'Smoky Eye', 'Everyday Neutral', 'Glitter Glam'],
-      kajal:      ['Intense Black', 'Smudge-Proof Kohl', 'Long-Lasting', 'Waterproof'],
-      compact:    ['Oil Control Pressed', 'Translucent Setting', 'Natural Finish', 'Long-Wear'],
-      'lip-gloss':['Plumping Shine', 'Clear Glossy', 'Tinted Berry', 'Hydrating Mirror'],
-    },
-    haircare: {
-      shampoo:       ['Nourishing Repair', 'Anti-Dandruff', 'Volumising Lift', 'Smoothing Keratin'],
-      conditioner:   ['Deep Repair', 'Detangling Silk', 'Moisture Lock', 'Smooth & Shiny'],
-      'hair-oil':    ['Growth Boosting', 'Coconut Amla Blend', 'Argan Nourish', 'Bhringraj Revive'],
-      'hair-serum':  ['Frizz Control', 'Shine Enhancing', 'Heat Protection', 'Smoothing Glass'],
-      'hair-mask':   ['Deep Conditioning', 'Restore & Repair', 'Strengthening Pro', 'Hydrating Silk'],
-      'hair-gel':    ['Strong Hold', 'Flexible Hold', 'Wet Look Shine', 'Curl Defining'],
-    },
-    fragrance: {
-      perfume:      ['Floral Bouquet', 'Oriental Woody', 'Fresh Citrus', 'Warm Spice', 'Aquatic Blue'],
-      deodorant:    ['24-Hour Protection', 'Anti-Perspirant Fresh', 'Sport Active', 'Refreshing'],
-      'body-mist':  ['Light Floral Splash', 'Refreshing Ocean', 'Fruity Burst', 'Breezy Garden'],
-      'body-spray': ['Long-Lasting Energy', 'Refreshing Citrus', 'Tropical Escape', 'Fresh Cotton'],
-    },
-  };
-
-  function pickRandom<T>(arr: T[]): T {
-    return arr[Math.floor((Date.now() * Math.random()) % arr.length)];
-  }
-
-  function generateClothesTitle(extraColor?: string): string {
-    const subStyles = clothesStyleBank[clothesData.subCategory] || ['Premium', 'Classic', 'Elegant'];
-    const style = pickRandom(subStyles);
-    const genderMap: Record<string, string> = { mens: "Men's", womens: "Women's", sarees: '', kids: "Kids'" };
-    const subLabelMap: Record<string, string> = {
-      jeans: 'Jeans', shirts: 'Shirt', tshirts: 'T-Shirt', shorts: 'Shorts',
-      daily: 'Casual Wear', party: 'Party Wear', ethnic: 'Ethnic Wear', seasonal: 'Seasonal Wear',
-      wedding: 'Wedding Saree', festival: 'Festival Saree',
-      '0-3': 'Baby Wear (0-3Y)', '4-7': 'Kids Wear (4-7Y)', '8-12': 'Kids Wear (8-12Y)',
-    };
-    const gender = genderMap[clothesData.category] ?? '';
-    const sub = subLabelMap[clothesData.subCategory] ?? clothesData.subCategory;
-    const fabric = clothesData.fabric ? ` ${clothesData.fabric}` : '';
-    const colorPart = extraColor ? ` ${extraColor}` : (colors.length > 0 ? ` ${colors[0].name}` : '');
-    return `${style}${colorPart}${fabric} ${sub}${gender ? ' for ' + gender : ''}`;
-  }
-
-  function generateFootwearTitle(extraColor?: string): string {
-    const subStyles = footwearStyleBank[footwearData.subCategory] || ['Premium Comfort', 'Classic Style'];
-    const style = pickRandom(subStyles);
-    const genderMap: Record<string, string> = { mens: "Men's", womens: "Women's", kids: "Kids'" };
-    const subLabelMap: Record<string, string> = {
-      'casual-shoes': 'Casual Shoes', 'formal-shoes': 'Formal Shoes', 'sports-shoes': 'Sports Shoes',
-      sandals: 'Sandals', slippers: 'Slippers', boots: 'Boots', heels: 'Heels', flats: 'Flats',
-    };
-    const brand = footwearData.brand ? `${footwearData.brand} ` : '';
-    const material = footwearData.material ? ` ${footwearData.material}` : '';
-    const gender = genderMap[footwearData.category] ?? '';
-    const sub = subLabelMap[footwearData.subCategory] ?? footwearData.subCategory;
-    const colorPart = extraColor ? ` ${extraColor}` : '';
-    return `${brand}${style}${colorPart}${material} ${sub}${gender ? ' for ' + gender : ''}`;
-  }
-
-  function generateBeautyTitle(extraBenefit?: string): string {
-    const catBank = beautyStyleBank[beautyData.category as keyof typeof beautyStyleBank];
-    const subStyles = catBank?.[beautyData.subCategory] ?? ['Premium', 'Advanced', 'Professional'];
-    const style = extraBenefit || pickRandom(subStyles);
-    const brand = beautyData.brand ? `${beautyData.brand} ` : '';
-    const shade = beautyData.shade ? ` – ${beautyData.shade}` : '';
-    const subLabel = beautyData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    return `${brand}${style} ${subLabel}${shade}`;
-  }
-
-  function handleGenerateTitle(tab: ProductTab, extraAnswer?: string) {
-    if (tab === 'clothes') {
-      if (!clothesData.subCategory) {
-        setMessage('Please select a sub-category before generating a title.');
-        return;
-      }
-      if (!clothesData.fabric && colors.length === 0 && !extraAnswer) {
-        setAiQuestion({ tab, text: 'What is the primary colour of this product?', field: 'color', options: ['Black', 'White', 'Blue', 'Red', 'Green', 'Yellow', 'Pink', 'Grey', 'Beige', 'Brown'] });
-        setAiAnswer('');
-        return;
-      }
-      const title = generateClothesTitle(extraAnswer);
-      setClothesData(prev => ({ ...prev, name: title }));
-      setAiQuestion(null);
-    } else if (tab === 'footwear') {
-      if (!footwearData.subCategory) {
-        setMessage('Please select a sub-category before generating a title.');
-        return;
-      }
-      if (!footwearData.brand && !footwearData.material && !extraAnswer) {
-        setAiQuestion({ tab, text: 'What occasion is this footwear best suited for?', field: 'occasion', options: ['Casual Everyday', 'Office & Formal', 'Sports & Gym', 'Party & Events', 'Outdoor & Travel'] });
-        setAiAnswer('');
-        return;
-      }
-      const title = generateFootwearTitle(extraAnswer);
-      setFootwearData(prev => ({ ...prev, name: title }));
-      setAiQuestion(null);
-    } else if (tab === 'beauty') {
-      if (!beautyData.subCategory) {
-        setMessage('Please select a sub-category before generating a title.');
-        return;
-      }
-      if (!beautyData.brand && !beautyData.shade && !extraAnswer) {
-        setAiQuestion({ tab, text: 'What is the key benefit of this product?', field: 'benefit', options: ['Hydrating', 'Brightening', 'Anti-Aging', 'Oil Control', 'Nourishing', 'Volumising', 'Long-Lasting', 'Natural & Organic'] });
-        setAiAnswer('');
-        return;
-      }
-      const title = generateBeautyTitle(extraAnswer);
-      setBeautyData(prev => ({ ...prev, name: title }));
-      setAiQuestion(null);
-    }
-  }
-
   // Auto-generate product ID for clothes
   useEffect(() => {
     if (activeTab === 'clothes' && clothesData.category && clothesData.subCategory) {
@@ -370,27 +207,19 @@ export default function SellerAddProductPage() {
     }
   }, [activeTab, beautyData.category, beautyData.subCategory]);
 
-  // Auto-generate description for clothes (bullet points)
+  // Auto-generate description for clothes (15 words)
   useEffect(() => {
     if (activeTab === 'clothes' && clothesData.name && clothesData.category && clothesData.subCategory) {
       const categoryName = clothesData.category === 'mens' ? "Men's" :
                           clothesData.category === 'womens' ? "Women's" :
                           clothesData.category === 'sarees' ? 'Sarees' : "Kids'";
       const subCategoryName = clothesData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      const fabricLine = clothesData.fabric ? `• Crafted from premium ${clothesData.fabric} fabric for superior comfort and breathability` : '• Made with high-quality fabric for superior comfort and breathability';
 
-      const autoDescription = [
-        `• ${clothesData.name} — ${categoryName} ${subCategoryName}`,
-        fabricLine,
-        '• Stylish design suitable for everyday wear and special occasions',
-        '• Comfortable fit that suits all body types with ease of movement',
-        '• Easy to wash and maintain, retains shape after multiple washes',
-        '• Available in multiple colors and sizes to match your preference',
-      ].join('\n');
+      const autoDescription = `${clothesData.name} - ${categoryName} ${subCategoryName}. Premium quality fabric with excellent fit and comfort for all-day wear.`;
 
       setClothesData(prev => ({ ...prev, description: autoDescription }));
     }
-  }, [activeTab, clothesData.name, clothesData.category, clothesData.subCategory, clothesData.fabric]);
+  }, [activeTab, clothesData.name, clothesData.category, clothesData.subCategory]);
 
   // Auto-generate description for footwear (15 words)
   useEffect(() => {
@@ -400,24 +229,14 @@ export default function SellerAddProductPage() {
       const subCategoryName = footwearData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       const brandName = footwearData.brand || 'Premium';
 
-      const materialLine = footwearData.material
-        ? `• Crafted from premium ${footwearData.material} material for durability and long-lasting wear`
-        : '• Made with high-quality material for durability and all-day comfort';
-      const autoDescription = [
-        `• ${brandName} ${categoryName} ${subCategoryName} — designed for style and comfort`,
-        materialLine,
-        '• Ergonomic design that provides excellent support and cushioning for your feet',
-        '• Suitable for daily use, casual outings, and a variety of occasions',
-        '• Easy to clean and maintain, retains shape after regular use',
-        '• Available in multiple sizes and colors to suit your personal style',
-      ].join('\n');
+      const autoDescription = `${brandName} ${categoryName} ${subCategoryName}. Comfortable and durable footwear with superior quality material and stylish design perfect for daily use.`;
 
       // Auto-generate name from brand + category + subcategory
       const autoName = `${brandName} ${categoryName} ${subCategoryName}`;
 
       setFootwearData(prev => ({ ...prev, name: autoName, description: autoDescription }));
     }
-  }, [activeTab, footwearData.brand, footwearData.category, footwearData.subCategory, footwearData.material]);
+  }, [activeTab, footwearData.brand, footwearData.category, footwearData.subCategory]);
 
   // Auto-generate description for beauty (15 words)
   useEffect(() => {
@@ -425,14 +244,7 @@ export default function SellerAddProductPage() {
       const categoryName = beautyData.category.replace(/\b\w/g, l => l.toUpperCase());
       const subCategoryName = beautyData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-      const autoDescription = [
-        `• ${beautyData.name} — ${categoryName} ${subCategoryName}`,
-        '• Formulated with premium ingredients for effective and visible results',
-        '• Suitable for all skin types, gentle and dermatologically tested',
-        '• Free from harmful chemicals, safe for everyday use',
-        '• Long-lasting formula that delivers consistent performance',
-        '• Thoughtfully packaged for hygiene and convenience',
-      ].join('\n');
+      const autoDescription = `${beautyData.name} - ${categoryName} ${subCategoryName}. High-quality beauty product with premium ingredients for best results and satisfaction.`;
 
       setBeautyData(prev => ({ ...prev, description: autoDescription }));
     }
@@ -611,15 +423,6 @@ export default function SellerAddProductPage() {
         setTimeout(() => router.push('/seller/dashboard'), 1500);
       } else {
         setMessage(data.error || 'Failed to create product');
-        // Regenerate product ID so the seller can retry without refreshing
-        const newNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
-        if (activeTab === 'clothes' && clothesData.category && clothesData.subCategory) {
-          setClothesData(prev => ({ ...prev, productId: `${prev.category}_${prev.subCategory}_${newNum}` }));
-        } else if (activeTab === 'footwear' && footwearData.category && footwearData.subCategory) {
-          setFootwearData(prev => ({ ...prev, productId: `footwear_${prev.category}_${prev.subCategory}_${newNum}` }));
-        } else if (activeTab === 'beauty' && beautyData.category && beautyData.subCategory) {
-          setBeautyData(prev => ({ ...prev, productId: `beauty_${prev.category}_${prev.subCategory}_${newNum}` }));
-        }
       }
     } catch (error) {
       setMessage('Error creating product');
@@ -771,58 +574,18 @@ export default function SellerAddProductPage() {
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-[#722F37] mb-4">Basic Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
                       Product Name <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={clothesData.name}
-                        onChange={(e) => setClothesData({ ...clothesData, name: e.target.value })}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                        placeholder="e.g., Classic Blue Jeans"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateTitle('clothes')}
-                        className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-[#722F37] to-[#9B4452] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
-                        title="Generate a unique product title with AI"
-                      >
-                        ✨ AI Title
-                      </button>
-                    </div>
-                    {aiQuestion?.tab === 'clothes' && (
-                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-sm font-medium text-amber-800 mb-2">🤖 {aiQuestion.text}</p>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {aiQuestion.options.map(opt => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setAiAnswer(opt)}
-                              className={`px-3 py-1 text-xs rounded-full border transition-colors ${aiAnswer === opt ? 'bg-[#722F37] text-white border-[#722F37]' : 'bg-white text-[#2D2D2D] border-gray-300 hover:border-[#722F37]'}`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={!aiAnswer}
-                            onClick={() => handleGenerateTitle('clothes', aiAnswer)}
-                            className="px-3 py-1.5 bg-[#722F37] text-white text-xs rounded-lg disabled:opacity-40"
-                          >
-                            Generate Title
-                          </button>
-                          <button type="button" onClick={() => setAiQuestion(null)} className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <input
+                      type="text"
+                      required
+                      value={clothesData.name}
+                      onChange={(e) => setClothesData({ ...clothesData, name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      placeholder="e.g., Classic Blue Jeans"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
@@ -1209,60 +972,6 @@ export default function SellerAddProductPage() {
                       ))}
                     </select>
                   </div>
-                  {/* Product Name row spanning full width */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                      Product Name <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={footwearData.name}
-                        onChange={(e) => setFootwearData({ ...footwearData, name: e.target.value })}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                        placeholder="e.g., Premium Leather Formal Shoes for Men"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateTitle('footwear')}
-                        className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-[#722F37] to-[#9B4452] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
-                        title="Generate a unique product title with AI"
-                      >
-                        ✨ AI Title
-                      </button>
-                    </div>
-                    {aiQuestion?.tab === 'footwear' && (
-                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-sm font-medium text-amber-800 mb-2">🤖 {aiQuestion.text}</p>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {aiQuestion.options.map(opt => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setAiAnswer(opt)}
-                              className={`px-3 py-1 text-xs rounded-full border transition-colors ${aiAnswer === opt ? 'bg-[#722F37] text-white border-[#722F37]' : 'bg-white text-[#2D2D2D] border-gray-300 hover:border-[#722F37]'}`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={!aiAnswer}
-                            onClick={() => handleGenerateTitle('footwear', aiAnswer)}
-                            className="px-3 py-1.5 bg-[#722F37] text-white text-xs rounded-lg disabled:opacity-40"
-                          >
-                            Generate Title
-                          </button>
-                          <button type="button" onClick={() => setAiQuestion(null)} className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
@@ -1520,57 +1229,17 @@ export default function SellerAddProductPage() {
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-[#722F37] mb-4">Basic Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
                       Product Name
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={beautyData.name}
-                        onChange={(e) => setBeautyData({ ...beautyData, name: e.target.value })}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                        placeholder="e.g., Lakme Velvet Matte Lipstick"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateTitle('beauty')}
-                        className="flex-shrink-0 px-3 py-2 bg-gradient-to-r from-[#722F37] to-[#9B4452] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
-                        title="Generate a unique product title with AI"
-                      >
-                        ✨ AI Title
-                      </button>
-                    </div>
-                    {aiQuestion?.tab === 'beauty' && (
-                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-sm font-medium text-amber-800 mb-2">🤖 {aiQuestion.text}</p>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {aiQuestion.options.map(opt => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setAiAnswer(opt)}
-                              className={`px-3 py-1 text-xs rounded-full border transition-colors ${aiAnswer === opt ? 'bg-[#722F37] text-white border-[#722F37]' : 'bg-white text-[#2D2D2D] border-gray-300 hover:border-[#722F37]'}`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={!aiAnswer}
-                            onClick={() => handleGenerateTitle('beauty', aiAnswer)}
-                            className="px-3 py-1.5 bg-[#722F37] text-white text-xs rounded-lg disabled:opacity-40"
-                          >
-                            Generate Title
-                          </button>
-                          <button type="button" onClick={() => setAiQuestion(null)} className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <input
+                      type="text"
+                      value={beautyData.name}
+                      onChange={(e) => setBeautyData({ ...beautyData, name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      placeholder="e.g., Matte Lipstick"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">

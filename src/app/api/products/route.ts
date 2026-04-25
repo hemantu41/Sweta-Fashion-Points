@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getCachedData, productCache } from '@/lib/cache';
+import { publicGet, publicInvalidate } from '@/lib/publicCache';
+import { notifyProductSubmitted } from '@/lib/notifications/productNotifications';
 import { filterProductsByDistance } from '@/lib/pincode-distance';
 
 // Helper to check if user is admin
@@ -25,19 +26,15 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive');
     const sellerId = searchParams.get('sellerId'); // NEW: Filter by seller
     const search = searchParams.get('search'); // NEW: Search query
+    const limit = searchParams.get('limit');   // Optional result limit (e.g. autocomplete)
     const userLat = searchParams.get('userLat');   // Location-based filter
     const userLng = searchParams.get('userLng');   // Location-based filter
-    // Pagination
-    const pageParam = searchParams.get('page');
-    const limitParam = searchParams.get('limit');
-    const page = pageParam ? Math.max(1, parseInt(pageParam)) : null;
-    const limit = limitParam ? Math.min(100, Math.max(1, parseInt(limitParam))) : null;
-    const usePagination = page !== null && limit !== null;
     // Note: _t parameter is ignored for cache key (used only for browser cache busting)
 
-    // Bypass cache for search, location, and paginated queries — results are context-specific
-    const useCache = !search && !(userLat && userLng) && !usePagination;
-    const cacheKey = `products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}:${sellerId || 'all'}:${search || 'none'}`;
+    // Public cache only for unauthenticated, non-search, non-location queries.
+    // Seller / admin queries and search are always real-time (no public cache).
+    const isPublicQuery = !search && !(userLat && userLng) && !sellerId && searchParams.get('includeAllStatuses') !== 'true';
+    const cacheKey = `pub:products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}`;
 
     // Function to fetch products
     const fetchProducts = async () => {
@@ -81,29 +78,47 @@ export async function GET(request: NextRequest) {
         query = query.is('deleted_at', null);
       }
       if (search) {
-        // Search in name, description, fabric, category, and subcategory
-        // Using .or() to search across multiple fields
-        query = query.or(`name.ilike.%${search}%,name_hi.ilike.%${search}%,description.ilike.%${search}%,description_hi.ilike.%${search}%,fabric.ilike.%${search}%,fabric_hi.ilike.%${search}%,category.ilike.%${search}%,sub_category.ilike.%${search}%`);
+        // Strategy 1: Exact substring match across all searchable fields (includes product_id)
+        const orClauses: string[] = [
+          `name.ilike.%${search}%`,
+          `name_hi.ilike.%${search}%`,
+          `description.ilike.%${search}%`,
+          `description_hi.ilike.%${search}%`,
+          `fabric.ilike.%${search}%`,
+          `fabric_hi.ilike.%${search}%`,
+          `category.ilike.%${search}%`,
+          `sub_category.ilike.%${search}%`,
+          `product_id.ilike.%${search}%`,
+        ];
+
+        // Strategy 2: Fuzzy typo-tolerance — replace vowel groups with SQL wildcard %
+        // e.g. "tshart" → "tsh%rt" → matches "tshirts"
+        // Only applies to terms ≥4 chars that contain vowels
+        if (search.length >= 4) {
+          const fuzzy = search.replace(/[aeiou]+/gi, '%');
+          if (fuzzy !== search) {
+            orClauses.push(`name.ilike.%${fuzzy}%`, `name_hi.ilike.%${fuzzy}%`);
+          }
+        }
+
+        query = query.or(orClauses.join(','));
       }
 
       // IMPORTANT: Only show approved products for customer-facing queries
       // Sellers querying their own products can see all statuses
       // Admin can use includeAllStatuses=true to see pending/rejected products
+      const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
       if (!sellerId && !includeAllStatuses) {
         query = query.eq('approval_status', 'approved');
         // Customer-facing queries should also exclude deleted products
         query = query.is('deleted_at', null);
       }
 
-      // Apply pagination at DB level when requested
-      if (usePagination) {
-        const from = (page! - 1) * limit!;
-        const to = from + limit! - 1;
-        query = query.range(from, to);
-      }
+      // Apply optional limit (used by autocomplete dropdown)
+      const lim = limit ? parseInt(limit) : 0;
+      if (lim > 0) query = query.limit(lim);
 
-      const { data: products, error, count } = await query
-        .order('created_at', { ascending: false });
+      const { data: products, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error('[Products API] Database error:', error);
@@ -155,13 +170,10 @@ export async function GET(request: NextRequest) {
       })) || [];
     };
 
-    // All scenarios use 30 min TTL; cache is invalidated on every mutation
-    const includeAllStatuses = searchParams.get('includeAllStatuses') === 'true';
-    const cacheTTL = 1800;
-
-    // Use cache for normal queries; bypass for search or location-filtered queries
-    let transformedProducts = useCache
-      ? await getCachedData(cacheKey, fetchProducts, productCache, cacheTTL)
+    // Use two-tier public cache (L1 memory → L2 Redis → DB) for public queries.
+    // Search / location / seller / admin queries always hit the DB directly.
+    let transformedProducts = isPublicQuery
+      ? await publicGet(cacheKey, fetchProducts, 300)
       : await fetchProducts();
 
     // Apply 35 km distance filter when user coordinates are provided
@@ -177,22 +189,14 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Products API] Returning ${transformedProducts.length} products${search ? ` for search: "${search}"` : category ? ` for category: ${category}` : ''}`);
 
-    const responseBody: Record<string, unknown> = { products: transformedProducts };
-    if (usePagination) {
-      responseBody.page = page;
-      responseBody.limit = limit;
-      responseBody.hasMore = transformedProducts.length === limit;
-    }
-
-    // CDN/browser cache headers:
-    // - Customer-facing (no search, no user context): cache 30 min, serve stale up to 1 min while revalidating
-    // - Admin / seller / search queries: no CDN cache (handled by Redis per-session)
-    const isPublicQuery = !search && !sellerId && !userLat && !includeAllStatuses;
+    // Public queries get aggressive CDN caching via Cache-Control headers.
+    // Vercel Edge Network (or any CDN) will serve subsequent requests from
+    // edge cache without hitting the origin — achieving near-zero latency.
     const cacheHeaders = isPublicQuery
-      ? { 'Cache-Control': 's-maxage=1800, stale-while-revalidate=60' }
-      : { 'Cache-Control': 'no-store' };
+      ? { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' }
+      : { 'Cache-Control': 'private, no-store' };
 
-    return NextResponse.json(responseBody, { headers: cacheHeaders });
+    return NextResponse.json({ products: transformedProducts }, { headers: cacheHeaders });
   } catch (error) {
     console.error('Products API error:', error);
     return NextResponse.json(
@@ -314,8 +318,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Clear product cache in background — don't block the response
-    productCache.clear().catch(e => console.warn('[Products API] Cache clear failed:', e));
+    // Invalidate public product cache (in-memory L1 + Redis L2)
+    publicInvalidate('pub:products:*').catch(() => {});
+
+    // Notify seller (non-blocking — does not delay API response)
+    // Only for seller-submitted products; admin-created products skip the review queue
+    if (!userIsAdmin && newProduct?.id) {
+      void notifyProductSubmitted(newProduct.id);
+    }
 
     return NextResponse.json({
       message: 'Product created successfully',

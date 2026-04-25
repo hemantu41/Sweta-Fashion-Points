@@ -1,180 +1,174 @@
 /**
- * Cache utility — Upstash Redis (primary) with in-memory fallback.
- *
- * Upstash Redis is a serverless-compatible shared cache that works
- * correctly across all Vercel function instances, unlike in-memory Maps.
- *
- * Setup:
- *  1. Create a free Redis database at https://console.upstash.com
- *  2. Add to .env.local:
- *       UPSTASH_REDIS_REST_URL=https://...upstash.io
- *       UPSTASH_REDIS_REST_TOKEN=...
- *  3. Add the same vars to Vercel Environment Variables (Settings → Env Vars)
- *
- * If the env vars are absent the module falls back to in-memory Maps
- * (useful for local dev without a Redis instance).
+ * In-memory cache utility for API responses
+ * Reduces database queries for frequently accessed data
  */
 
-import { Redis } from '@upstash/redis';
-
-// ---------------------------------------------------------------------------
-// Redis client — created lazily so missing env vars don't crash at import time
-// ---------------------------------------------------------------------------
-let redis: Redis | null = null;
-
-function getRedis(): Redis | null {
-  if (redis) return redis;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (url && token) {
-    redis = new Redis({ url, token });
-    console.log('[Cache] Using Upstash Redis');
-  }
-  return redis;
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
 }
 
-// ---------------------------------------------------------------------------
-// In-memory fallback (works in local dev, NOT shared across serverless instances)
-// ---------------------------------------------------------------------------
-interface MemEntry<T> { data: T; expiresAt: number }
-const memStore = new Map<string, MemEntry<any>>();
-
-function memGet<T>(key: string): T | null {
-  const entry = memStore.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) { memStore.delete(key); return null; }
-  return entry.data as T;
-}
-function memSet<T>(key: string, value: T, ttlSeconds: number): void {
-  memStore.set(key, { data: value, expiresAt: Date.now() + ttlSeconds * 1000 });
-}
-function memDelete(key: string): void { memStore.delete(key); }
-function memClear(): void { memStore.clear(); }
-function memKeys(): string[] { return Array.from(memStore.keys()); }
-
-// ---------------------------------------------------------------------------
-// Public Cache class — same API as before, now backed by Redis when available
-// ---------------------------------------------------------------------------
 class Cache {
-  private prefix: string;
-  private defaultTTL: number; // seconds
+  private cache: Map<string, CacheEntry<any>>;
+  private defaultTTL: number;
 
-  constructor(defaultTTLSeconds: number = 300, prefix: string = 'spf') {
-    this.defaultTTL = defaultTTLSeconds;
-    this.prefix = prefix;
+  constructor(defaultTTLSeconds: number = 300) {
+    // Default 5 minutes
+    this.cache = new Map();
+    this.defaultTTL = defaultTTLSeconds * 1000; // Convert to milliseconds
   }
 
-  private key(k: string): string {
-    return `${this.prefix}:${k}`;
+  /**
+   * Set a value in the cache
+   * @param key - Cache key
+   * @param value - Value to cache
+   * @param ttlSeconds - Time to live in seconds (optional)
+   */
+  set<T>(key: string, value: T, ttlSeconds?: number): void {
+    const ttl = ttlSeconds ? ttlSeconds * 1000 : this.defaultTTL;
+    const entry: CacheEntry<T> = {
+      data: value,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + ttl,
+    };
+
+    this.cache.set(key, entry);
+    console.log(`[Cache] Set: ${key} (TTL: ${ttl / 1000}s)`);
   }
 
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    const ttl = ttlSeconds ?? this.defaultTTL;
-    const r = getRedis();
-    if (r) {
-      try {
-        await r.set(this.key(key), JSON.stringify(value), { ex: ttl });
-        console.log(`[Cache:Redis] Set: ${key} (TTL: ${ttl}s)`);
-        return;
-      } catch (e) {
-        console.warn('[Cache:Redis] set failed, falling back to memory:', e);
+  /**
+   * Get a value from the cache
+   * @param key - Cache key
+   * @returns Cached value or null if not found/expired
+   */
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+
+    if (!entry) {
+      console.log(`[Cache] Miss: ${key}`);
+      return null;
+    }
+
+    // Check if expired
+    if (Date.now() > entry.expiresAt) {
+      console.log(`[Cache] Expired: ${key}`);
+      this.cache.delete(key);
+      return null;
+    }
+
+    console.log(`[Cache] Hit: ${key}`);
+    return entry.data as T;
+  }
+
+  /**
+   * Delete a value from the cache
+   * @param key - Cache key
+   */
+  delete(key: string): void {
+    this.cache.delete(key);
+    console.log(`[Cache] Deleted: ${key}`);
+  }
+
+  /**
+   * Clear all cache entries
+   */
+  clear(): void {
+    this.cache.clear();
+    console.log('[Cache] Cleared all entries');
+  }
+
+  /**
+   * Clear expired entries
+   */
+  clearExpired(): void {
+    const now = Date.now();
+    let clearedCount = 0;
+
+    for (const [key, entry] of this.cache.entries()) {
+      if (now > entry.expiresAt) {
+        this.cache.delete(key);
+        clearedCount++;
       }
     }
-    memSet(this.key(key), value, ttl);
-    console.log(`[Cache:Mem] Set: ${key} (TTL: ${ttl}s)`);
+
+    if (clearedCount > 0) {
+      console.log(`[Cache] Cleared ${clearedCount} expired entries`);
+    }
   }
 
-  async get<T>(key: string): Promise<T | null> {
-    const r = getRedis();
-    if (r) {
-      try {
-        const raw = await r.get<string>(this.key(key));
-        if (raw === null || raw === undefined) {
-          console.log(`[Cache:Redis] Miss: ${key}`);
-          return null;
-        }
-        console.log(`[Cache:Redis] Hit: ${key}`);
-        return (typeof raw === 'string' ? JSON.parse(raw) : raw) as T;
-      } catch (e) {
-        console.warn('[Cache:Redis] get failed, falling back to memory:', e);
-      }
-    }
-    const mem = memGet<T>(this.key(key));
-    console.log(`[Cache:Mem] ${mem !== null ? 'Hit' : 'Miss'}: ${key}`);
-    return mem;
-  }
-
-  async delete(key: string): Promise<void> {
-    const r = getRedis();
-    if (r) {
-      try { await r.del(this.key(key)); return; } catch {}
-    }
-    memDelete(this.key(key));
-  }
-
-  async clear(): Promise<void> {
-    const r = getRedis();
-    if (r) {
-      try {
-        // Scan all keys with this prefix and delete them
-        let cursor = 0;
-        do {
-          const result = await r.scan(cursor, { match: `${this.prefix}:*`, count: 100 });
-          cursor = result[0];
-          const keys = result[1];
-          if (keys.length > 0) await r.del(...keys);
-        } while (cursor !== 0);
-        console.log(`[Cache:Redis] Cleared all ${this.prefix}:* keys`);
-        return;
-      } catch (e) {
-        console.warn('[Cache:Redis] clear failed, falling back to memory:', e);
-      }
-    }
-    // Fallback: clear only keys belonging to this prefix
-    for (const k of memKeys()) {
-      if (k.startsWith(`${this.prefix}:`)) memDelete(k);
-    }
-    console.log(`[Cache:Mem] Cleared all ${this.prefix}:* keys`);
+  /**
+   * Get cache statistics
+   */
+  stats(): { size: number; keys: string[] } {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys()),
+    };
   }
 }
 
-// ---------------------------------------------------------------------------
-// Shared cache instances (TTLs preserved from original)
-// ---------------------------------------------------------------------------
-export const apiCache         = new Cache(300,  'api');         // 5 min
-export const productCache     = new Cache(1800, 'product');     // 30 min
-export const sellerCache      = new Cache(1800, 'seller');      // 30 min
-export const deliveryCache    = new Cache(1800, 'delivery');    // 30 min
-export const partnerCache     = new Cache(1800, 'partner');     // 30 min — delivery partners list
-export const adminOrdersCache = new Cache(1800, 'adminorders'); // 30 min — admin orders list
+// Create global cache instances
+export const apiCache = new Cache(300); // 5 minutes for API responses
+export const productCache = new Cache(600); // 10 minutes for products
+export const sellerCache = new Cache(600); // 10 minutes for sellers
 
-// ---------------------------------------------------------------------------
-// getCachedData — same signature as before, now async-aware
-// ---------------------------------------------------------------------------
+// Clear expired entries every minute
+if (typeof window === 'undefined') {
+  // Server-side only
+  setInterval(() => {
+    apiCache.clearExpired();
+    productCache.clearExpired();
+    sellerCache.clearExpired();
+  }, 60000); // 1 minute
+}
+
+/**
+ * Cache helper function for async operations
+ * @param key - Cache key
+ * @param fetcher - Function to fetch data if not in cache
+ * @param cache - Cache instance to use
+ * @param ttlSeconds - Time to live in seconds
+ * @returns Cached or fresh data
+ */
 export async function getCachedData<T>(
   key: string,
   fetcher: () => Promise<T>,
   cache: Cache = apiCache,
   ttlSeconds?: number
 ): Promise<T> {
-  const cached = await cache.get<T>(key);
-  if (cached !== null) return cached;
+  // Try to get from cache
+  const cached = cache.get<T>(key);
+  if (cached !== null) {
+    return cached;
+  }
 
+  // Fetch fresh data
   console.log(`[Cache] Fetching fresh data for: ${key}`);
   const data = await fetcher();
-  await cache.set(key, data, ttlSeconds);
+
+  // Store in cache
+  cache.set(key, data, ttlSeconds);
+
   return data;
 }
 
-// ---------------------------------------------------------------------------
-// invalidateCache — pattern-based deletion (memory fallback only)
-// For Redis, prefer calling cache.clear() directly on the relevant instance.
-// ---------------------------------------------------------------------------
-export async function invalidateCache(
-  pattern: string | RegExp,
-  cache: Cache = apiCache
-): Promise<void> {
-  // Simplest cross-environment approach: clear the whole namespace
-  await cache.clear();
-  console.log(`[Cache] Invalidated entries matching: ${pattern}`);
+/**
+ * Invalidate cache by pattern
+ * @param pattern - Regex pattern or string prefix
+ * @param cache - Cache instance to use
+ */
+export function invalidateCache(pattern: string | RegExp, cache: Cache = apiCache): void {
+  const stats = cache.stats();
+  const regex = typeof pattern === 'string' ? new RegExp(`^${pattern}`) : pattern;
+
+  let deletedCount = 0;
+  for (const key of stats.keys) {
+    if (regex.test(key)) {
+      cache.delete(key);
+      deletedCount++;
+    }
+  }
+
+  console.log(`[Cache] Invalidated ${deletedCount} entries matching: ${pattern}`);
 }

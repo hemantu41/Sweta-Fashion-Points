@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { useCategories, type CategoryNode } from '@/hooks/useCategories';
 
 interface Banner {
   id: string;
@@ -14,6 +15,7 @@ interface Banner {
   tagHi: string;
   link: string;
   bgImage: string;
+  catKeyword?: string; // used to find matching L1 category slug dynamically
 }
 
 const banners: Banner[] = [
@@ -21,8 +23,8 @@ const banners: Banner[] = [
     id: 'welcome',
     title: 'Your Style,\nYour Story',
     titleHi: 'आपकी शैली,\nआपकी कहानी',
-    subtitle: 'Amas, Gaya, Bihar',
-    subtitleHi: 'अमास, गया, बिहार',
+    subtitle: 'Premium Fashion for Everyone',
+    subtitleHi: 'हर किसी के लिए प्रीमियम फैशन',
     tag: 'Welcome',
     tagHi: 'स्वागत',
     link: '/',
@@ -38,6 +40,7 @@ const banners: Banner[] = [
     tagHi: 'पुरुष',
     link: '/mens',
     bgImage: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'men',
   },
   {
     id: 'womens',
@@ -49,6 +52,7 @@ const banners: Banner[] = [
     tagHi: 'महिला',
     link: '/womens',
     bgImage: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'women',
   },
   {
     id: 'sarees',
@@ -60,6 +64,7 @@ const banners: Banner[] = [
     tagHi: 'साड़ी',
     link: '/sarees',
     bgImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'saree',
   },
   {
     id: 'kids',
@@ -71,6 +76,7 @@ const banners: Banner[] = [
     tagHi: 'बच्चे',
     link: '/kids',
     bgImage: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'kid',
   },
   {
     id: 'beauty',
@@ -82,6 +88,7 @@ const banners: Banner[] = [
     tagHi: 'ब्यूटी',
     link: '/makeup',
     bgImage: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'beauty',
   },
   {
     id: 'footwear',
@@ -93,24 +100,54 @@ const banners: Banner[] = [
     tagHi: 'जूते',
     link: '/footwear',
     bgImage: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1600&h=700&fit=crop&q=90',
+    catKeyword: 'footwear',
   },
 ];
 
+// Resolves the banner link to a live category-tree page when possible.
+// Searches L1 nodes whose name contains the keyword; falls back to banner.link.
+function getBannerLink(banner: Banner, tree: CategoryNode[]): string {
+  if (!banner.catKeyword || tree.length === 0) return banner.link;
+  const kw = banner.catKeyword.toLowerCase();
+  const match = tree.find((node) => node.name.toLowerCase().includes(kw));
+  return match ? `/category/${match.slug}` : banner.link;
+}
+
 export default function BannerCarousel() {
   const { language } = useLanguage();
+  const { tree, loading } = useCategories();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   // Key increments each time a slide becomes active — forces animation classes to restart
   const [slideKey, setSlideKey] = useState(0);
 
+  // Only show category banners whose L1 category exists in the live tree.
+  // Welcome banner (no catKeyword) always shows.
+  // While the tree is still loading, show only the welcome banner to avoid flicker.
+  const visibleBanners = loading
+    ? banners.filter((b) => !b.catKeyword)
+    : banners.filter((b) => {
+        if (!b.catKeyword) return true;
+        return tree.some((node) =>
+          node.name.toLowerCase().includes(b.catKeyword!.toLowerCase())
+        );
+      });
+
+  // Clamp currentSlide whenever visibleBanners length shrinks
+  useEffect(() => {
+    if (currentSlide >= visibleBanners.length) {
+      setCurrentSlide(0);
+    }
+  }, [visibleBanners.length, currentSlide]);
+
   useEffect(() => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % banners.length);
+      setCurrentSlide((prev) => (prev + 1) % visibleBanners.length);
       setSlideKey((k) => k + 1);
     }, 6000);
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, visibleBanners.length]);
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
@@ -119,14 +156,14 @@ export default function BannerCarousel() {
     setTimeout(() => setIsAutoPlaying(true), 10000);
   };
 
-  const nextSlide = () => goToSlide((currentSlide + 1) % banners.length);
-  const prevSlide = () => goToSlide((currentSlide - 1 + banners.length) % banners.length);
+  const nextSlide = () => goToSlide((currentSlide + 1) % visibleBanners.length);
+  const prevSlide = () => goToSlide((currentSlide - 1 + visibleBanners.length) % visibleBanners.length);
 
   return (
     <section className="relative w-full">
       <div className="relative h-[500px] sm:h-[600px] md:h-[700px] overflow-hidden">
 
-        {banners.map((banner, index) => {
+        {visibleBanners.map((banner, index) => {
           const isActive = index === currentSlide;
           return (
             <div
@@ -143,12 +180,12 @@ export default function BannerCarousel() {
               />
 
               {/* Dark gradient — left-heavy for text legibility */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/10 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15 pointer-events-none" />
               {/* Bottom fade for indicator readability */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
               {/* Clickable text area */}
-              <Link href={banner.link} className="absolute inset-0">
+              <Link href={getBannerLink(banner, tree)} className="absolute inset-0">
                 <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
 
                   {/* Collection tag */}
@@ -159,11 +196,11 @@ export default function BannerCarousel() {
                     {language === 'hi' ? banner.tagHi : banner.tag}
                   </span>
 
-                  {/* Heading */}
+                  {/* Heading — brand maroon with strong shadow for contrast on photo backgrounds */}
                   <h2
                     key={`title-${slideKey}-${banner.id}`}
-                    className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-white leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
-                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
+                    className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-[#722F37] leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
+                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 0 40px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.4)' }}
                   >
                     {language === 'hi' ? banner.titleHi : banner.title}
                   </h2>
@@ -171,21 +208,10 @@ export default function BannerCarousel() {
                   {/* Subtitle */}
                   <p
                     key={`sub-${slideKey}-${banner.id}`}
-                    className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 mb-8 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
+                    className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
                   >
                     {language === 'hi' ? banner.subtitleHi : banner.subtitle}
                   </p>
-
-                  {/* CTA button — rounded, brand color, hover animation */}
-                  <span
-                    key={`cta-${slideKey}-${banner.id}`}
-                    className={`banner-cta self-start inline-flex items-center gap-2.5 px-8 py-3.5 bg-white text-[#1A1A1A] text-[11px] font-semibold tracking-[0.18em] uppercase rounded-full shadow-lg transition-all duration-300 hover:bg-[#722F37] hover:text-white hover:shadow-xl hover:-translate-y-0.5 ${isActive ? '' : 'opacity-0'}`}
-                  >
-                    {language === 'hi' ? 'अभी खरीदें' : 'Shop Now'}
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </span>
                 </div>
               </Link>
             </div>
@@ -216,7 +242,7 @@ export default function BannerCarousel() {
 
         {/* Progress indicators — aligned with text left padding */}
         <div className="absolute bottom-6 left-8 sm:left-14 lg:left-24 z-30 flex gap-2 items-center">
-          {banners.map((_, index) => (
+          {visibleBanners.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}

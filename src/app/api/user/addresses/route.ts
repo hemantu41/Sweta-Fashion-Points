@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // GET - Fetch user addresses
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: addresses, error } = await supabase
+    const { data: addresses, error } = await supabaseAdmin
       .from('spf_addresses')
       .select('*')
       .eq('user_id', userId)
@@ -64,21 +64,21 @@ export async function POST(request: NextRequest) {
 
     // If this is set as default, remove default from other addresses
     if (isDefault) {
-      await supabase
+      await supabaseAdmin
         .from('spf_addresses')
         .update({ is_default: false })
         .eq('user_id', userId);
     }
 
     // Check if this is the first address (make it default automatically)
-    const { data: existingAddresses } = await supabase
+    const { data: existingAddresses } = await supabaseAdmin
       .from('spf_addresses')
       .select('id')
       .eq('user_id', userId);
 
     const shouldBeDefault = isDefault || (existingAddresses?.length === 0);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('spf_addresses')
       .insert([{
         user_id: userId,
@@ -130,12 +130,12 @@ export async function PUT(request: NextRequest) {
 
     // If setting as default, remove default from other addresses
     if (isDefault) {
-      await supabase
+      await supabaseAdmin
         .from('spf_addresses')
         .update({ is_default: false })
         .eq('user_id', userId);
 
-      await supabase
+      await supabaseAdmin
         .from('spf_addresses')
         .update({ is_default: true })
         .eq('id', addressId)
@@ -169,7 +169,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('spf_addresses')
       .delete()
       .eq('id', addressId)

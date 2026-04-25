@@ -41,10 +41,12 @@ interface ShiprocketShipmentRequest {
   order_date: string;
   pickup_location: string;
   billing_customer_name: string;
+  billing_last_name: string;
   billing_address: string;
   billing_city: string;
   billing_state: string;
   billing_pincode: string;
+  billing_country: string;
   billing_phone: string;
   billing_email?: string;
   shipping_is_billing: boolean;
@@ -164,7 +166,10 @@ class ShiprocketService {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`Shiprocket API error: ${error.message || response.statusText}`);
+      const detail = error.errors
+        ? JSON.stringify(error.errors)
+        : error.message || response.statusText;
+      throw new Error(`Shiprocket API error: ${detail}`);
     }
 
     return response.json();
@@ -387,6 +392,116 @@ class ShiprocketService {
   }
 
   /**
+   * Generate shipping label for a shipment
+   */
+  async generateLabel(shipmentId: number): Promise<{
+    success: boolean;
+    labelUrl?: string;
+    error?: string;
+  }> {
+    try {
+      const response = await this.request<any>('/courier/generate/label', {
+        method: 'POST',
+        body: JSON.stringify({ shipment_id: [shipmentId] }),
+      });
+      if (response.label_url) {
+        return { success: true, labelUrl: response.label_url };
+      }
+      return { success: false, error: 'Label generation failed: ' + JSON.stringify(response) };
+    } catch (error: any) {
+      console.error('[Shiprocket] Generate label error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Register a seller's pickup address in Shiprocket.
+   * Call this when admin approves a new seller.
+   */
+  async addPickupLocation(seller: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    pincode: string;
+  }): Promise<{
+    success: boolean;
+    pickupLocationName?: string;
+    error?: string;
+  }> {
+    const locationName = `seller_${seller.phone}`;
+    try {
+      const data = await this.request<any>('/settings/company/addpickup', {
+        method: 'POST',
+        body: JSON.stringify({
+          pickup_location: locationName,
+          name:            seller.name,
+          email:           seller.email,
+          phone:           seller.phone,
+          address:         seller.address,
+          city:            seller.city,
+          state:           seller.state,
+          pin_code:        seller.pincode,
+          country:         'India',
+        }),
+      });
+      if (data.success || data.pickup_id) {
+        return { success: true, pickupLocationName: locationName };
+      }
+      return { success: false, error: JSON.stringify(data) };
+    } catch (error: any) {
+      console.error('[Shiprocket] Add pickup location error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Auto-assign cheapest courier and return AWB (wraps generateAWB + fallback)
+   */
+  async autoAssignCourier(shipmentId: number): Promise<{
+    success: boolean;
+    awbNumber?: string;
+    courierName?: string;
+    error?: string;
+  }> {
+    try {
+      // Try auto-assign first (Shiprocket picks cheapest)
+      const assignResponse = await this.request<any>('/courier/assign/awb', {
+        method: 'POST',
+        body: JSON.stringify({ shipment_id: shipmentId }),
+      });
+      if (assignResponse.response?.data?.awb_code) {
+        return {
+          success: true,
+          awbNumber: assignResponse.response.data.awb_code,
+          courierName: assignResponse.response.data.courier_name,
+        };
+      }
+      // Fallback: pick cheapest from serviceability
+      const svc = await this.request<any>(`/courier/serviceability/?shipment_id=${shipmentId}`);
+      const couriers: any[] = svc.data?.available_courier_companies || [];
+      if (!couriers.length) return { success: false, error: 'No couriers available' };
+      const cheapest = couriers.sort((a: any, b: any) => a.rate - b.rate)[0];
+      const manualAssign = await this.request<any>('/courier/assign/awb', {
+        method: 'POST',
+        body: JSON.stringify({ shipment_id: shipmentId, courier_id: cheapest.courier_company_id }),
+      });
+      if (manualAssign.response?.data?.awb_code) {
+        return {
+          success: true,
+          awbNumber: manualAssign.response.data.awb_code,
+          courierName: manualAssign.response.data.courier_name,
+        };
+      }
+      return { success: false, error: 'Auto-assign failed: ' + JSON.stringify(assignResponse) };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Helper: Convert our order format to Shiprocket format
    */
   formatOrderForShiprocket(order: any, pickupLocation: string = 'Primary'): ShiprocketShipmentRequest {
@@ -424,3 +539,127 @@ class ShiprocketService {
 
 // Export singleton instance
 export const shiprocketService = new ShiprocketService();
+
+// ─── Standalone exported functions (used by new API routes) ───────────────────
+
+export async function checkServiceability(
+  pickupPincode: string,
+  deliveryPincode: string,
+  weight: number,
+  cod = false
+) {
+  const result = await shiprocketService.getServiceability({
+    pickup_postcode: pickupPincode,
+    delivery_postcode: deliveryPincode,
+    weight,
+    cod: cod ? 1 : 0,
+  });
+  if (!result.success || !result.couriers?.length) {
+    return { serviceable: false, estimatedDays: null, courierName: null, shippingCost: null, codAvailable: false };
+  }
+  const best = result.recommendedCourier!;
+  return {
+    serviceable: true,
+    estimatedDays: parseInt(best.estimated_delivery_days) || null,
+    courierName: best.courier_name,
+    shippingCost: best.rate,
+    codAvailable: best.cod_charges >= 0,
+  };
+}
+
+export async function createShipment(orderData: {
+  orderId: string;
+  orderDate: string;
+  pickupLocation: string;
+  billingName: string;
+  billingPhone: string;
+  billingAddress: string;
+  billingCity: string;
+  billingState: string;
+  billingPincode: string;
+  billingEmail?: string;
+  items: { name: string; sku: string; units: number; sellingPrice: number; hsn?: string }[];
+  paymentMethod: 'Prepaid' | 'COD';
+  subTotal: number;
+  weight: number;
+  length: number;
+  breadth: number;
+  height: number;
+}) {
+  // Step 1: Create order
+  // Shiprocket requires first + last name separately
+  const nameParts     = (orderData.billingName || 'Customer').trim().split(/\s+/);
+  const firstName     = nameParts[0] || 'Customer';
+  const lastName      = nameParts.slice(1).join(' ') || '.';
+
+  const orderResult = await shiprocketService.createOrder({
+    order_id:               orderData.orderId,
+    order_date:             orderData.orderDate,
+    pickup_location:        orderData.pickupLocation,
+    billing_customer_name:  firstName,
+    billing_last_name:      lastName,
+    billing_address:        orderData.billingAddress,
+    billing_city:           orderData.billingCity,
+    billing_state:          orderData.billingState,
+    billing_pincode:        orderData.billingPincode,
+    billing_country:        'India',
+    billing_phone:          orderData.billingPhone,
+    billing_email:          orderData.billingEmail || '',
+    shipping_is_billing:    true,
+    order_items:            orderData.items.map(i => ({
+      name: i.name, sku: i.sku, units: i.units,
+      selling_price: i.sellingPrice, hsn: i.hsn ? Number(i.hsn) : undefined,
+    })),
+    payment_method:         orderData.paymentMethod,
+    sub_total:              orderData.subTotal,
+    length:                 orderData.length,
+    breadth:                orderData.breadth,
+    height:                 orderData.height,
+    weight:                 orderData.weight,
+  });
+
+  if (!orderResult.success || !orderResult.shipmentId) {
+    return { success: false, error: orderResult.error || 'Order creation failed' };
+  }
+
+  // Step 2: Auto-assign cheapest courier
+  const awbResult = await shiprocketService.autoAssignCourier(orderResult.shipmentId);
+  if (!awbResult.success) {
+    return { success: false, error: awbResult.error };
+  }
+
+  return {
+    success: true,
+    shiprocketOrderId: orderResult.orderId,
+    shipmentId:        orderResult.shipmentId,
+    awbNumber:         awbResult.awbNumber,
+    courierName:       awbResult.courierName,
+  };
+}
+
+export async function generateLabel(shipmentId: number) {
+  return shiprocketService.generateLabel(shipmentId);
+}
+
+export async function schedulePickup(shipmentId: number) {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const pickupDate = tomorrow.toISOString().split('T')[0];
+  return shiprocketService.schedulePickup(shipmentId, pickupDate);
+}
+
+export async function trackShipment(awbNumber: string) {
+  return shiprocketService.trackShipment(awbNumber);
+}
+
+export async function cancelShipment(awbNumbers: string[]) {
+  // Map AWBs to order IDs is not directly supported; use order cancel
+  return shiprocketService.cancelShipment(awbNumbers.map(Number));
+}
+
+export async function addPickupLocation(seller: {
+  name: string; email: string; phone: string;
+  address: string; city: string; state: string; pincode: string;
+}) {
+  return shiprocketService.addPickupLocation(seller);
+}

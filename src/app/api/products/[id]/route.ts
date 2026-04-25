@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
+import { publicCacheGet, publicCacheSet, publicInvalidate, publicDel } from '@/lib/publicCache';
 
 // GET /api/products/[id] - Fetch single product by ID
 export async function GET(
@@ -9,10 +11,23 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Fetch product with seller information
-    const { data: product, error } = await supabase
-      .from('spf_productdetails')
-      .select(`
+    // Determine if this is a public (customer) request — no seller/admin params
+    const sellerIdParam = request.nextUrl.searchParams.get('sellerId');
+    const adminView = request.nextUrl.searchParams.get('adminView') === 'true';
+    const isPublicView = !sellerIdParam && !adminView;
+
+    // ── Public cache check (L1 memory → L2 Redis) ──────────────────────────
+    if (isPublicView) {
+      const cacheKey = `pub:product:${id}`;
+      const cached = await publicCacheGet<Record<string, unknown>>(cacheKey, 300);
+      if (cached) {
+        return NextResponse.json({ product: cached }, {
+          headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+        });
+      }
+    }
+
+    const PRODUCT_SELECT = `
         *,
         seller:spf_sellers!spf_productdetails_seller_id_fkey (
           id,
@@ -22,13 +37,33 @@ export async function GET(
           state,
           business_phone
         )
-      `)
-      .eq('id', id)
-      .is('deleted_at', null)
-      .single();
+      `;
 
-    if (error) {
-      console.error('[Product API] Database error:', error);
+    // Try by UUID first; fall back to product_id for custom IDs like PRD-...
+    let product: any = null;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    if (isUUID) {
+      const { data, error } = await supabase
+        .from('spf_productdetails')
+        .select(PRODUCT_SELECT)
+        .eq('id', id)
+        .is('deleted_at', null)
+        .single();
+      if (!error) product = data;
+    }
+
+    if (!product) {
+      const { data, error } = await supabase
+        .from('spf_productdetails')
+        .select(PRODUCT_SELECT)
+        .eq('product_id', id)
+        .is('deleted_at', null)
+        .single();
+      if (!error) product = data;
+    }
+
+    if (!product) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
@@ -36,11 +71,7 @@ export async function GET(
     }
 
     // Allow sellers to view their own products regardless of approval status
-    const sellerIdParam = request.nextUrl.searchParams.get('sellerId');
     const isSellerViewingOwnProduct = sellerIdParam && product.seller_id === sellerIdParam;
-
-    // Allow admin to view any product regardless of approval/active status
-    const adminView = request.nextUrl.searchParams.get('adminView') === 'true';
 
     // Only show approved and active products to customers
     if (!adminView && !isSellerViewingOwnProduct && (product.approval_status !== 'approved' || !product.is_active)) {
@@ -85,7 +116,17 @@ export async function GET(
       } : null,
     };
 
-    return NextResponse.json({ product: transformedProduct });
+    // ── Populate public cache (fire-and-forget) ─────────────────────────────
+    if (isPublicView && product.approval_status === 'approved' && product.is_active) {
+      const cacheKey = `pub:product:${id}`;
+      publicCacheSet(cacheKey, transformedProduct, 300).catch(() => {});
+    }
+
+    const cacheHeaders = isPublicView
+      ? { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' }
+      : { 'Cache-Control': 'private, no-store' };
+
+    return NextResponse.json({ product: transformedProduct }, { headers: cacheHeaders });
   } catch (error) {
     console.error('[Product API] Error:', error);
     return NextResponse.json(
@@ -166,9 +207,14 @@ export async function PUT(
       );
     }
 
-    // Clear product cache in background — don't block the response
-    const { productCache } = await import('@/lib/cache');
-    productCache.clear().catch(e => console.warn('[Products API] Cache clear failed:', e));
+    // Invalidate public cache (product listings + this product detail)
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${id}`).catch(() => {});
+
+    // Invalidate seller Redis cache for products + inventory + pricing
+    if (updatedProduct?.seller_id) {
+      invalidateSellerKeys(updatedProduct.seller_id, 'products', 'inventory', 'pricing').catch(() => {});
+    }
 
     return NextResponse.json({
       message: isAdmin
@@ -183,6 +229,49 @@ export async function PUT(
       { error: 'Something went wrong' },
       { status: 500 }
     );
+  }
+}
+
+// PATCH /api/products/[id] - Partial update for stock / active status
+// Used by seller inventory page — does NOT reset approval_status
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    const update: Record<string, unknown> = {};
+    if (body.stockQuantity !== undefined) update.stock_quantity = body.stockQuantity;
+    if (body.isActive !== undefined)      update.is_active      = body.isActive;
+
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+    }
+
+    update.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('spf_productdetails')
+      .update(update)
+      .eq('id', id)
+      .select('id, stock_quantity, is_active')
+      .single();
+
+    if (error) {
+      console.error('[Product API] PATCH error:', error);
+      return NextResponse.json({ error: 'Failed to update product' }, { status: 500 });
+    }
+
+    // Invalidate public cache (stock change is immediately visible to customers)
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${id}`).catch(() => {});
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error('[Product API] PATCH error:', error);
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }
 
@@ -319,9 +408,14 @@ export async function DELETE(
       }
     }
 
-    // Clear product cache in background — don't block the response
-    const { productCache } = await import('@/lib/cache');
-    productCache.clear().catch(e => console.warn('[Products API] Cache clear failed:', e));
+    // Invalidate public cache (product listings + this product detail)
+    publicInvalidate('pub:products:*').catch(() => {});
+    publicDel(`pub:product:${productId}`).catch(() => {});
+
+    // Invalidate seller Redis cache for products + inventory + pricing
+    if (product?.seller_id) {
+      invalidateSellerKeys(product.seller_id, 'products', 'inventory', 'pricing').catch(() => {});
+    }
 
     return NextResponse.json({
       message: isFirstDeletion

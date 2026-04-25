@@ -1,6 +1,6 @@
 # Razorpay Payment Gateway Setup Guide
 
-This guide will help you set up Razorpay payment gateway for automatic payment detection in Sweta Fashion Points.
+This guide will help you set up Razorpay payment gateway for automatic payment detection in Insta Fashion Points.
 
 ## 🚀 Quick Start
 

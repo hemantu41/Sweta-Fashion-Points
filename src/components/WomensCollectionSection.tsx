@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { useCategories, type CategoryNode } from '@/hooks/useCategories';
 
 interface WomensCategory {
   id: string;
@@ -10,146 +11,130 @@ interface WomensCategory {
   description: string;
   descriptionHi: string;
   link: string;
-  bgImage: string;
+  bgGradient: string;
+  bgImage?: string;
 }
 
-// All images: on-model editorial style — consistent portrait orientation
 const womensCategories: WomensCategory[] = [
   {
     id: 'daily',
     name: 'Daily Wear',
     nameHi: 'डेली वियर',
-    description: 'Effortless everyday essentials',
-    descriptionHi: 'रोजमर्रा की आसान जरूरतें',
+    description: 'Everyday Essentials',
+    descriptionHi: 'रोजमर्रा की आवश्यकताएं',
     link: '/womens?category=daily',
-    bgImage: 'https://images.unsplash.com/photo-1583391733981-5df2f8db5eff?w=800&h=1067&fit=crop&crop=top&q=90',
+    bgGradient: 'from-pink-100 via-rose-100 to-pink-200',
+    bgImage: 'https://images.unsplash.com/photo-1583391733981-5df2f8db5eff?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
   {
     id: 'party',
     name: 'Party Wear',
     nameHi: 'पार्टी वियर',
-    description: 'Glamorous looks for every occasion',
-    descriptionHi: 'हर अवसर के लिए ग्लैमरस लुक',
+    description: 'Glamorous & Stylish',
+    descriptionHi: 'ग्लैमरस और स्टाइलिश',
     link: '/womens?category=party',
-    bgImage: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&h=1067&fit=crop&crop=top&q=90',
+    bgGradient: 'from-purple-100 via-violet-100 to-purple-200',
+    bgImage: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
   {
     id: 'ethnic',
     name: 'Ethnic Wear',
     nameHi: 'एथनिक वियर',
-    description: 'Traditional elegance, redefined',
-    descriptionHi: 'पारंपरिक सुंदरता, नए अंदाज में',
+    description: 'Traditional Elegance',
+    descriptionHi: 'पारंपरिक सुंदरता',
     link: '/womens?category=ethnic',
-    bgImage: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=800&h=1067&fit=crop&crop=top&q=90',
+    bgGradient: 'from-teal-100 via-cyan-100 to-teal-200',
+    bgImage: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
   {
     id: 'seasonal',
-    name: 'New Season',
-    nameHi: 'नया सीजन',
-    description: 'Fresh arrivals, trending now',
-    descriptionHi: 'नई आमद, अभी ट्रेंडिंग',
+    name: 'Seasonal Collections',
+    nameHi: 'सीज़नल कलेक्शन',
+    description: 'Trending Now',
+    descriptionHi: 'अभी ट्रेंडिंग',
     link: '/womens?category=seasonal',
-    bgImage: 'https://images.unsplash.com/photo-1571513722275-4b41940f54b8?w=800&h=1067&fit=crop&crop=top&q=90',
+    bgGradient: 'from-orange-100 via-amber-100 to-orange-200',
+    bgImage: 'https://images.unsplash.com/photo-1571513722275-4b41940f54b8?w=1600&h=1200&q=90&auto=format&fit=crop',
   },
 ];
 
-// Shared CSS filter — harmonises all four images into a consistent signature look:
-// warm, slightly desaturated, lifted contrast
-const PHOTO_FILTER = 'saturate(0.85) contrast(1.05) brightness(0.96)';
+function resolveLink(tree: CategoryNode[], l1Kw: string, subKw: string, fallback: string): string {
+  if (tree.length === 0) return fallback;
+  const re = new RegExp(`\\b${l1Kw}\\b`, 'i');
+  const l1 = tree.find(n => re.test(n.name) || re.test(n.slug));
+  if (!l1) return fallback;
+  if (subKw) {
+    const l2 = (l1.children || []).find(n => n.name.toLowerCase().includes(subKw.toLowerCase()));
+    if (l2) return `/category/${l2.slug}`;
+  }
+  return `/category/${l1.slug}`;
+}
 
 export default function WomensCollectionSection() {
   const { language } = useLanguage();
+  const { tree } = useCategories();
+  const subKeywords: Record<string, string> = { daily: 'daily', party: 'party', ethnic: 'ethnic', seasonal: 'season' };
 
   return (
-    <section className="py-24 md:py-32 bg-[#F8F5F2]">
-      <div className="max-w-[1300px] mx-auto px-6 sm:px-8 lg:px-14">
+    <section className="relative py-20 bg-[#FAF7F2] overflow-hidden">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle at 2px 2px, #722F37 1px, transparent 0)',
+          backgroundSize: '40px 40px'
+        }}></div>
+      </div>
 
-        {/* Section Header — split: title left, View All right */}
-        <div className="mb-16 md:mb-20 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
-          <div>
-            <h2
-              className="text-[2.2rem] sm:text-[2.8rem] md:text-[3.2rem] font-semibold text-[#1A1A1A] tracking-[-0.025em] leading-none"
-              style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
-            >
-              {language === 'hi' ? 'महिलाओं का कलेक्शन' : "Women's Collection"}
-            </h2>
-            <p className="mt-3 text-[13px] text-[#ADADAD] font-light tracking-wide max-w-xs leading-relaxed">
-              {language === 'hi'
-                ? 'आधुनिक महिला के लिए शैली और परिष्कार।'
-                : 'Style and sophistication for the modern woman.'
-              }
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#2D2D2D] mb-3 tracking-tight" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+            {language === 'hi' ? 'महिलाओं के लिए फैशन' : 'Fashion for Women'}
+          </h2>
 
-          {/* View All — desktop top-right, minimal arrow */}
-          <Link
-            href="/womens"
-            className="hidden sm:inline-flex items-center gap-2.5 text-[10px] tracking-[0.2em] uppercase text-[#1A1A1A] font-semibold border-b border-[#C8C8C8] pb-0.5 hover:border-[#722F37] hover:text-[#722F37] transition-colors duration-250 self-end mb-1 whitespace-nowrap group"
-          >
-            {language === 'hi' ? 'सभी देखें' : 'View All'}
-            <svg className="w-2.5 h-2.5 stroke-1 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+          <p className="text-lg text-[#6B6B6B] max-w-2xl mx-auto">
+            {language === 'hi'
+              ? 'आधुनिक महिलाओं के लिए शैली और आराम'
+              : 'Style and comfort for the modern woman'
+            }
+          </p>
         </div>
 
-        {/* Category Grid — no card containers, wide gutters */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-14 md:gap-x-10 lg:gap-x-12">
-          {womensCategories.map((category) => (
+        {/* Categories Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+          {womensCategories.map((category, index) => (
             <Link
               key={category.id}
-              href={category.link}
-              className="group block"
+              href={resolveLink(tree, 'women', subKeywords[category.id] || '', category.link)}
+              className="group flex flex-col items-center"
+              style={{ animationDelay: `${index * 100}ms` }}
             >
-              {/* Image — sharp rectangle, consistent CSS filter */}
-              <div className="relative aspect-[3/4] overflow-hidden bg-[#EDE9E4]">
+              {/* Circular Card Container */}
+              <div className="relative w-48 h-48 md:w-64 md:h-64 mb-4">
+                {/* Gradient Background Circle */}
+                <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${category.bgGradient} transition-all duration-300 group-hover:scale-105`}></div>
 
-                {/* Photo with shared filter */}
-                <div
-                  className="absolute inset-0 bg-cover bg-top transition-transform duration-700 ease-out group-hover:scale-[1.06]"
-                  style={{
-                    backgroundImage: `url(${category.bgImage})`,
-                    filter: PHOTO_FILTER,
-                  }}
-                />
-
-                {/* Subtle dark overlay on hover — makes ghost button readable */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/28 transition-colors duration-400" />
-
-                {/* Ghost button — 1px white border, fades in centered */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-350">
-                  <span className="border border-white/85 text-white text-[9.5px] font-semibold tracking-[0.26em] uppercase px-6 py-3 backdrop-blur-[2px]">
-                    {language === 'hi' ? 'अभी खरीदें' : 'Shop Now'}
-                  </span>
+                {/* Image Container */}
+                <div className="absolute inset-0 rounded-full overflow-hidden p-2">
+                  {category.bgImage && (
+                    <div
+                      className="w-full h-full bg-cover bg-center rounded-full transition-transform duration-300 group-hover:scale-110"
+                      style={{ backgroundImage: `url(${category.bgImage})` }}
+                    ></div>
+                  )}
                 </div>
+
+                {/* Hover Ring Effect */}
+                <div className="absolute inset-0 rounded-full border-4 border-transparent group-hover:border-[#722F37] transition-all duration-300"></div>
               </div>
 
-              {/* Text — left-flush on page background */}
-              <div className="mt-4">
-                <h3 className="text-[11px] sm:text-[11.5px] font-semibold text-[#1A1A1A] tracking-[0.22em] uppercase leading-snug group-hover:text-[#722F37] transition-colors duration-250">
-                  {language === 'hi' ? category.nameHi : category.name}
-                </h3>
-                <p className="mt-1.5 text-[11px] text-[#B8B8B8] font-light leading-snug tracking-wide">
-                  {language === 'hi' ? category.descriptionHi : category.description}
-                </p>
-              </div>
+              {/* Category Label */}
+              <h3 className="text-base md:text-lg font-semibold text-[#2D2D2D] text-center transition-colors duration-300 group-hover:text-[#722F37]">
+                {language === 'hi' ? category.nameHi : category.name}
+              </h3>
             </Link>
           ))}
         </div>
-
-        {/* Mobile: bottom CTA — sharp rectangle */}
-        <div className="mt-14 sm:hidden text-center">
-          <Link
-            href="/womens"
-            className="inline-flex items-center gap-2.5 px-8 py-3.5 border border-[#1A1A1A] text-[#1A1A1A] text-[10px] font-semibold tracking-[0.22em] uppercase hover:bg-[#1A1A1A] hover:text-white transition-all duration-300 group"
-          >
-            {language === 'hi' ? 'पूरा कलेक्शन देखें' : 'View Full Collection'}
-            <svg className="w-2.5 h-2.5 stroke-1 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </div>
-
       </div>
     </section>
   );

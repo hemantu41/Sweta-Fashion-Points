@@ -29,8 +29,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'Sweta Fashion Points में आपका स्वागत है। fashionpoints.co.in ("वेबसाइट") का उपयोग करके, आप इन नियमों और शर्तों से बाध्य होने के लिए सहमत हैं। कृपया सावधानीपूर्वक पढ़ें।'
-                  : 'Welcome to Sweta Fashion Points. By using fashionpoints.co.in ("Website"), you agree to be bound by these Terms and Conditions. Please read carefully.'}
+                  ? 'Insta Fashion Points में आपका स्वागत है। instafashionpoints.com ("वेबसाइट") का उपयोग करके, आप इन नियमों और शर्तों से बाध्य होने के लिए सहमत हैं। कृपया सावधानीपूर्वक पढ़ें।'
+                  : 'Welcome to Insta Fashion Points. By using instafashionpoints.com ("Website"), you agree to be bound by these Terms and Conditions. Please read carefully.'}
               </p>
             </section>
 
@@ -74,7 +74,6 @@ export default function TermsAndConditionsPage() {
               </h2>
               <ul className="list-disc pl-6 space-y-2 text-[#2D2D2D]">
                 <li>{language === 'hi' ? 'हम भारत भर में डिलीवरी करते हैं' : 'We deliver across India'}</li>
-                <li>{language === 'hi' ? 'Amas, Gaya के भीतर स्थानीय डिलीवरी (15 किमी): 1-2 दिन' : 'Local delivery within Amas, Gaya (15km): 1-2 days'}</li>
                 <li>{language === 'hi' ? 'कूरियर डिलीवरी (बाकी भारत): 5-7 व्यावसायिक दिन' : 'Courier delivery (Rest of India): 5-7 business days'}</li>
                 <li>{language === 'hi' ? 'डिलीवरी समय अनुमानित है और गारंटीकृत नहीं है' : 'Delivery times are estimated and not guaranteed'}</li>
               </ul>
@@ -108,8 +107,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'वेबसाइट पर सभी सामग्री, लोगो, डिज़ाइन और ट्रेडमार्क Sweta Fashion Points की संपत्ति हैं। बिना लिखित अनुमति के किसी भी सामग्री का उपयोग, पुनरुत्पादन या वितरण निषिद्ध है।'
-                  : 'All content, logos, designs, and trademarks on the Website are the property of Sweta Fashion Points. Any use, reproduction, or distribution of any content without written permission is prohibited.'}
+                  ? 'वेबसाइट पर सभी सामग्री, लोगो, डिज़ाइन और ट्रेडमार्क Insta Fashion Points की संपत्ति हैं। बिना लिखित अनुमति के किसी भी सामग्री का उपयोग, पुनरुत्पादन या वितरण निषिद्ध है।'
+                  : 'All content, logos, designs, and trademarks on the Website are the property of Insta Fashion Points. Any use, reproduction, or distribution of any content without written permission is prohibited.'}
               </p>
             </section>
 
@@ -130,8 +129,8 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'Sweta Fashion Points वेबसाइट के उपयोग या उत्पादों की खरीद से उत्पन्न किसी भी प्रत्यक्ष, अप्रत्यक्ष, आकस्मिक या परिणामी क्षति के लिए उत्तरदायी नहीं होगा। हमारा अधिकतम दायित्व खरीद मूल्य तक सीमित है।'
-                  : 'Sweta Fashion Points shall not be liable for any direct, indirect, incidental, or consequential damages arising from the use of the Website or purchase of products. Our maximum liability is limited to the purchase price.'}
+                  ? 'Insta Fashion Points वेबसाइट के उपयोग या उत्पादों की खरीद से उत्पन्न किसी भी प्रत्यक्ष, अप्रत्यक्ष, आकस्मिक या परिणामी क्षति के लिए उत्तरदायी नहीं होगा। हमारा अधिकतम दायित्व खरीद मूल्य तक सीमित है।'
+                  : 'Insta Fashion Points shall not be liable for any direct, indirect, incidental, or consequential damages arising from the use of the Website or purchase of products. Our maximum liability is limited to the purchase price.'}
               </p>
             </section>
 
@@ -152,16 +151,16 @@ export default function TermsAndConditionsPage() {
               </h2>
               <div className="bg-[#F0EDE8] rounded-lg p-6 text-[#2D2D2D]">
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? 'पता:' : 'Address:'}</strong> Amas, Gaya, Bihar - 824219
+                  <strong>{language === 'hi' ? 'पता:' : 'Address:'}</strong> Hyderabad, Telangana – 500032
                 </p>
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? 'ईमेल:' : 'Email:'}</strong> support@fashionpoints.co.in
+                  <strong>{language === 'hi' ? 'ईमेल:' : 'Email:'}</strong> info@instafashionpoints.com
                 </p>
                 <p className="mb-2">
                   <strong>{language === 'hi' ? 'फोन:' : 'Phone:'}</strong> +91 82941 53256
                 </p>
                 <p>
-                  <strong>{language === 'hi' ? 'वेबसाइट:' : 'Website:'}</strong> fashionpoints.co.in
+                  <strong>{language === 'hi' ? 'वेबसाइट:' : 'Website:'}</strong> instafashionpoints.com
                 </p>
               </div>
             </section>
@@ -172,16 +171,16 @@ export default function TermsAndConditionsPage() {
               </h2>
               <p className="text-[#2D2D2D] leading-relaxed mb-4">
                 {language === 'hi'
-                  ? 'ये नियम और शर्तें भारत के कानूनों द्वारा शासित होंगी। किसी भी विवाद के मामले में, Gaya, Bihar की अदालतों का विशेष क्षेत्राधिकार होगा।'
-                  : 'These Terms and Conditions shall be governed by the laws of India. In case of any dispute, the courts of Gaya, Bihar shall have exclusive jurisdiction.'}
+                  ? 'ये नियम और शर्तें भारत के कानूनों द्वारा शासित होंगी। किसी भी विवाद के मामले में, हैदराबाद, तेलंगाना की अदालतों का विशेष क्षेत्राधिकार होगा।'
+                  : 'These Terms and Conditions shall be governed by the laws of India. In case of any dispute, the courts of Hyderabad, Telangana shall have exclusive jurisdiction.'}
               </p>
             </section>
 
             <div className="mt-12 p-6 bg-[#722F37] bg-opacity-10 rounded-lg border border-[#722F37]">
               <p className="text-[#722F37] font-semibold text-center">
                 {language === 'hi'
-                  ? 'इन नियमों और शर्तों को स्वीकार करके, आप Sweta Fashion Points के साथ एक कानूनी समझौते में प्रवेश कर रहे हैं।'
-                  : 'By accepting these Terms and Conditions, you are entering into a legally binding agreement with Sweta Fashion Points.'}
+                  ? 'इन नियमों और शर्तों को स्वीकार करके, आप Insta Fashion Points के साथ एक कानूनी समझौते में प्रवेश कर रहे हैं।'
+                  : 'By accepting these Terms and Conditions, you are entering into a legally binding agreement with Insta Fashion Points.'}
               </p>
             </div>
           </div>

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { parsePaginationParams, createPaginationResult } from '@/lib/pagination';
-import { adminOrdersCache } from '@/lib/cache';
 
 // GET - List all orders (Admin only)
 export async function GET(request: NextRequest) {
@@ -12,14 +11,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { page, limit, offset } = parsePaginationParams(searchParams);
     const status = searchParams.get('status');
-
-    // Check Redis cache first (30 min TTL)
-    const cacheKey = `orders:${status || 'all'}:p${page}:l${limit}`;
-    const cached = await adminOrdersCache.get<any>(cacheKey);
-    if (cached !== null) {
-      console.log(`[Admin Orders API] Cache hit: ${cacheKey}`);
-      return NextResponse.json({ success: true, ...cached });
-    }
 
     // Build query with count
     let query = supabase
@@ -44,9 +35,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create paginated response and cache it
+    // Create paginated response
     const result = createPaginationResult(orders || [], count || 0, page, limit);
-    await adminOrdersCache.set(cacheKey, result);
 
     return NextResponse.json({
       success: true,

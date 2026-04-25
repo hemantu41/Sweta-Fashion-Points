@@ -107,13 +107,13 @@ export async function POST(request: NextRequest) {
       }
 
       const { error: emailError } = await resend.emails.send({
-        from: 'Fashion Points <noreply@fashionpoints.co.in>',
+        from: 'Insta Fashion Points <noreply@fashionpoints.co.in>',
         to: value,
-        subject: 'Verify Your Email - Fashion Points',
+        subject: 'Verify Your Email - Insta Fashion Points',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #722F37; margin: 0;">Fashion Points</h1>
+              <h1 style="color: #722F37; margin: 0;">Insta Fashion Points</h1>
               <p style="color: #6B6B6B; margin-top: 10px;">Account Registration</p>
             </div>
             <div style="background: #f8f8f8; padding: 30px; border-radius: 10px; text-align: center;">
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       }
     } else if (type === 'mobile') {
       // Send OTP via SMS
-      const smsMessage = `Your OTP for account registration at Fashion Points is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
+      const smsMessage = `Your OTP for account registration at Insta Fashion Points is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
 
       const smsResult = await sendSMS({
         phone: value,
@@ -152,10 +152,13 @@ export async function POST(request: NextRequest) {
       });
 
       if (!smsResult.success) {
-        // Log OTP to server console so it can be retrieved from logs during UAT/dev
         console.warn(`[OTP] SMS could not be sent to ${value}. OTP for testing: ${otp}. Error: ${smsResult.error}`);
-        // Still return success — OTP is saved in DB and visible in server logs
-        // When MSG91 is properly configured, SMS will be sent automatically
+        // UAT: return OTP in response so testers can use it without SMS
+        // TODO: remove devOtp field before going live with MSG91
+        return NextResponse.json(
+          { message: 'OTP sent successfully', devOtp: otp, devNote: 'SMS not configured — use this OTP for testing' },
+          { status: 200 }
+        );
       }
     }
 

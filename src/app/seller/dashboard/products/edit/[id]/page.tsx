@@ -194,7 +194,7 @@ export default function SellerEditProductPage() {
   // Show loading while fetching product
   if (loadingProduct) {
     return (
-      <div className="min-h-screen bg-[#FAF7F2] p-8">
+      <div className="min-h-screen bg-[#FAF7F8] p-8">
         <div className="max-w-4xl mx-auto text-center py-12">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto mb-4"></div>
@@ -209,14 +209,14 @@ export default function SellerEditProductPage() {
   // Show error if unauthorized or product not found
   if (message && !formData.name) {
     return (
-      <div className="min-h-screen bg-[#FAF7F2] p-8">
+      <div className="min-h-screen bg-[#FAF7F8] p-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
             <h2 className="text-xl font-semibold text-red-600 mb-2">Error</h2>
             <p className="text-red-700">{message}</p>
             <Link
               href="/seller/dashboard"
-              className="inline-block mt-4 px-6 py-2 bg-[#722F37] text-white rounded-full hover:bg-[#8B3D47] transition-all"
+              className="inline-block mt-4 px-6 py-2 bg-[#5B1A3A] text-white rounded-full hover:bg-[#7A2350] transition-all"
             >
               Back to Dashboard
             </Link>
@@ -227,18 +227,18 @@ export default function SellerEditProductPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] p-8">
+    <div className="min-h-screen bg-[#FAF7F8] p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair)' }}>
+            <h1 className="text-3xl font-bold text-[#5B1A3A]" style={{ fontFamily: 'var(--font-playfair)' }}>
               Edit Product
             </h1>
             <p className="text-[#6B6B6B] mt-1">Update your product information</p>
           </div>
           <Link
             href="/seller/dashboard"
-            className="px-6 py-2 border border-[#722F37] text-[#722F37] rounded-full hover:bg-[#722F37] hover:text-white transition-all"
+            className="px-6 py-2 border border-[#5B1A3A] text-[#5B1A3A] rounded-full hover:bg-[#5B1A3A] hover:text-white transition-all"
           >
             ← Back to Dashboard
           </Link>
@@ -252,10 +252,10 @@ export default function SellerEditProductPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-[#E8E2D9] p-8">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-[#E8E0E4] p-8">
           {/* Shop Information (Read-only display) */}
           <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-2 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-[#5B1A3A] mb-2 flex items-center gap-2">
               <span>🏪</span> Shop Information
               <span className="text-sm font-normal text-blue-600">ℹ️ From your seller profile</span>
             </h2>
@@ -280,12 +280,12 @@ export default function SellerEditProductPage() {
             <label className="block text-sm font-medium text-[#2D2D2D] mb-1">
               Product ID (Cannot be changed)
             </label>
-            <p className="font-mono text-[#722F37] font-semibold">{formData.productId}</p>
+            <p className="font-mono text-[#5B1A3A] font-semibold">{formData.productId}</p>
           </div>
 
           {/* Basic Product Information */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Basic Information</h2>
+            <h2 className="text-xl font-semibold text-[#5B1A3A] mb-4">Basic Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
@@ -296,7 +296,7 @@ export default function SellerEditProductPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                   placeholder="e.g., Classic Blue Jeans"
                 />
               </div>
@@ -306,7 +306,7 @@ export default function SellerEditProductPage() {
                   type="text"
                   value={formData.nameHi}
                   onChange={(e) => setFormData({ ...formData, nameHi: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                   placeholder="हिंदी में नाम"
                 />
               </div>
@@ -318,7 +318,7 @@ export default function SellerEditProductPage() {
                   required
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value, subCategory: '' })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                 >
                   <option value="mens">Men's</option>
                   <option value="womens">Women's</option>
@@ -334,7 +334,7 @@ export default function SellerEditProductPage() {
                   required
                   value={formData.subCategory}
                   onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                 >
                   <option value="">Select Sub-Category</option>
                   {subCategories[formData.category as keyof typeof subCategories]?.map((sub) => (
@@ -347,7 +347,7 @@ export default function SellerEditProductPage() {
 
           {/* Pricing */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Pricing</h2>
+            <h2 className="text-xl font-semibold text-[#5B1A3A] mb-4">Pricing</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
@@ -358,7 +358,7 @@ export default function SellerEditProductPage() {
                   required
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                   placeholder="499"
                 />
               </div>
@@ -368,7 +368,7 @@ export default function SellerEditProductPage() {
                   type="number"
                   value={formData.originalPrice}
                   onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                   placeholder="999"
                 />
               </div>
@@ -377,7 +377,7 @@ export default function SellerEditProductPage() {
                 <select
                   value={formData.priceRange}
                   onChange={(e) => setFormData({ ...formData, priceRange: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                 >
                   <option value="budget">Budget</option>
                   <option value="mid">Mid-Range</option>
@@ -389,7 +389,7 @@ export default function SellerEditProductPage() {
 
           {/* Product Details */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Product Details</h2>
+            <h2 className="text-xl font-semibold text-[#5B1A3A] mb-4">Product Details</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Description</label>
@@ -397,7 +397,7 @@ export default function SellerEditProductPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                   placeholder="Describe your product..."
                 />
               </div>
@@ -407,7 +407,7 @@ export default function SellerEditProductPage() {
                   value={formData.descriptionHi}
                   onChange={(e) => setFormData({ ...formData, descriptionHi: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                   placeholder="उत्पाद का विवरण..."
                 />
               </div>
@@ -418,7 +418,7 @@ export default function SellerEditProductPage() {
                     type="text"
                     value={formData.fabric}
                     onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                     placeholder="e.g., Cotton, Silk"
                   />
                 </div>
@@ -428,7 +428,7 @@ export default function SellerEditProductPage() {
                     type="text"
                     value={formData.fabricHi}
                     onChange={(e) => setFormData({ ...formData, fabricHi: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                     placeholder="कपड़े का प्रकार"
                   />
                 </div>
@@ -441,7 +441,7 @@ export default function SellerEditProductPage() {
                     required
                     value={formData.stockQuantity}
                     onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -450,13 +450,13 @@ export default function SellerEditProductPage() {
 
           {/* Sizes */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Sizes</h2>
+            <h2 className="text-xl font-semibold text-[#5B1A3A] mb-4">Sizes</h2>
             <div className="flex gap-2 mb-3">
               <input
                 type="text"
                 value={newSize}
                 onChange={(e) => setNewSize(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                 placeholder="e.g., S, M, L, XL or 4-6Y, 6-8Y"
               />
               <button
@@ -467,14 +467,14 @@ export default function SellerEditProductPage() {
                     setNewSize('');
                   }
                 }}
-                className="px-6 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+                className="px-6 py-2 bg-[#5B1A3A] text-white rounded-lg hover:bg-[#7A2350] transition-colors"
               >
                 Add Size
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.sizes.map((size, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-[#F5F0E8] px-3 py-1.5 rounded-lg border border-[#E8E2D9]">
+                <div key={idx} className="flex items-center gap-2 bg-[#F5EDF2] px-3 py-1.5 rounded-lg border border-[#E8E0E4]">
                   <span className="text-sm font-medium text-[#2D2D2D]">{size}</span>
                   <button
                     type="button"
@@ -493,20 +493,20 @@ export default function SellerEditProductPage() {
 
           {/* Colors */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-4">Colors</h2>
+            <h2 className="text-xl font-semibold text-[#5B1A3A] mb-4">Colors</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
               <input
                 type="text"
                 value={newColor.name}
                 onChange={(e) => setNewColor({ ...newColor, name: e.target.value })}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                 placeholder="Color name (English)"
               />
               <input
                 type="text"
                 value={newColor.nameHi}
                 onChange={(e) => setNewColor({ ...newColor, nameHi: e.target.value })}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent"
                 placeholder="रंग का नाम (Hindi)"
               />
               <input
@@ -523,14 +523,14 @@ export default function SellerEditProductPage() {
                     setNewColor({ name: '', nameHi: '', hex: '#000000' });
                   }
                 }}
-                className="px-6 py-2 bg-[#722F37] text-white rounded-lg hover:bg-[#8B3D47] transition-colors"
+                className="px-6 py-2 bg-[#5B1A3A] text-white rounded-lg hover:bg-[#7A2350] transition-colors"
               >
                 Add Color
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.colors.map((color, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-[#F5F0E8] px-3 py-1.5 rounded-lg border border-[#E8E2D9]">
+                <div key={idx} className="flex items-center gap-2 bg-[#F5EDF2] px-3 py-1.5 rounded-lg border border-[#E8E0E4]">
                   <div className="w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: color.hex }}></div>
                   <span className="text-sm font-medium text-[#2D2D2D]">{color.name}</span>
                   <button
@@ -550,7 +550,7 @@ export default function SellerEditProductPage() {
 
           {/* Image Upload */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-[#722F37] mb-4">
+            <h2 className="text-xl font-semibold text-[#5B1A3A] mb-4">
               Product Images <span className="text-red-500">*</span>
             </h2>
             <MultiImageUpload
@@ -572,13 +572,13 @@ export default function SellerEditProductPage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-8 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50"
+              className="px-8 py-3 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white font-semibold rounded-full hover:shadow-lg transition-all disabled:opacity-50"
             >
               {loading ? 'Updating Product...' : 'Update Product'}
             </button>
             <Link
               href="/seller/dashboard"
-              className="px-8 py-3 border border-[#722F37] text-[#722F37] font-semibold rounded-full hover:bg-[#F5F0E8] transition-all"
+              className="px-8 py-3 border border-[#5B1A3A] text-[#5B1A3A] font-semibold rounded-full hover:bg-[#F5EDF2] transition-all"
             >
               Cancel
             </Link>

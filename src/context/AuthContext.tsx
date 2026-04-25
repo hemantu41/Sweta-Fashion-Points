@@ -81,8 +81,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         localStorage.removeItem('user');
       }
+      setIsLoading(false);
+    } else {
+      // No localStorage user — try to restore from the server-side iron-session.
+      // This covers the case where the user cleared site data but still has a
+      // valid 30-day session cookie, so we don't force them through login again.
+      // isLoading stays true until the fetch resolves, preventing AuthGuard from
+      // redirecting to /login while the check is still in progress.
+      fetch('/api/auth/session-restore')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.user) {
+            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
     }
-    setIsLoading(false);
   }, []);
 
   const login = (userData: User) => {
@@ -93,6 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    // Clear iron-session cookie + seller Redis cache
+    const sellerId = user?.sellerId;
+    fetch('/api/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sellerId }),
+    }).catch(() => {});
   };
 
   return (

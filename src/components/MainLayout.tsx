@@ -12,6 +12,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
 
   const isAuthPage = authPaths.includes(pathname);
+  const isAdminDashboard = pathname.startsWith('/admin/dashboard');
 
   // Show loading state
   if (isLoading) {
@@ -32,6 +33,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {children}
       </div>
     );
+  }
+
+  // Admin dashboard has its own layout (sidebar + topbar) — no Navbar/Footer
+  if (isAdminDashboard) {
+    return <>{children}</>;
+  }
+
+  // Seller dashboard has its own layout (sidebar + topbar) — no Navbar/Footer
+  if (pathname?.startsWith('/seller/dashboard')) {
+    return <>{children}</>;
+  }
+
+  // Seller landing/register pages have their own layout
+  if (pathname === '/seller' || pathname === '/seller/register') {
+    return <>{children}</>;
   }
 
   // For other pages, show full layout with navbar and footer

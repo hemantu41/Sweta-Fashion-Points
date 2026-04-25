@@ -1,8 +1,8 @@
-# Multi-Seller Architecture - Sweta Fashion Points
+# Multi-Seller Architecture - Insta Fashion Points
 
 ## Overview
 
-The Sweta Fashion Points platform now supports a **database-driven multi-seller marketplace** where multiple sellers can add and manage their products. The system uses PostgreSQL (Supabase) as the single source of truth, with Cloudinary providing efficient image storage and delivery.
+The Insta Fashion Points platform now supports a **database-driven multi-seller marketplace** where multiple sellers can add and manage their products. The system uses PostgreSQL (Supabase) as the single source of truth, with Cloudinary providing efficient image storage and delivery.
 
 **Last Updated:** February 15, 2024
 **Version:** 2.0
@@ -151,7 +151,7 @@ if (productId) tags.push(`product:${productId}`);
 #### Folder Structure
 Images organized by category for better management:
 ```
-sweta-fashion-points/
+insta-fashion-points/
 ├── mens/
 │   ├── product-image-1.jpg (tags: product, seller:123, category:mens)
 │   └── product-image-2.jpg
@@ -462,5 +462,5 @@ For questions or issues:
 
 ---
 
-**Maintained by:** Sweta Fashion Points Development Team
+**Maintained by:** Insta Fashion Points Development Team
 **Last Review:** February 15, 2024

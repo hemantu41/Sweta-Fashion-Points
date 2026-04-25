@@ -31,7 +31,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.replace('/login?callbackUrl=/profile');
       return;
     }
 

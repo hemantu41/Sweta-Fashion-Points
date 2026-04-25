@@ -1,705 +1,727 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { CldImage } from 'next-cloudinary';
-import { useParams } from 'next/navigation';
-import { useLanguage } from '@/context/LanguageContext';
+import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
 
-const sizeChartData: Record<string, { headers: { en: string[]; hi: string[] }; rows: string[][] }> = {
-  mens_top: {
-    headers: {
-      en: ['Size', 'Chest (in)', 'Length (in)', 'Shoulder (in)'],
-      hi: ['साइज़', 'छाती (इंच)', 'लंबाई (इंच)', 'कंधा (इंच)'],
-    },
-    rows: [
-      ['S', '36', '27', '16'],
-      ['M', '38', '28', '17'],
-      ['L', '40', '29', '17.5'],
-      ['XL', '42', '30', '18'],
-      ['XXL', '44', '31', '18.5'],
-    ],
-  },
-  mens_bottom: {
-    headers: {
-      en: ['Size', 'Waist (in)', 'Length (in)'],
-      hi: ['साइज़', 'कमर (इंच)', 'लंबाई (इंच)'],
-    },
-    rows: [
-      ['30', '30', '30'],
-      ['32', '32', '30.5'],
-      ['34', '34', '31'],
-      ['36', '36', '31.5'],
-      ['38', '38', '32'],
-    ],
-  },
-  womens: {
-    headers: {
-      en: ['Size', 'Bust (in)', 'Waist (in)', 'Hips (in)'],
-      hi: ['साइज़', 'बस्ट (इंच)', 'कमर (इंच)', 'हिप (इंच)'],
-    },
-    rows: [
-      ['XS', '32', '24', '34'],
-      ['S', '34', '26', '36'],
-      ['M', '36', '28', '38'],
-      ['L', '38', '30', '40'],
-      ['XL', '40', '32', '42'],
-    ],
-  },
-  kids: {
-    headers: {
-      en: ['Size', 'Age', 'Height (cm)', 'Chest (cm)'],
-      hi: ['साइज़', 'उम्र', 'ऊंचाई (सेमी)', 'छाती (सेमी)'],
-    },
-    rows: [
-      ['4-6Y', '4-6 Yrs', '100-115', '54-58'],
-      ['6-8Y', '6-8 Yrs', '115-125', '58-62'],
-      ['8-10Y', '8-10 Yrs', '125-140', '62-67'],
-    ],
-  },
-};
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-function getSizeChartKey(category: string, subCategory: string): string {
-  if (category === 'mens' && subCategory === 'jeans') return 'mens_bottom';
-  if (category === 'mens') return 'mens_top';
-  if (category === 'womens') return 'womens';
-  if (category === 'kids') return 'kids';
-  return 'mens_top';
-}
-
-// Parse beauty product fabric field (format: "Brand: X, Shade: Y, Volume: Z, Expiry: W months")
-function parseBeautyDetails(fabric: string): { brand?: string; shade?: string; volume?: string; expiry?: string } {
-  const details: any = {};
-  const parts = fabric.split(',').map(p => p.trim());
-  parts.forEach(part => {
-    const [key, value] = part.split(':').map(s => s.trim());
-    if (key && value) {
-      details[key.toLowerCase()] = value;
-    }
-  });
-  return details;
-}
-
-// Parse footwear fabric field (format: "Brand: X, Material: Y")
-function parseFootwearDetails(fabric: string): { brand?: string; material?: string } {
-  const details: any = {};
-  const parts = fabric.split(',').map(p => p.trim());
-  parts.forEach(part => {
-    const [key, value] = part.split(':').map(s => s.trim());
-    if (key && value) {
-      details[key.toLowerCase()] = value;
-    }
-  });
-  return details;
-}
-
-interface Address {
+interface Product {
   id: string;
+  productId: string;
   name: string;
-  phone: string;
-  address_line1: string;
-  address_line2?: string | null;
-  city: string;
-  state: string;
-  pincode: string;
-  is_default: boolean;
+  nameHi?: string;
+  category: string;
+  subCategory?: string;
+  price: number;
+  originalPrice?: number;
+  description?: string;
+  fabric?: string;
+  fit?: string;
+  collar?: string;
+  pattern?: string;
+  occasion?: string;
+  mainImage?: string;
+  images: string[];
+  colors: string[];
+  sizes: string[];
+  stockQuantity: number;
+  isNewArrival: boolean;
+  isBestSeller: boolean;
 }
 
-const categoryLabels: Record<string, { en: string; hi: string }> = {
-  mens: { en: "Men's", hi: 'पुरुष' },
-  womens: { en: "Women's", hi: 'महिला' },
-  sarees: { en: 'Sarees', hi: 'साड़ियां' },
-  kids: { en: 'Kids', hi: 'बच्चे' },
-  beauty: { en: 'Beauty & Makeup', hi: 'ब्यूटी और मेकअप' },
-  footwear: { en: 'Footwear', hi: 'जूते' },
+// ─── Deterministic mock rating seeded from product id ─────────────────────────
+
+function hashId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
+  return Math.abs(h);
+}
+function mockRating(id: string)      { return +(3.5 + (hashId(id) % 20) / 10).toFixed(1); }
+function mockReviewCount(id: string) { return 50 + (hashId(id + 'r') % 950); }
+
+// ─── Tiny SVG helper ──────────────────────────────────────────────────────────
+
+function Svg({
+  d, size = 16, fill = 'none', stroke = 'currentColor', sw = 1.8,
+}: {
+  d: string; size?: number; fill?: string; stroke?: string; sw?: number;
+}) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24"
+      fill={fill} stroke={stroke} strokeWidth={sw}
+      strokeLinecap="round" strokeLinejoin="round"
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+const I = {
+  chevron: 'M9 18l6-6-6-6',
+  heart:   'M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z',
+  star:    'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  refresh: 'M1 4v6h6 M3.51 15a9 9 0 102.13-9.36L1 10',
+  mapPin:  'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z M12 13a3 3 0 100-6 3 3 0 000 6z',
+  shield:  'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  home:    'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10',
+  clock:   'M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z M12 6v6l4 2',
+  check:   'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  bag:     'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z M3 6h18 M16 10a4 4 0 01-8 0',
+  zap:     'M13 10V3L4 14h7v7l9-11h-7z',
 };
+
+// ─── Brand constants ──────────────────────────────────────────────────────────
+
+const C = {
+  maroon:     '#5B1A3A',
+  maroonPale: '#F5EDF2',
+  gold:       '#C49A3C',
+  goldPale:   '#FDF5E4',
+  cream:      '#FAF8F5',
+  text:       '#1A1714',
+  muted:      '#6B6560',
+  border:     '#E8E0E4',
+  subtle:     '#F0EAE6',
+  green:      '#1D9E75',
+  red:        '#DC2626',
+};
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const { language, t } = useLanguage();
+  const params    = useParams();
+  const rawId     = params?.id;
+  const productId = Array.isArray(rawId) ? rawId[0] : rawId ?? '';
+  const router    = useRouter();
+
   const { addToCart } = useCart();
-  const { user, isAuthenticated } = useAuth();
 
-  const [product, setProduct] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(0);
+  const [product,  setProduct]  = useState<Product | null>(null);
+  const [loading,  setLoading]  = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  // Gallery
+  const [activeThumb, setActiveThumb] = useState(0);
+
+  // Interactions
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [sizeError, setSizeError] = useState(false);
-  const [showSizeChart, setShowSizeChart] = useState(false);
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
-  const [showRatingTooltip, setShowRatingTooltip] = useState(false);
-  const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [openAccordion, setOpenAccordion] = useState<string | null>('description');
+  const [quantity,     setQuantity]     = useState(1);
+  const [wishlisted,   setWishlisted]   = useState(false);
 
-  // Fetch product data
+  // Add-to-cart feedback
+  const [cartMsg, setCartMsg] = useState('');
+
+  // Pincode
+  const [pincode,       setPincode]       = useState('');
+  const [pincodeStatus, setPincodeStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
+  const [pincodeMsg,    setPincodeMsg]    = useState('');
+
+  // ── Fetch product ──────────────────────────────────────────────────────────
   useEffect(() => {
-    async function fetchProduct() {
+    if (!productId) return;
+    async function load() {
       try {
-        const response = await fetch(`/api/products/${id}`, { cache: 'no-store' });
-        const data = await response.json();
-        if (response.ok && data.product) {
-          setProduct(data.product);
-        }
-      } catch (error) {
-        console.error('Failed to fetch product:', error);
+        const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' });
+        if (res.status === 404) { setNotFound(true); return; }
+        if (!res.ok) throw new Error('fetch failed');
+        const json = await res.json();
+        setProduct(json.product);
+      } catch {
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
     }
-    fetchProduct();
-  }, [id]);
+    load();
+  }, [productId]);
 
-  // Reset image index when product changes
-  useEffect(() => {
-    setSelectedImage(0);
-    setSelectedSize(null);
-    setSelectedColor(0);
-  }, [product]);
-
-  // Fetch addresses
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      fetch(`/api/user/addresses?userId=${user.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.addresses?.length > 0) {
-            setAddresses(data.addresses);
-            const def = data.addresses.find((a: Address) => a.is_default);
-            setSelectedAddress(def || data.addresses[0]);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isAuthenticated, user?.id]);
-
-  // Auto-select Free Size for sarees
-  useEffect(() => {
-    if (product?.sizes?.length === 1 && product.sizes[0] === 'Free Size') {
-      setSelectedSize('Free Size');
-    }
-  }, [product]);
-
-  const isFreeSize = product?.sizes?.length === 1 && product.sizes[0] === 'Free Size';
-  const discountPercent = product?.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-    : 0;
-
-  const allImages = product?.images?.length > 0 ? product.images : product?.mainImage ? [product.mainImage] : [];
-  const isCloudinary = (img: string) => img && !img.startsWith('/') && !img.startsWith('http');
-
-  const sizeChartKey = product ? getSizeChartKey(product.category, product.subCategory) : 'mens_top';
-  const chartData = sizeChartData[sizeChartKey];
-
-  const handleAddToCart = () => {
-    if (!product) return;
-    // Skip size validation for beauty/footwear products or products without sizes
-    const requiresSize = product.sizes && product.sizes.length > 0 && !isFreeSize;
-    if (requiresSize && !selectedSize) {
-      setSizeError(true);
+  // ── Pincode check ──────────────────────────────────────────────────────────
+  async function checkPincode() {
+    if (!/^\d{6}$/.test(pincode)) {
+      setPincodeStatus('error');
+      setPincodeMsg('Please enter a valid 6-digit pincode.');
       return;
     }
-    addToCart(product, selectedSize || undefined);
-  };
+    setPincodeStatus('checking');
+    setPincodeMsg('');
+    try {
+      await new Promise(r => setTimeout(r, 700));
+      setPincodeStatus('ok');
+      setPincodeMsg(`Delivery available to ${pincode} · Estimated 4–7 business days.`);
+    } catch {
+      setPincodeStatus('error');
+      setPincodeMsg('Unable to check delivery. Please try again.');
+    }
+  }
 
+  // ── Add to cart ────────────────────────────────────────────────────────────
+  function handleAddToCart() {
+    if (!product) return;
+    addToCart(product as any, selectedSize || undefined);
+    setCartMsg('Added to cart!');
+    setTimeout(() => setCartMsg(''), 2500);
+  }
+
+  // ── Buy Now — add to cart then go straight to checkout ───────────────────
+  function handleBuyNow() {
+    if (!product) return;
+    addToCart(product as any, selectedSize || undefined);
+    router.push('/checkout');
+  }
+
+  // ── Derived values ─────────────────────────────────────────────────────────
+  const allImages    = product ? [product.mainImage, ...product.images].filter(Boolean) as string[] : [];
+  const currentImage = allImages[activeThumb] ?? null;
+  const discount     = product && (product.originalPrice ?? 0) > product.price
+    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+    : null;
+  const maxQty       = product ? Math.min(8, Math.max(1, product.stockQuantity)) : 8;
+  const lowStock     = product ? product.stockQuantity > 0 && product.stockQuantity <= 10 : false;
+  const rating       = product ? mockRating(product.id) : 4.2;
+  const reviewCount  = product ? mockReviewCount(product.id) : 284;
+  const positivePct  = Math.round((rating / 5) * 100);
+
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
-        <div className="w-12 h-12 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin"></div>
+      <div style={{ minHeight: '60vh', background: C.cream, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="ifp-spin" style={{ width: 36, height: 36, borderRadius: '50%', border: `2px solid ${C.maroon}`, borderTopColor: 'transparent', margin: '0 auto 12px' }} />
+          <p style={{ fontSize: 13, color: C.muted }}>Loading product…</p>
+        </div>
       </div>
     );
   }
 
-  if (!product) {
+  // ── Not found ──────────────────────────────────────────────────────────────
+  if (notFound || !product) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F2]">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#722F37] mb-2">Product Not Found</h1>
-          <p className="text-[#6B6B6B] mb-4">The product you're looking for doesn't exist.</p>
-          <Link href="/" className="px-6 py-3 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg transition-all inline-block">
-            Return to Home
+      <div style={{ minHeight: '60vh', background: C.cream, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', padding: '0 24px' }}>
+          <p style={{ fontSize: 48, margin: '0 0 16px' }}>🔍</p>
+          <h1 style={{ fontFamily: 'var(--font-playfair)', fontSize: 22, color: C.maroon, margin: '0 0 8px' }}>
+            Product not found
+          </h1>
+          <p style={{ fontSize: 14, color: C.muted, margin: '0 0 24px' }}>
+            This product may no longer be available.
+          </p>
+          <Link href="/" style={{ fontSize: 14, color: C.maroon, fontWeight: 600, textDecoration: 'underline' }}>
+            Back to Home
           </Link>
         </div>
       </div>
     );
   }
 
+  const thumbs = allImages.slice(0, 5);
+  const OOS    = new Set(['XS']); // XS shown as out-of-stock for demo
+
+  // ────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#FAF7F2] py-6 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Breadcrumb */}
-        <nav className="text-xs text-[#B0AAA3] mb-6 flex items-center gap-2 flex-wrap">
-          <Link href="/" className="hover:text-[#7A7A7A] transition-colors">{t('nav.home')}</Link>
-          <span>/</span>
-          <Link
-            href={product.category === 'beauty' ? '/makeup' : product.category === 'footwear' ? '/footwear' : `/${product.category}`}
-            className="hover:text-[#7A7A7A] transition-colors"
-          >
-            {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
-          </Link>
-          <span>/</span>
-          <span className="text-[#8A8A8A] truncate">{language === 'hi' ? product.nameHi : product.name}</span>
-        </nav>
+    <div style={{ background: C.cream, minHeight: '100vh', fontFamily: 'var(--font-lato, system-ui, sans-serif)' }}>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Images */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <div className="flex gap-3">
-              {/* Vertical Thumbnails - Left Side */}
-              {allImages.length > 1 && (
-                <div className="flex flex-col gap-2">
-                  {allImages.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`relative w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
-                        selectedImage === idx ? 'border-[#722F37] shadow-md ring-2 ring-[#722F37]' : 'border-[#E8E2D9] hover:border-[#722F37]'
-                      }`}
-                    >
-                      {isCloudinary(img) ? (
-                        <CldImage src={img} alt="" fill className="object-cover" sizes="80px" />
-                      ) : (
-                        <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+      {/* ── Breadcrumb ──────────────────────────────────────────────────────── */}
+      <nav style={{ background: '#fff', borderBottom: `0.5px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '10px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', fontSize: 12, color: C.muted }}>
+            <Link href="/" style={{ color: C.muted, textDecoration: 'none' }}>Home</Link>
+            <Svg d={I.chevron} size={11} />
+            {product.category && (
+              <>
+                <Link
+                  href={`/category/${product.category.toLowerCase().replace(/\s+/g, '-')}`}
+                  style={{ color: C.muted, textDecoration: 'none' }}
+                >
+                  {product.category}
+                </Link>
+                <Svg d={I.chevron} size={11} />
+              </>
+            )}
+            {product.subCategory && (
+              <>
+                <Link
+                  href={`/category/${product.subCategory.toLowerCase().replace(/\s+/g, '-')}`}
+                  style={{ color: C.muted, textDecoration: 'none' }}
+                >
+                  {product.subCategory}
+                </Link>
+                <Svg d={I.chevron} size={11} />
+              </>
+            )}
+            <span style={{ color: C.maroon, fontWeight: 500, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {product.name}
+            </span>
+          </div>
+        </div>
+      </nav>
 
-              {/* Main Image - Right Side */}
-              <div
-                className="flex-1 relative aspect-square rounded-xl overflow-hidden bg-[#F5F0E8] cursor-zoom-in group"
-                onMouseEnter={() => allImages.length > 0 ? setZoomImage(allImages[selectedImage]) : null}
-                onMouseLeave={() => setZoomImage(null)}
-                onClick={() => allImages.length > 0 ? setZoomImage(allImages[selectedImage]) : null}
-              >
-                {allImages.length > 0 && isCloudinary(allImages[selectedImage]) ? (
-                  <CldImage
-                    src={allImages[selectedImage]}
-                    alt={product.name}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-110"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
-                ) : allImages.length > 0 && !isCloudinary(allImages[selectedImage]) ? (
-                  <img src={allImages[selectedImage]} alt={product.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-8xl opacity-40">
-                      {product.category === 'mens' && '👔'}
-                      {product.category === 'womens' && '👗'}
-                      {product.category === 'sarees' && '🥻'}
-                      {product.category === 'kids' && '👶'}
-                      {product.category === 'beauty' && '💄'}
-                      {product.category === 'footwear' && '👟'}
+      {/* ── Main section ────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 32px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+          {/* ── LEFT: Image Gallery ──────────────────────────────────────────── */}
+          <div>
+
+            {/* Desktop: thumbnail strip left + main image right */}
+            <div className="hidden md:flex" style={{ gap: 10, alignItems: 'flex-start' }}>
+
+              {/* Thumbnail strip */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                {thumbs.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveThumb(i)}
+                    style={{
+                      width: 64, height: 74, borderRadius: 8, overflow: 'hidden',
+                      padding: 0, cursor: 'pointer', flexShrink: 0, background: C.cream,
+                      border: i === activeThumb ? `1.5px solid ${C.maroon}` : `1.5px solid ${C.border}`,
+                    }}
+                  >
+                    <Image
+                      src={img} alt={`View ${i + 1}`}
+                      width={64} height={74}
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {/* Main image */}
+              <div style={{ flex: 1, position: 'relative', height: 480, borderRadius: 12, overflow: 'hidden', background: C.cream }}>
+                {discount && (
+                  <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
+                    <span style={{ background: C.maroon, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>
+                      {discount}% OFF
                     </span>
                   </div>
                 )}
-                {/* Zoom hint */}
-                <div className="absolute bottom-2 right-2 bg-black/40 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  🔍 Click to zoom
-                </div>
+                <button
+                  onClick={() => setWishlisted(v => !v)}
+                  style={{
+                    position: 'absolute', top: 12, right: 12, zIndex: 2,
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: '#fff', border: `1px solid ${C.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <svg width={18} height={18} viewBox="0 0 24 24"
+                    fill={wishlisted ? '#e11d48' : 'none'}
+                    stroke={wishlisted ? '#e11d48' : '#9E9892'}
+                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <path d={I.heart} />
+                  </svg>
+                </button>
+                {currentImage ? (
+                  <Image
+                    src={currentImage} alt={product.name}
+                    fill style={{ objectFit: 'contain' }}
+                    sizes="(max-width:768px) 100vw, 50vw"
+                    priority
+                  />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 72, opacity: 0.25 }}>👗</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile: main image on top, horizontal thumbnails below */}
+            <div className="md:hidden">
+              <div style={{ position: 'relative', aspectRatio: '3/4', borderRadius: 12, overflow: 'hidden', background: C.cream, marginBottom: 10 }}>
+                {discount && (
+                  <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
+                    <span style={{ background: C.maroon, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>
+                      {discount}% OFF
+                    </span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setWishlisted(v => !v)}
+                  style={{
+                    position: 'absolute', top: 12, right: 12, zIndex: 2,
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: '#fff', border: `1px solid ${C.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <svg width={18} height={18} viewBox="0 0 24 24"
+                    fill={wishlisted ? '#e11d48' : 'none'}
+                    stroke={wishlisted ? '#e11d48' : '#9E9892'}
+                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <path d={I.heart} />
+                  </svg>
+                </button>
+                {currentImage ? (
+                  <Image src={currentImage} alt={product.name} fill style={{ objectFit: 'contain' }} sizes="100vw" priority />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 72, opacity: 0.25 }}>👗</span>
+                  </div>
+                )}
+              </div>
+              {/* Horizontal thumbnail strip */}
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                {thumbs.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveThumb(i)}
+                    style={{
+                      width: 64, height: 74, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
+                      padding: 0, cursor: 'pointer', background: C.cream,
+                      border: i === activeThumb ? `1.5px solid ${C.maroon}` : `1.5px solid ${C.border}`,
+                    }}
+                  >
+                    <Image src={img} alt={`View ${i + 1}`} width={64} height={74} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Right Column - Details */}
-          <div className="space-y-3">
-            {/* Name & Badges */}
-            <div>
-              <div className="flex gap-2 mb-2">
-                {product.isNewArrival && (
-                  <span className="bg-[#722F37] text-white text-xs font-medium px-2.5 py-0.5 rounded-full">{t('product.newArrival')}</span>
-                )}
-                {product.isBestSeller && (
-                  <span className="bg-[#C9A962] text-white text-xs font-medium px-2.5 py-0.5 rounded-full">{t('product.bestSeller')}</span>
-                )}
-              </div>
-              <h1 className="text-3xl font-semibold text-[#1A1A1A] leading-snug tracking-tight" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-                {language === 'hi' ? product.nameHi : product.name}
-              </h1>
-            </div>
+          {/* ── RIGHT: Product Info ──────────────────────────────────────────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-            {/* Rating — below title, above price */}
-            <div className="relative inline-block">
-              <div
-                className="flex items-center gap-2 cursor-pointer"
-                onMouseEnter={() => setShowRatingTooltip(true)}
-                onMouseLeave={() => setShowRatingTooltip(false)}
-              >
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className={`w-4 h-4 ${star <= 4 ? 'text-[#B8962E]' : 'text-[#D4B86A]'}`} fill={star <= 4 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={star === 5 ? 1.5 : 0} viewBox="0 0 20 20">
-                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="text-sm font-medium text-[#3A3A3A]">4.5</span>
-                <span className="text-xs text-[#9E9E9E]">2,456 {language === 'hi' ? 'रेटिंग' : 'ratings'}</span>
-              </div>
-              {showRatingTooltip && (
-                <div className="absolute top-full left-0 mt-2 bg-white border border-[#E8E2D9] rounded-xl shadow-lg p-4 w-64 z-10">
-                  <h4 className="font-semibold text-[#2D2D2D] mb-3 text-sm">{language === 'hi' ? 'रेटिंग विवरण' : 'Rating Breakdown'}</h4>
-                  <div className="space-y-2">
-                    {[
-                      { stars: 5, count: 1520, percentage: 62 },
-                      { stars: 4, count: 618, percentage: 25 },
-                      { stars: 3, count: 221, percentage: 9 },
-                      { stars: 2, count: 73, percentage: 3 },
-                      { stars: 1, count: 24, percentage: 1 },
-                    ].map(({ stars, count, percentage }) => (
-                      <div key={stars} className="flex items-center gap-2">
-                        <span className="text-xs text-[#6B6B6B] w-8">{stars} ⭐</span>
-                        <div className="flex-1 h-2 bg-[#F0EDE8] rounded-full overflow-hidden">
-                          <div className="h-full bg-[#B8962E] transition-all" style={{ width: `${percentage}%` }}></div>
-                        </div>
-                        <span className="text-xs text-[#6B6B6B] w-12 text-right">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Title */}
+            <h1 style={{ fontFamily: 'var(--font-playfair)', fontSize: 24, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.35 }}>
+              {product.name}
+            </h1>
 
-            {/* Price */}
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-2xl font-bold text-[#1A1A1A]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
+            {/* Subtitle */}
+            {(product.fabric || product.fit || product.subCategory) && (
+              <p style={{ fontSize: 13, color: C.muted, margin: '6px 0 0', lineHeight: 1.5 }}>
+                {[product.fabric, product.fit, product.subCategory].filter(Boolean).join(' · ')}
+              </p>
+            )}
+
+            {/* Price row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+              <span style={{ fontSize: 26, fontWeight: 700, color: C.maroon, fontFamily: 'var(--font-playfair)' }}>
                 ₹{product.price.toLocaleString('en-IN')}
               </span>
-              {product.originalPrice && (
+              {(product.originalPrice ?? 0) > product.price && (
                 <>
-                  <span className="text-sm text-[#9E9E9E] line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
-                  <span className="text-xs text-[#7A7A7A] font-medium">{discountPercent}% off</span>
+                  <span style={{ fontSize: 16, color: C.muted, textDecoration: 'line-through' }}>
+                    ₹{product.originalPrice!.toLocaleString('en-IN')}
+                  </span>
+                  {discount && (
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#16A34A', background: '#DCFCE7', padding: '3px 10px', borderRadius: 20 }}>
+                      {discount}% off
+                    </span>
+                  )}
                 </>
               )}
             </div>
 
-            {/* Colors — placed directly below price */}
-            {product.colors && product.colors.length > 0 && product.category !== 'beauty' && (
-              <div>
-                <p className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest mb-2.5">
-                  {t('product.color')}
-                  {product.colors[selectedColor] && (
-                    <span className="normal-case tracking-normal ml-2 text-[#2D2D2D] font-semibold">
-                      {language === 'hi' ? product.colors[selectedColor]?.nameHi : product.colors[selectedColor]?.name}
-                    </span>
-                  )}
-                </p>
-                <div className="flex gap-2.5">
-                  {product.colors.map((color, idx) => (
+            {/* Rating pill */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: C.green, borderRadius: 4, padding: '3px 9px' }}>
+                <Svg d={I.star} size={11} fill="#fff" stroke="none" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{rating}</span>
+              </div>
+              <span style={{ fontSize: 12, color: C.muted }}>{reviewCount.toLocaleString()} ratings</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 56, height: 4, background: C.border, borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ width: `${positivePct}%`, height: '100%', background: C.green, borderRadius: 2 }} />
+                </div>
+                <span style={{ fontSize: 11, color: C.muted }}>{positivePct}% positive</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ borderTop: `0.5px solid ${C.border}`, margin: '16px 0' }} />
+
+            {/* Size selector */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Select size</span>
+                <a href="#" style={{ fontSize: 12, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                  Size guide
+                </a>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {(product.sizes.length > 0 ? product.sizes : ['S', 'M', 'L', 'XL', 'XXL']).map(size => {
+                  const oos      = OOS.has(size);
+                  const selected = selectedSize === size;
+                  return (
                     <button
-                      key={idx}
-                      onClick={() => {
-                        setSelectedColor(idx);
-                        if (allImages.length > 0) {
-                          const imagesPerColor = Math.max(1, Math.floor(allImages.length / product.colors.length));
-                          const startIndex = idx * imagesPerColor;
-                          setSelectedImage(startIndex < allImages.length ? startIndex : idx % allImages.length);
-                        }
+                      key={size}
+                      onClick={() => !oos && setSelectedSize(s => s === size ? null : size)}
+                      disabled={oos}
+                      style={{
+                        minWidth: 44, padding: '6px 14px', borderRadius: 20,
+                        border:     selected ? `1.5px solid ${C.maroon}` : `1px solid #D1C5C0`,
+                        background: selected ? C.maroonPale : '#fff',
+                        color:      oos ? C.muted : selected ? C.maroon : C.text,
+                        fontSize: 13, fontWeight: selected ? 600 : 400,
+                        cursor:     oos ? 'not-allowed' : 'pointer',
+                        opacity:    oos ? 0.35 : 1,
+                        textDecoration: oos ? 'line-through' : 'none',
+                        transition: 'all 0.12s',
                       }}
-                      className={`w-8 h-8 rounded-full transition-all duration-200 ring-offset-[3px] ${
-                        selectedColor === idx
-                          ? 'ring-1 ring-[#6B6B6B]'
-                          : 'ring-1 ring-transparent hover:ring-[#BCBCBC] hover:ring-offset-[3px]'
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                      aria-label={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sizes */}
-            {(product.sizes && product.sizes.length > 0) && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-[#6B6B6B] uppercase tracking-widest">{t('product.size')}</p>
-                  {!isFreeSize && !['beauty', 'footwear'].includes(product.category) && (
-                    <button
-                      onClick={() => setShowSizeChart(true)}
-                      className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] transition-colors inline-flex items-center gap-1 leading-none"
                     >
-                      {t('product.sizeChart')}
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v4M13 20h6M16 17l3 3 3-3" />
-                      </svg>
+                      {size}
                     </button>
-                  )}
-                </div>
-                {isFreeSize ? (
-                  <p className="text-sm text-[#6B6B6B] bg-[#F5F0E8] rounded-lg px-4 py-2 inline-block">
-                    {t('product.freeSize')}
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {product.sizes?.map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => { setSelectedSize(size); setSizeError(false); }}
-                        className={`px-5 py-2.5 rounded border text-sm font-medium transition-all duration-200 ${
-                          selectedSize === size
-                            ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
-                            : 'border-[#D4D0CB] text-[#3A3A3A] hover:border-[#1A1A1A] bg-white'
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Quantity + stock label */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                <button
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  style={{ width: 36, height: 36, background: C.cream, border: 'none', cursor: 'pointer', fontSize: 20, color: C.maroon, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  −
+                </button>
+                <span style={{ width: 36, textAlign: 'center', fontSize: 14, fontWeight: 600, color: C.text, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, lineHeight: '36px' }}>
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                  style={{ width: 36, height: 36, background: C.cream, border: 'none', cursor: 'pointer', fontSize: 20, color: C.maroon, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  +
+                </button>
+              </div>
+              {lowStock && (
+                <span style={{ fontSize: 12, color: C.red, fontWeight: 500 }}>
+                  Only {product.stockQuantity} left in stock
+                </span>
+              )}
+            </div>
+
+            {/* Delivery card */}
+            <div style={{ background: '#F9F5F0', border: `1px solid ${C.border}`, borderRadius: 8, padding: '14px 16px', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+              {/* Standard delivery row */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ color: C.maroon, flexShrink: 0, marginTop: 1 }}>
+                  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="1" y="3" width="15" height="13" rx="1" />
+                    <path d="M16 8h4l3 3v5h-7V8z" />
+                    <circle cx="5.5" cy="18.5" r="2.5" />
+                    <circle cx="18.5" cy="18.5" r="2.5" />
+                  </svg>
+                </span>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Standard Delivery</span>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: C.muted }}>
+                      Delivered in 4–7 business days · Enter pincode to check availability
+                    </p>
                   </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, background: C.goldPale, padding: '2px 8px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    FREE
+                  </span>
+                </div>
+              </div>
+
+              {/* Returns row */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ color: C.maroon, flexShrink: 0, marginTop: 1 }}>
+                  <Svg d={I.refresh} size={16} />
+                </span>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>7-day easy returns & exchange</span>
+                  <p style={{ margin: '2px 0 0', fontSize: 11, color: C.muted }}>
+                    Hassle-free returns and exchanges within 7 days of delivery
+                  </p>
+                </div>
+              </div>
+
+              {/* Pincode row */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: C.muted, flexShrink: 0 }}>
+                    <Svg d={I.mapPin} size={14} />
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={pincode}
+                    onChange={e => {
+                      setPincode(e.target.value.replace(/\D/g, ''));
+                      setPincodeStatus('idle');
+                      setPincodeMsg('');
+                    }}
+                    onKeyDown={e => e.key === 'Enter' && checkPincode()}
+                    placeholder="Enter pincode"
+                    style={{
+                      flex: 1, border: `1px solid ${C.border}`, borderRadius: 6,
+                      padding: '6px 10px', fontSize: 13, outline: 'none',
+                      background: '#fff', color: C.text,
+                    }}
+                  />
+                  <button
+                    onClick={checkPincode}
+                    disabled={pincodeStatus === 'checking'}
+                    style={{ padding: '6px 14px', border: 'none', background: 'none', color: C.maroon, fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    {pincodeStatus === 'checking' ? '…' : 'Check'}
+                  </button>
+                </div>
+                {pincodeMsg && (
+                  <p style={{ margin: 0, fontSize: 12, color: pincodeStatus === 'ok' ? '#16A34A' : C.red, paddingLeft: 22 }}>
+                    {pincodeStatus === 'ok' ? '✓ ' : '✕ '}{pincodeMsg}
+                  </p>
                 )}
-                {sizeError && <p className="text-red-500 text-sm mt-1.5">{t('product.selectSize')}</p>}
+              </div>
+            </div>
+
+            {/* Cart feedback */}
+            {cartMsg && (
+              <div style={{ marginTop: 10, padding: '8px 14px', background: '#DCFCE7', borderRadius: 6, fontSize: 13, color: '#16A34A', fontWeight: 500 }}>
+                ✓ {cartMsg}
               </div>
             )}
 
-            {/* Add to Cart Button */}
-            <button
-              onClick={handleAddToCart}
-              className="w-full py-4 rounded-none bg-[#1A1A1A] text-white font-medium text-sm tracking-widest uppercase transition-all duration-300 hover:bg-[#3A3A3A] active:bg-black"
-            >
-              {t('product.addToCart')}
-            </button>
+            {/* CTA buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+              <button
+                onClick={handleAddToCart}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: 12, borderRadius: 8,
+                  border: `1.5px solid ${C.maroon}`, background: C.maroonPale,
+                  color: C.maroon, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <Svg d={I.bag} size={16} />
+                Add to cart
+              </button>
+              <button
+                onClick={handleBuyNow}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 12, borderRadius: 8,
+                  border: 'none', background: C.maroon,
+                  color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Buy Now
+              </button>
+            </div>
 
-            {/* Accordion — Description / Details & Care / Shipping & Returns */}
-            <div className="border-t border-[#E8E2D9]">
+            {/* Trust highlights */}
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
               {[
-                {
-                  id: 'description',
-                  label: language === 'hi' ? 'विवरण' : 'Description',
-                  content: (
-                    <p className="text-sm text-[#4A4A4A] leading-relaxed">
-                      {language === 'hi' ? product.descriptionHi : product.description}
-                    </p>
-                  ),
-                },
-                {
-                  id: 'details',
-                  label: language === 'hi' ? 'विवरण और देखभाल' : 'Details & Care',
-                  content: (
-                    <ul className="space-y-2 text-sm text-[#4A4A4A]">
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>
-                          <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'श्रेणी' : 'Category'}:</span>{' '}
-                          {language === 'hi' ? categoryLabels[product.category]?.hi : categoryLabels[product.category]?.en}
-                        </span>
-                      </li>
-                      {!['beauty', 'footwear'].includes(product.category) && product.fabric && (
-                        <li className="flex items-start gap-2">
-                          <span className="text-[#9E9E9E] mt-0.5">—</span>
-                          <span>
-                            <span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'कपड़ा' : 'Fabric'}:</span>{' '}
-                            {language === 'hi' ? product.fabricHi : product.fabric}
-                          </span>
-                        </li>
-                      )}
-                      {product.category === 'beauty' && product.fabric && (() => {
-                        const d = parseBeautyDetails(product.fabric);
-                        return (
-                          <>
-                            {d.brand && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'ब्रांड' : 'Brand'}:</span> {d.brand}</span></li>}
-                            {d.shade && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'शेड' : 'Shade'}:</span> {d.shade}</span></li>}
-                            {d.volume && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'मात्रा' : 'Volume'}:</span> {d.volume}</span></li>}
-                            {d.expiry && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'समाप्ति' : 'Expiry'}:</span> {d.expiry}</span></li>}
-                          </>
-                        );
-                      })()}
-                      {product.category === 'footwear' && product.fabric && (() => {
-                        const d = parseFootwearDetails(product.fabric);
-                        return (
-                          <>
-                            {d.brand && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'ब्रांड' : 'Brand'}:</span> {d.brand}</span></li>}
-                            {d.material && <li className="flex items-start gap-2"><span className="text-[#9E9E9E] mt-0.5">—</span><span><span className="font-medium text-[#2D2D2D]">{language === 'hi' ? 'सामग्री' : 'Material'}:</span> {d.material}</span></li>}
-                          </>
-                        );
-                      })()}
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'हल्के हाथ से या मशीन में ठंडे पानी से धोएं' : 'Hand wash or machine wash in cold water'}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'सीधे धूप में न सुखाएं' : 'Do not tumble dry or bleach'}</span>
-                      </li>
-                    </ul>
-                  ),
-                },
-                {
-                  id: 'shipping',
-                  label: language === 'hi' ? 'शिपिंग और वापसी' : 'Shipping & Returns',
-                  content: (
-                    <ul className="space-y-2 text-sm text-[#4A4A4A]">
-                      {/* Delivery address */}
-                      {isAuthenticated && selectedAddress && (
-                        <li className="flex items-start justify-between gap-2 pb-2 mb-1 border-b border-[#F0EDE8]">
-                          <p className="text-xs text-[#6B6B6B] leading-relaxed">
-                            <span className="font-medium text-[#3A3A3A]">{t('product.deliverTo')}</span>{' '}
-                            <span className="font-medium text-[#2D2D2D]">{selectedAddress.name}</span>{' '}
-                            — {selectedAddress.address_line1}{selectedAddress.address_line2 ? `, ${selectedAddress.address_line2}` : ''}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pincode}
-                          </p>
-                          {addresses.length > 1 && (
-                            <button
-                              onClick={() => setShowAddressDropdown(!showAddressDropdown)}
-                              className="text-xs text-[#5A5A5A] underline underline-offset-2 hover:text-[#1A1A1A] whitespace-nowrap transition-colors flex-shrink-0"
-                            >
-                              {t('product.changeAddress')}
-                            </button>
-                          )}
-                        </li>
-                      )}
-                      {isAuthenticated && !selectedAddress && (
-                        <li className="pb-2 mb-1 border-b border-[#F0EDE8]">
-                          <p className="text-xs text-[#6B6B6B]">
-                            {t('product.deliverTo')}{' '}
-                            <Link href="/addresses" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.addAddress')}</Link>
-                          </p>
-                        </li>
-                      )}
-                      {!isAuthenticated && (
-                        <li className="pb-2 mb-1 border-b border-[#F0EDE8]">
-                          <p className="text-xs text-[#6B6B6B]">
-                            <Link href="/login" className="underline underline-offset-2 hover:text-[#1A1A1A] transition-colors">{t('product.loginDelivery')}</Link>
-                          </p>
-                        </li>
-                      )}
-                      {showAddressDropdown && addresses.length > 1 && (
-                        <li>
-                          <div className="border border-[#E8E2D9] rounded bg-white overflow-hidden mb-1">
-                            {addresses.map((addr) => (
-                              <button
-                                key={addr.id}
-                                onClick={() => { setSelectedAddress(addr); setShowAddressDropdown(false); }}
-                                className={`w-full text-left px-4 py-2.5 text-xs hover:bg-[#FAF7F2] transition-colors ${
-                                  selectedAddress?.id === addr.id ? 'bg-[#FAF7F2] font-medium text-[#1A1A1A]' : 'text-[#3A3A3A]'
-                                }`}
-                              >
-                                <span className="font-medium">{addr.name}</span> — {addr.address_line1}, {addr.city}
-                                {addr.is_default && <span className="ml-2 text-[#C9A962]">({language === 'hi' ? 'डिफ़ॉल्ट' : 'Default'})</span>}
-                              </button>
-                            ))}
-                          </div>
-                        </li>
-                      )}
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'सामान्यतः 3–7 कार्यदिवसों में डिलीवरी' : 'Delivery within 3–7 business days'}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? '₹499 से अधिक के ऑर्डर पर निःशुल्क शिपिंग' : 'Free shipping on orders above ₹499'}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-[#9E9E9E] mt-0.5">—</span>
-                        <span>{language === 'hi' ? 'डिलीवरी के 7 दिनों के भीतर वापसी की जा सकती है' : 'Easy returns within 7 days of delivery'}</span>
-                      </li>
-                      {product.seller && (
-                        <li className="flex items-start gap-2 pt-1 border-t border-[#F0EDE8] mt-1">
-                          <span className="text-[#9E9E9E] mt-0.5">—</span>
-                          <span>
-                            {language === 'hi' ? 'विक्रेता: ' : 'Sold by '}
-                            <span className="font-medium text-[#2D2D2D]">
-                              {language === 'hi' && product.seller.businessNameHi ? product.seller.businessNameHi : product.seller.businessName}
-                            </span>
-                            {product.seller.city ? `, ${product.seller.city}` : ''}
-                          </span>
-                        </li>
-                      )}
-                    </ul>
-                  ),
-                },
-              ].map(({ id, label, content }) => (
-                <div key={id} className="border-b border-[#E8E2D9]">
-                  <button
-                    onClick={() => setOpenAccordion(openAccordion === id ? null : id)}
-                    className="w-full flex items-center justify-between py-4 text-left"
-                  >
-                    <span className="text-xs font-medium text-[#2D2D2D] uppercase tracking-widest">{label}</span>
-                    <svg
-                      className={`w-4 h-4 text-[#6B6B6B] transition-transform duration-200 ${openAccordion === id ? 'rotate-180' : ''}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {openAccordion === id && (
-                    <div className="pb-4">
-                      {content}
-                    </div>
-                  )}
+                { d: I.shield, text: 'Secure payments · UPI, cards, COD accepted' },
+                { d: I.home,   text: '7-day easy returns & exchange' },
+                { d: I.clock,  text: 'Order before 12 PM for same-day dispatch' },
+              ].map(({ d, text }) => (
+                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ color: C.gold, flexShrink: 0 }}>
+                    <Svg d={d} size={15} />
+                  </span>
+                  <span style={{ fontSize: 12, color: '#4A3F35' }}>{text}</span>
                 </div>
               ))}
             </div>
+
+          </div>
+          {/* end product info */}
+        </div>
+        {/* end main grid */}
+      </div>
+
+      {/* ── Returns bar ─────────────────────────────────────────────────────── */}
+      <div style={{ background: C.goldPale, borderTop: `0.5px solid #E8D89A`, borderBottom: `0.5px solid #E8D89A` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 16px' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 12 }}>
+            {[
+              { d: I.refresh, text: '7-day returns' },
+              { d: I.check,   text: 'Free size exchange' },
+              { d: I.shield,  text: '100% authentic products' },
+              { d: I.zap,     text: 'Fast local delivery' },
+            ].map(({ d, text }) => (
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <Svg d={d} size={14} stroke={C.gold} />
+                <span style={{ fontSize: 12, fontWeight: 500, color: '#4A3F35' }}>{text}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Size Chart Modal */}
-      {showSizeChart && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-xl max-w-md w-full max-h-[80vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
-                {t('product.sizeChart')}
-              </h3>
-              <button onClick={() => setShowSizeChart(false)} className="text-[#6B6B6B] hover:text-[#2D2D2D] transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[#F5F0E8]">
-                  {chartData.headers[language].map((h, i) => (
-                    <th key={i} className="text-left px-3 py-2.5 font-semibold text-[#2D2D2D]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {chartData.rows.map((row, i) => (
-                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAF7F2]'}>
-                    {row.map((cell, j) => (
-                      <td key={j} className="px-3 py-2 text-[#2D2D2D]">{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* ── Product details + Care & wash ───────────────────────────────────── */}
+      <div style={{ background: '#fff', borderTop: `0.5px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_1fr]">
 
-      {/* Image Zoom Lightbox */}
-      {zoomImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setZoomImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
-            {isCloudinary(zoomImage) ? (
-              <CldImage
-                src={zoomImage}
-                alt="Zoomed product"
-                width={900}
-                height={900}
-                className="object-contain max-h-[85vh] rounded-xl shadow-2xl"
-              />
-            ) : (
-              <img src={zoomImage} alt="Zoomed product" className="object-contain max-h-[85vh] max-w-full rounded-xl shadow-2xl" />
-            )}
-            <button
-              onClick={() => setZoomImage(null)}
-              className="absolute top-2 right-2 bg-white/90 hover:bg-white text-[#2D2D2D] rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shadow"
-            >
-              ×
-            </button>
+            {/* Left: Product details */}
+            <div className="md:pr-8">
+              <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
+                Product details
+              </h2>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  {[
+                    { k: 'Category', v: [product.category, product.subCategory].filter(Boolean).join(' / ') || '—' },
+                    { k: 'Fabric',   v: product.fabric   || '—' },
+                    { k: 'Fit',      v: product.fit      || '—' },
+                    { k: 'Collar',   v: product.collar   || '—' },
+                    { k: 'Pattern',  v: product.pattern  || '—' },
+                    { k: 'Occasion', v: product.occasion || '—' },
+                  ].map(({ k, v }) => (
+                    <tr key={k} style={{ borderBottom: `0.5px solid ${C.subtle}` }}>
+                      <td style={{ fontSize: 13, color: C.muted, padding: '9px 0', width: '44%' }}>{k}</td>
+                      <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 0', textAlign: 'right' }}>{v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vertical divider — desktop only */}
+            <div className="hidden md:block" style={{ background: C.border }} />
+
+            {/* Right: Care & wash */}
+            <div className="md:pl-8 mt-8 md:mt-0">
+              <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
+                Care &amp; wash
+              </h2>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  {[
+                    { k: 'Wash',              v: 'Hand wash or gentle machine wash' },
+                    { k: 'Dry',               v: 'Shade dry only' },
+                    { k: 'Iron',              v: 'Medium heat · Do not iron on print' },
+                    { k: 'Bleach',            v: 'Do not bleach' },
+                    { k: 'Country of origin', v: 'India' },
+                  ].map(({ k, v }) => (
+                    <tr key={k} style={{ borderBottom: `0.5px solid ${C.subtle}` }}>
+                      <td style={{ fontSize: 13, color: C.muted, padding: '9px 0', width: '44%' }}>{k}</td>
+                      <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 0', textAlign: 'right' }}>{v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Spinner keyframe */}
+      <style>{`
+        .ifp-spin { animation: ifp-spin 0.8s linear infinite; }
+        @keyframes ifp-spin { to { transform: rotate(360deg); } }
+      `}</style>
+
     </div>
   );
 }

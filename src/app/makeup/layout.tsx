@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Makeup & Beauty | Cosmetics & Skincare | Fashion Points",
-  description: "Shop makeup and beauty products at Fashion Points, Amas, Gaya, Bihar. Explore cosmetics, skincare and beauty essentials at great prices.",
+  title: "Makeup & Beauty | Cosmetics & Skincare | Insta Fashion Points",
+  description: "Shop makeup and beauty products at Insta Fashion Points, Amas, Gaya, Bihar. Explore cosmetics, skincare and beauty essentials at great prices.",
   keywords: "makeup, cosmetics, skincare, beauty products, lipstick, foundation, eye makeup, fashion points beauty, makeup Gaya, cosmetics Bihar",
   openGraph: {
-    title: "Makeup & Beauty Collection | Fashion Points",
+    title: "Makeup & Beauty Collection | Insta Fashion Points",
     description: "Cosmetics, skincare & beauty essentials. Shop online or visit us in Amas, Gaya, Bihar.",
     url: 'https://fashionpoints.co.in/makeup',
-    siteName: 'Fashion Points',
+    siteName: 'Insta Fashion Points',
     type: 'website',
   },
   alternates: {

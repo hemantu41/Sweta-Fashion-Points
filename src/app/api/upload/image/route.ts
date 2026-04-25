@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
     if (productId) tags.push(`product:${productId}`);
 
     // Determine folder structure: category-based for better organization
-    let folder = 'sweta-fashion-points';
+    let folder = 'insta-fashion-points';
     if (category) {
-      folder = `sweta-fashion-points/${category}`;
+      folder = `insta-fashion-points/${category}`;
     }
 
     // Upload to Cloudinary
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Extract the public ID from the full public_id
-    // For example: "sweta-fashion-points/abc123" -> "sweta-fashion-points/abc123"
+    // For example: "insta-fashion-points/abc123" -> "insta-fashion-points/abc123"
     const publicId = result.public_id;
 
     return NextResponse.json({

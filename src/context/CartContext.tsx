@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import type { Product } from '@/data/products';
-import { products as allProducts } from '@/data/products';
 
 export interface CartItem {
   product: Product;
@@ -67,14 +66,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('sweta_cart');
     if (stored) {
       try {
-        const parsed = JSON.parse(stored) as { id: string; qty: number; size?: string }[];
-        const restored = parsed
-          .map(({ id, qty, size }) => {
-            const product = allProducts.find(p => p.id === id);
-            return product ? { product, quantity: qty, ...(size !== undefined ? { size } : {}) } : null;
-          })
-          .filter((item): item is CartItem => item !== null);
-        if (restored.length > 0) dispatch({ type: 'INIT', items: restored });
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+        // New format: { product: Product, qty: number, size?: string }
+        if (parsed[0]?.product) {
+          const restored: CartItem[] = parsed
+            .filter((entry: { product?: Product; qty?: number }) => entry.product && entry.qty)
+            .map(({ product, qty, size }: { product: Product; qty: number; size?: string }) => ({
+              product,
+              quantity: qty,
+              ...(size !== undefined ? { size } : {}),
+            }));
+          if (restored.length > 0) dispatch({ type: 'INIT', items: restored });
+          return;
+        }
+
+        // Legacy format: { id: string, qty: number, size?: string } — only static products survive
+        // DB products (UUIDs) are simply dropped; cart shows empty for those items
       } catch {
         // ignore invalid data
       }
@@ -84,7 +93,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(
       'sweta_cart',
-      JSON.stringify(items.map(i => ({ id: i.product.id, qty: i.quantity, size: i.size })))
+      JSON.stringify(items.map(i => ({ product: i.product, qty: i.quantity, size: i.size })))
     );
   }, [items]);
 

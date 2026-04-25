@@ -70,8 +70,8 @@ export default function ReturnPolicyPage() {
                 <ol className="list-decimal pl-6 space-y-3 text-[#2D2D2D]">
                   <li>
                     {language === 'hi'
-                      ? 'support@fashionpoints.co.in पर ईमेल करें या +91 82941 53256 पर कॉल करें'
-                      : 'Email us at support@fashionpoints.co.in or call +91 82941 53256'}
+                      ? 'info@instafashionpoints.com पर ईमेल करें या +91 82941 53256 पर कॉल करें'
+                      : 'Email us at info@instafashionpoints.com or call +91 82941 53256'}
                   </li>
                   <li>
                     {language === 'hi'
@@ -101,38 +101,25 @@ export default function ReturnPolicyPage() {
               <h2 className="text-2xl font-bold text-[#722F37] mb-4">
                 {language === 'hi' ? '4. रिटर्न शिपिंग' : '4. Return Shipping'}
               </h2>
-              <div className="space-y-3 text-[#2D2D2D]">
-                <p>
-                  <strong>{language === 'hi' ? 'स्थानीय रिटर्न (Amas, Gaya के भीतर 15 किमी):' : 'Local Returns (Within 15km of Amas, Gaya):'}</strong>
-                </p>
-                <ul className="list-disc pl-6 space-y-2">
-                  <li>{language === 'hi' ? 'मुफ्त पिकअप सेवा उपलब्ध है' : 'Free pickup service available'}</li>
-                  <li>{language === 'hi' ? 'हमारे डिलीवरी पार्टनर उत्पाद एकत्र करेंगे' : 'Our delivery partner will collect the product'}</li>
-                </ul>
-
-                <p className="mt-4">
-                  <strong>{language === 'hi' ? 'अन्य स्थान:' : 'Other Locations:'}</strong>
-                </p>
-                <ul className="list-disc pl-6 space-y-2">
-                  <li>{language === 'hi' ? 'ग्राहक को रिटर्न शिपिंग की व्यवस्था करनी होगी' : 'Customer must arrange return shipping'}</li>
-                  <li>
-                    {language === 'hi'
-                      ? 'दोषपूर्ण/क्षतिग्रस्त उत्पादों के लिए, हम शिपिंग शुल्क वापस करेंगे'
-                      : 'For defective/damaged products, we will reimburse shipping charges'}
-                  </li>
-                  <li>
-                    {language === 'hi'
-                      ? 'मन बदलने पर, ग्राहक शिपिंग शुल्क वहन करता है'
-                      : 'For change of mind, customer bears shipping charges'}
-                  </li>
-                </ul>
-              </div>
+              <ul className="list-disc pl-6 space-y-2 text-[#2D2D2D]">
+                <li>{language === 'hi' ? 'ग्राहक को रिटर्न शिपिंग की व्यवस्था करनी होगी' : 'Customer must arrange return shipping'}</li>
+                <li>
+                  {language === 'hi'
+                    ? 'दोषपूर्ण/क्षतिग्रस्त उत्पादों के लिए, हम शिपिंग शुल्क वापस करेंगे'
+                    : 'For defective/damaged products, we will reimburse shipping charges'}
+                </li>
+                <li>
+                  {language === 'hi'
+                    ? 'मन बदलने पर, ग्राहक शिपिंग शुल्क वहन करता है'
+                    : 'For change of mind, customer bears shipping charges'}
+                </li>
+              </ul>
 
               <div className="bg-[#722F37] bg-opacity-10 rounded-lg p-4 mt-4 border border-[#722F37]">
                 <p className="text-[#722F37] font-semibold">
                   {language === 'hi'
-                    ? '📦 रिटर्न पता: Sweta Fashion Points, Amas, Gaya, Bihar - 824219'
-                    : '📦 Return Address: Sweta Fashion Points, Amas, Gaya, Bihar - 824219'}
+                    ? '📦 रिटर्न पता: Insta Fashion Points, Hyderabad, Telangana – 500032'
+                    : '📦 Return Address: Insta Fashion Points, Hyderabad, Telangana – 500032'}
                 </p>
               </div>
             </section>
@@ -280,7 +267,7 @@ export default function ReturnPolicyPage() {
                     : 'For any questions regarding returns, please contact us:'}
                 </p>
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? '📧 ईमेल:' : '📧 Email:'}</strong> support@fashionpoints.co.in
+                  <strong>{language === 'hi' ? '📧 ईमेल:' : '📧 Email:'}</strong> info@instafashionpoints.com
                 </p>
                 <p className="mb-2">
                   <strong>{language === 'hi' ? '📞 फोन:' : '📞 Phone:'}</strong> +91 82941 53256
@@ -292,7 +279,7 @@ export default function ReturnPolicyPage() {
                     : 'Monday - Saturday, 10:00 AM - 6:00 PM'}
                 </p>
                 <p>
-                  <strong>{language === 'hi' ? '📍 पता:' : '📍 Address:'}</strong> Amas, Gaya, Bihar - 824219
+                  <strong>{language === 'hi' ? '📍 पता:' : '📍 Address:'}</strong> Hyderabad, Telangana – 500032
                 </p>
               </div>
             </section>

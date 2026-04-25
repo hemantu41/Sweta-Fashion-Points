@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CldImage } from 'next-cloudinary';
 
 interface OrderItem {
@@ -27,6 +28,8 @@ interface Order {
   status: string;
   delivery_status?: string;
   tracking_number?: string;
+  awb_number?: string;
+  courier_partner?: string;
   items: OrderItem[];
   delivery_address: {
     name: string;
@@ -43,17 +46,33 @@ interface Order {
 }
 
 export default function OrdersPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, isLoading, router]);
+    if (isLoading) return;
+    if (isAuthenticated) return;
+
+    // localStorage is empty but iron-session may still be valid (middleware already blocked
+    // access if the session cookie was missing, so we must be here with a valid session).
+    // Try to restore user from server. Do NOT redirect to /login here — the middleware
+    // handles unauthorized access and a client-side redirect would cause a redirect loop
+    // (middleware bounces /login back to / when iron-session is valid).
+    fetch('/api/auth/session')
+      .then(r => r.json())
+      .then(data => {
+        if (data.isLoggedIn && data.user) {
+          login(data.user); // restores localStorage; triggers fetchOrders via [user] effect
+        } else {
+          // Session truly gone — stop the spinner; middleware would have blocked if no cookie
+          setLoading(false);
+        }
+      })
+      .catch(() => setLoading(false));
+  }, [isAuthenticated, isLoading, login]);
 
   useEffect(() => {
     if (user?.id) {
@@ -236,9 +255,10 @@ export default function OrdersPage() {
                           Paid on {formatDate(order.payment_completed_at)}
                         </p>
                       )}
-                      {order.tracking_number && (
+                      {order.awb_number && (
                         <p className="text-sm text-[#6B6B6B] mt-1">
-                          Tracking: <span className="font-medium text-[#722F37]">{order.tracking_number}</span>
+                          AWB: <span className="font-medium text-[#722F37]">{order.awb_number}</span>
+                          {order.courier_partner && <span className="text-[#6B6B6B]"> · {order.courier_partner}</span>}
                         </p>
                       )}
                     </div>
@@ -266,12 +286,21 @@ export default function OrdersPage() {
                   </h4>
                   <div className="space-y-4">
                     {order.items.map((item, index) => {
-                      const isCloudinary = item.image && !item.image.startsWith('/') && !item.image.startsWith('http');
+                      const isCloudinaryId = item.image && !item.image.startsWith('/') && !item.image.startsWith('http');
+                      const isFullUrl = item.image && item.image.startsWith('http');
                       return (
                         <div key={index} className="flex gap-4 items-start pb-4 border-b border-gray-100 last:border-0 last:pb-0">
                           <div className="relative w-20 h-20 bg-[#F5F0E8] rounded-lg overflow-hidden flex-shrink-0">
-                            {isCloudinary ? (
+                            {isCloudinaryId ? (
                               <CldImage
+                                src={item.image}
+                                alt={item.name}
+                                fill
+                                className="object-cover"
+                                sizes="80px"
+                              />
+                            ) : isFullUrl ? (
+                              <Image
                                 src={item.image}
                                 alt={item.name}
                                 fill
@@ -302,10 +331,10 @@ export default function OrdersPage() {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-[#722F37]">
-                            ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                            ₹{((Number(item.price) || 0) * (item.quantity || 1)).toLocaleString('en-IN')}
                           </p>
                           <p className="text-xs text-[#6B6B6B] mt-1">
-                            ₹{item.price.toLocaleString('en-IN')} each
+                            ₹{(Number(item.price) || 0).toLocaleString('en-IN')} each
                           </p>
                         </div>
                       </div>
@@ -324,17 +353,23 @@ export default function OrdersPage() {
                     Delivery Address
                   </h4>
                   <div className="bg-[#F5F0E8] rounded-lg p-4">
-                    <p className="font-medium text-[#2D2D2D]">{order.delivery_address.name}</p>
-                    <p className="text-sm text-[#6B6B6B] mt-1">
-                      {order.delivery_address.address_line1}
-                      {order.delivery_address.address_line2 && `, ${order.delivery_address.address_line2}`}
-                    </p>
-                    <p className="text-sm text-[#6B6B6B]">
-                      {order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}
-                    </p>
-                    <p className="text-sm text-[#6B6B6B] mt-1">
-                      Phone: {order.delivery_address.phone}
-                    </p>
+                    {order.delivery_address ? (
+                      <>
+                        <p className="font-medium text-[#2D2D2D]">{order.delivery_address.name}</p>
+                        <p className="text-sm text-[#6B6B6B] mt-1">
+                          {order.delivery_address.address_line1}
+                          {order.delivery_address.address_line2 && `, ${order.delivery_address.address_line2}`}
+                        </p>
+                        <p className="text-sm text-[#6B6B6B]">
+                          {order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}
+                        </p>
+                        <p className="text-sm text-[#6B6B6B] mt-1">
+                          Phone: {order.delivery_address.phone}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-[#6B6B6B]">Address not available</p>
+                    )}
                   </div>
                 </div>
 
@@ -348,9 +383,9 @@ export default function OrdersPage() {
                         </p>
                       )}
                     </div>
-                    {order.status === 'captured' && (
+                    {order.awb_number ? (
                       <Link
-                        href={`/orders/${order.id}/track`}
+                        href={`/track/${order.awb_number}`}
                         className="inline-flex items-center gap-2 bg-[#722F37] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#8B3D47] transition-colors text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,7 +393,14 @@ export default function OrdersPage() {
                         </svg>
                         Track Order
                       </Link>
-                    )}
+                    ) : order.status === 'captured' ? (
+                      <span className="inline-flex items-center gap-2 text-[#6B6B6B] text-sm">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Awaiting Shipment
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>

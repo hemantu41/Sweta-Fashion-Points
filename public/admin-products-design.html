@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product Management — Insta Fashion Points Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ── Reset & Base ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --brand:       #8B2020;
+  --brand-light: #F9EDED;
+  --bg:          #FAF8F5;
+  --surface:     #FFFFFF;
+  --surface2:    #F3F0EB;
+  --border-l:    #E8E3DC;
+  --border-s:    #D4CFC7;
+  --green:       #2D4A22;
+  --green-fill:  #EBF2E8;
+  --green-border:#C3D9BC;
+  --amber:       #A0620A;
+  --amber-fill:  #FEF6E7;
+  --amber-border:#F0D89A;
+  --red-fill:    #FAECEC;
+  --red-border:  #EFC8C8;
+  --text:        #1A1714;
+  --text2:       #6B6560;
+  --text3:       #9E9892;
+  --shadow-sm:   0 1px 4px rgba(26,23,20,.06), 0 0.5px 1px rgba(26,23,20,.04);
+  --shadow-md:   0 4px 16px rgba(26,23,20,.08), 0 1px 3px rgba(26,23,20,.05);
+  --shadow-lg:   0 12px 40px rgba(26,23,20,.14), 0 2px 8px rgba(26,23,20,.06);
+  --radius:      10px;
+  --font-serif:  'Playfair Display', Georgia, serif;
+  --font-sans:   'DM Sans', system-ui, sans-serif;
+  --transition:  0.15s ease;
+}
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Navbar ────────────────────────────────────────────────────── */
+.navbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--border-l);
+  padding: 0 28px;
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 1px 0 var(--border-l), 0 2px 12px rgba(26,23,20,.05);
+}
+.navbar-brand { display: flex; align-items: baseline; gap: 10px; }
+.navbar-brand-name {
+  font-family: var(--font-serif);
+  font-size: 18px; font-weight: 600;
+  color: var(--brand); letter-spacing: -0.2px;
+}
+.navbar-brand-sub {
+  font-size: 12px; color: var(--text3);
+  font-weight: 400; letter-spacing: 0.2px;
+}
+.navbar-right { display: flex; align-items: center; gap: 12px; }
+.pending-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--amber-fill);
+  border: 0.5px solid var(--amber-border);
+  color: var(--amber);
+  font-size: 12px; font-weight: 500;
+  padding: 5px 12px; border-radius: 20px;
+  cursor: pointer; transition: var(--transition);
+  white-space: nowrap;
+}
+.pending-pill:hover { background: #FEECD2; border-color: #E8C070; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--brand); color: #fff;
+  font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+  font-family: var(--font-sans);
+}
+
+/* ── Page Wrapper ──────────────────────────────────────────────── */
+.page { padding: 28px; max-width: 1380px; margin: 0 auto; }
+
+/* ── Page Header ───────────────────────────────────────────────── */
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 20px; gap: 16px; flex-wrap: wrap;
+}
+.page-title { font-family: var(--font-serif); font-size: 26px; font-weight: 600; color: var(--text); letter-spacing: -0.4px; line-height: 1.2; }
+.page-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
+.header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  border: 0.5px solid transparent; transition: var(--transition);
+  white-space: nowrap; text-decoration: none;
+}
+.btn-amber {
+  background: var(--amber-fill); color: var(--amber);
+  border-color: var(--amber-border);
+}
+.btn-amber:hover { background: #FEECD2; }
+.btn-red { background: var(--brand); color: #fff; border-color: var(--brand); }
+.btn-red:hover { background: #7A1C1C; }
+.badge-inline {
+  background: var(--amber); color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 10px; line-height: 1.4;
+}
+
+/* ── CTA Banner ────────────────────────────────────────────────── */
+.cta-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--amber-fill);
+  border: 0.5px solid var(--amber-border);
+  border-radius: var(--radius); padding: 14px 20px;
+  margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+}
+.cta-text { font-size: 13px; color: var(--amber); }
+.cta-text strong { font-weight: 600; }
+.btn-outline-amber {
+  font-family: var(--font-sans); font-size: 12px; font-weight: 500;
+  padding: 6px 14px; border-radius: 7px; cursor: pointer;
+  background: transparent; border: 1px solid var(--amber); color: var(--amber);
+  transition: var(--transition); white-space: nowrap;
+}
+.btn-outline-amber:hover { background: #FEECD2; }
+
+/* ── Stats Grid ────────────────────────────────────────────────── */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 20px;
+}
+@media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+.stat-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border-l);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), transform var(--transition);
+  cursor: default; position: relative; overflow: hidden;
+}
+.stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.stat-card.accent-green { border-color: var(--green-border); }
+.stat-card.accent-amber { border-left: 3px solid var(--amber); border-radius: var(--radius); }
+.stat-card.accent-red { border-color: var(--red-border); }
+.stat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.stat-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+.stat-icon { font-size: 17px; line-height: 1; }
+.stat-value { font-family: var(--font-serif); font-size: 30px; font-weight: 600; line-height: 1; margin-bottom: 6px; }
+.stat-value.green { color: var(--green); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.red   { color: var(--brand); }
+.stat-value.dark  { color: var(--text); }
+.stat-sub { font-size: 11.5px; color: var(--text3); }
+
+/* ── Filter Tabs ───────────────────────────────────────────────── */
+.tabs-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 500;
+  padding: 7px 14px; border-radius: 20px; cursor: pointer;
+  border: 0.5px solid var(--border-l); background: var(--surface);
+  color: var(--text2); transition: var(--transition);
+}
+.tab:hover { background: var(--surface2); border-color: var(--border-s); }
+.tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+.tab-count {
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 10px; line-height: 1.5;
+}
+.tab.active .tab-count { background: rgba(255,255,255,.22); color: #fff; }
+.tab:not(.active) .tab-count { background: var(--surface2); color: var(--text3); }
+
+/* ── Filters Bar ───────────────────────────────────────────────── */
+.filter-bar {
+  background: var(--surface); border: 0.5px solid var(--border-l);
+  border-radius: var(--radius); padding: 14px 18px;
+  box-shadow: var(--shadow-sm); margin-bottom: 14px;
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+}
+.filter-input-wrap { position: relative; flex: 1; min-width: 200px; }
+.filter-icon {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  color: var(--text3); font-size: 13px; pointer-events: none;
+}
+.filter-input {
+  width: 100%; padding: 8px 12px 8px 32px;
+  font-family: var(--font-sans); font-size: 13px;
+  background: var(--bg); border: 0.5px solid var(--border-l);
+  border-radius: 7px; color: var(--text); outline: none;
+  transition: var(--transition);
+}
+.filter-input:focus { border-color: var(--brand); box-shadow: 0 0 0 2.5px rgba(139,32,32,.1); }
+.filter-input::placeholder { color: var(--text3); }
+.filter-select-wrap { position: relative; }
+.filter-select {
+  appearance: none; -webkit-appearance: none;
+  padding: 8px 32px 8px 12px;
+  font-family: var(--font-sans); font-size: 13px;
+  background: var(--bg); border: 0.5px solid var(--border-l);
+  border-radius: 7px; color: var(--text); outline: none;
+  cursor: pointer; min-width: 140px; transition: var(--transition);
+}
+.filter-select:focus { border-color: var(--brand); box-shadow: 0 0 0 2.5px rgba(139,32,32,.1); }
+.select-arrow {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: var(--text3);
+}
+
+/* ── Table Container ───────────────────────────────────────────── */
+.table-card {
+  background: var(--surface); border: 0.5px solid var(--border-l);
+  border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead tr {
+  background: var(--surface2);
+  border-bottom: 0.5px solid var(--border-l);
+}
+thead th {
+  font-size: 10.5px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  padding: 11px 16px; text-align: left; white-space: nowrap;
+}
+tbody tr {
+  border-bottom: 0.5px solid var(--border-l);
+  transition: background var(--transition);
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg); }
+tbody td { padding: 14px 16px; vertical-align: middle; }
+tbody tr.fade-out { opacity: 0; transition: opacity 0.4s ease; }
+
+/* ── Product Cell ──────────────────────────────────────────────── */
+.product-cell { display: flex; align-items: center; gap: 11px; }
+.product-thumb {
+  width: 40px; height: 40px; border-radius: 8px;
+  background: var(--surface2); border: 0.5px solid var(--border-l);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.product-name { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; max-width: 180px; }
+.product-id { font-size: 10.5px; color: var(--text3); font-family: 'Courier New', monospace; margin-top: 2px; }
+
+/* ── Table Cells ───────────────────────────────────────────────── */
+.category-badge {
+  font-size: 11px; font-weight: 500; padding: 3px 9px;
+  border-radius: 5px; background: var(--surface2);
+  border: 0.5px solid var(--border-l); color: var(--text2);
+  white-space: nowrap;
+}
+.seller-name { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.seller-city { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.price-main { font-family: var(--font-serif); font-size: 14px; font-weight: 600; color: var(--text); }
+.price-mrp { font-size: 11px; color: var(--text3); text-decoration: line-through; margin-top: 1px; }
+.price-discount { font-size: 11px; color: var(--green); font-weight: 500; }
+
+/* ── Status / Approval Badges ──────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 500;
+  padding: 3px 9px; border-radius: 12px; white-space: nowrap;
+}
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.badge-active   { background: var(--green-fill); color: var(--green); border: 0.5px solid var(--green-border); }
+.badge-active::before   { background: var(--green); }
+.badge-inactive { background: var(--surface2); color: var(--text3); border: 0.5px solid var(--border-l); }
+.badge-inactive::before { background: var(--text3); }
+.badge-pending  { background: var(--amber-fill); color: var(--amber); border: 0.5px solid var(--amber-border); }
+.badge-pending::before  { background: var(--amber); }
+.badge-rejected { background: var(--red-fill); color: var(--brand); border: 0.5px solid var(--red-border); }
+.badge-rejected::before { background: var(--brand); }
+
+/* ── Stock Indicator ───────────────────────────────────────────── */
+.stock-cell { display: flex; align-items: center; gap: 6px; }
+.stock-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.stock-value { font-size: 13px; font-weight: 500; }
+
+/* ── Action Buttons ────────────────────────────────────────────── */
+.actions { display: flex; gap: 6px; }
+.action-btn {
+  font-size: 11.5px; font-weight: 500; padding: 5px 11px;
+  border-radius: 6px; cursor: pointer; border: 0.5px solid transparent;
+  transition: var(--transition); white-space: nowrap;
+  font-family: var(--font-sans);
+}
+.action-approve { background: var(--green-fill); color: var(--green); border-color: var(--green-border); }
+.action-approve:hover { background: #D7EDD0; }
+.action-reject  { background: var(--red-fill); color: var(--brand); border-color: var(--red-border); }
+.action-reject:hover { background: #F5D8D8; }
+.action-edit    { background: #EBF0F9; color: #1A3D7A; border-color: #C5D5EC; }
+.action-edit:hover { background: #D9E5F5; }
+.action-delete  { background: var(--red-fill); color: var(--brand); border-color: var(--red-border); }
+.action-delete:hover { background: #F5D8D8; }
+
+/* ── Pagination ────────────────────────────────────────────────── */
+.pagination-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-top: 0.5px solid var(--border-l);
+  flex-wrap: wrap; gap: 10px;
+}
+.page-info { font-size: 12px; color: var(--text3); }
+.page-btns { display: flex; gap: 5px; }
+.page-btn {
+  width: 30px; height: 30px; border-radius: 6px;
+  font-size: 12.5px; font-weight: 500; cursor: pointer;
+  border: 0.5px solid var(--border-l); background: var(--surface);
+  color: var(--text2); display: flex; align-items: center; justify-content: center;
+  transition: var(--transition);
+}
+.page-btn:hover { background: var(--surface2); }
+.page-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+.page-btn.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+
+/* ── Modal Overlay ─────────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(26,23,20,.45);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+  padding: 24px;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface);
+  border-radius: 14px;
+  width: 100%; max-width: 520px;
+  max-height: 86vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(24px);
+  transition: transform 0.22s ease;
+}
+.overlay.open .modal { transform: translateY(0); }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 24px 18px;
+  border-bottom: 0.5px solid var(--border-l);
+  position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.modal-title { font-family: var(--font-serif); font-size: 20px; font-weight: 600; color: var(--text); }
+.modal-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--surface2); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--text2);
+  transition: var(--transition);
+}
+.modal-close:hover { background: var(--border-l); }
+
+/* ── Review Cards ──────────────────────────────────────────────── */
+.review-list { padding: 18px 24px; display: flex; flex-direction: column; gap: 16px; }
+.review-card {
+  border: 0.5px solid var(--border-l); border-radius: var(--radius);
+  overflow: hidden; transition: opacity 0.4s ease, transform 0.3s ease;
+}
+.review-card.fade-out { opacity: 0; transform: scale(0.97); }
+.review-card-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface2);
+  border-bottom: 0.5px solid var(--border-l);
+}
+.review-thumb {
+  width: 44px; height: 44px; border-radius: 8px;
+  background: var(--surface); border: 0.5px solid var(--border-l);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.review-product-name { font-size: 14px; font-weight: 500; color: var(--text); }
+.review-product-meta { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
+.review-product-id { font-size: 10.5px; color: var(--text3); font-family: 'Courier New', monospace; margin-top: 3px; }
+.review-card-body { padding: 14px 16px; }
+.review-note {
+  width: 100%; font-family: var(--font-sans); font-size: 12.5px;
+  padding: 9px 12px; border: 0.5px solid var(--border-l);
+  border-radius: 7px; background: var(--bg); color: var(--text);
+  resize: none; outline: none; transition: var(--transition);
+  margin-bottom: 12px;
+}
+.review-note:focus { border-color: var(--brand); box-shadow: 0 0 0 2.5px rgba(139,32,32,.1); }
+.review-note::placeholder { color: var(--text3); }
+.review-actions { display: flex; gap: 8px; }
+.review-btn {
+  flex: 1; padding: 9px 0; text-align: center;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  border-radius: 7px; cursor: pointer; border: 1.5px solid transparent;
+  transition: var(--transition);
+}
+.review-btn-approve { background: var(--green-fill); color: var(--green); border-color: var(--green-border); }
+.review-btn-approve:hover { background: #D7EDD0; }
+.review-btn-reject  { background: var(--red-fill);   color: var(--brand); border-color: var(--red-border); }
+.review-btn-reject:hover { background: #F5D8D8; }
+.review-empty {
+  text-align: center; padding: 40px 24px;
+  color: var(--text3); font-size: 13px;
+}
+.review-empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+/* ── Add Product Modal ─────────────────────────────────────────── */
+.add-modal-body { padding: 28px 24px; text-align: center; }
+.add-modal-icon { font-size: 44px; margin-bottom: 14px; }
+.add-modal-title { font-family: var(--font-serif); font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.add-modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 24px; }
+.add-modal-btn {
+  display: inline-block; padding: 10px 28px;
+  background: var(--brand); color: #fff; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  border: none; font-family: var(--font-sans); transition: var(--transition);
+}
+.add-modal-btn:hover { background: #7A1C1C; }
+
+/* ── Alert ─────────────────────────────────────────────────────── */
+.alert {
+  font-size: 12px; color: var(--brand); background: var(--red-fill);
+  border: 0.5px solid var(--red-border); border-radius: 6px;
+  padding: 7px 12px; margin-bottom: 10px; display: none;
+}
+.alert.show { display: block; }
+
+/* ── Empty State ────────────────────────────────────────────────── */
+.empty-row td {
+  text-align: center; padding: 48px 20px;
+  color: var(--text3); font-size: 13px;
+}
+.empty-icon { font-size: 32px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════════════════════ -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <span class="navbar-brand-name">Insta Fashion Points</span>
+    <span class="navbar-brand-sub">/ Admin</span>
+  </div>
+  <div class="navbar-right">
+    <div class="pending-pill" id="navPendingPill" onclick="openReviewModal()">
+      ⏳ <span id="navPendingCount">4</span> Pending Review
+    </div>
+    <div class="avatar" title="Admin: Hemant">H</div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE
+════════════════════════════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Product Management</h1>
+      <p class="page-sub">Manage listings, review QC submissions, and control product visibility across all sellers.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-amber" onclick="openReviewModal()">
+        ⏳ Review Products
+        <span class="badge-inline" id="headerPendingBadge">4</span>
+      </button>
+      <button class="btn btn-red" onclick="openAddModal()">
+        + Add New Product
+      </button>
+    </div>
+  </div>
+
+  <!-- Pending CTA Banner -->
+  <div class="cta-banner" id="ctaBanner">
+    <span class="cta-text">
+      <strong><span id="ctaCount">4</span> products are awaiting your approval.</strong>
+      Review and publish them to make them live for customers.
+    </span>
+    <button class="btn-outline-amber" onclick="openReviewModal()">Review Now →</button>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Total Products</span>
+        <span class="stat-icon">📦</span>
+      </div>
+      <div class="stat-value dark" id="statTotal">20</div>
+      <div class="stat-sub">Across all sellers</div>
+    </div>
+    <div class="stat-card accent-green">
+      <div class="stat-header">
+        <span class="stat-label">Active Products</span>
+        <span class="stat-icon">✅</span>
+      </div>
+      <div class="stat-value green" id="statActive">15</div>
+      <div class="stat-sub">Live for customers</div>
+    </div>
+    <div class="stat-card accent-amber">
+      <div class="stat-header">
+        <span class="stat-label">Pending Approval</span>
+        <span class="stat-icon">⏳</span>
+      </div>
+      <div class="stat-value amber" id="statPending">4</div>
+      <div class="stat-sub">Needs your action</div>
+    </div>
+    <div class="stat-card accent-red">
+      <div class="stat-header">
+        <span class="stat-label">Out of Stock</span>
+        <span class="stat-icon">🏷️</span>
+      </div>
+      <div class="stat-value red" id="statOOS">1</div>
+      <div class="stat-sub">Update stock urgently</div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="tabs-row" id="tabsRow">
+    <div class="tab active" data-tab="all"       onclick="switchTab('all')">All Products    <span class="tab-count" id="tab-count-all">20</span></div>
+    <div class="tab"        data-tab="active"    onclick="switchTab('active')">Active         <span class="tab-count" id="tab-count-active">15</span></div>
+    <div class="tab"        data-tab="pending"   onclick="switchTab('pending')">Pending        <span class="tab-count" id="tab-count-pending">4</span></div>
+    <div class="tab"        data-tab="inactive"  onclick="switchTab('inactive')">Inactive       <span class="tab-count" id="tab-count-inactive">1</span></div>
+    <div class="tab"        data-tab="rejected"  onclick="switchTab('rejected')">Rejected       <span class="tab-count" id="tab-count-rejected">0</span></div>
+  </div>
+
+  <!-- Filters Bar -->
+  <div class="filter-bar">
+    <div class="filter-input-wrap">
+      <span class="filter-icon">🔍</span>
+      <input class="filter-input" id="searchInput" type="text" placeholder="Search by name or product ID…" oninput="applyFilters()" />
+    </div>
+    <div class="filter-select-wrap">
+      <select class="filter-select" id="catFilter" onchange="applyFilters()">
+        <option value="">All Categories</option>
+        <option>Saree</option>
+        <option>Kurta</option>
+        <option>Lehenga</option>
+        <option>Dupatta</option>
+        <option>Salwar Suit</option>
+        <option>Ethnic Jacket</option>
+      </select>
+      <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="filter-select-wrap">
+      <select class="filter-select" id="statusFilter" onchange="applyFilters()">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="pending">Pending</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="filter-select-wrap">
+      <select class="filter-select" id="sellerFilter" onchange="applyFilters()">
+        <option value="">All Sellers</option>
+        <option>Rajni Fashions</option>
+        <option>Shree Textiles</option>
+        <option>Anaya Creations</option>
+        <option>Meena Bazaar</option>
+        <option>Karishma Boutique</option>
+      </select>
+      <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+  </div>
+
+  <!-- Products Table -->
+  <div class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Seller</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Approval</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="productTableBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination-row">
+      <span class="page-info" id="pageInfo">Showing 1–10 of 20 products</span>
+      <div class="page-btns">
+        <div class="page-btn disabled">‹</div>
+        <div class="page-btn active">1</div>
+        <div class="page-btn">2</div>
+        <div class="page-btn">›</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     REVIEW MODAL
+════════════════════════════════════════════════════════════════ -->
+<div class="overlay" id="reviewOverlay" onclick="overlayClose(event,'reviewOverlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">Review Products</span>
+      <button class="modal-close" onclick="closeModal('reviewOverlay')">✕</button>
+    </div>
+    <div class="review-list" id="reviewList"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ADD PRODUCT MODAL
+════════════════════════════════════════════════════════════════ -->
+<div class="overlay" id="addOverlay" onclick="overlayClose(event,'addOverlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">Add New Product</span>
+      <button class="modal-close" onclick="closeModal('addOverlay')">✕</button>
+    </div>
+    <div class="add-modal-body">
+      <div class="add-modal-icon">📋</div>
+      <div class="add-modal-title">Create a New Listing</div>
+      <div class="add-modal-sub">Fill in the product details, set pricing, upload images and configure variants to publish a new listing on the platform.</div>
+      <button class="add-modal-btn" onclick="closeModal('addOverlay')">Go to Full Add Product Page →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DATA + LOGIC
+════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Product Data ────────────────────────────────────────────── */
+const PRODUCTS = [
+  { id:'IFP-0101', name:'Banarasi Silk Saree', emoji:'🥻', category:'Saree',       seller:'Rajni Fashions',    city:'Varanasi', price:4200,  mrp:5500,  stock:24, approval:'approved', active:true  },
+  { id:'IFP-0102', name:'Chanderi Cotton Kurta Set', emoji:'👘', category:'Kurta', seller:'Shree Textiles',    city:'Bhopal',   price:1850,  mrp:2400,  stock:40, approval:'approved', active:true  },
+  { id:'IFP-0103', name:'Rajasthani Lehenga Choli', emoji:'👗', category:'Lehenga',seller:'Anaya Creations',   city:'Jaipur',   price:7800,  mrp:10500, stock:8,  approval:'pending',  active:false },
+  { id:'IFP-0104', name:'Georgette Dupatta Set',    emoji:'🧣', category:'Dupatta', seller:'Meena Bazaar',      city:'Surat',    price:950,   mrp:1200,  stock:60, approval:'pending',  active:false },
+  { id:'IFP-0105', name:'Embroidered Silk Saree',   emoji:'🥻', category:'Saree',   seller:'Rajni Fashions',    city:'Varanasi', price:6500,  mrp:8000,  stock:12, approval:'approved', active:true  },
+  { id:'IFP-0106', name:'Anarkali Salwar Suit',     emoji:'👘', category:'Salwar Suit',seller:'Karishma Boutique',city:'Lucknow',price:3200,  mrp:4200,  stock:18, approval:'approved', active:true  },
+  { id:'IFP-0107', name:'Phulkari Dupatta',          emoji:'🧣', category:'Dupatta', seller:'Shree Textiles',    city:'Bhopal',   price:1100,  mrp:1500,  stock:35, approval:'approved', active:true  },
+  { id:'IFP-0108', name:'Kanjivaram Silk Saree',    emoji:'🥻', category:'Saree',   seller:'Anaya Creations',   city:'Jaipur',   price:9200,  mrp:12000, stock:5,  approval:'pending',  active:false },
+  { id:'IFP-0109', name:'Cotton Lucknowi Kurti',    emoji:'👘', category:'Kurta',   seller:'Karishma Boutique', city:'Lucknow',  price:890,   mrp:1100,  stock:0,  approval:'approved', active:true  },
+  { id:'IFP-0110', name:'Bridal Lehenga Set',        emoji:'👗', category:'Lehenga', seller:'Meena Bazaar',      city:'Surat',    price:18500, mrp:24000, stock:3,  approval:'pending',  active:false },
+  { id:'IFP-0111', name:'Ikat Weave Saree',          emoji:'🥻', category:'Saree',   seller:'Rajni Fashions',    city:'Varanasi', price:3400,  mrp:4200,  stock:15, approval:'approved', active:true  },
+  { id:'IFP-0112', name:'Block Print Kurta',         emoji:'👘', category:'Kurta',   seller:'Shree Textiles',    city:'Bhopal',   price:1250,  mrp:1600,  stock:28, approval:'approved', active:true  },
+  { id:'IFP-0113', name:'Mirror Work Blouse Piece', emoji:'✨', category:'Ethnic Jacket',seller:'Anaya Creations',city:'Jaipur',price:2200,  mrp:2800,  stock:9,  approval:'approved', active:true  },
+  { id:'IFP-0114', name:'Tissue Silk Saree',         emoji:'🥻', category:'Saree',   seller:'Rajni Fashions',    city:'Varanasi', price:5600,  mrp:7000,  stock:7,  approval:'approved', active:true  },
+  { id:'IFP-0115', name:'Chikankari Kurti Set',      emoji:'👘', category:'Kurta',   seller:'Karishma Boutique', city:'Lucknow',  price:2100,  mrp:2600,  stock:22, approval:'approved', active:true  },
+  { id:'IFP-0116', name:'Patola Silk Saree',         emoji:'🥻', category:'Saree',   seller:'Meena Bazaar',      city:'Surat',    price:11000, mrp:14500, stock:4,  approval:'approved', active:true  },
+  { id:'IFP-0117', name:'Sharara Set Eid Special',  emoji:'👗', category:'Salwar Suit',seller:'Karishma Boutique',city:'Lucknow',price:4800,  mrp:6200,  stock:11, approval:'approved', active:false },
+  { id:'IFP-0118', name:'Kutch Embroidery Saree',   emoji:'🥻', category:'Saree',   seller:'Anaya Creations',   city:'Jaipur',   price:7200,  mrp:9000,  stock:6,  approval:'approved', active:true  },
+  { id:'IFP-0119', name:'Festive Silk Dupatta',      emoji:'🧣', category:'Dupatta', seller:'Shree Textiles',    city:'Bhopal',   price:1650,  mrp:2100,  stock:30, approval:'approved', active:true  },
+  { id:'IFP-0120', name:'Net Embroidered Lehenga',  emoji:'👗', category:'Lehenga', seller:'Meena Bazaar',      city:'Surat',    price:13500, mrp:17500, stock:2,  approval:'approved', active:true  },
+];
+
+let currentTab   = 'all';
+let filteredData = [...PRODUCTS];
+
+/* ── Utility ─────────────────────────────────────────────────── */
+const fmt = n => '₹' + n.toLocaleString('en-IN');
+const disc = (p, m) => m > p ? Math.round((1 - p/m) * 100) + '% off' : '';
+
+function getStatusKey(p) {
+  if (p.approval === 'pending')  return 'pending';
+  if (p.approval === 'rejected') return 'rejected';
+  if (!p.active)                 return 'inactive';
+  return 'active';
+}
+
+function updateCounts() {
+  const counts = { all:0, active:0, pending:0, inactive:0, rejected:0 };
+  PRODUCTS.forEach(p => {
+    counts.all++;
+    counts[getStatusKey(p)]++;
+  });
+  document.getElementById('tab-count-all').textContent     = counts.all;
+  document.getElementById('tab-count-active').textContent  = counts.active;
+  document.getElementById('tab-count-pending').textContent = counts.pending;
+  document.getElementById('tab-count-inactive').textContent= counts.inactive;
+  document.getElementById('tab-count-rejected').textContent= counts.rejected;
+
+  document.getElementById('statTotal').textContent   = counts.all;
+  document.getElementById('statActive').textContent  = counts.active;
+  document.getElementById('statPending').textContent = counts.pending;
+
+  const oos = PRODUCTS.filter(p => p.stock === 0).length;
+  document.getElementById('statOOS').textContent = oos;
+
+  // pending pill
+  const pendingCount = counts.pending;
+  document.getElementById('navPendingCount').textContent  = pendingCount;
+  document.getElementById('headerPendingBadge').textContent = pendingCount;
+  document.getElementById('ctaCount').textContent           = pendingCount;
+
+  // Hide CTA banner if no pending
+  document.getElementById('ctaBanner').style.display = pendingCount > 0 ? 'flex' : 'none';
+  document.getElementById('navPendingPill').style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+}
+
+/* ── Render Table ─────────────────────────────────────────────── */
+function renderTable(data) {
+  const tbody = document.getElementById('productTableBody');
+  if (!data.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📭</div><br/>No products match the current filters.</td></tr>`;
+    document.getElementById('pageInfo').textContent = 'No products found';
+    return;
+  }
+
+  tbody.innerHTML = data.map(p => {
+    const statusKey = getStatusKey(p);
+    const stockColor = p.stock === 0 ? '#8B2020' : p.stock <= 5 ? '#A0620A' : '#2D4A22';
+    const stockLabel = p.stock === 0 ? 'Out of stock' : p.stock <= 5 ? 'Low stock' : 'In stock';
+    const stockDotBg = p.stock === 0 ? '#8B2020' : p.stock <= 5 ? '#A0620A' : '#2D4A22';
+    const discStr = disc(p.price, p.mrp);
+
+    const approvalBadge = {
+      approved: '<span class="badge badge-active">Approved</span>',
+      pending:  '<span class="badge badge-pending">Pending</span>',
+      rejected: '<span class="badge badge-rejected">Rejected</span>',
+    }[p.approval] || '';
+
+    const statusBadge = statusKey === 'active'
+      ? '<span class="badge badge-active">Active</span>'
+      : statusKey === 'pending'
+        ? '<span class="badge badge-pending">Pending</span>'
+        : statusKey === 'rejected'
+          ? '<span class="badge badge-rejected">Rejected</span>'
+          : '<span class="badge badge-inactive">Inactive</span>';
+
+    const actionBtns = p.approval === 'pending'
+      ? `<button class="action-btn action-approve" onclick="quickApprove('${p.id}')">✓ Approve</button>
+         <button class="action-btn action-reject"  onclick="quickReject('${p.id}')">✕ Reject</button>`
+      : `<button class="action-btn action-edit"   onclick="editProduct('${p.id}')">✎ Edit</button>
+         <button class="action-btn action-delete" onclick="deleteProduct('${p.id}')">✕ Delete</button>`;
+
+    return `<tr id="row-${p.id}">
+      <td>
+        <div class="product-cell">
+          <div class="product-thumb">${p.emoji}</div>
+          <div>
+            <div class="product-name">${p.name}</div>
+            <div class="product-id">${p.id}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="category-badge">${p.category}</span></td>
+      <td>
+        <div class="seller-name">${p.seller}</div>
+        <div class="seller-city">📍 ${p.city}</div>
+      </td>
+      <td>
+        <div class="price-main">${fmt(p.price)}</div>
+        <div class="price-mrp">${fmt(p.mrp)}</div>
+        ${discStr ? `<div class="price-discount">${discStr}</div>` : ''}
+      </td>
+      <td>
+        <div class="stock-cell">
+          <div class="stock-dot" style="background:${stockDotBg}"></div>
+          <span class="stock-value" style="color:${stockColor}">${p.stock === 0 ? '0' : p.stock}</span>
+        </div>
+        <div style="font-size:10.5px;color:${stockColor};margin-top:2px;">${stockLabel}</div>
+      </td>
+      <td>${approvalBadge}</td>
+      <td>${statusBadge}</td>
+      <td><div class="actions">${actionBtns}</div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pageInfo').textContent =
+    `Showing 1–${data.length} of ${data.length} products`;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  applyFilters();
+}
+
+/* ── Filters ─────────────────────────────────────────────────── */
+function applyFilters() {
+  const q      = document.getElementById('searchInput').value.toLowerCase().trim();
+  const cat    = document.getElementById('catFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const seller = document.getElementById('sellerFilter').value;
+
+  filteredData = PRODUCTS.filter(p => {
+    const sk = getStatusKey(p);
+    if (currentTab !== 'all' && sk !== currentTab) return false;
+    if (q && !p.name.toLowerCase().includes(q) && !p.id.toLowerCase().includes(q)) return false;
+    if (cat    && p.category !== cat)    return false;
+    if (status && sk !== status)         return false;
+    if (seller && p.seller !== seller)   return false;
+    return true;
+  });
+
+  renderTable(filteredData);
+}
+
+/* ── Quick Actions ────────────────────────────────────────────── */
+function quickApprove(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  const row = document.getElementById('row-' + id);
+  if (row) { row.classList.add('fade-out'); }
+  setTimeout(() => {
+    p.approval = 'approved';
+    p.active   = true;
+    updateCounts();
+    applyFilters();
+    buildReviewList();
+  }, 350);
+}
+
+function quickReject(id) {
+  const note = prompt('Rejection reason (required):');
+  if (!note?.trim()) { alert('A rejection reason is required.'); return; }
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  const row = document.getElementById('row-' + id);
+  if (row) { row.classList.add('fade-out'); }
+  setTimeout(() => {
+    p.approval = 'rejected';
+    p.active   = false;
+    updateCounts();
+    applyFilters();
+    buildReviewList();
+  }, 350);
+}
+
+function editProduct(id)   { alert(`Navigating to edit page for product ${id}`); }
+function deleteProduct(id) {
+  if (!confirm(`Delete product ${id}? This action cannot be undone.`)) return;
+  const idx = PRODUCTS.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const row = document.getElementById('row-' + id);
+  if (row) { row.classList.add('fade-out'); }
+  setTimeout(() => {
+    PRODUCTS.splice(idx, 1);
+    updateCounts(); applyFilters();
+  }, 400);
+}
+
+/* ── Review Modal ─────────────────────────────────────────────── */
+function buildReviewList() {
+  const pending = PRODUCTS.filter(p => p.approval === 'pending');
+  const list = document.getElementById('reviewList');
+
+  if (!pending.length) {
+    list.innerHTML = `<div class="review-empty"><div class="review-empty-icon">🎉</div><p>All caught up! No products are pending review right now.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = pending.map(p => `
+    <div class="review-card" id="rc-${p.id}">
+      <div class="review-card-header">
+        <div class="review-thumb">${p.emoji}</div>
+        <div>
+          <div class="review-product-name">${p.name}</div>
+          <div class="review-product-meta">${p.category} · ${p.seller} · ${fmt(p.price)}</div>
+          <div class="review-product-id">${p.id}</div>
+        </div>
+      </div>
+      <div class="review-card-body">
+        <div class="alert" id="alert-${p.id}">⚠ Please enter a rejection reason before rejecting.</div>
+        <textarea class="review-note" id="note-${p.id}" rows="2" placeholder="Admin note or rejection reason (required for rejection)…"></textarea>
+        <div class="review-actions">
+          <button class="review-btn review-btn-approve" onclick="modalApprove('${p.id}')">✓ Approve &amp; Publish</button>
+          <button class="review-btn review-btn-reject"  onclick="modalReject('${p.id}')">✕ Reject</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function modalApprove(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  const card = document.getElementById('rc-' + id);
+  card.classList.add('fade-out');
+  setTimeout(() => {
+    p.approval = 'approved';
+    p.active   = true;
+    updateCounts();
+    applyFilters();
+    buildReviewList();
+  }, 400);
+}
+
+function modalReject(id) {
+  const note = document.getElementById('note-' + id).value.trim();
+  const alert = document.getElementById('alert-' + id);
+  if (!note) { alert.classList.add('show'); return; }
+  alert.classList.remove('show');
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  const card = document.getElementById('rc-' + id);
+  card.classList.add('fade-out');
+  setTimeout(() => {
+    p.approval = 'rejected';
+    p.active   = false;
+    updateCounts();
+    applyFilters();
+    buildReviewList();
+  }, 400);
+}
+
+function openReviewModal() {
+  buildReviewList();
+  document.getElementById('reviewOverlay').classList.add('open');
+}
+
+function openAddModal() {
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function overlayClose(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
+
+/* ── Init ─────────────────────────────────────────────────────── */
+updateCounts();
+applyFilters();
+</script>
+</body>
+</html>

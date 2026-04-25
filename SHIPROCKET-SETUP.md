@@ -27,7 +27,7 @@ Shiprocket is a courier aggregator that gives you access to 17+ courier partners
 #### A. Sign Up (FREE)
 1. Go to: https://app.shiprocket.in/signup
 2. Enter business details:
-   - Business Name: Sweta Fashion Points
+   - Business Name: Insta Fashion Points
    - Business Email: your-email@example.com
    - Mobile Number: Your number
    - GST Number: Optional (not required initially)
@@ -85,7 +85,7 @@ SHIPROCKET_PASSWORD=your-shiprocket-password
 #### B. Vercel Production
 
 1. Go to Vercel Dashboard
-2. Select your project: `sweta-fashion-points`
+2. Select your project: `insta-fashion-points`
 3. Go to **Settings** → **Environment Variables**
 4. Add these variables:
 

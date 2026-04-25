@@ -12,7 +12,7 @@ export default function AdminAuthGuard({ children }: { children: React.ReactNode
     if (!isLoading) {
       if (!user) {
         // Not logged in - redirect to login
-        router.push('/login');
+        router.replace('/login');
       } else if (!isAdmin) {
         // Logged in but not admin - redirect to home with error
         router.push('/?error=unauthorized');

@@ -86,7 +86,7 @@ Contact: ${partner.mobile}
 
 Expected delivery soon. Please keep ₹${(order.amount / 100).toLocaleString('en-IN')} ready if COD.
 
-Thank you for shopping with Fashion Points!`;
+Thank you for shopping with Insta Fashion Points!`;
 
   if (config.sendSMS && order.customerPhone) {
     await sendSMS(order.customerPhone, message);
@@ -106,7 +106,7 @@ export async function notifyOrderDelivered(
 ) {
   const message = `✅ Order #${order.orderNumber} delivered successfully!
 
-Thank you for shopping with Fashion Points.
+Thank you for shopping with Insta Fashion Points.
 
 Rate your delivery experience: ${process.env.NEXT_PUBLIC_BASE_URL}/orders/${order.trackingNumber}/track
 
@@ -247,7 +247,7 @@ async function sendEmail(to: string, subject: string, html: string) {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Fashion Points <orders@swetafashionpoints.com>',
+        from: 'Insta Fashion Points <orders@swetafashionpoints.com>',
         to: [to],
         subject: subject,
         html: html,
@@ -318,10 +318,10 @@ function getAssignedEmailTemplate(
         </a>
       </center>
 
-      <p>Thank you for shopping with Fashion Points!</p>
+      <p>Thank you for shopping with Insta Fashion Points!</p>
 
       <div class="footer">
-        <p>Fashion Points | +91 82941 53256</p>
+        <p>Insta Fashion Points | +91 82941 53256</p>
         <p>This is an automated email. Please do not reply.</p>
       </div>
     </div>
