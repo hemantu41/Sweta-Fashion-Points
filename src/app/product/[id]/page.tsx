@@ -280,8 +280,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  const thumbs = allImages.slice(0, 5);
-  const OOS    = new Set(['XS']); // XS shown as out-of-stock for demo
+  const thumbs    = allImages.slice(0, 5);
+  const sizeList  = product.sizes.length > 0 ? product.sizes : [];
 
   // ────────────────────────────────────────────────────────────────────────────
   return (
@@ -472,7 +472,7 @@ export default function ProductDetailPage() {
 
               {/* Price row with info icon */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 26, fontWeight: 700, color: C.maroon, fontFamily: 'var(--font-playfair)' }}>
+                <span style={{ fontSize: 28, fontWeight: 900, color: '#111', fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', letterSpacing: '-0.5px' }}>
                   ₹{product.price.toLocaleString('en-IN')}
                 </span>
                 {(product.originalPrice ?? 0) > product.price && (
@@ -574,40 +574,44 @@ export default function ProductDetailPage() {
             {/* Divider */}
             <div style={{ borderTop: `0.5px solid ${C.border}`, margin: '0 0 16px' }} />
 
-            {/* Size selector */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Select size</span>
-                <a href="#" style={{ fontSize: 12, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                  Size guide
+            {/* ── Size selector ─────────────────────────────────────────── */}
+            <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', background: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Select Size</span>
+                <a href="#" style={{ fontSize: 12, color: C.gold, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                  Size Guide
                 </a>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {(product.sizes.length > 0 ? product.sizes : ['S', 'M', 'L', 'XL', 'XXL']).map(size => {
-                  const oos      = OOS.has(size);
-                  const selected = selectedSize === size;
-                  return (
-                    <button
-                      key={size}
-                      onClick={() => !oos && setSelectedSize(s => s === size ? null : size)}
-                      disabled={oos}
-                      style={{
-                        minWidth: 44, padding: '6px 14px', borderRadius: 20,
-                        border:     selected ? `1.5px solid ${C.maroon}` : `1px solid #D1C5C0`,
-                        background: selected ? C.maroonPale : '#fff',
-                        color:      oos ? C.muted : selected ? C.maroon : C.text,
-                        fontSize: 13, fontWeight: selected ? 600 : 400,
-                        cursor:     oos ? 'not-allowed' : 'pointer',
-                        opacity:    oos ? 0.35 : 1,
-                        textDecoration: oos ? 'line-through' : 'none',
-                        transition: 'all 0.12s',
-                      }}
-                    >
-                      {size}
-                    </button>
-                  );
-                })}
-              </div>
+
+              {sizeList.length === 0 ? (
+                <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>No sizes available</p>
+              ) : (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {sizeList.map(size => {
+                    const selected = selectedSize === size;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(s => s === size ? null : size)}
+                        style={{
+                          padding: '8px 18px',
+                          borderRadius: 24,
+                          border: selected ? `2px solid ${C.maroon}` : `1.5px solid #D1C5C0`,
+                          background: selected ? C.maroonPale : '#fff',
+                          color: selected ? C.maroon : C.text,
+                          fontSize: 13,
+                          fontWeight: selected ? 700 : 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          boxShadow: selected ? `0 0 0 3px ${C.maroon}22` : 'none',
+                        }}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Quantity + stock label */}
