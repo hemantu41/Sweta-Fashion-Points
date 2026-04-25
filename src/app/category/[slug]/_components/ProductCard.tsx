@@ -106,9 +106,6 @@ export default function ProductCard({ product }: { product: Product }) {
   // Rating breakdown — real data preferred, mock fallback
   const breakdown = product.rating_breakdown?.breakdown ?? mockBreakdown(product.id);
 
-  const stock = product.stockQuantity ?? 999;
-  const showFewLeft = stock > 0 && stock <= 5;
-
   // Discount always shown in bold dark green
   const discountColor = '#16A34A';
 
@@ -213,12 +210,6 @@ export default function ProductCard({ product }: { product: Product }) {
             )}
           </div>
 
-          {/* Low-stock urgency badge */}
-          {showFewLeft && (
-            <div style={{ marginBottom: 5 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#DC2626' }}>Only few left</span>
-            </div>
-          )}
 
           {/* Change 3: Rating row with hover tooltip breakdown */}
           <div className="relative group/rating inline-flex items-center gap-1 pt-0.5 cursor-default">
