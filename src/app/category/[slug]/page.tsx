@@ -333,7 +333,7 @@ export default function CategoryPage() {
 
             {/* ── Loading skeletons ── */}
             {prodsLoading && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-xl overflow-hidden border border-gray-100">
                     <div
@@ -400,7 +400,7 @@ export default function CategoryPage() {
 
             {/* ── Product grid ── */}
             {!prodsLoading && paginated.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {paginated.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
