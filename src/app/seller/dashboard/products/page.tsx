@@ -40,7 +40,6 @@ function qcStage(status?: string): QcStage {
   }
 }
 
-const CATEGORIES = ['All', 'Clothes', 'Footwear', 'Beauty & Makeup', 'Sarees', 'Kids'];
 const STATUSES = ['All', 'approved', 'pending', 'under_review', 'rejected'];
 const STOCKS = ['All', 'In Stock', 'Low Stock', 'Out of Stock'];
 
@@ -75,10 +74,15 @@ function ProductsContent() {
     } finally { setDeletingId(null); setConfirmDelete(null); }
   }
 
+  // Derive unique category options from actual product data
+  const categoryOptions = ['All', ...Array.from(new Set(
+    products.map(p => p.category).filter((c): c is string => !!c)
+  ))];
+
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
     if (q && !p.name.toLowerCase().includes(q) && !p.productId?.toLowerCase().includes(q)) return false;
-    if (catFilter !== 'All' && !p.category?.toLowerCase().includes(catFilter.toLowerCase())) return false;
+    if (catFilter !== 'All' && p.category !== catFilter) return false;
     if (statusFilter !== 'All' && p.approvalStatus !== statusFilter) return false;
     if (stockFilter === 'In Stock' && p.stockQuantity <= 5) return false;
     if (stockFilter === 'Low Stock' && (p.stockQuantity === 0 || p.stockQuantity > 5)) return false;
@@ -108,7 +112,7 @@ function ProductsContent() {
           className="flex-1 min-w-48 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#5B1A3A]/30"
         />
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none">
-          {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+          {categoryOptions.map(c => <option key={c}>{c}</option>)}
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none">
           {STATUSES.map(s => <option key={s}>{s === 'All' ? 'All Status' : STATUS_CONFIG[s]?.label || s}</option>)}

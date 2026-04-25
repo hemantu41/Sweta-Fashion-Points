@@ -71,24 +71,26 @@ export default function CategoryHeader({
         </div>
       </div>
 
-      {/* Product count */}
-      <p className="text-[13px] text-gray-400 mt-2">
-        {filteredTotal === 0 ? (
-          'No products found'
-        ) : filteredTotal < totalProducts ? (
-          <>
-            Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
-            <span className="font-semibold text-gray-700">{filteredTotal}</span> filtered results
-            {' '}
-            <span className="text-gray-300">({totalProducts} total)</span>
-          </>
-        ) : (
-          <>
-            Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
-            <span className="font-semibold text-gray-700">{filteredTotal}</span> products
-          </>
-        )}
-      </p>
+      {/* Product count — only shown on leaf (L3) category pages */}
+      {filteredTotal >= 0 && (
+        <p className="text-[13px] text-gray-400 mt-2">
+          {filteredTotal === 0 ? (
+            'No products found'
+          ) : filteredTotal < totalProducts ? (
+            <>
+              Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
+              <span className="font-semibold text-gray-700">{filteredTotal}</span> filtered results
+              {' '}
+              <span className="text-gray-300">({totalProducts} total)</span>
+            </>
+          ) : (
+            <>
+              Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
+              <span className="font-semibold text-gray-700">{filteredTotal}</span> products
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

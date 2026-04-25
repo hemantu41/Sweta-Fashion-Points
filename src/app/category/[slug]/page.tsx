@@ -292,11 +292,20 @@ export default function CategoryPage() {
             <CategoryHeader
               breadcrumb={breadcrumb}
               category={category}
-              totalProducts={products.length}
-              filteredTotal={sorted.length}
+              totalProducts={category?.level === 3 ? products.length : -1}
+              filteredTotal={category?.level === 3 ? sorted.length : -1}
               currentPage={page}
               pageSize={PAGE_SIZE}
             />
+
+            {/* ── L1 / L2: skeleton while tree loads ── */}
+            {treeLoading && !category && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4 mb-8">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-24 rounded-2xl bg-[#f0eaed] animate-pulse" />
+                ))}
+              </div>
+            )}
 
             {/* ── L1 / L2: child category cards ── */}
             {!treeLoading && category && category.level !== 3 && childCategories.length > 0 && (
