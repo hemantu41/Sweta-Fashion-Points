@@ -136,7 +136,7 @@ export default function ProductCard({ product }: { product: Product }) {
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#E5E7EB' }}>
-              👗
+              
             </div>
           )}
 
@@ -238,7 +238,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 Overall Rating
               </p>
               <div className="flex items-center gap-1 mb-2">
-                <span style={{ color: '#5B1A3A', fontSize: 13 }}>★</span>
+                <span style={{ color: '#5B1A3A', fontSize: 13 }}></span>
                 <span className="text-[13px] font-bold text-gray-900"
                       style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
                   {rating.toFixed(1)}
@@ -256,7 +256,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 <div key={star} className="flex items-center gap-1.5 mb-1">
                   <span className="text-[11px] text-gray-500 w-5 text-right"
                         style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
-                    {star}★
+                    {star}
                   </span>
                   <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div
@@ -275,7 +275,7 @@ export default function ProductCard({ product }: { product: Product }) {
             {/* Visible rating badge */}
             <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold"
                  style={{ background: '#F5EDF2', color: '#5B1A3A', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
-              <span>★</span>
+              <span></span>
               <span>{rating.toFixed(1)}</span>
             </div>
             <span className="text-[11px] text-gray-400"

@@ -357,7 +357,7 @@ export default function SareesPage() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-6xl">
-                              🥻
+                              
                             </div>
                           )}
                         </div>
@@ -418,7 +418,7 @@ export default function SareesPage() {
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-[#E8E2D9] p-12 text-center">
-                <span className="text-6xl mb-4 block">🥻</span>
+                <span className="text-6xl mb-4 block"></span>
                 <h3 className="text-xl font-medium text-gray-900 mb-2">
                   {language === 'hi' ? 'कोई साड़ी नहीं मिली' : 'No Sarees Found'}
                 </h3>

@@ -109,7 +109,7 @@ export async function approveProduct(
   // Log to QC feedback thread
   await supabaseAdmin.from('spf_product_qc_feedback').insert({
     product_id: productId,
-    message: note ? `Approved ✓\n\nAdmin note: ${note}` : 'Approved ✓',
+    message: note ? `Approved \n\nAdmin note: ${note}` : 'Approved ',
     author_type: 'admin',
     author_name: 'Admin',
     is_read: false,

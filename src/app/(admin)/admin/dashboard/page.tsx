@@ -2669,8 +2669,8 @@ function SettingsPage() {
           <h3 className="text-sm font-semibold text-gray-800">Language Preference</h3>
           <div className="flex gap-3">
             {[
-              { code: 'en', label: 'English', flag: '🇬🇧' },
-              { code: 'hi', label: 'हिंदी', flag: '🇮🇳' },
+              { code: 'en', label: 'English', flag: '' },
+              { code: 'hi', label: 'हिंदी', flag: '' },
             ].map(({ code, label, flag }) => (
               <button key={code}
                 className={`flex-1 p-3 rounded-lg border-2 text-sm font-medium transition-all

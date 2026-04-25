@@ -158,7 +158,7 @@ export default function CheckoutPage() {
   if (mounted && items.length === 0) {
     return (
       <div className="min-h-screen bg-[#FAF7F2] flex flex-col items-center justify-center gap-4 px-4">
-        <div className="text-6xl">🛒</div>
+        <div className="text-6xl"></div>
         <h2 className="text-2xl font-bold text-[#2D2D2D]">Your cart is empty</h2>
         <p className="text-[#6B6B6B]">Add some items before checking out.</p>
         <a
@@ -480,12 +480,12 @@ export default function CheckoutPage() {
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <span className="text-xl">
-                                  {item.product.category === 'mens' && '👔'}
-                                  {item.product.category === 'womens' && '👗'}
-                                  {item.product.category === 'sarees' && '🥻'}
-                                  {item.product.category === 'kids' && '👶'}
-                                  {item.product.category === 'beauty' && '💄'}
-                                  {item.product.category === 'footwear' && '👟'}
+                                  {item.product.category === 'mens' && ''}
+                                  {item.product.category === 'womens' && ''}
+                                  {item.product.category === 'sarees' && ''}
+                                  {item.product.category === 'kids' && ''}
+                                  {item.product.category === 'beauty' && ''}
+                                  {item.product.category === 'footwear' && ''}
                                 </span>
                               </div>
                             )}

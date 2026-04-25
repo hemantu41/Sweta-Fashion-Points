@@ -222,7 +222,7 @@ export default function CategoryPage() {
         style={{ background: '#FAFAFA', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}
       >
         <div className="text-center max-w-md">
-          <div className="text-[72px] mb-4">🔍</div>
+          <div className="text-[72px] mb-4"></div>
           <h1
             className="text-[44px] font-extrabold mb-2"
             style={{ fontFamily: 'var(--font-playfair, Playfair Display, serif)', color: '#5B1A3A' }}
@@ -362,7 +362,7 @@ export default function CategoryPage() {
                 className="text-center py-20 rounded-2xl border"
                 style={{ background: '#fff', borderColor: 'rgba(196,154,60,0.1)' }}
               >
-                <div className="text-[56px] mb-4">🛍️</div>
+                <div className="text-[56px] mb-4"></div>
                 <h2
                   className="text-[20px] font-bold mb-2"
                   style={{ fontFamily: 'var(--font-playfair, Playfair Display, serif)', color: '#5B1A3A' }}

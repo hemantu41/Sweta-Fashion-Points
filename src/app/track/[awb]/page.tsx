@@ -30,12 +30,12 @@ interface ShipmentInfo {
 }
 
 const STATUS_STEPS = [
-  { key: 'label_generated', label: 'Order Placed', icon: '📦' },
-  { key: 'pickup_scheduled', label: 'Pickup Scheduled', icon: '🗓️' },
-  { key: 'picked_up', label: 'Picked Up', icon: '🚚' },
-  { key: 'in_transit', label: 'In Transit', icon: '🛣️' },
-  { key: 'out_for_delivery', label: 'Out for Delivery', icon: '🏃' },
-  { key: 'delivered', label: 'Delivered', icon: '✅' },
+  { key: 'label_generated', label: 'Order Placed', icon: '' },
+  { key: 'pickup_scheduled', label: 'Pickup Scheduled', icon: '' },
+  { key: 'picked_up', label: 'Picked Up', icon: '' },
+  { key: 'in_transit', label: 'In Transit', icon: '' },
+  { key: 'out_for_delivery', label: 'Out for Delivery', icon: '' },
+  { key: 'delivered', label: 'Delivered', icon: '' },
 ];
 
 const STATUS_ORDER: Record<string, number> = {
@@ -105,7 +105,7 @@ export default function TrackingPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>📭</div>
+          <div style={{ fontSize: 64, marginBottom: 16 }}></div>
           <h2 style={{ fontFamily: 'Playfair Display, serif', color: '#5B1A3A', fontSize: 24, marginBottom: 8 }}>Shipment Not Found</h2>
           <p style={{ color: '#666', fontFamily: 'Lato, sans-serif', marginBottom: 24 }}>
             We couldn&apos;t find a shipment with AWB <strong>{awb}</strong>. Please check the number and try again.
@@ -204,7 +204,7 @@ export default function TrackingPage() {
                       fontSize: 16,
                       transition: 'all 0.3s',
                     }}>
-                      {done ? <span style={{ color: '#fff' }}>✓</span> : <span style={{ opacity: 0.4 }}>{step.icon}</span>}
+                      {done ? <span style={{ color: '#fff' }}></span> : <span style={{ opacity: 0.4 }}>{step.icon}</span>}
                     </div>
                     <p style={{
                       fontSize: 11,
@@ -223,7 +223,7 @@ export default function TrackingPage() {
         {/* RTO / Cancelled Banner */}
         {(isCancelled || isRTO) && (
           <div style={{ background: '#fdecea', border: '1px solid #f5c6cb', borderRadius: 12, padding: 20, marginBottom: 20, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 24 }}>⚠️</span>
+            <span style={{ fontSize: 24 }}></span>
             <div>
               <p style={{ margin: 0, fontWeight: 700, color: '#c62828', fontSize: 15 }}>
                 {isRTO ? 'Shipment is being returned to sender' : 'Shipment Cancelled'}
@@ -258,7 +258,7 @@ export default function TrackingPage() {
                     justifyContent: 'center',
                     zIndex: 1,
                   }}>
-                    <span style={{ fontSize: 14 }}>{idx === 0 ? '📍' : '•'}</span>
+                    <span style={{ fontSize: 14 }}>{idx === 0 ? '' : '•'}</span>
                   </div>
                   <div style={{ paddingTop: 4 }}>
                     <p style={{ margin: 0, fontWeight: 600, color: idx === 0 ? '#5B1A3A' : '#333', fontSize: 14 }}>
@@ -269,7 +269,7 @@ export default function TrackingPage() {
                     )}
                     <div style={{ display: 'flex', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
                       {event.location && (
-                        <span style={{ color: '#888', fontSize: 12 }}>📍 {event.location}</span>
+                        <span style={{ color: '#888', fontSize: 12 }}> {event.location}</span>
                       )}
                       <span style={{ color: '#aaa', fontSize: 12 }}>{formatDate(event.created_at)}</span>
                     </div>

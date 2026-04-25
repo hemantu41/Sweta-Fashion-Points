@@ -152,7 +152,7 @@ export default function AdminQCPage() {
          ...(data.notifyFailed ?? []).map((e: string) => ({ event: e, status: 'failed' as const }))],
         approveProduct
       );
-      addToast('green', '✅ Approved!', `"${approveProduct.name}" is now live. ${data.notifyFired?.length ?? 0} notify events fired.`);
+      addToast('green', ' Approved!', `"${approveProduct.name}" is now live. ${data.notifyFired?.length ?? 0} notify events fired.`);
       setApproveProduct(null);
       setApproveNote('');
       fetchQueue();
@@ -186,7 +186,7 @@ export default function AdminQCPage() {
          ...(data.notifyFailed ?? []).map((e: string) => ({ event: e, status: 'failed' as const }))],
         rejectProduct
       );
-      addToast('red', '❌ Rejected', `"${rejectProduct.name}" rejected with ${selectedReasons.size} reason(s). Seller notified.`);
+      addToast('red', ' Rejected', `"${rejectProduct.name}" rejected with ${selectedReasons.size} reason(s). Seller notified.`);
       setRejectProduct(null);
       setSelectedReasons(new Set());
       setSeverity('minor');
@@ -262,7 +262,7 @@ export default function AdminQCPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             {/* Bell with unread dot */}
             <div style={{ position: 'relative', cursor: 'pointer' }}>
-              <span style={{ fontSize: 20 }}>🔔</span>
+              <span style={{ fontSize: 20 }}></span>
               {eventLog.filter(e => e.status === 'sent').length > 0 && (
                 <span style={{
                   position: 'absolute', top: -2, right: -2,
@@ -295,10 +295,10 @@ export default function AdminQCPage() {
         {/* ════ SLA STAT CARDS ════ */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, padding: '20px 28px 0' }}>
           {[
-            { label: 'Overdue (>24h)', value: slaCounts.overdue, color: C.brand, bg: C.brandLight, border: C.brand, icon: '🔴' },
-            { label: 'Warning (12–24h)', value: slaCounts.warning, color: C.amber, bg: C.amberLight, border: C.amberBorder, icon: '🟡' },
-            { label: 'On Track (<12h)', value: slaCounts.onTrack, color: C.green, bg: C.greenLight, border: C.greenBorder, icon: '🟢' },
-            { label: 'Resolved Today', value: slaCounts.resolvedToday, color: C.text, bg: C.surface, border: C.border, icon: '✅' },
+            { label: 'Overdue (>24h)', value: slaCounts.overdue, color: C.brand, bg: C.brandLight, border: C.brand, icon: '' },
+            { label: 'Warning (12–24h)', value: slaCounts.warning, color: C.amber, bg: C.amberLight, border: C.amberBorder, icon: '' },
+            { label: 'On Track (<12h)', value: slaCounts.onTrack, color: C.green, bg: C.greenLight, border: C.greenBorder, icon: '' },
+            { label: 'Resolved Today', value: slaCounts.resolvedToday, color: C.text, bg: C.surface, border: C.border, icon: '' },
           ].map((s) => (
             <div key={s.label} style={{
               background: C.surface, border: `1px solid ${C.border}`,
@@ -387,12 +387,12 @@ export default function AdminQCPage() {
           <div>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: C.text2 }}>
-                <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
+                <div style={{ fontSize: 28, marginBottom: 12 }}></div>
                 Loading queue…
               </div>
             ) : products.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: C.text2 }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>🎉</div>
+                <div style={{ fontSize: 32, marginBottom: 12 }}></div>
                 <strong>Queue is clear!</strong>
                 <div style={{ fontSize: 13, marginTop: 4 }}>No {activeTab} products right now.</div>
               </div>
@@ -425,7 +425,7 @@ export default function AdminQCPage() {
                       }}>
                         {p.main_image
                           ? <img src={p.main_image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : '📦'}
+                          : ''}
                       </div>
 
                       {/* Info */}
@@ -492,7 +492,7 @@ export default function AdminQCPage() {
                               border: `1.5px solid #DDBBB8`, background: C.brandLight,
                               color: C.brand, cursor: 'pointer',
                             }}
-                          >✕ Reject with reasons</button>
+                          > Reject with reasons</button>
                           <button
                             onClick={() => { setApproveProduct(p); setApproveNote(''); }}
                             style={{
@@ -501,7 +501,7 @@ export default function AdminQCPage() {
                               border: `1.5px solid ${C.greenBorder}`, background: C.greenLight,
                               color: C.green, cursor: 'pointer',
                             }}
-                          >✓ Approve</button>
+                          > Approve</button>
                         </div>
                       )}
                       {p.approval_status === 'approved' && (
@@ -514,7 +514,7 @@ export default function AdminQCPage() {
                         <span style={{
                           fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 12,
                           background: C.brandLight, color: C.brand, border: `1px solid #DDBBB8`,
-                        }}>⏳ Awaiting seller resubmit</span>
+                        }}> Awaiting seller resubmit</span>
                       )}
                     </div>
                   </div>
@@ -534,7 +534,7 @@ export default function AdminQCPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: C.text }}>
-                  📡 notify.* Event Log
+                   notify.* Event Log
                   <span style={{
                     background: C.green, color: '#fff', borderRadius: 10,
                     padding: '1px 7px', fontSize: 10, fontWeight: 700,
@@ -549,7 +549,7 @@ export default function AdminQCPage() {
               <div style={{ maxHeight: 340, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {eventLog.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '28px 16px', color: C.text3, fontSize: 12 }}>
-                    <div style={{ fontSize: 22, marginBottom: 8, opacity: .5 }}>📭</div>
+                    <div style={{ fontSize: 22, marginBottom: 8, opacity: .5 }}></div>
                     No events yet.<br />Approve or reject to see live events.
                   </div>
                 ) : (
@@ -580,7 +580,7 @@ export default function AdminQCPage() {
             {/* Queue Summary */}
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden' }}>
               <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}`, background: C.surface2, fontSize: 13, fontWeight: 700, color: C.text }}>
-                📊 Queue Summary
+                 Queue Summary
               </div>
               {[
                 ['Total Pending', slaCounts.overdue + slaCounts.warning + slaCounts.onTrack],
@@ -620,12 +620,12 @@ export default function AdminQCPage() {
             }}>
               {/* Header */}
               <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 42, height: 42, borderRadius: 10, background: C.greenLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>✅</div>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: C.greenLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: C.text }}>Approve Product</div>
                   <div style={{ fontSize: 12, color: C.text2, marginTop: 2 }}>The following notify.* events will fire on confirmation</div>
                 </div>
-                <button onClick={() => setApproveProduct(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: C.text3, padding: '2px 6px' }}>✕</button>
+                <button onClick={() => setApproveProduct(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: C.text3, padding: '2px 6px' }}></button>
               </div>
 
               <div style={{ padding: '18px 24px' }}>
@@ -638,10 +638,10 @@ export default function AdminQCPage() {
                 {/* Notify checklist */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
                   {[
-                    { icon: '📱', label: 'notify.product.approved', desc: 'In-app notification → seller dashboard bell' },
-                    { icon: '📧', label: 'notify.email.seller', desc: `Email → ${approveProduct.seller_email || 'seller registered email'}` },
-                    { icon: '🗑', label: 'notify.cache.invalidated', desc: 'productCache cleared + Redis seller:* keys invalidated' },
-                    { icon: '📊', label: 'notify.event.logged', desc: 'Logged to spf_notify_event_log table' },
+                    { icon: '', label: 'notify.product.approved', desc: 'In-app notification → seller dashboard bell' },
+                    { icon: '', label: 'notify.email.seller', desc: `Email → ${approveProduct.seller_email || 'seller registered email'}` },
+                    { icon: '', label: 'notify.cache.invalidated', desc: 'productCache cleared + Redis seller:* keys invalidated' },
+                    { icon: '', label: 'notify.event.logged', desc: 'Logged to spf_notify_event_log table' },
                   ].map((item) => (
                     <div key={item.label} style={{
                       display: 'flex', gap: 10, padding: '11px 13px',
@@ -684,7 +684,7 @@ export default function AdminQCPage() {
                     padding: '8px 20px', borderRadius: 8, border: 'none',
                     background: submitting ? C.border : C.green, color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer',
                   }}
-                >{submitting ? 'Approving…' : '✓ Approve & Notify Seller'}</button>
+                >{submitting ? 'Approving…' : ' Approve & Notify Seller'}</button>
               </div>
             </div>
           </div>
@@ -708,12 +708,12 @@ export default function AdminQCPage() {
             }}>
               {/* Header */}
               <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 42, height: 42, borderRadius: 10, background: C.brandLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🚫</div>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: C.brandLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: C.text }}>Reject &amp; Notify Seller</div>
                   <div style={{ fontSize: 12, color: C.text2, marginTop: 2 }}>Select reason tags — sent as structured fix instructions to seller</div>
                 </div>
-                <button onClick={() => setRejectProduct(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: C.text3, padding: '2px 6px' }}>✕</button>
+                <button onClick={() => setRejectProduct(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: C.text3, padding: '2px 6px' }}></button>
               </div>
 
               <div style={{ padding: '18px 24px' }}>
@@ -752,7 +752,7 @@ export default function AdminQCPage() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all .13s',
                         }}>
-                          {selected && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>✓</span>}
+                          {selected && <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}></span>}
                         </div>
                         <div>
                           <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{r.title}</div>
@@ -824,7 +824,7 @@ export default function AdminQCPage() {
                   borderLeft: `3px solid ${C.amber}`, borderRadius: 8,
                   padding: '11px 14px', fontSize: 12, color: C.text2,
                 }}>
-                  <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>📬 Seller Will Receive</div>
+                  <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}> Seller Will Receive</div>
                   <div>Seller: <strong>{rejectProduct.seller_name}</strong></div>
                   <div style={{ marginTop: 2 }}>
                     Reasons: <strong>{selectedReasons.size > 0 ? `${selectedReasons.size} tag(s) as fix instructions` : 'None selected yet'}</strong>
@@ -855,7 +855,7 @@ export default function AdminQCPage() {
                     background: submitting || selectedReasons.size === 0 ? C.border : C.brand,
                     color: '#fff', cursor: submitting || selectedReasons.size === 0 ? 'not-allowed' : 'pointer',
                   }}
-                >{submitting ? 'Rejecting…' : '🚫 Reject & Notify Seller'}</button>
+                >{submitting ? 'Rejecting…' : ' Reject & Notify Seller'}</button>
               </div>
             </div>
           </div>
@@ -880,7 +880,7 @@ export default function AdminQCPage() {
                 background: t.type === 'green' ? C.greenLight : t.type === 'red' ? C.brandLight : C.amberLight,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
               }}>
-                {t.type === 'green' ? '✅' : t.type === 'red' ? '🚫' : '⚠️'}
+                {t.type === 'green' ? '' : t.type === 'red' ? '' : ''}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{t.title}</div>

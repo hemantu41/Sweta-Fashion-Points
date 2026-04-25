@@ -138,8 +138,8 @@ export async function PUT(request: NextRequest) {
           seller_id:    product.seller_id,
           type:         'qc',
           title:        action === 'approve'
-            ? `✅ "${product.name}" is now live!`
-            : `❌ "${product.name}" needs changes`,
+            ? ` "${product.name}" is now live!`
+            : ` "${product.name}" needs changes`,
           message:      action === 'approve'
             ? `Your product has been approved and is now visible to customers.`
             : `Your product was rejected. Please review the feedback and resubmit.`,

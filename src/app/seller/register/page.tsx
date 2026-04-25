@@ -499,10 +499,10 @@ export default function SellerRegisterPage() {
   // ─── Already a Seller — Show Status (skip if re-registering) ────────────
   if (isSeller && sellerStatus && !isReRegistrationMode) {
     const statusConfig: Record<string, { icon: string; color: string; bg: string; title: string; desc: string }> = {
-      pending: { icon: '⏳', color: '#CA8A04', bg: '#FEFCE8', title: 'Application Under Review', desc: 'Your seller application is being reviewed by our team. We typically review applications within 24-48 hours.' },
-      approved: { icon: '🎉', color: C.success, bg: C.successBg, title: 'Congratulations!', desc: 'Your seller application has been approved! You can now start adding products and managing your store.' },
-      rejected: { icon: '❌', color: C.error, bg: C.errorBg, title: 'Application Not Approved', desc: 'Unfortunately, your seller application was not approved. Please contact support for more information.' },
-      suspended: { icon: '🚫', color: '#6B7280', bg: '#F9FAFB', title: 'Account Suspended', desc: 'Your seller account has been temporarily suspended. Please contact the admin team.' },
+      pending: { icon: '', color: '#CA8A04', bg: '#FEFCE8', title: 'Application Under Review', desc: 'Your seller application is being reviewed by our team. We typically review applications within 24-48 hours.' },
+      approved: { icon: '', color: C.success, bg: C.successBg, title: 'Congratulations!', desc: 'Your seller application has been approved! You can now start adding products and managing your store.' },
+      rejected: { icon: '', color: C.error, bg: C.errorBg, title: 'Application Not Approved', desc: 'Unfortunately, your seller application was not approved. Please contact support for more information.' },
+      suspended: { icon: '', color: '#6B7280', bg: '#F9FAFB', title: 'Account Suspended', desc: 'Your seller account has been temporarily suspended. Please contact the admin team.' },
     };
     const cfg = statusConfig[sellerStatus] || statusConfig.pending;
 

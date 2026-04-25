@@ -66,7 +66,7 @@ export default function ReviewSubmissionPage({ params }: { params: Promise<{ ord
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center px-4">
         <Toaster position="top-right" />
         <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center max-w-md w-full shadow-sm">
-          <div className="text-5xl mb-4">🎉</div>
+          <div className="text-5xl mb-4"></div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Thank You!</h2>
           <p className="text-sm text-gray-500 mb-6">
             Your review has been submitted successfully. It helps other shoppers and our sellers improve.

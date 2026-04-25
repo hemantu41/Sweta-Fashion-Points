@@ -207,10 +207,10 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
       sellerCacheSet(sellerId, 'reviews',   reviewsRes.data || []),
     ]);
 
-    console.log(`[SellerCache] ✅ Migrated 7 keys for seller ${sellerId} (TTL: ${SELLER_CACHE_TTL}s)`);
+    console.log(`[SellerCache]  Migrated 7 keys for seller ${sellerId} (TTL: ${SELLER_CACHE_TTL}s)`);
   } catch (err) {
     // Never block login — fail silently
-    console.error(`[SellerCache] ❌ Migration failed for seller ${sellerId}:`, err);
+    console.error(`[SellerCache]  Migration failed for seller ${sellerId}:`, err);
   }
 }
 

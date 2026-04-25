@@ -251,7 +251,7 @@ export async function notifySellerNewOrder(orderId: string): Promise<void> {
       </div>
       <div style="background:${C.warnBg};border-left:4px solid ${C.warn};padding:12px 16px;border-radius:4px;margin-bottom:24px;">
         <span style="font-size:13px;color:${C.warn};font-weight:600;">
-          ⏱ Accept deadline: ${deadline} — Missing this deadline will auto-cancel the order.
+           Accept deadline: ${deadline} — Missing this deadline will auto-cancel the order.
         </span>
       </div>
       ${ctaButton('Accept Order on Dashboard →', DASHBOARD_URL)}`;
@@ -260,7 +260,7 @@ export async function notifySellerNewOrder(orderId: string): Promise<void> {
       sendEmail({
         to:      seller.email,
         subject: `New Order #${order.orderNumber} — Accept by ${deadline}`,
-        html:    emailShell(C.maroon, '🛍 New Order Received', 'Apne Dukandaar se, Online', body),
+        html:    emailShell(C.maroon, ' New Order Received', 'Apne Dukandaar se, Online', body),
       }),
       // SMS: disabled until DLT approved
       _sendSms(seller.phone, process.env.MSG91_ACCEPTANCE_TEMPLATE_ID ?? '', {
@@ -296,7 +296,7 @@ export async function notifySellerSlaWarning(
 
     const body = `
       <div style="background:${C.warnBg};border:2px solid ${C.warn};border-radius:8px;padding:20px;text-align:center;margin-bottom:24px;">
-        <div style="font-size:28px;margin-bottom:8px;">⏰</div>
+        <div style="font-size:28px;margin-bottom:8px;"></div>
         <div style="font-size:16px;font-weight:700;color:${C.warn};">Only 30 Minutes Left!</div>
         <div style="font-size:13px;color:${C.text};margin-top:6px;">
           Order <strong>#${order.orderNumber}</strong> will be auto-cancelled if not ${label}ed by <strong>${deadline}</strong>.
@@ -310,8 +310,8 @@ export async function notifySellerSlaWarning(
     await Promise.all([
       sendEmail({
         to:      seller.email,
-        subject: `⚠️ 30 Min Left — Order #${order.orderNumber} needs your action`,
-        html:    emailShell(C.warn, '⏰ Action Required', 'Order deadline approaching', body),
+        subject: ` 30 Min Left — Order #${order.orderNumber} needs your action`,
+        html:    emailShell(C.warn, ' Action Required', 'Order deadline approaching', body),
       }),
       _sendSms(seller.phone, process.env.MSG91_SLA_WARNING_TEMPLATE_ID ?? '', {
         order_number: order.orderNumber,
@@ -319,7 +319,7 @@ export async function notifySellerSlaWarning(
         deadline,
         link:         DASHBOARD_URL,
       }),
-      _sendPush(order.sellerId, '⏰ 30 Min Left', `Order #${order.orderNumber} — ${label} now`),
+      _sendPush(order.sellerId, ' 30 Min Left', `Order #${order.orderNumber} — ${label} now`),
     ]);
   } catch (err: any) {
     console.error('[sellerNotify] notifySellerSlaWarning error:', err?.message);
@@ -345,7 +345,7 @@ export async function notifySellerSlaBreached(
 
     const body = `
       <div style="background:${C.dangerBg};border:2px solid ${C.danger};border-radius:8px;padding:20px;text-align:center;margin-bottom:24px;">
-        <div style="font-size:28px;margin-bottom:8px;">❌</div>
+        <div style="font-size:28px;margin-bottom:8px;"></div>
         <div style="font-size:16px;font-weight:700;color:${C.danger};">Order Auto-Cancelled</div>
         <div style="font-size:13px;color:${C.text};margin-top:6px;">
           Order <strong>#${order.orderNumber}</strong> has been automatically cancelled.
@@ -398,7 +398,7 @@ export async function notifySellerPickupScheduled(orderId: string): Promise<void
 
     const body = `
       <div style="background:${C.successBg};border:2px solid ${C.success};border-radius:8px;padding:20px;text-align:center;margin-bottom:24px;">
-        <div style="font-size:28px;margin-bottom:8px;">📦</div>
+        <div style="font-size:28px;margin-bottom:8px;"></div>
         <div style="font-size:16px;font-weight:700;color:${C.success};">Pickup Scheduled</div>
         <div style="font-size:13px;color:${C.text};margin-top:6px;">
           A courier will arrive to pick up order <strong>#${order.orderNumber}</strong> tomorrow.
@@ -410,7 +410,7 @@ export async function notifySellerPickupScheduled(orderId: string): Promise<void
         ${infoRow('Pickup', 'Tomorrow between 10 AM – 6 PM')}
       </table>
       <div style="background:${C.altBg};border-radius:8px;padding:16px;margin-bottom:24px;">
-        <div style="font-size:13px;color:${C.maroon};font-weight:700;margin-bottom:6px;">📋 Checklist</div>
+        <div style="font-size:13px;color:${C.maroon};font-weight:700;margin-bottom:6px;"> Checklist</div>
         <ul style="margin:0;padding-left:20px;font-size:13px;color:${C.text};line-height:1.8;">
           <li>Package is securely sealed and labelled</li>
           <li>Shipping label is printed and affixed</li>
@@ -424,10 +424,10 @@ export async function notifySellerPickupScheduled(orderId: string): Promise<void
       sendEmail({
         to:      seller.email,
         subject: `Pickup Scheduled — Order #${order.orderNumber}`,
-        html:    emailShell(C.success, '📦 Pickup Scheduled', 'Keep the package ready', body),
+        html:    emailShell(C.success, ' Pickup Scheduled', 'Keep the package ready', body),
       }),
       _sendSms(seller.phone, '', { order_number: order.orderNumber }),
-      _sendPush(order.sellerId, '📦 Pickup Tomorrow', `Order #${order.orderNumber} — keep package ready`),
+      _sendPush(order.sellerId, ' Pickup Tomorrow', `Order #${order.orderNumber} — keep package ready`),
     ]);
   } catch (err: any) {
     console.error('[sellerNotify] notifySellerPickupScheduled error:', err?.message);
@@ -551,7 +551,7 @@ export async function notifyCustomerNewOrder(orderId: string): Promise<void> {
       </div>
       <div style="background:${C.successBg};border-left:4px solid ${C.success};padding:12px 16px;border-radius:4px;margin-bottom:24px;">
         <span style="font-size:13px;color:${C.success};font-weight:600;">
-          ✅ Order placed successfully! You will receive shipping updates once dispatched.
+           Order placed successfully! You will receive shipping updates once dispatched.
         </span>
       </div>
       ${ctaButton('Track Your Order →', `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com'}/orders`)}
@@ -562,7 +562,7 @@ export async function notifyCustomerNewOrder(orderId: string): Promise<void> {
     await sendEmail({
       to:      customerEmail,
       subject: `Order Confirmed #${order.orderNumber} — Insta Fashion Points`,
-      html:    emailShell(C.maroon, '🛍 Order Confirmed!', 'Thank you for shopping with us', body),
+      html:    emailShell(C.maroon, ' Order Confirmed!', 'Thank you for shopping with us', body),
     });
   } catch (err: any) {
     console.error('[sellerNotify] notifyCustomerNewOrder error:', err?.message);

@@ -17,10 +17,10 @@ export default function HeroSection() {
 
       {/* Subtle Pattern */}
       <div className="absolute inset-0 opacity-[0.03]">
-        <div className="absolute top-20 left-10 text-9xl text-[#722F37]">✦</div>
-        <div className="absolute top-40 right-20 text-8xl text-[#C9A962]">✦</div>
-        <div className="absolute bottom-20 left-1/4 text-7xl text-[#722F37]">✦</div>
-        <div className="absolute bottom-40 right-1/3 text-6xl text-[#C9A962]">✦</div>
+        <div className="absolute top-20 left-10 text-9xl text-[#722F37]"></div>
+        <div className="absolute top-40 right-20 text-8xl text-[#C9A962]"></div>
+        <div className="absolute bottom-20 left-1/4 text-7xl text-[#722F37]"></div>
+        <div className="absolute bottom-40 right-1/3 text-6xl text-[#C9A962]"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 relative">

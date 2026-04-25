@@ -47,7 +47,7 @@ export default function QcPipeline({ currentStage, rejected = false, compact = f
               >
                 {done ? (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5" /></svg>
-                ) : isRej ? '✕' : i + 1}
+                ) : isRej ? '' : i + 1}
               </div>
               <span className="text-[9px] font-medium mt-1 text-center whitespace-nowrap" style={{ color: active || done ? stepColor : '#9CA3AF' }}>
                 {label}

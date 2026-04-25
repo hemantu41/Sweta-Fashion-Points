@@ -52,12 +52,12 @@ const STATS = [
 ];
 
 const BENEFITS = [
-  { icon: '💰', title: '0% Commission Fee', hi: '0% कमीशन', desc: 'Keep 100% of your profit for the first 6 months. No hidden charges, no deductions, no surprises.' },
-  { icon: '⚡', title: '7-Day Fast Payments', hi: '7 दिन में भुगतान', desc: 'Receive payments within 7 days of delivery — including COD orders. Trusted sellers unlock 5-day payouts.' },
-  { icon: '🏪', title: 'Your Real Shop Identity', hi: 'आपकी असली दुकान पहचान', desc: 'Customers see YOUR shop name, photo & story. Build your brand identity — not just sell products.' },
-  { icon: '✅', title: 'Free Fabric Verification', hi: 'मुफ्त कपड़ा जांच', desc: 'First 10 products verified FREE. Verified products earn more trust, more orders, and fewer returns.' },
-  { icon: '🛡️', title: 'Zero Penalty Policy', hi: 'शून्य जुर्माना नीति', desc: 'No penalties for order cancellations or late dispatch. We understand the realities of small businesses.' },
-  { icon: '📦', title: 'Effortless Shipping', hi: 'आसान शिपिंग', desc: 'We handle pickup from your doorstep and delivery across India. You focus on your craft — we handle the logistics.' },
+  { icon: '', title: '0% Commission Fee', hi: '0% कमीशन', desc: 'Keep 100% of your profit for the first 6 months. No hidden charges, no deductions, no surprises.' },
+  { icon: '', title: '7-Day Fast Payments', hi: '7 दिन में भुगतान', desc: 'Receive payments within 7 days of delivery — including COD orders. Trusted sellers unlock 5-day payouts.' },
+  { icon: '', title: 'Your Real Shop Identity', hi: 'आपकी असली दुकान पहचान', desc: 'Customers see YOUR shop name, photo & story. Build your brand identity — not just sell products.' },
+  { icon: '', title: 'Free Fabric Verification', hi: 'मुफ्त कपड़ा जांच', desc: 'First 10 products verified FREE. Verified products earn more trust, more orders, and fewer returns.' },
+  { icon: '', title: 'Zero Penalty Policy', hi: 'शून्य जुर्माना नीति', desc: 'No penalties for order cancellations or late dispatch. We understand the realities of small businesses.' },
+  { icon: '', title: 'Effortless Shipping', hi: 'आसान शिपिंग', desc: 'We handle pickup from your doorstep and delivery across India. You focus on your craft — we handle the logistics.' },
 ];
 
 const STEPS = [
@@ -78,9 +78,9 @@ const FAQS = [
 ];
 
 const APNA_FEATURES = [
-  { icon: '🏪', title: 'Your Shop Photo & Name', desc: 'Customers see your real shop identity' },
-  { icon: '⭐', title: 'Your Ratings & Reviews', desc: 'Build trust with genuine feedback' },
-  { icon: '👥', title: 'Build Your Followers', desc: 'Grow a loyal customer base' },
+  { icon: '', title: 'Your Shop Photo & Name', desc: 'Customers see your real shop identity' },
+  { icon: '', title: 'Your Ratings & Reviews', desc: 'Build trust with genuine feedback' },
+  { icon: '', title: 'Build Your Followers', desc: 'Grow a loyal customer base' },
 ];
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
@@ -285,7 +285,7 @@ export default function SellerLandingPage() {
                   width: 80, height: 80, borderRadius: 20, margin: '0 auto 16px',
                   background: 'linear-gradient(135deg, rgba(196,154,60,0.2), rgba(196,154,60,0.1))',
                   border: `2px solid rgba(196,154,60,0.3)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
-                }}>🏪</div>
+                }}></div>
                 <div style={{ fontFamily: FONT_PLAYFAIR, fontSize: 22, fontWeight: 700, color: '#fff' }}>Your Shop</div>
                 <div style={{ fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500, color: C.accent, letterSpacing: 1 }}>Now Online</div>
               </div>
@@ -301,14 +301,14 @@ export default function SellerLandingPage() {
                     width: 46, height: 46, borderRadius: 12,
                     background: `linear-gradient(135deg, ${C.accent}, ${C.accentLight})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
-                  }}>🧵</div>
+                  }}></div>
                   <div>
                     <div style={{ fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: '#fff' }}>Ravi Textiles, Gaya</div>
-                    <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>⭐ 4.8 · Since 2018 · 342 Followers</div>
+                    <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}> 4.8 · Since 2018 · 342 Followers</div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {['Fabric Verified ✓', 'Trusted Seller', '🔥 Trending'].map(b => (
+                  {['Fabric Verified ', 'Trusted Seller', ' Trending'].map(b => (
                     <span key={b} style={{
                       fontFamily: FONT_BODY, fontSize: 9, fontWeight: 700, color: C.accent,
                       background: 'rgba(196,154,60,0.15)', border: '1px solid rgba(196,154,60,0.2)',
@@ -385,7 +385,7 @@ export default function SellerLandingPage() {
         <div style={{ position: 'absolute', top: -200, right: -200, width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(196,154,60,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-          <p style={{ fontFamily: FONT_BODY, fontSize: 11, color: C.accent, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>✦ Only on Insta Fashion Points ✦</p>
+          <p style={{ fontFamily: FONT_BODY, fontSize: 11, color: C.accent, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}> Only on Insta Fashion Points </p>
           <h2 style={{ fontFamily: FONT_PLAYFAIR, fontSize: 38, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Apna Dukandaar</h2>
           <p style={{ fontFamily: FONT_PLAYFAIR, fontSize: 20, fontWeight: 500, color: C.accent, fontStyle: 'italic', margin: '0 0 20px' }}>Your Real Shop, Online</p>
           <p style={{ fontFamily: FONT_BODY, fontSize: 16, color: 'rgba(255,255,255,0.7)', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.8 }}>

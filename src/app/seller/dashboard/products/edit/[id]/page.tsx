@@ -281,8 +281,8 @@ export default function SellerEditProductPage() {
           {/* Shop Information (Read-only display) */}
           <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-[#5B1A3A] mb-2 flex items-center gap-2">
-              <span>🏪</span> Shop Information
-              <span className="text-sm font-normal text-blue-600">ℹ️ From your seller profile</span>
+              <span></span> Shop Information
+              <span className="text-sm font-normal text-blue-600">ℹ From your seller profile</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>

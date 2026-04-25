@@ -310,13 +310,13 @@ export default function OrdersPage() {
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <span className="text-2xl">
-                                  {item.category === 'mens' && '👔'}
-                                  {item.category === 'womens' && '👗'}
-                                  {item.category === 'sarees' && '🥻'}
-                                  {item.category === 'kids' && '👶'}
-                                  {item.category === 'beauty' && '💄'}
-                                  {item.category === 'footwear' && '👟'}
-                                  {!item.category && '📦'}
+                                  {item.category === 'mens' && ''}
+                                  {item.category === 'womens' && ''}
+                                  {item.category === 'sarees' && ''}
+                                  {item.category === 'kids' && ''}
+                                  {item.category === 'beauty' && ''}
+                                  {item.category === 'footwear' && ''}
+                                  {!item.category && ''}
                                 </span>
                               </div>
                             )}

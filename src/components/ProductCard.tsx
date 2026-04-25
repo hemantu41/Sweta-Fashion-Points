@@ -35,10 +35,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-6xl opacity-60">
-              {product.category === 'mens' && '👔'}
-              {product.category === 'womens' && '👗'}
-              {product.category === 'sarees' && '🥻'}
-              {product.category === 'kids' && '👶'}
+              {product.category === 'mens' && ''}
+              {product.category === 'womens' && ''}
+              {product.category === 'sarees' && ''}
+              {product.category === 'kids' && ''}
             </span>
           </div>
         )}

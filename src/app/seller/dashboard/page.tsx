@@ -386,7 +386,7 @@ export default function SellerDashboardPage() {
         </div>
         {seller?.latitude ? (
           <p className="text-sm text-gray-600 mb-4">
-            📍 Lat: {seller.latitude.toFixed(4)}, Lng: {seller.longitude?.toFixed(4)} — Amas, Gaya, Bihar
+             Lat: {seller.latitude.toFixed(4)}, Lng: {seller.longitude?.toFixed(4)} — Amas, Gaya, Bihar
           </p>
         ) : (
           <p className="text-sm text-[#999999] mb-4">No location set. Add your shop location for delivery radius calculation.</p>

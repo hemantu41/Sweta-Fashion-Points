@@ -128,7 +128,7 @@ export default function AdminProductReviewPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <span className="text-6xl">📦</span>
+                        <span className="text-6xl"></span>
                       </div>
                     )}
                   </div>

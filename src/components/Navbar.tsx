@@ -140,7 +140,7 @@ export default function Navbar() {
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
                     >
                       <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                        <span className="text-lg">{cat.icon || '🛍️'}</span>
+                        <span className="text-lg">{cat.icon || ''}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
@@ -616,7 +616,7 @@ export default function Navbar() {
                         className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
                       >
                         <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                          <span className="text-lg">{cat.icon || '🛍️'}</span>
+                          <span className="text-lg">{cat.icon || ''}</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>

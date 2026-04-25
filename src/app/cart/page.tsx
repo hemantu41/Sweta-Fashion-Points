@@ -73,12 +73,12 @@ function CartContent() {
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <span className="text-3xl">
-                          {item.product.category === 'mens' && '👔'}
-                          {item.product.category === 'womens' && '👗'}
-                          {item.product.category === 'sarees' && '🥻'}
-                          {item.product.category === 'kids' && '👶'}
-                          {item.product.category === 'beauty' && '💄'}
-                          {item.product.category === 'footwear' && '👟'}
+                          {item.product.category === 'mens' && ''}
+                          {item.product.category === 'womens' && ''}
+                          {item.product.category === 'sarees' && ''}
+                          {item.product.category === 'kids' && ''}
+                          {item.product.category === 'beauty' && ''}
+                          {item.product.category === 'footwear' && ''}
                         </span>
                       </div>
                     )}

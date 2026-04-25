@@ -497,11 +497,11 @@ export default function SellerAddProductPage() {
           {/* Shop Information (Common for all tabs) */}
           <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-[#722F37] mb-2 flex items-center gap-2">
-              <span>🏪</span> Shop Information
+              <span></span> Shop Information
               {loadingProfile ? (
                 <span className="text-sm font-normal text-gray-500">(Loading...)</span>
               ) : (
-                <span className="text-sm font-normal text-green-600">✓ Auto-filled from your profile</span>
+                <span className="text-sm font-normal text-green-600"> Auto-filled from your profile</span>
               )}
             </h2>
             <p className="text-xs text-gray-600 mb-4">
@@ -1215,7 +1215,7 @@ export default function SellerAddProductPage() {
 
                 {sizes.length > 0 && (
                   <p className="text-sm text-green-600 mt-2">
-                    ✓ Selected sizes: {sizes.join(', ')}
+                     Selected sizes: {sizes.join(', ')}
                   </p>
                 )}
               </div>

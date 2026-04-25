@@ -204,7 +204,7 @@ export default function ProductDetailPage() {
     return (
       <div style={{ minHeight: '60vh', background: C.cream, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', padding: '0 24px' }}>
-          <p style={{ fontSize: 48, margin: '0 0 16px' }}>🔍</p>
+          <p style={{ fontSize: 48, margin: '0 0 16px' }}></p>
           <h1 style={{ fontFamily: 'var(--font-playfair)', fontSize: 22, color: C.maroon, margin: '0 0 8px' }}>
             Product not found
           </h1>
@@ -328,7 +328,7 @@ export default function ProductDetailPage() {
                   />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 72, opacity: 0.25 }}>👗</span>
+                    <span style={{ fontSize: 72, opacity: 0.25 }}></span>
                   </div>
                 )}
               </div>
@@ -366,7 +366,7 @@ export default function ProductDetailPage() {
                   <Image src={currentImage} alt={product.name} fill style={{ objectFit: 'contain' }} sizes="100vw" priority />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 72, opacity: 0.25 }}>👗</span>
+                    <span style={{ fontSize: 72, opacity: 0.25 }}></span>
                   </div>
                 )}
               </div>
@@ -576,7 +576,7 @@ export default function ProductDetailPage() {
                 </div>
                 {pincodeMsg && (
                   <p style={{ margin: 0, fontSize: 12, color: pincodeStatus === 'ok' ? '#16A34A' : C.red, paddingLeft: 22 }}>
-                    {pincodeStatus === 'ok' ? '✓ ' : '✕ '}{pincodeMsg}
+                    {pincodeStatus === 'ok' ? ' ' : ' '}{pincodeMsg}
                   </p>
                 )}
               </div>
@@ -585,7 +585,7 @@ export default function ProductDetailPage() {
             {/* Cart feedback */}
             {cartMsg && (
               <div style={{ marginTop: 10, padding: '8px 14px', background: '#DCFCE7', borderRadius: 6, fontSize: 13, color: '#16A34A', fontWeight: 500 }}>
-                ✓ {cartMsg}
+                 {cartMsg}
               </div>
             )}
 

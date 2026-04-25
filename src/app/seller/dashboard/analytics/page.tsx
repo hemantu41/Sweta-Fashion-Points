@@ -258,14 +258,14 @@ export default function AnalyticsPage() {
           {data && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-xl p-4 border border-blue-100 bg-blue-50">
-                <p className="text-xs font-semibold text-blue-800 mb-1">📦 Avg orders / day</p>
+                <p className="text-xs font-semibold text-blue-800 mb-1"> Avg orders / day</p>
                 <p className="text-2xl font-bold text-blue-900" style={{ fontFamily: 'var(--font-playfair)' }}>
                   {data.orders > 0 ? (data.orders / days).toFixed(1) : '0'}
                 </p>
                 <p className="text-[10px] text-blue-600 mt-1">Over {days} days</p>
               </div>
               <div className="rounded-xl p-4 border border-green-100 bg-green-50">
-                <p className="text-xs font-semibold text-green-800 mb-1">💰 Revenue / order</p>
+                <p className="text-xs font-semibold text-green-800 mb-1"> Revenue / order</p>
                 <p className="text-2xl font-bold text-green-900" style={{ fontFamily: 'var(--font-playfair)' }}>
                   {fmt(data.avgOrderValue)}
                 </p>
@@ -273,7 +273,7 @@ export default function AnalyticsPage() {
               </div>
               <div className={`rounded-xl p-4 border ${data.returnRate <= 3 ? 'border-green-100 bg-green-50' : data.returnRate <= 6 ? 'border-amber-100 bg-amber-50' : 'border-red-100 bg-red-50'}`}>
                 <p className={`text-xs font-semibold mb-1 ${data.returnRate <= 3 ? 'text-green-800' : data.returnRate <= 6 ? 'text-amber-800' : 'text-red-800'}`}>
-                  {data.returnRate <= 3 ? '✓ Excellent' : data.returnRate <= 6 ? '⚡ Monitor' : '↑ High'} return rate
+                  {data.returnRate <= 3 ? ' Excellent' : data.returnRate <= 6 ? ' Monitor' : '↑ High'} return rate
                 </p>
                 <p className={`text-2xl font-bold ${data.returnRate <= 3 ? 'text-green-900' : data.returnRate <= 6 ? 'text-amber-900' : 'text-red-900'}`}
                   style={{ fontFamily: 'var(--font-playfair)' }}>
@@ -322,7 +322,7 @@ export default function AnalyticsPage() {
               <div key={m.key} className="rounded-xl p-4 border" style={{ background: bg, borderColor: `${color}25` }}>
                 <div className="flex justify-between items-start mb-2">
                   <p className="text-xs text-gray-600 leading-tight">{m.label}</p>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: `${color}20`, color }}>{isGood ? '✓ Good' : '⚡ Improve'}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: `${color}20`, color }}>{isGood ? ' Good' : ' Improve'}</span>
                 </div>
                 <p className="text-xl font-bold mb-2" style={{ color, fontFamily: 'var(--font-playfair)' }}>{m.value}{m.unit}</p>
                 <div className="h-1 rounded-full bg-white/60">
@@ -336,7 +336,7 @@ export default function AnalyticsPage() {
 
         {nextTier && (
           <div className="flex items-start gap-3 p-4 rounded-xl border" style={{ background: '#FEFCE8', borderColor: '#FDE68A' }}>
-            <span className="text-lg">💡</span>
+            <span className="text-lg"></span>
             <div>
               <p className="text-sm font-semibold text-amber-800">You need {pointsToNext} more points to reach {nextTier} Tier</p>
               <p className="text-xs text-amber-700 mt-0.5">

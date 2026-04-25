@@ -21,11 +21,11 @@ const C = {
 const SUPPORT_URL = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com'}/seller/dashboard/support`;
 
 const TICKET_STATUS_META: Record<string, { label: string; emoji: string; headerBg: string; note: string }> = {
-  open:              { label: 'Open',           emoji: '🎫', headerBg: C.maroon,    note: 'Your ticket has been received and is in the queue.' },
-  in_progress:       { label: 'In Progress',    emoji: '🔧', headerBg: '#B45309',   note: 'Our support team is actively working on your ticket.' },
-  waiting_on_seller: { label: 'Waiting on You', emoji: '💬', headerBg: '#7C3AED',   note: 'We need more information from you to proceed. Please reply to your ticket.' },
-  resolved:          { label: 'Resolved',        emoji: '✅', headerBg: C.success,   note: 'Your ticket has been marked as resolved. If the issue persists, you can re-open it from your seller portal.' },
-  closed:            { label: 'Closed',          emoji: '🔒', headerBg: '#374151',   note: 'This ticket is now closed. If you need further help, you can open a new ticket.' },
+  open:              { label: 'Open',           emoji: '', headerBg: C.maroon,    note: 'Your ticket has been received and is in the queue.' },
+  in_progress:       { label: 'In Progress',    emoji: '', headerBg: '#B45309',   note: 'Our support team is actively working on your ticket.' },
+  waiting_on_seller: { label: 'Waiting on You', emoji: '', headerBg: '#7C3AED',   note: 'We need more information from you to proceed. Please reply to your ticket.' },
+  resolved:          { label: 'Resolved',        emoji: '', headerBg: C.success,   note: 'Your ticket has been marked as resolved. If the issue persists, you can re-open it from your seller portal.' },
+  closed:            { label: 'Closed',          emoji: '', headerBg: '#374151',   note: 'This ticket is now closed. If you need further help, you can open a new ticket.' },
 };
 
 function emailShell(headerBg: string, title: string, subtitle: string, body: string): string {
@@ -132,7 +132,7 @@ export async function notifySellerTicketUpdate(opts: {
       </p>`;
 
     const headerBg    = meta?.headerBg ?? C.maroon;
-    const headerTitle = isReply ? '💬 New Reply on Your Ticket' : `${meta?.emoji ?? '🎫'} Ticket Update`;
+    const headerTitle = isReply ? ' New Reply on Your Ticket' : `${meta?.emoji ?? ''} Ticket Update`;
     const headerSub   = isReply ? `Ticket ${ticketNumber}` : `Status → ${meta?.label ?? newStatus}`;
 
     await sendEmail({

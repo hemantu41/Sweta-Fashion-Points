@@ -108,8 +108,8 @@ const TABS = [
   { key: 'ready',      label: 'Ready to Ship' },
   { key: 'in-transit', label: 'In Transit' },
   { key: 'delivered',  label: 'Delivered' },
-  { key: 'sla-breach', label: '🔴 SLA Breach' },
-  { key: 'flagged',    label: '⚠️ Flagged' },
+  { key: 'sla-breach', label: ' SLA Breach' },
+  { key: 'flagged',    label: ' Flagged' },
 ] as const;
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -705,7 +705,7 @@ function DrawerContent({ order, actionLoading, onClose, onAction, onCancel }: {
         <button onClick={onClose} style={{
           background: 'none', border: 'none', fontSize: 22,
           cursor: 'pointer', color: C.muted,
-        }}>✕</button>
+        }}></button>
       </div>
 
       <hr style={{ border: 'none', borderTop: `1px solid ${C.border}`, margin: '12px 0' }} />
@@ -725,7 +725,7 @@ function DrawerContent({ order, actionLoading, onClose, onAction, onCancel }: {
                     border: current ? `3px solid ${C.gold}` : 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {done && !current && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                    {done && !current && <span style={{ color: '#fff', fontSize: 11 }}></span>}
                   </div>
                   <div style={{
                     fontSize: 9, marginTop: 3, textAlign: 'center',

@@ -52,7 +52,7 @@ const ALL_FABRICS = [
 ];
 
 const DISCOUNT = [{ label: '10% or more', value: 10 }, { label: '25% or more', value: 25 }, { label: '50% or more', value: 50 }];
-const RATINGS  = [{ label: '4★ & above', value: 4 }, { label: '3★ & above', value: 3 }];
+const RATINGS  = [{ label: '4 & above', value: 4 }, { label: '3 & above', value: 3 }];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -205,7 +205,7 @@ function FilterContent({ filters, onChange, onClear, availableFabrics, available
               className="flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border"
               style={{ borderColor: '#5B1A3A', color: '#5B1A3A' }}
             >
-              {filters.minRating}★+ <X size={9} style={{ color: '#C49A3C' }} />
+              {filters.minRating}+ <X size={9} style={{ color: '#C49A3C' }} />
             </button>
           )}
           {filters.minDiscount && (
@@ -302,7 +302,7 @@ function FilterContent({ filters, onChange, onClear, availableFabrics, available
                   onClick={() => onChange({ minRating: filters.minRating === opt.value ? null : opt.value })}
                 />
                 <span className="text-[12px] text-gray-600">
-                  <span style={{ color: '#F59E0B' }}>★</span>{' '}{opt.label}
+                  <span style={{ color: '#F59E0B' }}></span>{' '}{opt.label}
                 </span>
               </label>
             ))}
