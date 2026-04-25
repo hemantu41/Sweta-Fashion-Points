@@ -47,9 +47,6 @@ export default function CategoryHeader({
 
       {/* Title row */}
       <div className="flex items-start gap-3">
-        {category?.icon && (
-          <span className="text-[26px] leading-none mt-0.5">{category.icon}</span>
-        )}
         <div>
           <h1
             className="text-[28px] font-bold leading-tight"

@@ -1,9 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { CldImage } from 'next-cloudinary';
+import Image from 'next/image';
 import { useLanguage } from '@/context/LanguageContext';
 import type { Product } from '@/data/products';
+
+// Convert Cloudinary public ID or full URL to a renderable URL
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
+}
 
 interface ProductCardProps {
   product: Product;
@@ -14,7 +22,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   // Use mainImage if available, otherwise fall back to legacy image field
   const imageSource = product.mainImage || product.image;
-  const isCloudinaryImage = imageSource && !imageSource.startsWith('/') && !imageSource.startsWith('http');
+  const imgUrl = toImageUrl(imageSource);
   const discountPercent = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
@@ -24,22 +32,21 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Image Container */}
       <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-[#FAF7F2] to-[#F5F0E8]">
         {/* Product Image */}
-        {isCloudinaryImage ? (
-          <CldImage
-            src={imageSource!}
+        {imgUrl ? (
+          <Image
+            src={imgUrl}
             alt={product.name}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-6xl opacity-60">
-              {product.category === 'mens' && ''}
-              {product.category === 'womens' && ''}
-              {product.category === 'sarees' && ''}
-              {product.category === 'kids' && ''}
-            </span>
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="M21 15l-5-5L5 21"/>
+            </svg>
           </div>
         )}
 

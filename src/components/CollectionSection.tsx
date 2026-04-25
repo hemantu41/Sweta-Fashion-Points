@@ -133,11 +133,6 @@ export default function CollectionSection() {
 
                 {/* Content */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-white">
-                  {/* Icon */}
-                  <div className="text-6xl mb-4 transform group-hover:scale-110 transition-transform duration-300">
-                    {collection.icon}
-                  </div>
-
                   {/* Title */}
                   <h3 className="text-2xl font-bold mb-2 tracking-wide" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
                     {language === 'hi' ? collection.nameHi : collection.name}

@@ -5,7 +5,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CldImage } from 'next-cloudinary';
+
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
+}
 
 interface OrderItem {
   id: string;
@@ -286,22 +292,13 @@ export default function OrdersPage() {
                   </h4>
                   <div className="space-y-4">
                     {order.items.map((item, index) => {
-                      const isCloudinaryId = item.image && !item.image.startsWith('/') && !item.image.startsWith('http');
-                      const isFullUrl = item.image && item.image.startsWith('http');
+                      const imgUrl = toImageUrl(item.image);
                       return (
                         <div key={index} className="flex gap-4 items-start pb-4 border-b border-gray-100 last:border-0 last:pb-0">
                           <div className="relative w-20 h-20 bg-[#F5F0E8] rounded-lg overflow-hidden flex-shrink-0">
-                            {isCloudinaryId ? (
-                              <CldImage
-                                src={item.image}
-                                alt={item.name}
-                                fill
-                                className="object-cover"
-                                sizes="80px"
-                              />
-                            ) : isFullUrl ? (
+                            {imgUrl ? (
                               <Image
-                                src={item.image}
+                                src={imgUrl}
                                 alt={item.name}
                                 fill
                                 className="object-cover"
@@ -309,15 +306,7 @@ export default function OrdersPage() {
                               />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-2xl">
-                                  {item.category === 'mens' && ''}
-                                  {item.category === 'womens' && ''}
-                                  {item.category === 'sarees' && ''}
-                                  {item.category === 'kids' && ''}
-                                  {item.category === 'beauty' && ''}
-                                  {item.category === 'footwear' && ''}
-                                  {!item.category && ''}
-                                </span>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                               </div>
                             )}
                           </div>

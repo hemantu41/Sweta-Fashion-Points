@@ -140,7 +140,7 @@ export default function Navbar() {
                       className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
                     >
                       <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                        <span className="text-lg">{cat.icon || ''}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B1A3A" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
@@ -616,7 +616,7 @@ export default function Navbar() {
                         className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
                       >
                         <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                          <span className="text-lg">{cat.icon || ''}</span>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B1A3A" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
@@ -642,7 +642,6 @@ export default function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                   className="px-4 py-3 rounded-lg text-base font-bold transition-colors text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8]"
                 >
-                  {l1.icon && <span className="mr-2">{l1.icon}</span>}
                   {l1.name}
                 </Link>
               ))}

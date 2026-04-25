@@ -4,6 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+// ─── Image URL helper ─────────────────────────────────────────────────────────
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
+}
+
 // ─── Seeded mock helpers (consistent per product, no real reviews table yet) ──
 function seededVal(id: string, salt: number): number {
   let h = salt;
@@ -127,7 +135,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <div className="relative aspect-[3/4] overflow-hidden bg-white">
           {imgSrc ? (
             <Image
-              src={imgSrc}
+              src={toImageUrl(imgSrc)}
               alt={product.name}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"

@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { CldImage } from 'next-cloudinary';
+import Image from 'next/image';
+
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
+}
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -62,24 +69,16 @@ function CartContent() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-3">
             {items.map((item) => {
-              const imageUrl = item.product.mainImage || item.product.image;
-              const isCloudinary = imageUrl && !imageUrl.startsWith('/') && !imageUrl.startsWith('http');
+              const imgUrl = toImageUrl(item.product.mainImage || item.product.image);
               return (
                 <div key={`${item.product.id}-${item.size || ''}`} className="bg-white rounded-xl border border-[#E8E2D9] p-4 flex gap-4">
                   {/* Thumbnail */}
                   <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-[#F5F0E8]">
-                    {isCloudinary ? (
-                      <CldImage src={imageUrl} alt={item.product.name} fill className="object-cover" sizes="96px" />
+                    {imgUrl ? (
+                      <Image src={imgUrl} alt={item.product.name} fill className="object-cover" sizes="96px" />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-3xl">
-                          {item.product.category === 'mens' && ''}
-                          {item.product.category === 'womens' && ''}
-                          {item.product.category === 'sarees' && ''}
-                          {item.product.category === 'kids' && ''}
-                          {item.product.category === 'beauty' && ''}
-                          {item.product.category === 'footwear' && ''}
-                        </span>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                       </div>
                     )}
                   </div>

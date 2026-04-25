@@ -314,7 +314,6 @@ export default function CategoryPage() {
                     className="flex-shrink-0 px-4 py-1.5 rounded-full text-[12px] font-medium border transition-colors"
                     style={{ borderColor: '#E5E7EB', color: '#374151', background: '#fff' }}
                   >
-                    {child.icon && <span className="mr-1">{child.icon}</span>}
                     {child.name}
                   </Link>
                 ))}

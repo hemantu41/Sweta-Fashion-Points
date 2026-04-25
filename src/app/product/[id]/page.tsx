@@ -32,6 +32,16 @@ interface Product {
   isBestSeller: boolean;
 }
 
+// ─── Image URL helper ─────────────────────────────────────────────────────────
+// Images may be stored as Cloudinary public IDs (e.g. "insta-fashion-points/xyz")
+// or as full https:// URLs. Normalise to a full URL before passing to <Image>.
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
+}
+
 // ─── Deterministic mock rating seeded from product id ─────────────────────────
 
 function hashId(id: string): number {
@@ -284,7 +294,7 @@ export default function ProductDetailPage() {
                     }}
                   >
                     <Image
-                      src={img} alt={`View ${i + 1}`}
+                      src={toImageUrl(img)} alt={`View ${i + 1}`}
                       width={64} height={74}
                       style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />
@@ -321,7 +331,7 @@ export default function ProductDetailPage() {
                 </button>
                 {currentImage ? (
                   <Image
-                    src={currentImage} alt={product.name}
+                    src={toImageUrl(currentImage)} alt={product.name}
                     fill style={{ objectFit: 'contain' }}
                     sizes="(max-width:768px) 100vw, 50vw"
                     priority
@@ -363,7 +373,7 @@ export default function ProductDetailPage() {
                   </svg>
                 </button>
                 {currentImage ? (
-                  <Image src={currentImage} alt={product.name} fill style={{ objectFit: 'contain' }} sizes="100vw" priority />
+                  <Image src={toImageUrl(currentImage)} alt={product.name} fill style={{ objectFit: 'contain' }} sizes="100vw" priority />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontSize: 72, opacity: 0.25 }}></span>
@@ -382,7 +392,7 @@ export default function ProductDetailPage() {
                       border: i === activeThumb ? `1.5px solid ${C.maroon}` : `1.5px solid ${C.border}`,
                     }}
                   >
-                    <Image src={img} alt={`View ${i + 1}`} width={64} height={74} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                    <Image src={toImageUrl(img)} alt={`View ${i + 1}`} width={64} height={74} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                   </button>
                 ))}
               </div>
