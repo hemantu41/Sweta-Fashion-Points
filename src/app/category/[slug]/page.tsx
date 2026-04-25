@@ -144,17 +144,18 @@ export default function CategoryPage() {
     setChildCategories(result.node.children ?? []);
   }, [tree, treeLoading, slug]);
 
-  // ── 3. Fetch products — only for L3 categories ──
-  // L1 and L2 show their children as navigation cards; only L3 shows a product grid.
+  // ── 3. Fetch products for all levels ──
+  // L1 → all products under this L1; L2 → all products under this L2; L3 → exact match.
+  // Sub-category chips let the user drill down without losing the product grid.
   const fetchProducts = useCallback(async (cat: CategoryNode) => {
-    if (cat.level !== 3) {
-      // Not a leaf category — clear products and show child navigation instead
-      setProducts([]);
-      return;
-    }
     setProdsLoading(true);
     try {
-      const res  = await fetch(`/api/products?l3CategoryId=${encodeURIComponent(cat.id)}`, { cache: 'no-store' });
+      let param: string;
+      if (cat.level === 1)      param = `l1CategoryId=${encodeURIComponent(cat.id)}`;
+      else if (cat.level === 2) param = `l2CategoryId=${encodeURIComponent(cat.id)}`;
+      else                      param = `l3CategoryId=${encodeURIComponent(cat.id)}`;
+
+      const res  = await fetch(`/api/products?${param}`, { cache: 'no-store' });
       const data = await res.json();
       setProducts(data.products ?? []);
     } catch {/* silent */}
@@ -274,16 +275,14 @@ export default function CategoryPage() {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-5">
         <div className="flex gap-6 items-start">
 
-          {/* ── Filter Sidebar — only visible for L3 (product grid) pages ── */}
-          {category?.level === 3 && (
-            <FilterSidebar
-              filters={filters}
-              onChange={updateFilters}
-              onClear={clearFilters}
-              availableFabrics={availableFabrics}
-              availableCities={availableCities}
-            />
-          )}
+          {/* ── Filter Sidebar ── */}
+          <FilterSidebar
+            filters={filters}
+            onChange={updateFilters}
+            onClear={clearFilters}
+            availableFabrics={availableFabrics}
+            availableCities={availableCities}
+          />
 
           {/* ── Main content ── */}
           <div className="flex-1 min-w-0">
@@ -292,68 +291,49 @@ export default function CategoryPage() {
             <CategoryHeader
               breadcrumb={breadcrumb}
               category={category}
-              totalProducts={category?.level === 3 ? products.length : -1}
-              filteredTotal={category?.level === 3 ? sorted.length : -1}
+              totalProducts={products.length}
+              filteredTotal={sorted.length}
               currentPage={page}
               pageSize={PAGE_SIZE}
             />
 
-            {/* ── L1 / L2: skeleton while tree loads ── */}
-            {treeLoading && !category && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4 mb-8">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-24 rounded-2xl bg-[#f0eaed] animate-pulse" />
-                ))}
-              </div>
-            )}
-
-            {/* ── L1 / L2: child category cards ── */}
-            {!treeLoading && category && category.level !== 3 && childCategories.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4 mb-8">
+            {/* ── Sub-category chips (for all levels that have children) ── */}
+            {!treeLoading && childCategories.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-3 mt-1" style={{ scrollbarWidth: 'none' }}>
+                <Link
+                  href={`/category/${slug}`}
+                  className="flex-shrink-0 px-4 py-1.5 rounded-full text-[12px] font-semibold text-white"
+                  style={{ background: '#5B1A3A' }}
+                >
+                  All
+                </Link>
                 {childCategories.map(child => (
                   <Link
                     key={child.id}
                     href={`/category/${child.slug}`}
-                    className="group flex flex-col items-center p-4 rounded-2xl border transition-all duration-200 hover:shadow-md"
-                    style={{ borderColor: '#E5E7EB', background: '#fff' }}
+                    className="flex-shrink-0 px-4 py-1.5 rounded-full text-[12px] font-medium border transition-colors"
+                    style={{ borderColor: '#E5E7EB', color: '#374151', background: '#fff' }}
                   >
-                    {child.icon && (
-                      <span className="text-3xl mb-2">{child.icon}</span>
-                    )}
-                    <span
-                      className="text-[13px] font-semibold text-center transition-colors duration-200 group-hover:text-[#5B1A3A]"
-                      style={{ color: '#374151' }}
-                    >
-                      {child.name}
-                    </span>
-                    {(child.product_count ?? 0) > 0 && (
-                      <span className="mt-1 text-[10px]" style={{ color: '#C49A3C' }}>
-                        {child.product_count} products
-                      </span>
-                    )}
+                    {child.icon && <span className="mr-1">{child.icon}</span>}
+                    {child.name}
                   </Link>
                 ))}
               </div>
             )}
 
-            {/* ── L3: subcategory chips (siblings) + sort bar ── */}
-            {!treeLoading && category?.level === 3 && (
-              <>
-                {/* Sort bar */}
-                <div className="mb-3">
-                  <SortBar
-                    sort={sortBy}
-                    onSortChange={s => updateFilters({ sort: s })}
-                    filteredTotal={sorted.length}
-                    currentPage={page}
-                    pageSize={PAGE_SIZE}
-                  />
-                </div>
-              </>
-            )}
+            {/* ── Sort bar ── */}
+            <div className="mb-3">
+              <SortBar
+                sort={sortBy}
+                onSortChange={s => updateFilters({ sort: s })}
+                filteredTotal={sorted.length}
+                currentPage={page}
+                pageSize={PAGE_SIZE}
+              />
+            </div>
 
-            {/* ── Loading skeletons (L3 only) ── */}
-            {category?.level === 3 && prodsLoading && (
+            {/* ── Loading skeletons ── */}
+            {prodsLoading && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-xl overflow-hidden border border-gray-100">
@@ -376,8 +356,8 @@ export default function CategoryPage() {
               </div>
             )}
 
-            {/* ── Empty state (L3 only, after load completes) ── */}
-            {category?.level === 3 && !prodsLoading && paginated.length === 0 && (
+            {/* ── Empty state ── */}
+            {!prodsLoading && paginated.length === 0 && (
               <div
                 className="text-center py-20 rounded-2xl border"
                 style={{ background: '#fff', borderColor: 'rgba(196,154,60,0.1)' }}
@@ -419,8 +399,8 @@ export default function CategoryPage() {
               </div>
             )}
 
-            {/* ── Product grid (L3 only) ── */}
-            {category?.level === 3 && !prodsLoading && paginated.length > 0 && (
+            {/* ── Product grid ── */}
+            {!prodsLoading && paginated.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
                 {paginated.map(product => (
                   <ProductCard key={product.id} product={product} />
@@ -428,8 +408,8 @@ export default function CategoryPage() {
               </div>
             )}
 
-            {/* ── Pagination (L3 only) ── */}
-            {category?.level === 3 && !prodsLoading && totalPages > 1 && (
+            {/* ── Pagination ── */}
+            {!prodsLoading && totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-10 flex-wrap">
                 {page > 1 && (
                   <button
@@ -479,50 +459,46 @@ export default function CategoryPage() {
         </div>
       </div>
 
-      {/* ── Mobile filter drawer (L3 only) ── */}
-      {category?.level === 3 && (
-        <FilterDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          onApply={() => setDrawerOpen(false)}
-          filters={filters}
-          onChange={updateFilters}
-          onClear={clearFilters}
-          availableFabrics={availableFabrics}
-          availableCities={availableCities}
-        />
-      )}
+      {/* ── Mobile filter drawer ── */}
+      <FilterDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onApply={() => setDrawerOpen(false)}
+        filters={filters}
+        onChange={updateFilters}
+        onClear={clearFilters}
+        availableFabrics={availableFabrics}
+        availableCities={availableCities}
+      />
 
-      {/* ── Mobile sticky bottom bar (L3 only) ── */}
-      {category?.level === 3 && (
-        <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 flex z-40">
-          <button
-            onClick={() => {
-              const next = sortBy === 'newest' ? 'price_low' : sortBy === 'price_low' ? 'price_high' : 'newest';
-              updateFilters({ sort: next });
-            }}
-            className="flex-1 py-3 text-[13px] font-semibold flex items-center justify-center gap-2 text-gray-700"
-          >
-            <ArrowUpDown size={15} /> Sort
-          </button>
-          <div className="w-px bg-gray-200" />
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="flex-1 py-3 text-[13px] font-semibold flex items-center justify-center gap-2"
-            style={{ color: '#5B1A3A' }}
-          >
-            <SlidersHorizontal size={15} /> Filters
-            {(sizes.length + fabrics.length + cities.length + (minPrice || maxPrice ? 1 : 0) + (minDiscount ? 1 : 0)) > 0 && (
-              <span
-                className="w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
-                style={{ background: '#5B1A3A' }}
-              >
-                {sizes.length + fabrics.length + cities.length + (minPrice || maxPrice ? 1 : 0) + (minDiscount ? 1 : 0)}
-              </span>
-            )}
-          </button>
-        </div>
-      )}
+      {/* ── Mobile sticky bottom bar ── */}
+      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 flex z-40">
+        <button
+          onClick={() => {
+            const next = sortBy === 'newest' ? 'price_low' : sortBy === 'price_low' ? 'price_high' : 'newest';
+            updateFilters({ sort: next });
+          }}
+          className="flex-1 py-3 text-[13px] font-semibold flex items-center justify-center gap-2 text-gray-700"
+        >
+          <ArrowUpDown size={15} /> Sort
+        </button>
+        <div className="w-px bg-gray-200" />
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="flex-1 py-3 text-[13px] font-semibold flex items-center justify-center gap-2"
+          style={{ color: '#5B1A3A' }}
+        >
+          <SlidersHorizontal size={15} /> Filters
+          {(sizes.length + fabrics.length + cities.length + (minPrice || maxPrice ? 1 : 0) + (minDiscount ? 1 : 0)) > 0 && (
+            <span
+              className="w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+              style={{ background: '#5B1A3A' }}
+            >
+              {sizes.length + fabrics.length + cities.length + (minPrice || maxPrice ? 1 : 0) + (minDiscount ? 1 : 0)}
+            </span>
+          )}
+        </button>
+      </div>
 
       <style>{`
         @keyframes shimmer {
