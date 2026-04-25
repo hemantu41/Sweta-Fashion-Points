@@ -152,6 +152,7 @@ export default function ProductDetailPage() {
   const [selectedSize,   setSelectedSize]   = useState<string | null>(null);
   const [wishlisted,     setWishlisted]     = useState(false);
   const [sizeGuideOpen,  setSizeGuideOpen]  = useState(false);
+  const [imgHovered,     setImgHovered]     = useState(false);
 
   // Add-to-cart feedback
   const [cartMsg, setCartMsg] = useState('');
@@ -359,36 +360,20 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Main image */}
-              <div style={{ flex: 1, position: 'relative', height: 480, borderRadius: 12, overflow: 'hidden', background: C.cream }}>
-                {discount && (
-                  <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
-                    <span style={{ background: C.maroon, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>
-                      {discount}% OFF
-                    </span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setWishlisted(v => !v)}
-                  style={{
-                    position: 'absolute', top: 12, right: 12, zIndex: 2,
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: '#fff', border: `1px solid ${C.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  <svg width={18} height={18} viewBox="0 0 24 24"
-                    fill={wishlisted ? '#e11d48' : 'none'}
-                    stroke={wishlisted ? '#e11d48' : '#9E9892'}
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d={I.heart} />
-                  </svg>
-                </button>
+              <div
+                onMouseEnter={() => setImgHovered(true)}
+                onMouseLeave={() => setImgHovered(false)}
+                style={{ flex: 1, position: 'relative', height: 480, borderRadius: 12, overflow: 'hidden', background: C.cream, cursor: 'zoom-in' }}
+              >
                 {currentImage ? (
                   <Image
                     src={toImageUrl(currentImage)} alt={product.name}
-                    fill style={{ objectFit: 'contain' }}
+                    fill
+                    style={{
+                      objectFit: 'contain',
+                      transform: imgHovered ? 'scale(1.5)' : 'scale(1)',
+                      transition: 'transform 350ms ease',
+                    }}
                     sizes="(max-width:768px) 100vw, 50vw"
                     priority
                   />
@@ -403,31 +388,6 @@ export default function ProductDetailPage() {
             {/* Mobile: main image on top, horizontal thumbnails below */}
             <div className="md:hidden">
               <div style={{ position: 'relative', aspectRatio: '3/4', borderRadius: 12, overflow: 'hidden', background: C.cream, marginBottom: 10 }}>
-                {discount && (
-                  <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
-                    <span style={{ background: C.maroon, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>
-                      {discount}% OFF
-                    </span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setWishlisted(v => !v)}
-                  style={{
-                    position: 'absolute', top: 12, right: 12, zIndex: 2,
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: '#fff', border: `1px solid ${C.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <svg width={18} height={18} viewBox="0 0 24 24"
-                    fill={wishlisted ? '#e11d48' : 'none'}
-                    stroke={wishlisted ? '#e11d48' : '#9E9892'}
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d={I.heart} />
-                  </svg>
-                </button>
                 {currentImage ? (
                   <Image src={toImageUrl(currentImage)} alt={product.name} fill style={{ objectFit: 'contain' }} sizes="100vw" priority />
                 ) : (
@@ -690,7 +650,7 @@ export default function ProductDetailPage() {
                   <div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Standard Delivery</span>
                     <p style={{ margin: '2px 0 0', fontSize: 11, color: C.muted }}>
-                      Delivered in 4–7 business days · Enter pincode to check availability
+                      Delivered in 3–5 business days · Enter pincode to check availability
                     </p>
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, background: C.goldPale, padding: '2px 8px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -831,7 +791,6 @@ export default function ProductDetailPage() {
               { d: I.refresh, text: '7-day returns' },
               { d: I.check,   text: 'Free size exchange' },
               { d: I.shield,  text: '100% authentic products' },
-              { d: I.zap,     text: 'Fast local delivery' },
             ].map(({ d, text }) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Svg d={d} size={14} stroke={C.gold} />
@@ -894,10 +853,6 @@ export default function ProductDetailPage() {
                     </div>
                   </div>
                 </div>
-                {/* Right: View Shop button */}
-                <button style={{ padding: '9px 22px', borderRadius: 8, border: `1.5px solid ${C.maroon}`, background: 'transparent', color: C.maroon, fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  View Shop
-                </button>
               </div>
             );
           })() : (
