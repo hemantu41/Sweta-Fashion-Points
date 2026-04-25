@@ -138,9 +138,9 @@ export default function ProductDetailPage() {
   const [activeThumb, setActiveThumb] = useState(0);
 
   // Interactions
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [quantity,     setQuantity]     = useState(1);
-  const [wishlisted,   setWishlisted]   = useState(false);
+  const [selectedSize,   setSelectedSize]   = useState<string | null>(null);
+  const [wishlisted,     setWishlisted]     = useState(false);
+  const [sizeGuideOpen,  setSizeGuideOpen]  = useState(false);
 
   // Add-to-cart feedback
   const [cartMsg, setCartMsg] = useState('');
@@ -242,11 +242,19 @@ export default function ProductDetailPage() {
   const discount     = product && (product.originalPrice ?? 0) > product.price
     ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
     : null;
-  const maxQty       = product ? Math.min(8, Math.max(1, product.stockQuantity)) : 8;
-  const lowStock     = product ? product.stockQuantity > 0 && product.stockQuantity <= 10 : false;
-  const rating       = product ? mockRating(product.id) : 4.2;
-  const reviewCount  = product ? mockReviewCount(product.id) : 284;
-  const positivePct  = Math.round((rating / 5) * 100);
+  const lowStock    = product ? product.stockQuantity > 0 && product.stockQuantity <= 10 : false;
+  const rating      = product ? mockRating(product.id) : 4.2;
+  const reviewCount = product ? mockReviewCount(product.id) : 284;
+  const positivePct = Math.round((rating / 5) * 100);
+
+  // Detect size guide category from L1 breadcrumb or product.category
+  const sizeGuideType = useMemo(() => {
+    const cat = (breadcrumb[0]?.name || product?.category || '').toLowerCase();
+    if (/foot|shoe|sandal|slipper|heel|boot|sneaker/i.test(cat)) return 'footwear' as const;
+    if (/kid|child|boy|toddler|infant|baby/i.test(cat))           return 'kids'     as const;
+    if (/women|lady|ladies|kurti|saree|lehenga|girl/i.test(cat))  return 'womens'   as const;
+    return 'mens' as const;
+  }, [breadcrumb, product]);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
@@ -434,6 +442,43 @@ export default function ProductDetailPage() {
                 ))}
               </div>
             </div>
+
+            {/* ── CTA buttons — below image on both mobile and desktop ──── */}
+            {cartMsg && (
+              <div style={{ marginTop: 14, padding: '8px 14px', background: '#DCFCE7', borderRadius: 6, fontSize: 13, color: '#16A34A', fontWeight: 500 }}>
+                 {cartMsg}
+              </div>
+            )}
+            {lowStock && (
+              <p style={{ margin: '10px 0 0', fontSize: 12, color: C.red, fontWeight: 500 }}>
+                Only {product.stockQuantity} left in stock
+              </p>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
+              <button
+                onClick={handleAddToCart}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '13px 0', borderRadius: 8,
+                  border: `1.5px solid ${C.maroon}`, background: C.maroonPale,
+                  color: C.maroon, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                <Svg d={I.bag} size={16} />
+                Add to Cart
+              </button>
+              <button
+                onClick={handleBuyNow}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '13px 0', borderRadius: 8,
+                  border: 'none', background: C.maroon,
+                  color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Buy Now
+              </button>
+            </div>
           </div>
 
           {/* ── RIGHT: Product Info ──────────────────────────────────────────── */}
@@ -578,9 +623,12 @@ export default function ProductDetailPage() {
             <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', background: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Select Size</span>
-                <a href="#" style={{ fontSize: 12, color: C.gold, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                <button
+                  onClick={() => setSizeGuideOpen(true)}
+                  style={{ fontSize: 12, color: C.gold, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
                   Size Guide
-                </a>
+                </button>
               </div>
 
               {sizeList.length === 0 ? (
@@ -611,32 +659,6 @@ export default function ProductDetailPage() {
                     );
                   })}
                 </div>
-              )}
-            </div>
-
-            {/* Quantity + stock label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden' }}>
-                <button
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  style={{ width: 36, height: 36, background: C.cream, border: 'none', cursor: 'pointer', fontSize: 20, color: C.maroon, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  −
-                </button>
-                <span style={{ width: 36, textAlign: 'center', fontSize: 14, fontWeight: 600, color: C.text, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, lineHeight: '36px' }}>
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-                  style={{ width: 36, height: 36, background: C.cream, border: 'none', cursor: 'pointer', fontSize: 20, color: C.maroon, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  +
-                </button>
-              </div>
-              {lowStock && (
-                <span style={{ fontSize: 12, color: C.red, fontWeight: 500 }}>
-                  Only {product.stockQuantity} left in stock
-                </span>
               )}
             </div>
 
@@ -719,55 +741,47 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Cart feedback */}
-            {cartMsg && (
-              <div style={{ marginTop: 10, padding: '8px 14px', background: '#DCFCE7', borderRadius: 6, fontSize: 13, color: '#16A34A', fontWeight: 500 }}>
-                 {cartMsg}
-              </div>
-            )}
+            {/* ── Product Info (seller-provided details) ────────────────── */}
+            {(() => {
+              const fields = [
+                { k: 'Category',  v: [product.category, product.subCategory].filter(Boolean).join(' / ') },
+                { k: 'Fabric',    v: product.fabric   },
+                { k: 'Fit',       v: product.fit      },
+                { k: 'Collar',    v: product.collar   },
+                { k: 'Pattern',   v: product.pattern  },
+                { k: 'Occasion',  v: product.occasion },
+              ].filter(f => f.v);
+              if (fields.length === 0 && !product.description) return null;
+              return (
+                <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#fff', overflow: 'hidden', marginTop: 16 }}>
+                  {/* Header */}
+                  <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Product Info</span>
+                  </div>
 
-            {/* CTA buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-              <button
-                onClick={handleAddToCart}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  padding: 12, borderRadius: 8,
-                  border: `1.5px solid ${C.maroon}`, background: C.maroonPale,
-                  color: C.maroon, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                <Svg d={I.bag} size={16} />
-                Add to cart
-              </button>
-              <button
-                onClick={handleBuyNow}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 12, borderRadius: 8,
-                  border: 'none', background: C.maroon,
-                  color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                Buy Now
-              </button>
-            </div>
+                  {/* Key-value rows */}
+                  {fields.length > 0 && (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <tbody>
+                        {fields.map(({ k, v }) => (
+                          <tr key={k} style={{ borderBottom: `1px solid ${C.subtle}` }}>
+                            <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
+                            <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
 
-            {/* Trust highlights */}
-            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
-              {[
-                { d: I.shield, text: 'Secure payments · UPI, cards, COD accepted' },
-                { d: I.home,   text: '7-day easy returns & exchange' },
-                { d: I.clock,  text: 'Order before 12 PM for same-day dispatch' },
-              ].map(({ d, text }) => (
-                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ color: C.gold, flexShrink: 0 }}>
-                    <Svg d={d} size={15} />
-                  </span>
-                  <span style={{ fontSize: 12, color: '#4A3F35' }}>{text}</span>
+                  {/* Description */}
+                  {product.description && (
+                    <div style={{ padding: '12px 16px', borderTop: fields.length > 0 ? `1px solid ${C.subtle}` : undefined }}>
+                      <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.7 }}>{product.description}</p>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
 
           </div>
           {/* end product info */}
@@ -858,6 +872,179 @@ export default function ProductDetailPage() {
         .ifp-spin { animation: ifp-spin 0.8s linear infinite; }
         @keyframes ifp-spin { to { transform: rotate(360deg); } }
       `}</style>
+
+      {/* ── Size Guide Modal ─────────────────────────────────────────────────── */}
+      {sizeGuideOpen && (
+        <div
+          onClick={() => setSizeGuideOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 14, width: '100%', maxWidth: 560,
+              maxHeight: '90vh', overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            {/* Modal header */}
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>Size Guide</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
+                  {sizeGuideType === 'footwear' ? 'Footwear sizing' :
+                   sizeGuideType === 'kids'     ? 'Kids clothing' :
+                   sizeGuideType === 'womens'   ? 'Women\'s clothing' :
+                                                  'Men\'s clothing'}
+                </p>
+              </div>
+              <button onClick={() => setSizeGuideOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: C.muted, lineHeight: 1, padding: 4 }}>
+                ×
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div style={{ padding: '20px' }}>
+
+              {sizeGuideType === 'footwear' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>Measure your foot length and match it to the size below.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['UK', 'EU', 'US (M)', 'US (F)', 'Foot (cm)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['4', '37', '5',  '6',  '22.5'],
+                        ['5', '38', '6',  '7',  '23.5'],
+                        ['6', '39', '7',  '8',  '24.5'],
+                        ['7', '40', '8',  '9',  '25.5'],
+                        ['8', '41', '9',  '10', '26.5'],
+                        ['9', '42', '10', '11', '27.5'],
+                        ['10','43', '11', '12', '28.5'],
+                        ['11','44', '12', '13', '29.5'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {sizeGuideType === 'kids' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>Select by your child's age and height for the best fit.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['Size', 'Age', 'Height (cm)', 'Chest (in)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['2Y',  '1–2 yrs',   '80–92',   '21'],
+                        ['3Y',  '2–3 yrs',   '92–98',   '22'],
+                        ['4Y',  '3–4 yrs',   '98–104',  '23'],
+                        ['5Y',  '4–5 yrs',   '104–110', '24'],
+                        ['6Y',  '5–6 yrs',   '110–116', '25'],
+                        ['8Y',  '7–8 yrs',   '122–128', '27'],
+                        ['10Y', '9–10 yrs',  '134–140', '29'],
+                        ['12Y', '11–12 yrs', '146–152', '31'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {sizeGuideType === 'womens' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>All measurements are in inches. Choose the size closest to your bust measurement.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['Size', 'Bust (in)', 'Waist (in)', 'Hip (in)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['XS',  '31–32', '24–25', '33–34'],
+                        ['S',   '33–34', '26–27', '35–36'],
+                        ['M',   '35–36', '28–29', '37–38'],
+                        ['L',   '37–38', '30–31', '39–40'],
+                        ['XL',  '39–40', '32–33', '41–42'],
+                        ['XXL', '41–42', '34–35', '43–44'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {sizeGuideType === 'mens' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>All measurements are in inches. Choose the size closest to your chest measurement.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['Size', 'Chest (in)', 'Waist (in)', 'Hip (in)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['S',   '36–38', '30–32', '38–40'],
+                        ['M',   '38–40', '32–34', '40–42'],
+                        ['L',   '40–42', '34–36', '42–44'],
+                        ['XL',  '42–44', '36–38', '44–46'],
+                        ['XXL', '44–46', '38–40', '46–48'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              <p style={{ margin: '16px 0 0', fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
+                Sizes may vary slightly between styles. If you are between sizes, we recommend sizing up.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
