@@ -178,12 +178,6 @@ function CartContent() {
                 {t('checkout.buyNow')}
               </Link>
 
-              <Link
-                href="/contact"
-                className="block mt-3 text-center text-sm text-[#722F37] hover:underline transition-colors"
-              >
-                {t('cart.visitStore')}
-              </Link>
             </div>
           </div>
         </div>
