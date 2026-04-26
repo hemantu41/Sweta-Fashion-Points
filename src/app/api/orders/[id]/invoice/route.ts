@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import React from 'react';
 
-// GET /api/orders/[id]/invoice — returns GST invoice PDF
+// GET /api/orders/[id]/invoice — returns GST invoice PDF for an spf_orders record
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -10,68 +10,69 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Fetch order
+    // Fetch from spf_orders (the live order table)
     const { data: order, error } = await supabaseAdmin
-      .from('spf_payment_orders')
-      .select('id, order_number, status, items, total_amount, delivery_address, payment_method, created_at, seller_id')
+      .from('spf_orders')
+      .select(`
+        id, order_number, status, payment_method, subtotal, shipping_charge,
+        shipping_address, created_at, seller_id,
+        spf_order_items(product_name, quantity, unit_price, total_price, sku)
+      `)
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error || !order) {
-      const { data: orderByNum } = await supabaseAdmin
-        .from('spf_payment_orders')
-        .select('id, order_number, status, items, total_amount, delivery_address, payment_method, created_at, seller_id')
-        .eq('order_number', id)
-        .single();
-
-      if (!orderByNum) {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-      }
-      Object.assign(order || {}, orderByNum);
-      if (!order) {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-      }
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Fetch seller info if available
-    let sellerName = '';
+    // Fetch seller info
+    let sellerName    = 'Insta Fashion Points';
     let sellerAddress = '';
-    let sellerGstin = '';
-    if (order.seller_id) {
+    let sellerGstin   = '';
+
+    if ((order as any).seller_id) {
       const { data: seller } = await supabaseAdmin
         .from('spf_sellers')
-        .select('business_name, gstin, address')
-        .eq('id', order.seller_id)
-        .single();
+        .select('business_name, gstin, address_line1, address_line2, city, state, pincode')
+        .eq('id', (order as any).seller_id)
+        .maybeSingle();
+
       if (seller) {
-        sellerName = (seller.business_name as string) || '';
-        sellerGstin = (seller.gstin as string) || '';
-        sellerAddress = (seller.address as string) || '';
+        sellerName    = (seller as any).business_name || sellerName;
+        sellerGstin   = (seller as any).gstin        || '';
+        sellerAddress = [
+          (seller as any).address_line1,
+          (seller as any).address_line2,
+          (seller as any).city,
+          (seller as any).state,
+          (seller as any).pincode,
+        ].filter(Boolean).join(', ');
       }
     }
 
-    const addr = (order.delivery_address as Record<string, unknown>) || {};
-    const items = (order.items as Array<Record<string, unknown>>) || [];
+    const o     = order as any;
+    const addr  = o.shipping_address || {};
+    const items = (o.spf_order_items as any[]) || [];
 
     const invoiceOrder = {
-      order_id: (order.order_number as string) || order.id,
-      order_number: (order.order_number as string) || order.id,
-      customer_name: (addr.name as string) || 'Customer',
-      customer_mobile: (addr.mobile as string) || '',
-      pincode: (addr.pincode as string) || '',
-      district: (addr.city as string) || (addr.district as string) || '',
-      items: items.map((i: Record<string, unknown>) => ({
-        name: (i.name as string) || (i.product_name as string) || '',
-        quantity: Number(i.quantity) || 1,
-        price: Number(i.price) || 0,
-        size: (i.size as string) || '',
+      order_id:        o.order_number || o.id,
+      order_number:    o.order_number || o.id,
+      customer_name:   addr.name     || 'Customer',
+      customer_mobile: addr.phone    || addr.mobile || '',
+      pincode:         addr.pincode  || '',
+      district:        addr.city     || addr.district || '',
+      items: items.map((i: any) => ({
+        name:     i.product_name || '',
+        quantity: Number(i.quantity)   || 1,
+        price:    Number(i.unit_price) || 0,
+        size:     i.variant_details?.size || '',
       })),
-      total: Number(order.total_amount) || 0,
-      payment_mode: (order.payment_method as string) || 'cod',
-      created_at: order.created_at as string,
-      seller_name: sellerName,
+      total:          Number(o.subtotal) + Number(o.shipping_charge),
+      payment_mode:   o.payment_method || 'Prepaid',
+      created_at:     o.created_at,
+      seller_name:    sellerName,
       seller_address: sellerAddress,
-      seller_gstin: sellerGstin,
+      seller_gstin:   sellerGstin,
     };
 
     const { pdf } = await import('@react-pdf/renderer');
