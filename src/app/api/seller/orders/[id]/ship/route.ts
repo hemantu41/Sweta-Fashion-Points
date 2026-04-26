@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { createShipment, generateLabel, schedulePickup, addPickupLocation } from '@/lib/shiprocket';
-import { notifySellerPickupScheduled } from '@/lib/notifications/sellerNotify';
+import { createShipment, generateLabel, addPickupLocation } from '@/lib/shiprocket';
 
 // POST /api/seller/orders/[id]/ship
 // Called when seller enters package dimensions and clicks "Generate Label & Schedule Pickup"
@@ -205,35 +204,42 @@ export async function POST(
     // 5. Generate shipping label
     const labelResult = await generateLabel(shipmentResult.shipmentId!);
 
-    // 6. Schedule pickup (tomorrow)
-    const pickupResult = await schedulePickup(shipmentResult.shipmentId!);
+    // Pickup is scheduled separately when seller confirms "Packing Completed"
+    // (POST /api/orders/[id]/packing-status)
 
-    // 7. Save to spf_shipments
-    // Note: run the spf_shipments migration in Supabase before using this route.
-    const { data: savedShipment } = await supabaseAdmin
+    // 6. Save to spf_shipments
+    const { data: savedShipment, error: shipmentInsertErr } = await supabaseAdmin
       .from('spf_shipments')
       .insert({
-        order_id:           orderId,
-        seller_id:          sellerId,
-        shiprocket_order_id: shipmentResult.shiprocketOrderId,
-        shipment_id:        shipmentResult.shipmentId,
-        awb_number:         shipmentResult.awbNumber,
-        courier_name:       shipmentResult.courierName,
-        status:             'label_generated',
-        label_url:          labelResult.labelUrl ?? null,
-        label_generated_at: new Date().toISOString(),
-        weight_kg:          weight,
-        dimensions_cm:      `${length}x${breadth}x${height}`,
+        order_id:            orderId,
+        seller_id:           sellerId,
+        shiprocket_order_id: shipmentResult.shiprocketOrderId
+          ? Number(shipmentResult.shiprocketOrderId)
+          : null,
+        shipment_id:         shipmentResult.shipmentId
+          ? Number(shipmentResult.shipmentId)
+          : null,
+        awb_number:          shipmentResult.awbNumber,
+        courier_name:        shipmentResult.courierName,
+        status:              'label_generated',
+        label_url:           labelResult.labelUrl ?? null,
+        label_generated_at:  new Date().toISOString(),
+        weight_kg:           weight,
+        dimensions_cm:       `${length}x${breadth}x${height}`,
       })
       .select('id')
       .single();
 
-    // 8. Update order status in spf_orders
+    if (shipmentInsertErr) {
+      console.error('[Ship API] spf_shipments insert error:', shipmentInsertErr.message, shipmentInsertErr.details);
+    }
+
+    // 7. Update order status to LABEL_GENERATED (pickup scheduled after "Packing Completed")
     const now = new Date().toISOString();
     await supabaseAdmin
       .from('spf_orders')
       .update({
-        status:          'READY_TO_SHIP',
+        status:          'LABEL_GENERATED',
         awb_number:      shipmentResult.awbNumber   ?? null,
         courier_partner: shipmentResult.courierName ?? null,
         tracking_url:    `${process.env.NEXT_PUBLIC_SITE_URL || 'https://instafashionpoints.com'}/track/${shipmentResult.awbNumber}`,
@@ -244,10 +250,10 @@ export async function POST(
     await supabaseAdmin.from('spf_order_status_history').insert({
       order_id:    orderId,
       from_status: order.status,
-      to_status:   'READY_TO_SHIP',
+      to_status:   'LABEL_GENERATED',
       actor_type:  'SELLER',
       actor_id:    sellerId,
-      note:        `Label generated. Courier: ${shipmentResult.courierName}. AWB: ${shipmentResult.awbNumber}`,
+      note:        `Shipping label generated. Courier: ${shipmentResult.courierName}. AWB: ${shipmentResult.awbNumber}. Awaiting packing confirmation.`,
     });
 
     // 9. Add initial tracking entry
@@ -259,16 +265,12 @@ export async function POST(
       });
     }
 
-    // 10. Email seller about scheduled pickup — fire-and-forget
-    void notifySellerPickupScheduled(orderId);
-
     return NextResponse.json({
       success: true,
       data: {
         awbNumber:   shipmentResult.awbNumber,
         courierName: shipmentResult.courierName,
         labelUrl:    labelResult.labelUrl,
-        pickupDate:  (pickupResult as any).pickupDate ?? null,
         trackingUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://instafashionpoints.com'}/track/${shipmentResult.awbNumber}`,
       },
     });

@@ -569,6 +569,118 @@ export async function notifyCustomerNewOrder(orderId: string): Promise<void> {
   }
 }
 
+/**
+ * Notify the customer when the seller manually rejects their order.
+ */
+export async function notifyCustomerOrderRejected(
+  customerEmail: string,
+  orderNumber:   string,
+  reason:        string,
+  isPrepaid:     boolean,
+  orderTotal:    number,
+): Promise<void> {
+  try {
+    const refundNote = isPrepaid
+      ? `<p style="color:${C.text};font-size:14px;">A <strong>full refund of ₹${orderTotal.toLocaleString('en-IN')}</strong> has been initiated and will be credited to your original payment method within 5–7 business days.</p>`
+      : `<p style="color:${C.text};font-size:14px;">Since this was a COD order, no amount was charged. Your order has been cancelled with no cost to you.</p>`;
+
+    const body = `
+      <p style="color:${C.text};font-size:15px;">We're sorry for the inconvenience.</p>
+      <p style="color:${C.text};font-size:14px;">
+        Your order <strong>#${orderNumber}</strong> has been rejected by the seller.
+      </p>
+      <div style="background:${C.dangerBg};border-left:4px solid ${C.danger};padding:12px 16px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:13px;font-weight:600;color:${C.danger};">Reason from seller:</p>
+        <p style="margin:4px 0 0;font-size:13px;color:${C.text};">${reason}</p>
+      </div>
+      ${refundNote}
+      ${ctaButton('Shop Again →', process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com', C.maroon)}
+      <p style="font-size:12px;color:${C.muted};text-align:center;">
+        Questions? Contact <a href="mailto:support@instafashionpoints.com" style="color:${C.maroon};">support@instafashionpoints.com</a>
+      </p>`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Order #${orderNumber} Rejected — ${isPrepaid ? 'Refund Initiated' : 'No Charges'}`,
+      html:    emailShell(C.danger, 'Order Rejected', 'We apologise for the inconvenience', body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerOrderRejected error:', err?.message);
+  }
+}
+
+/**
+ * Notify the seller when a customer cancels their own order.
+ */
+export async function notifySellerCustomerCancelled(
+  sellerEmail:   string,
+  businessName:  string,
+  orderNumber:   string,
+  reason:        string,
+): Promise<void> {
+  try {
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello <strong>${businessName}</strong>,</p>
+      <p style="color:${C.text};font-size:14px;">
+        Order <strong>#${orderNumber}</strong> has been cancelled by the customer.
+      </p>
+      <div style="background:${C.warnBg};border-left:4px solid ${C.warn};padding:12px 16px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:13px;font-weight:600;color:${C.warn};">Customer's reason:</p>
+        <p style="margin:4px 0 0;font-size:13px;color:${C.text};">${reason}</p>
+      </div>
+      <p style="color:${C.text};font-size:13px;">Please do not pack or ship this order. The item stock has been automatically restored.</p>
+      ${ctaButton('View Orders →', DASHBOARD_URL, C.maroon)}`;
+
+    await sendEmail({
+      to:      sellerEmail,
+      subject: `Customer Cancelled Order #${orderNumber}`,
+      html:    emailShell(C.warn, 'Order Cancelled by Customer', `Order #${orderNumber}`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifySellerCustomerCancelled error:', err?.message);
+  }
+}
+
+/**
+ * Notify the customer when they cancel their own order.
+ */
+export async function notifyCustomerSelfCancelled(
+  customerEmail: string,
+  orderNumber:   string,
+  reason:        string,
+  isPrepaid:     boolean,
+  orderTotal:    number,
+): Promise<void> {
+  try {
+    const refundNote = isPrepaid
+      ? `<p style="color:${C.text};font-size:14px;">A <strong>full refund of ₹${orderTotal.toLocaleString('en-IN')}</strong> has been initiated and will be credited to your original payment method within 5–7 business days.</p>`
+      : `<p style="color:${C.text};font-size:14px;">Since this was a COD order, no amount was charged.</p>`;
+
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello,</p>
+      <p style="color:${C.text};font-size:14px;">
+        Your cancellation request for order <strong>#${orderNumber}</strong> has been confirmed.
+      </p>
+      <div style="background:${C.altBg};border-radius:8px;padding:16px;margin:20px 0;">
+        <p style="margin:0;font-size:13px;color:${C.muted};">Cancellation reason</p>
+        <p style="margin:4px 0 0;font-size:13px;color:${C.text};">${reason}</p>
+      </div>
+      ${refundNote}
+      ${ctaButton('Continue Shopping →', process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com', C.maroon)}
+      <p style="font-size:12px;color:${C.muted};text-align:center;">
+        Questions? Contact <a href="mailto:support@instafashionpoints.com" style="color:${C.maroon};">support@instafashionpoints.com</a>
+      </p>`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Cancellation Confirmed — Order #${orderNumber}`,
+      html:    emailShell(C.maroon, 'Cancellation Confirmed', `Order #${orderNumber}`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerSelfCancelled error:', err?.message);
+  }
+}
+
 // Support ticket notifications have been moved to:
 // src/lib/notifications/ticketNotify.ts
 // (separate file — no Prisma dependency)

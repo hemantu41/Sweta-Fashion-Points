@@ -36,10 +36,11 @@ interface Filters {
 /* ─── Constants ──────────────────────────────────────────────────────────────── */
 
 const TABS = [
-  { key: 'pending',       label: 'Pending',        statuses: ['captured'] },
-  { key: 'ready',         label: 'Ready to Ship',  statuses: ['accepted', 'packed'] },
-  { key: 'shipped',       label: 'Shipped',         statuses: ['shipped', 'out_for_delivery', 'delivered'] },
-  { key: 'cancelled',     label: 'Cancelled',       statuses: ['cancelled', 'returned'] },
+  { key: 'pending',   label: 'Pending',        statuses: ['captured', 'SELLER_NOTIFIED', 'CONFIRMED'] },
+  { key: 'ready',     label: 'Ready to Ship',  statuses: ['accepted', 'ACCEPTED', 'packed', 'PACKED', 'LABEL_GENERATED', 'label_generated'] },
+  { key: 'shipped',   label: 'Shipped',        statuses: ['shipped', 'SHIPPED', 'out_for_delivery', 'OUT_FOR_DELIVERY', 'delivered', 'DELIVERED', 'READY_TO_SHIP', 'ready_to_ship'] },
+  { key: 'delivered', label: 'Delivered',      statuses: ['delivered', 'DELIVERED'] },
+  { key: 'cancelled', label: 'Cancelled',      statuses: ['cancelled', 'CANCELLED', 'returned', 'RETURNED', 'rejected', 'REJECTED'] },
 ];
 
 const DEFAULT_FILTERS: Filters = {
@@ -391,7 +392,7 @@ function ShipModal({
                 Generating…
               </>
             ) : (
-              <><Package size={14} /> Generate Label &amp; Schedule Pickup</>
+              <><Package size={14} /> Generate Shipping Label</>
             )}
           </button>
         </div>
@@ -415,9 +416,9 @@ function ShipSuccess({ awb, courierName, labelUrl, onClose }: {
           <CheckCircle size={32} className="text-[#16A34A]" />
         </div>
         <h3 style={{ fontFamily: 'var(--font-playfair)', color: '#5B1A3A', fontSize: 20, fontWeight: 700 }}>
-          Shipment Created!
+          Label Generated!
         </h3>
-        <p className="text-sm text-[#6B7280] mt-2">Pickup has been scheduled for tomorrow.</p>
+        <p className="text-sm text-[#6B7280] mt-2">Pack the item and click "Packing Completed" to schedule courier pickup.</p>
         <div className="mt-4 p-3 bg-[#FAF8F5] rounded-xl text-left space-y-1">
           <p className="text-xs text-[#6B7280]">AWB Number</p>
           <p className="text-sm font-bold text-[#5B1A3A]">{awb}</p>
@@ -436,6 +437,88 @@ function ShipSuccess({ awb, courierName, labelUrl, onClose }: {
             className="flex-1 py-2.5 text-sm font-semibold border rounded-xl text-[#374151] hover:bg-[#F5EDF2]"
             style={{ borderColor: '#E5DDD5' }}>
             Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Reject Modal ───────────────────────────────────────────────────────────── */
+
+function RejectModal({
+  order,
+  sellerId,
+  onClose,
+  onSuccess,
+}: {
+  order: Order;
+  sellerId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState('');
+
+  async function handleReject() {
+    if (!reason.trim()) { setError('Please provide a rejection reason.'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected', sellerId, reason: reason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reject order');
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl w-full max-w-md" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5DDD5]">
+          <div>
+            <h3 style={{ fontFamily: 'var(--font-playfair)', color: '#C62828', fontSize: 18, fontWeight: 700 }}>Reject Order</h3>
+            <p className="text-xs text-[#6B7280] mt-0.5">#{order.order_number}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-50"><X size={16} className="text-[#6B7280]" /></button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            The customer will be notified with your reason. This action cannot be undone.
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#374151] mb-1.5">
+              Reason for rejection <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={4}
+              value={reason}
+              onChange={e => { setReason(e.target.value); setError(''); }}
+              placeholder="e.g. Item out of stock, pricing error, unable to fulfil..."
+              className="w-full px-3 py-2.5 text-sm border border-[#E5DDD5] rounded-lg focus:outline-none focus:border-red-400 resize-none"
+            />
+            {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+          </div>
+        </div>
+        <div className="px-6 pb-5 flex gap-3">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-sm font-semibold border rounded-xl text-[#374151] hover:bg-[#F5EDF2]"
+            style={{ borderColor: '#E5DDD5' }}>Cancel</button>
+          <button onClick={handleReject} disabled={loading || !reason.trim()}
+            className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl disabled:opacity-60 flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(135deg,#C62828,#E53935)' }}>
+            {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+            {loading ? 'Rejecting…' : 'Reject Order'}
           </button>
         </div>
       </div>
@@ -479,9 +562,10 @@ function OrdersTable({
   orders: Order[];
   activeTab: string;
   sellerId: string;
-  onAction: (type: 'accepted' | 'ship', order: Order) => void;
+  onAction: (type: 'accepted' | 'rejected' | 'ship' | 'packed', order: Order) => void;
 }) {
-  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  const [busyIds,    setBusyIds]    = useState<Set<string>>(new Set());
+  const [packingIds, setPackingIds] = useState<Set<string>>(new Set());
 
   async function acceptOrder(order: Order) {
     setBusyIds(s => new Set(s).add(order.id));
@@ -497,12 +581,28 @@ function OrdersTable({
     }
   }
 
+  async function confirmPacking(order: Order) {
+    setPackingIds(s => new Set(s).add(order.id));
+    try {
+      const res = await fetch(`/api/orders/${order.id}/packing-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId }),
+      });
+      if (res.ok) onAction('packed', order);
+    } finally {
+      setPackingIds(s => { const n = new Set(s); n.delete(order.id); return n; });
+    }
+  }
+
+  const isDeliveredTab = activeTab === 'delivered';
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[#E5DDD5]" style={{ background: '#FAF7F4' }}>
-            {['Order ID', 'Product', 'Customer City', 'Order Date', 'SLA / Dispatch', 'Amount', 'Action'].map((h, i) => (
+            {['Order ID', 'Product', 'Customer City', isDeliveredTab ? 'Delivered On' : 'Order Date', 'SLA / Status', 'Amount', 'Action'].map((h, i) => (
               <th key={h}
                 className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] ${i === 2 ? 'hidden lg:table-cell' : i === 3 ? 'hidden md:table-cell' : ''}`}>
                 {h}
@@ -512,14 +612,26 @@ function OrdersTable({
         </thead>
         <tbody>
           {orders.map((order, idx) => {
-            const sla = getSla(order.packing_deadline || order.sla_deadline);
-            const slaCfg = sla ? SLA_CFG[sla] : null;
-            const firstItem = order.items?.[0];
+            const sla         = getSla(order.packing_deadline || order.sla_deadline);
+            const slaCfg      = sla ? SLA_CFG[sla] : null;
+            const firstItem   = order.items?.[0];
             const productName = firstItem?.name || firstItem?.product_name || 'Product';
-            const extraItems = (order.items?.length || 1) - 1;
-            const city = order.delivery_address?.city || order.delivery_address?.district || '—';
-            const statusStr = order.status || 'captured';
-            const busy = busyIds.has(order.id);
+            const extraItems  = (order.items?.length || 1) - 1;
+            const city        = order.delivery_address?.city || order.delivery_address?.district || '—';
+            const statusStr   = (order.status || 'captured').toUpperCase();
+            const busy        = busyIds.has(order.id);
+            const packing     = packingIds.has(order.id);
+
+            const isPending       = ['CAPTURED', 'SELLER_NOTIFIED', 'CONFIRMED'].includes(statusStr);
+            const isAccepted      = statusStr === 'ACCEPTED';
+            const isLabelGen      = statusStr === 'LABEL_GENERATED';
+            const isPacked        = ['PACKED', 'READY_TO_SHIP'].includes(statusStr);
+            const isInTransit     = ['SHIPPED', 'OUT_FOR_DELIVERY'].includes(statusStr);
+            const isDelivered     = statusStr === 'DELIVERED';
+            const isCancelledOrRejected = ['CANCELLED', 'RETURNED', 'REJECTED'].includes(statusStr);
+
+            // AWB — can live on order or first item
+            const awb = (order as any).awb_number || order.items?.[0]?.awb || '';
 
             return (
               <tr key={order.id}
@@ -529,6 +641,9 @@ function OrdersTable({
                 {/* Order ID */}
                 <td className="px-4 py-3">
                   <span className="font-semibold text-[#5B1A3A] text-xs">#{order.order_number}</span>
+                  {statusStr === 'REJECTED' && (
+                    <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-red-100 text-red-700">Rejected</span>
+                  )}
                 </td>
 
                 {/* Product */}
@@ -544,18 +659,38 @@ function OrdersTable({
                   <span className="text-xs text-[#6B7280]">{city}</span>
                 </td>
 
-                {/* Order Date */}
+                {/* Date column — delivery date for Delivered tab, order date otherwise */}
                 <td className="px-4 py-3 hidden md:table-cell">
-                  <span className="text-xs text-[#6B7280]">{fmtTime(order.created_at)}</span>
+                  <span className="text-xs text-[#6B7280]">
+                    {isDeliveredTab
+                      ? fmtTime((order as any).delivered_at || order.shipped_at)
+                      : fmtTime(order.created_at)}
+                  </span>
                 </td>
 
-                {/* SLA / Dispatch date */}
+                {/* SLA / Status */}
                 <td className="px-4 py-3">
-                  {slaCfg ? (
+                  {slaCfg && !isInTransit && !isDelivered && !isCancelledOrRejected && !isPacked ? (
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
                       style={{ background: slaCfg.bg, color: slaCfg.color }}>
                       <span className="w-1.5 h-1.5 rounded-full" style={{ background: slaCfg.color }} />
                       {slaCfg.label}
+                    </span>
+                  ) : isLabelGen ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700">
+                      Label Ready
+                    </span>
+                  ) : isPacked ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700">
+                      Pickup Scheduled
+                    </span>
+                  ) : isInTransit ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700">
+                      {statusStr === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : 'Shipped'}
+                    </span>
+                  ) : isDelivered ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700">
+                      Delivered
                     </span>
                   ) : order.shipped_at ? (
                     <span className="text-xs text-[#6B7280]">{fmtDate(order.shipped_at)}</span>
@@ -573,29 +708,55 @@ function OrdersTable({
 
                 {/* Action */}
                 <td className="px-4 py-3">
-                  {statusStr === 'captured' && (
-                    <button onClick={() => acceptOrder(order)} disabled={busy}
-                      className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg disabled:opacity-60 whitespace-nowrap"
-                      style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
-                      {busy ? '…' : 'Accept Order'}
-                    </button>
+                  {isPending && (
+                    <div className="flex flex-col gap-1.5">
+                      <button onClick={() => acceptOrder(order)} disabled={busy}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg disabled:opacity-60 whitespace-nowrap"
+                        style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+                        {busy ? '…' : 'Accept'}
+                      </button>
+                      <button onClick={() => onAction('rejected', order)} disabled={busy}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap"
+                        style={{ background: 'linear-gradient(135deg,#C62828,#E53935)' }}>
+                        Reject
+                      </button>
+                    </div>
                   )}
-                  {(statusStr === 'accepted' || statusStr === 'packed') && (
+                  {isAccepted && (
                     <button onClick={() => onAction('ship', order)}
                       className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap flex items-center gap-1"
                       style={{ background: 'linear-gradient(135deg,#C49A3C,#A07830)' }}>
                       <Package size={11} /> Generate Label
                     </button>
                   )}
-                  {['shipped', 'out_for_delivery', 'delivered'].includes(statusStr) && (
-                    <a
-                      href={`/track/${order.items?.[0]?.awb || ''}`}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#5B1A3A] hover:underline"
-                    >
-                      <Eye size={12} /> Track
+                  {isLabelGen && (
+                    <div className="flex flex-col gap-1.5">
+                      <button onClick={() => onAction('ship', order)}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap flex items-center gap-1"
+                        style={{ background: 'linear-gradient(135deg,#C49A3C,#A07830)' }}>
+                        <Package size={11} /> Download Label
+                      </button>
+                      <button onClick={() => confirmPacking(order)} disabled={packing}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap flex items-center gap-1 disabled:opacity-60"
+                        style={{ background: 'linear-gradient(135deg,#16A34A,#15803D)' }}>
+                        {packing
+                          ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          : <CheckCircle size={11} />}
+                        {packing ? 'Scheduling…' : 'Packing Completed'}
+                      </button>
+                    </div>
+                  )}
+                  {isPacked && (
+                    <span className="text-[11px] text-amber-600 font-semibold">Awaiting Pickup</span>
+                  )}
+                  {(isInTransit || isDelivered) && awb && (
+                    <a href={`/track/${awb}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap"
+                      style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+                      <Truck size={11} /> Live Track
                     </a>
                   )}
-                  {['cancelled', 'returned'].includes(statusStr) && (
+                  {isCancelledOrRejected && (
                     <span className="text-[11px] text-[#6B7280]">—</span>
                   )}
                 </td>
@@ -621,6 +782,9 @@ export default function OrdersPage() {
   const [shipOrder, setShipOrder] = useState<Order | null>(null);
   const [shipSuccess, setShipSuccess] = useState<{ awb: string; courierName: string; labelUrl?: string } | null>(null);
 
+  // Reject modal state
+  const [rejectOrder, setRejectOrder] = useState<Order | null>(null);
+
   const fetchOrders = useCallback(() => {
     if (!user?.sellerId) return;
     setLoading(true);
@@ -632,11 +796,17 @@ export default function OrdersPage() {
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  function handleAction(type: 'accepted' | 'ship', order: Order) {
+  function handleAction(type: 'accepted' | 'rejected' | 'ship' | 'packed', order: Order) {
     if (type === 'accepted') {
       // Optimistically update and move to Ready to Ship
-      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'accepted' } : o));
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'ACCEPTED' } : o));
       setActiveTab('ready');
+    } else if (type === 'rejected') {
+      setRejectOrder(order);
+    } else if (type === 'packed') {
+      // Optimistically update — PACKED shows in Shipped tab
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'PACKED' } : o));
+      setActiveTab('shipped');
     } else {
       setShipOrder(order);
     }
@@ -645,22 +815,32 @@ export default function OrdersPage() {
   function handleShipSuccess(awb: string, courierName: string, labelUrl?: string) {
     setShipOrder(null);
     setShipSuccess({ awb, courierName, labelUrl });
-    // Refresh orders after ship
+    // Refresh orders — LABEL_GENERATED stays in the Ready to Ship tab
     fetchOrders();
-    setActiveTab('shipped');
   }
 
-  /* Tab counts */
+  function handleRejectSuccess() {
+    if (!rejectOrder) return;
+    setOrders(prev => prev.map(o => o.id === rejectOrder.id ? { ...o, status: 'REJECTED' } : o));
+    setRejectOrder(null);
+    setActiveTab('cancelled');
+  }
+
+  /* Tab counts — case-insensitive */
+  function matchesTab(orderStatus: string | undefined, tab: typeof TABS[number]) {
+    const s = (orderStatus || 'captured').toLowerCase();
+    return tab.statuses.some(ts => ts.toLowerCase() === s);
+  }
+
   const tabCounts = TABS.reduce<Record<string, number>>((acc, tab) => {
-    acc[tab.key] = orders.filter(o => tab.statuses.includes(o.status || 'captured')).length;
+    acc[tab.key] = orders.filter(o => matchesTab(o.status, tab)).length;
     return acc;
   }, {});
 
   /* Filter logic */
   const filtered = orders.filter(o => {
-    const s = o.status || 'captured';
     const tab = TABS.find(t => t.key === activeTab);
-    if (!tab?.statuses.includes(s)) return false;
+    if (!tab || !matchesTab(o.status, tab)) return false;
 
     if (filters.period) {
       const d = new Date(o.created_at);
@@ -740,6 +920,16 @@ export default function OrdersPage() {
           courierName={shipSuccess.courierName}
           labelUrl={shipSuccess.labelUrl}
           onClose={() => setShipSuccess(null)}
+        />
+      )}
+
+      {/* Reject modal */}
+      {rejectOrder && (
+        <RejectModal
+          order={rejectOrder}
+          sellerId={user?.sellerId || ''}
+          onClose={() => setRejectOrder(null)}
+          onSuccess={handleRejectSuccess}
         />
       )}
 
