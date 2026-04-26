@@ -42,13 +42,23 @@ export default function CheckoutPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // ── Shipping / serviceability ─────────────────────────────────────────────
+  interface SellerBreakdownItem {
+    sellerId:     string;
+    sellerName:   string;
+    shippingCost: number;
+    deliveryDays: string;
+    courierName:  string;
+    serviceable:  boolean;
+    noPincode?:   boolean;
+  }
   interface ShippingInfo {
-    serviceable:    boolean;
-    shippingCost:   number;
-    deliveryDays:   string;
-    courierName:    string;
-    isFreeShipping?: boolean;
-    error?:         string;
+    serviceable:      boolean;
+    shippingCost:     number;
+    deliveryDays:     string;
+    courierName:      string;
+    isFreeShipping?:  boolean;
+    sellerBreakdown?: SellerBreakdownItem[];
+    error?:           string;
   }
   const [shippingInfo,    setShippingInfo]    = useState<ShippingInfo | null>(null);
   const [shippingLoading, setShippingLoading] = useState(false);
@@ -94,26 +104,22 @@ export default function CheckoutPage() {
       setShippingInfo(null);
       return;
     }
-    // 0.5 kg per unit — default clothing weight; refine per-product later
-    const totalWeight = Math.max(0.1, items.reduce((s, i) => s + i.quantity * 0.5, 0));
-
-    // Build seller IDs ordered by dominant seller (highest total quantity first)
-    const sellerQty: Record<string, number> = {};
+    // Build per-seller weight map (0.5 kg per unit, default clothing weight)
+    const sellerWeightMap: Record<string, number> = {};
     items.forEach(i => {
       const sid = i.product.sellerId;
-      if (sid) sellerQty[sid] = (sellerQty[sid] || 0) + i.quantity;
+      if (sid) sellerWeightMap[sid] = (sellerWeightMap[sid] || 0) + i.quantity * 0.5;
     });
-    const sellerIds = Object.entries(sellerQty)
-      .sort((a, b) => b[1] - a[1])
-      .map(([id]) => id)
+    const sellerWeights = Object.entries(sellerWeightMap)
+      .map(([sid, w]) => `${sid}:${Math.max(0.1, w).toFixed(2)}`)
       .join(',');
 
     setShippingLoading(true);
     setShippingInfo(null);
     fetch(
       `/api/checkout/shipping-cost?deliveryPincode=${addr.pincode}` +
-      `&weight=${totalWeight.toFixed(2)}&declaredValue=${totalPrice}` +
-      (sellerIds ? `&sellerIds=${sellerIds}` : '')
+      `&declaredValue=${totalPrice}` +
+      (sellerWeights ? `&sellerWeights=${sellerWeights}` : '')
     )
       .then(r => r.json())
       .then((data: ShippingInfo) => setShippingInfo(data))
@@ -657,18 +663,26 @@ export default function CheckoutPage() {
                       <span className="font-medium text-[#2D2D2D]">₹{totalPrice.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#6B6B6B]">
-                        Delivery
-                        {shippingInfo?.courierName && !shippingInfo.isFreeShipping && (
-                          <span className="ml-1 text-xs text-[#9CA3AF]">({shippingInfo.courierName})</span>
-                        )}
-                      </span>
+                      <span className="text-[#6B6B6B]">Delivery</span>
                       {shippingCost === 0 ? (
                         <span className="text-green-600 font-semibold">Free</span>
                       ) : (
                         <span className="font-medium text-[#2D2D2D]">₹{shippingCost.toLocaleString('en-IN')}</span>
                       )}
                     </div>
+                    {/* Per-seller breakdown */}
+                    {shippingInfo?.sellerBreakdown && shippingInfo.sellerBreakdown.map(s => (
+                      <div key={s.sellerId} className="flex justify-between text-xs pl-2 border-l-2 border-[#E8E2D9]">
+                        <span className="text-[#9CA3AF] truncate mr-2">
+                          {s.sellerName}
+                          {s.noPincode && <span className="ml-1 text-amber-500">(address not set)</span>}
+                          {s.courierName && !s.noPincode && <span className="text-[#C0C0C0]"> · {s.courierName}</span>}
+                        </span>
+                        <span className="text-[#6B6B6B] flex-shrink-0">
+                          {s.shippingCost === 0 ? 'Free' : `₹${s.shippingCost.toLocaleString('en-IN')}`}
+                        </span>
+                      </div>
+                    ))}
                     {shippingInfo?.deliveryDays && (
                       <div className="flex justify-between text-xs text-[#9CA3AF]">
                         <span>Estimated delivery</span>
@@ -725,6 +739,18 @@ export default function CheckoutPage() {
                     <span className="font-medium text-[#2D2D2D]">₹{shippingCost.toLocaleString('en-IN')}</span>
                   )}
                 </div>
+                {/* Per-seller breakdown in sidebar */}
+                {!shippingLoading && shippingInfo?.sellerBreakdown && shippingInfo.sellerBreakdown.map(s => (
+                  <div key={s.sellerId} className="flex justify-between text-xs pl-2 border-l-2 border-[#E8E2D9]">
+                    <span className="text-[#9CA3AF] truncate mr-1">
+                      {s.sellerName}
+                      {s.noPincode && <span className="text-amber-500"> ⚠</span>}
+                    </span>
+                    <span className="text-[#9CA3AF] flex-shrink-0">
+                      {s.shippingCost === 0 ? 'Free' : `₹${s.shippingCost.toLocaleString('en-IN')}`}
+                    </span>
+                  </div>
+                ))}
                 {shippingInfo?.deliveryDays && !shippingLoading && (
                   <div className="flex justify-between text-xs text-[#9CA3AF]">
                     <span>Est. delivery</span>

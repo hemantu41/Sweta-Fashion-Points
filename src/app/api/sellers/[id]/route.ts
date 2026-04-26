@@ -324,6 +324,7 @@ export async function PUT(
     if (updateData.city !== undefined) updateFields.city = updateData.city;
     if (updateData.state !== undefined) updateFields.state = updateData.state;
     if (updateData.pincode !== undefined) updateFields.pincode = updateData.pincode;
+    if (updateData.pickupPincode !== undefined) updateFields.pickup_pincode = updateData.pickupPincode;
     if (updateData.bankAccountName !== undefined) updateFields.bank_account_name = updateData.bankAccountName;
     if (updateData.bankAccountNumber !== undefined) updateFields.bank_account_number = updateData.bankAccountNumber;
     if (updateData.bankIfsc !== undefined) updateFields.bank_ifsc = updateData.bankIfsc;

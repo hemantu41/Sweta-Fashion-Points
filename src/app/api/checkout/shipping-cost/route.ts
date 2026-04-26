@@ -5,72 +5,95 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 /**
  * GET /api/checkout/shipping-cost
  *
- * Checks Shiprocket serviceability for a customer's delivery pincode and
- * returns the recommended courier's rate and estimated delivery days.
- *
- * The pickup pincode is resolved in this order:
- *   1. Seller's pickup_pincode / pincode from spf_sellers (via sellerIds param)
- *   2. SHIPROCKET_PICKUP_PINCODE env var (platform fallback)
- *
- * For multi-seller carts, the dominant seller (highest total quantity) is used
- * as the pickup location to avoid double-charging the customer.
+ * Calculates Shiprocket shipping cost for each seller in the cart and returns
+ * a per-seller breakdown plus the total charge.
  *
  * Query params:
  *   deliveryPincode  — customer's 6-digit pincode (required)
- *   weight           — total shipment weight in kg (default: 0.5)
  *   declaredValue    — order value in ₹ for insurance (optional)
- *   sellerIds        — comma-separated seller UUIDs from cart items (optional)
+ *   sellerWeights    — comma-separated "sellerId:weightKg" pairs
+ *                      e.g. "uuid1:0.5,uuid2:1.00"
+ *                      If omitted, falls back to single-call with env-var pincode.
  *
- * Graceful fallback: if Shiprocket is not configured (no env vars set),
- * returns serviceable=true with shippingCost=0 so checkout still works
- * in dev/staging environments.
+ * Response (single-seller or fallback):
+ *   { serviceable, shippingCost, deliveryDays, courierName, isFreeShipping? }
+ *
+ * Response (multi-seller):
+ *   { serviceable, shippingCost, deliveryDays, courierName, sellerBreakdown[] }
+ *   sellerBreakdown item:
+ *     { sellerId, sellerName, shippingCost, deliveryDays, courierName,
+ *       serviceable, noPincode? }
+ *
+ * Graceful fallback: Shiprocket env vars missing → shippingCost: 0 so checkout
+ * still works in dev/staging.
  */
+
+interface SellerRecord {
+  id: string;
+  business_name: string;
+  pincode: string | null;
+  pickup_pincode: string | null;
+}
+
+interface SellerBreakdownItem {
+  sellerId: string;
+  sellerName: string;
+  shippingCost: number;
+  deliveryDays: string;
+  courierName: string;
+  serviceable: boolean;
+  noPincode?: boolean;
+}
+
+async function getShippingForSeller(
+  pickupPincode: string,
+  deliveryPincode: string,
+  weight: number,
+  declaredValue?: number,
+): Promise<{ shippingCost: number; deliveryDays: string; courierName: string; serviceable: boolean }> {
+  const result = await shiprocketService.getServiceability({
+    pickup_postcode:   pickupPincode,
+    delivery_postcode: deliveryPincode,
+    weight,
+    cod:           0,
+    declared_value: declaredValue,
+  });
+
+  if (!result.success || !result.couriers || result.couriers.length === 0) {
+    return { shippingCost: 0, deliveryDays: '3–5', courierName: '', serviceable: false };
+  }
+
+  const best = result.recommendedCourier ?? result.couriers[0];
+  return {
+    shippingCost: Math.round(best.freight_charge ?? best.rate ?? 0),
+    deliveryDays: String(best.estimated_delivery_days ?? '3–5').replace('-', '–'),
+    courierName:  best.courier_name,
+    serviceable:  true,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
-  const deliveryPincode = searchParams.get('deliveryPincode') ?? '';
-  const weight         = Math.max(0.1, parseFloat(searchParams.get('weight')        ?? '0.5'));
-  const declaredValue  = parseFloat(searchParams.get('declaredValue') ?? '0') || undefined;
-  const sellerIdsParam = searchParams.get('sellerIds') ?? '';
+  const deliveryPincode  = searchParams.get('deliveryPincode') ?? '';
+  const declaredValue    = parseFloat(searchParams.get('declaredValue') ?? '0') || undefined;
+  const sellerWeightsRaw = searchParams.get('sellerWeights') ?? '';
 
-  // Basic pincode validation
   if (!/^\d{6}$/.test(deliveryPincode)) {
     return NextResponse.json({ error: 'Invalid pincode' }, { status: 400 });
   }
 
-  // ── Resolve pickup pincode from seller(s) ────────────────────────────────
-  let pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE ?? '';
-
-  if (sellerIdsParam) {
-    const sellerIds = sellerIdsParam
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    if (sellerIds.length > 0) {
-      try {
-        const { data: sellers } = await supabaseAdmin
-          .from('spf_sellers')
-          .select('id, pickup_pincode, pincode')
-          .in('id', sellerIds);
-
-        if (sellers && sellers.length > 0) {
-          // For multi-seller carts, use the first seller that has a pincode.
-          // sellerIds is ordered by dominant seller (most items) from the frontend.
-          const dominant = sellers.find(s => s.pickup_pincode || s.pincode);
-          if (dominant) {
-            pickupPincode = dominant.pickup_pincode || dominant.pincode || pickupPincode;
-          }
-        }
-      } catch (err) {
-        console.error('[checkout/shipping-cost] Failed to fetch seller pincode:', err);
-        // continue with env-var fallback
-      }
-    }
+  // ── Parse sellerWeights ───────────────────────────────────────────────────
+  const sellerWeightPairs: { sellerId: string; weight: number }[] = [];
+  if (sellerWeightsRaw) {
+    sellerWeightsRaw.split(',').forEach(pair => {
+      const [sid, w] = pair.trim().split(':');
+      if (sid) sellerWeightPairs.push({ sellerId: sid, weight: Math.max(0.1, parseFloat(w) || 0.5) });
+    });
   }
 
-  // ── Graceful fallback when Shiprocket is not configured ───────────────────
-  if (!pickupPincode || !process.env.SHIPROCKET_EMAIL) {
+  // ── Graceful fallback: Shiprocket not configured ──────────────────────────
+  if (!process.env.SHIPROCKET_EMAIL) {
     return NextResponse.json({
       serviceable:    true,
       shippingCost:   0,
@@ -80,58 +103,91 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  try {
-    const result = await shiprocketService.getServiceability({
-      pickup_postcode:   pickupPincode,
-      delivery_postcode: deliveryPincode,
-      weight,
-      cod:           0,           // prepaid only at checkout
-      declared_value: declaredValue,
-    });
-
-    // No couriers available → pincode not serviceable
-    if (!result.success || !result.couriers || result.couriers.length === 0) {
-      return NextResponse.json({
-        serviceable: false,
-        error:       'Delivery is not available to this pincode yet.',
-      });
+  // ── No seller info → single call with env-var pincode ────────────────────
+  if (sellerWeightPairs.length === 0) {
+    const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE ?? '';
+    if (!pickupPincode) {
+      return NextResponse.json({ serviceable: true, shippingCost: 0, deliveryDays: '3–5', courierName: 'Standard Delivery', isFreeShipping: true });
     }
-
-    // Use recommendedCourier (cheapest with best SLA) returned by Shiprocket
-    const best = result.recommendedCourier ?? result.couriers[0];
-
-    // Parse estimated days — Shiprocket returns strings like "2-3" or "3"
-    const rawDays   = String(best.estimated_delivery_days ?? '3–5').replace('-', '–');
-    const freightAmt = Math.round(best.freight_charge ?? best.rate ?? 0);
-
-    return NextResponse.json({
-      serviceable:  true,
-      shippingCost: freightAmt,
-      deliveryDays: rawDays,
-      courierName:  best.courier_name,
-    });
-
-  } catch (error: any) {
-    console.error('[checkout/shipping-cost]', error.message);
-
-    // If credentials are wrong/missing, degrade gracefully
-    if (
-      error.message?.includes('not configured') ||
-      error.message?.includes('credentials') ||
-      error.message?.includes('auth')
-    ) {
-      return NextResponse.json({
-        serviceable:    true,
-        shippingCost:   0,
-        deliveryDays:   '3–5',
-        courierName:    'Standard Delivery',
-        isFreeShipping: true,
-      });
+    try {
+      const totalWeight = 0.5;
+      const res = await getShippingForSeller(pickupPincode, deliveryPincode, totalWeight, declaredValue);
+      if (!res.serviceable) return NextResponse.json({ serviceable: false, error: 'Delivery is not available to this pincode yet.' });
+      return NextResponse.json({ serviceable: true, shippingCost: res.shippingCost, deliveryDays: res.deliveryDays, courierName: res.courierName });
+    } catch (err: any) {
+      console.error('[checkout/shipping-cost]', err.message);
+      return NextResponse.json({ serviceable: true, shippingCost: 0, deliveryDays: '3–5', courierName: 'Standard Delivery', isFreeShipping: true });
     }
-
-    return NextResponse.json(
-      { serviceable: false, error: 'Unable to check delivery at the moment. Please try again.' },
-      { status: 500 }
-    );
   }
+
+  // ── Fetch seller records ──────────────────────────────────────────────────
+  const sellerIds = sellerWeightPairs.map(p => p.sellerId);
+  let sellers: SellerRecord[] = [];
+  try {
+    const { data } = await supabaseAdmin
+      .from('spf_sellers')
+      .select('id, business_name, pincode, pickup_pincode')
+      .in('id', sellerIds);
+    sellers = (data as SellerRecord[]) ?? [];
+  } catch (err) {
+    console.error('[checkout/shipping-cost] Failed to fetch sellers:', err);
+  }
+
+  const sellerMap = new Map<string, SellerRecord>(sellers.map(s => [s.id, s]));
+  const platformPincode = process.env.SHIPROCKET_PICKUP_PINCODE ?? '';
+
+  // ── Per-seller Shiprocket calls (parallel) ────────────────────────────────
+  const breakdown: SellerBreakdownItem[] = await Promise.all(
+    sellerWeightPairs.map(async ({ sellerId, weight }) => {
+      const seller = sellerMap.get(sellerId);
+      const sellerName = seller?.business_name ?? 'Seller';
+      const pickupPincode = seller?.pickup_pincode || seller?.pincode || platformPincode;
+
+      if (!pickupPincode) {
+        return {
+          sellerId, sellerName,
+          shippingCost: 0, deliveryDays: '3–5', courierName: '',
+          serviceable: true, noPincode: true,
+        };
+      }
+
+      try {
+        const res = await getShippingForSeller(pickupPincode, deliveryPincode, weight, declaredValue);
+        return { sellerId, sellerName, ...res };
+      } catch {
+        return {
+          sellerId, sellerName,
+          shippingCost: 0, deliveryDays: '3–5', courierName: 'Standard',
+          serviceable: true,
+        };
+      }
+    })
+  );
+
+  const totalShippingCost = breakdown.reduce((s, b) => s + b.shippingCost, 0);
+  const anyNotServiceable = breakdown.some(b => !b.serviceable);
+
+  if (anyNotServiceable) {
+    return NextResponse.json({
+      serviceable: false,
+      error: 'Delivery is not available to this pincode from one or more sellers.',
+      sellerBreakdown: breakdown,
+    });
+  }
+
+  // Overall delivery days = max across sellers
+  const maxDays = breakdown.reduce((max, b) => {
+    const d = parseInt(String(b.deliveryDays).split('–')[1] || b.deliveryDays) || 5;
+    return d > max ? d : max;
+  }, 0);
+
+  const dominantCourier = breakdown.find(b => b.courierName)?.courierName ?? 'Standard Delivery';
+
+  return NextResponse.json({
+    serviceable:      true,
+    shippingCost:     totalShippingCost,
+    deliveryDays:     String(maxDays),
+    courierName:      dominantCourier,
+    sellerBreakdown:  breakdown.length > 1 ? breakdown : undefined,
+  });
 }

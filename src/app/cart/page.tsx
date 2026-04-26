@@ -160,10 +160,7 @@ function CartContent() {
                   <span className="text-[#6B6B6B]">{t('cart.subtotal')}</span>
                   <span className="font-medium text-[#2D2D2D]">₹{totalPrice.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#6B6B6B]">{t('cart.delivery')}</span>
-                  <span className="text-green-600 font-semibold">{t('cart.freePickup')}</span>
-                </div>
+                <p className="text-xs text-[#9CA3AF]">Delivery charges calculated at checkout</p>
               </div>
 
               <div className="border-t border-[#E8E2D9] mt-4 pt-4 flex justify-between items-center">
