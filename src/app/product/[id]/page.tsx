@@ -151,8 +151,9 @@ export default function ProductDetailPage() {
   // Interactions
   const [selectedSize,   setSelectedSize]   = useState<string | null>(null);
   const [wishlisted,     setWishlisted]     = useState(false);
-  const [sizeGuideOpen,  setSizeGuideOpen]  = useState(false);
-  const [imgHovered,     setImgHovered]     = useState(false);
+  const [sizeGuideOpen,       setSizeGuideOpen]       = useState(false);
+  const [imgHovered,          setImgHovered]          = useState(false);
+  const [productInfoExpanded, setProductInfoExpanded] = useState(false);
 
   // Add-to-cart feedback
   const [cartMsg, setCartMsg] = useState('');
@@ -714,65 +715,135 @@ export default function ProductDetailPage() {
 
             {/* ── Product Info (seller-provided details) ────────────────── */}
             {(() => {
-              const fields = [
-                { k: 'Category',  v: [product.category, product.subCategory].filter(Boolean).join(' / ') },
-                { k: 'Fabric',    v: product.fabric   },
-                { k: 'Fit',       v: product.fit      },
-                { k: 'Collar',    v: product.collar   },
-                { k: 'Pattern',   v: product.pattern  },
-                { k: 'Occasion',  v: product.occasion },
+              const allFields = [
+                { k: 'Category', v: [product.category, product.subCategory].filter(Boolean).join(' / ') },
+                { k: 'Fabric',   v: product.fabric   },
+                { k: 'Fit',      v: product.fit      },
+                { k: 'Collar',   v: product.collar   },
+                { k: 'Pattern',  v: product.pattern  },
+                { k: 'Occasion', v: product.occasion },
               ].filter(f => f.v);
-              if (fields.length === 0 && !product.description) return null;
+
+              // Always-visible: first 2 fields (Category + Fabric if present)
+              const visibleFields = allFields.slice(0, 2);
+              const hiddenFields  = allFields.slice(2);
+              const hasMore = hiddenFields.length > 0 || !!product.description;
+
+              if (allFields.length === 0 && !product.description) return null;
+
+              const rowStyle = (last: boolean): React.CSSProperties => ({
+                borderBottom: last ? 'none' : `1px solid ${C.subtle}`,
+              });
+
               return (
                 <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#fff', overflow: 'hidden', marginTop: 16 }}>
-                  {/* Header */}
-                  <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+                  {/* Header — clickable to toggle */}
+                  <button
+                    onClick={() => setProductInfoExpanded(v => !v)}
+                    style={{
+                      width: '100%', padding: '12px 16px',
+                      borderBottom: `1px solid ${C.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'none', border: 'none', borderBottom: `1px solid ${C.border}`,
+                      cursor: 'pointer', textAlign: 'left',
+                    }}
+                  >
                     <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Product Info</span>
-                  </div>
+                    <svg
+                      width={16} height={16} viewBox="0 0 24 24"
+                      fill="none" stroke={C.muted} strokeWidth={2}
+                      strokeLinecap="round" strokeLinejoin="round"
+                      style={{ transition: 'transform 250ms ease', transform: productInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
 
-                  {/* Key-value rows */}
-                  {fields.length > 0 && (
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <tbody>
-                        {fields.map(({ k, v }) => (
-                          <tr key={k} style={{ borderBottom: `1px solid ${C.subtle}` }}>
-                            <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
-                            <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  {/* Always-visible rows */}
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <tbody>
+                      {visibleFields.map(({ k, v }, i) => (
+                        <tr key={k} style={rowStyle(!productInfoExpanded && i === visibleFields.length - 1)}>
+                          <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
+                          <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Expandable content */}
+                  {productInfoExpanded && (
+                    <>
+                      {/* Remaining attribute rows */}
+                      {hiddenFields.length > 0 && (
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <tbody>
+                            {hiddenFields.map(({ k, v }) => (
+                              <tr key={k} style={{ borderBottom: `1px solid ${C.subtle}` }}>
+                                <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
+                                <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+
+                      {/* Description */}
+                      {product.description && (
+                        <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.subtle}` }}>
+                          <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.7 }}>{product.description}</p>
+                        </div>
+                      )}
+
+                      {/* Care & Wash */}
+                      <div style={{ borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ padding: '10px 16px 4px' }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Care &amp; Wash</span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <tbody>
+                            {[
+                              { k: 'Wash',              v: 'Hand wash or gentle machine wash' },
+                              { k: 'Dry',               v: 'Shade dry only' },
+                              { k: 'Iron',              v: 'Medium heat · Do not iron on print' },
+                              { k: 'Bleach',            v: 'Do not bleach' },
+                              { k: 'Country of origin', v: 'India' },
+                            ].map(({ k, v }, i, arr) => (
+                              <tr key={k} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${C.subtle}` : 'none' }}>
+                                <td style={{ fontSize: 13, color: C.muted, padding: '9px 16px', width: '44%' }}>{k}</td>
+                                <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 16px' }}>{v}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
 
-                  {/* Description */}
-                  {product.description && (
-                    <div style={{ padding: '12px 16px', borderTop: fields.length > 0 ? `1px solid ${C.subtle}` : undefined }}>
-                      <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.7 }}>{product.description}</p>
-                    </div>
+                  {/* Expand / collapse toggle row */}
+                  {hasMore && (
+                    <button
+                      onClick={() => setProductInfoExpanded(v => !v)}
+                      style={{
+                        width: '100%', padding: '10px 16px',
+                        borderTop: `1px solid ${C.border}`,
+                        background: C.cream, border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        fontSize: 13, fontWeight: 600, color: C.maroon,
+                      }}
+                    >
+                      {productInfoExpanded ? 'Show less' : 'View all details'}
+                      <svg
+                        width={14} height={14} viewBox="0 0 24 24"
+                        fill="none" stroke={C.maroon} strokeWidth={2.2}
+                        strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transition: 'transform 250ms ease', transform: productInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
                   )}
-
-                  {/* Care & Wash */}
-                  <div style={{ borderTop: `1px solid ${C.border}` }}>
-                    <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Care &amp; Wash</span>
-                    </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <tbody>
-                        {[
-                          { k: 'Wash',              v: 'Hand wash or gentle machine wash' },
-                          { k: 'Dry',               v: 'Shade dry only' },
-                          { k: 'Iron',              v: 'Medium heat · Do not iron on print' },
-                          { k: 'Bleach',            v: 'Do not bleach' },
-                          { k: 'Country of origin', v: 'India' },
-                        ].map(({ k, v }) => (
-                          <tr key={k} style={{ borderBottom: `1px solid ${C.subtle}` }}>
-                            <td style={{ fontSize: 13, color: C.muted, padding: '9px 16px', width: '44%' }}>{k}</td>
-                            <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 16px' }}>{v}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
                 </div>
               );
             })()}
