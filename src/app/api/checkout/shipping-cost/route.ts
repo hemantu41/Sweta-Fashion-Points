@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { shiprocketService } from '@/lib/shiprocket';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 /**
  * GET /api/checkout/shipping-cost
@@ -7,13 +8,18 @@ import { shiprocketService } from '@/lib/shiprocket';
  * Checks Shiprocket serviceability for a customer's delivery pincode and
  * returns the recommended courier's rate and estimated delivery days.
  *
- * The platform pickup pincode is read from the SHIPROCKET_PICKUP_PINCODE
- * environment variable and never exposed to the browser.
+ * The pickup pincode is resolved in this order:
+ *   1. Seller's pickup_pincode / pincode from spf_sellers (via sellerIds param)
+ *   2. SHIPROCKET_PICKUP_PINCODE env var (platform fallback)
+ *
+ * For multi-seller carts, the dominant seller (highest total quantity) is used
+ * as the pickup location to avoid double-charging the customer.
  *
  * Query params:
  *   deliveryPincode  — customer's 6-digit pincode (required)
  *   weight           — total shipment weight in kg (default: 0.5)
  *   declaredValue    — order value in ₹ for insurance (optional)
+ *   sellerIds        — comma-separated seller UUIDs from cart items (optional)
  *
  * Graceful fallback: if Shiprocket is not configured (no env vars set),
  * returns serviceable=true with shippingCost=0 so checkout still works
@@ -25,13 +31,43 @@ export async function GET(request: NextRequest) {
   const deliveryPincode = searchParams.get('deliveryPincode') ?? '';
   const weight         = Math.max(0.1, parseFloat(searchParams.get('weight')        ?? '0.5'));
   const declaredValue  = parseFloat(searchParams.get('declaredValue') ?? '0') || undefined;
+  const sellerIdsParam = searchParams.get('sellerIds') ?? '';
 
   // Basic pincode validation
   if (!/^\d{6}$/.test(deliveryPincode)) {
     return NextResponse.json({ error: 'Invalid pincode' }, { status: 400 });
   }
 
-  const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE ?? '';
+  // ── Resolve pickup pincode from seller(s) ────────────────────────────────
+  let pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE ?? '';
+
+  if (sellerIdsParam) {
+    const sellerIds = sellerIdsParam
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    if (sellerIds.length > 0) {
+      try {
+        const { data: sellers } = await supabaseAdmin
+          .from('spf_sellers')
+          .select('id, pickup_pincode, pincode')
+          .in('id', sellerIds);
+
+        if (sellers && sellers.length > 0) {
+          // For multi-seller carts, use the first seller that has a pincode.
+          // sellerIds is ordered by dominant seller (most items) from the frontend.
+          const dominant = sellers.find(s => s.pickup_pincode || s.pincode);
+          if (dominant) {
+            pickupPincode = dominant.pickup_pincode || dominant.pincode || pickupPincode;
+          }
+        }
+      } catch (err) {
+        console.error('[checkout/shipping-cost] Failed to fetch seller pincode:', err);
+        // continue with env-var fallback
+      }
+    }
+  }
 
   // ── Graceful fallback when Shiprocket is not configured ───────────────────
   if (!pickupPincode || !process.env.SHIPROCKET_EMAIL) {

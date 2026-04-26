@@ -96,11 +96,24 @@ export default function CheckoutPage() {
     }
     // 0.5 kg per unit — default clothing weight; refine per-product later
     const totalWeight = Math.max(0.1, items.reduce((s, i) => s + i.quantity * 0.5, 0));
+
+    // Build seller IDs ordered by dominant seller (highest total quantity first)
+    const sellerQty: Record<string, number> = {};
+    items.forEach(i => {
+      const sid = i.product.sellerId;
+      if (sid) sellerQty[sid] = (sellerQty[sid] || 0) + i.quantity;
+    });
+    const sellerIds = Object.entries(sellerQty)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id)
+      .join(',');
+
     setShippingLoading(true);
     setShippingInfo(null);
     fetch(
       `/api/checkout/shipping-cost?deliveryPincode=${addr.pincode}` +
-      `&weight=${totalWeight.toFixed(2)}&declaredValue=${totalPrice}`
+      `&weight=${totalWeight.toFixed(2)}&declaredValue=${totalPrice}` +
+      (sellerIds ? `&sellerIds=${sellerIds}` : '')
     )
       .then(r => r.json())
       .then((data: ShippingInfo) => setShippingInfo(data))
