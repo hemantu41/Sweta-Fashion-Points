@@ -40,6 +40,18 @@ export default function CheckoutPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  // ── Shipping / serviceability ─────────────────────────────────────────────
+  interface ShippingInfo {
+    serviceable:    boolean;
+    shippingCost:   number;
+    deliveryDays:   string;
+    courierName:    string;
+    isFreeShipping?: boolean;
+    error?:         string;
+  }
+  const [shippingInfo,    setShippingInfo]    = useState<ShippingInfo | null>(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -74,6 +86,32 @@ export default function CheckoutPage() {
       setShowAddForm(true);
     }
   }, [isFetching, addresses.length]);
+
+  // ── Fire serviceability check whenever selected address changes ───────────
+  useEffect(() => {
+    const addr = addresses.find(a => a.id === selectedAddressId);
+    if (!addr?.pincode || !/^\d{6}$/.test(addr.pincode)) {
+      setShippingInfo(null);
+      return;
+    }
+    // 0.5 kg per unit — default clothing weight; refine per-product later
+    const totalWeight = Math.max(0.1, items.reduce((s, i) => s + i.quantity * 0.5, 0));
+    setShippingLoading(true);
+    setShippingInfo(null);
+    fetch(
+      `/api/checkout/shipping-cost?deliveryPincode=${addr.pincode}` +
+      `&weight=${totalWeight.toFixed(2)}&declaredValue=${totalPrice}`
+    )
+      .then(r => r.json())
+      .then((data: ShippingInfo) => setShippingInfo(data))
+      .catch(() => setShippingInfo({ serviceable: true, shippingCost: 0, deliveryDays: '3–5', courierName: 'Standard', isFreeShipping: true }))
+      .finally(() => setShippingLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAddressId, addresses]);
+
+  // ── Derived totals ────────────────────────────────────────────────────────
+  const shippingCost = shippingInfo?.serviceable ? (shippingInfo.shippingCost ?? 0) : 0;
+  const grandTotal   = totalPrice + shippingCost;
 
   const fetchAddresses = async () => {
     try {
@@ -137,8 +175,8 @@ export default function CheckoutPage() {
     sessionStorage.setItem('sweta_order', JSON.stringify({
       items: items.map(i => ({
         id: i.product.id,
-        productId: i.product.productId || i.product.id, // Use productId if available, fallback to id
-        sellerId: i.product.sellerId || null, // Include sellerId for earnings calculation
+        productId: i.product.productId || i.product.id,
+        sellerId: i.product.sellerId || null,
         name: i.product.name,
         nameHi: i.product.nameHi,
         image: i.product.mainImage || i.product.image,
@@ -150,6 +188,10 @@ export default function CheckoutPage() {
       address: selected,
       paymentMethod: selectedPayment,
       totalPrice,
+      shippingCost,
+      grandTotal,
+      courierName:  shippingInfo?.courierName  ?? 'Standard',
+      deliveryDays: shippingInfo?.deliveryDays ?? '3–5',
     }));
     router.push(`/payment?method=${selectedPayment}`);
   };
@@ -343,12 +385,63 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
+                {/* ── Shipping serviceability status ── */}
+                {selectedAddressId && (
+                  <div className="mt-4">
+                    {shippingLoading ? (
+                      <div className="flex items-center gap-3 p-4 bg-white border border-[#E8E2D9] rounded-xl text-sm text-[#6B6B6B]">
+                        <svg className="w-4 h-4 animate-spin text-[#722F37] flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                        Checking delivery availability…
+                      </div>
+                    ) : shippingInfo && !shippingInfo.serviceable ? (
+                      <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+                        <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-semibold text-red-700">Delivery not available</p>
+                          <p className="text-xs text-red-600 mt-0.5">Sorry, we don&apos;t deliver to this pincode yet. Please try a different address.</p>
+                        </div>
+                      </div>
+                    ) : shippingInfo?.serviceable ? (
+                      <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+                        <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-green-800">
+                            {shippingInfo.isFreeShipping
+                              ? `Free delivery · ${shippingInfo.deliveryDays} business days`
+                              : `${shippingInfo.courierName} · ${shippingInfo.deliveryDays} business days`}
+                          </p>
+                          <p className="text-xs text-green-700 mt-0.5">
+                            {shippingInfo.isFreeShipping
+                              ? 'Shipping is on us!'
+                              : `Shipping charge: ₹${shippingInfo.shippingCost.toLocaleString('en-IN')}`}
+                          </p>
+                        </div>
+                        {!shippingInfo.isFreeShipping && (
+                          <span className="text-sm font-bold text-green-800 flex-shrink-0">
+                            ₹{shippingInfo.shippingCost.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                        {shippingInfo.isFreeShipping && (
+                          <span className="text-sm font-bold text-green-700 flex-shrink-0">FREE</span>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
                 <button
                   onClick={() => setStep(2)}
-                  disabled={!selectedAddressId}
-                  className="mt-6 w-full py-3.5 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300 disabled:opacity-50 disabled:shadow-none"
+                  disabled={!selectedAddressId || shippingLoading || shippingInfo?.serviceable === false}
+                  className="mt-6 w-full py-3.5 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
                 >
-                  Continue
+                  {shippingLoading ? 'Checking delivery…' : 'Continue'}
                 </button>
               </div>
             )}
@@ -551,13 +644,28 @@ export default function CheckoutPage() {
                       <span className="font-medium text-[#2D2D2D]">₹{totalPrice.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#6B6B6B]">Delivery</span>
-                      <span className="text-green-600 font-semibold">Free</span>
+                      <span className="text-[#6B6B6B]">
+                        Delivery
+                        {shippingInfo?.courierName && !shippingInfo.isFreeShipping && (
+                          <span className="ml-1 text-xs text-[#9CA3AF]">({shippingInfo.courierName})</span>
+                        )}
+                      </span>
+                      {shippingCost === 0 ? (
+                        <span className="text-green-600 font-semibold">Free</span>
+                      ) : (
+                        <span className="font-medium text-[#2D2D2D]">₹{shippingCost.toLocaleString('en-IN')}</span>
+                      )}
                     </div>
+                    {shippingInfo?.deliveryDays && (
+                      <div className="flex justify-between text-xs text-[#9CA3AF]">
+                        <span>Estimated delivery</span>
+                        <span>{shippingInfo.deliveryDays} business days</span>
+                      </div>
+                    )}
                   </div>
                   <div className="border-t border-[#E8E2D9] mt-3 pt-3 flex justify-between">
                     <span className="font-bold text-[#2D2D2D]">Total</span>
-                    <span className="text-lg font-bold text-[#722F37]">₹{totalPrice.toLocaleString('en-IN')}</span>
+                    <span className="text-lg font-bold text-[#722F37]">₹{grandTotal.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -567,7 +675,7 @@ export default function CheckoutPage() {
                     onClick={handleConfirm}
                     className="flex-1 py-3.5 bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#722F37]/25 transition-all duration-300"
                   >
-                    Confirm & Pay ₹{totalPrice.toLocaleString('en-IN')}
+                    Confirm &amp; Pay ₹{grandTotal.toLocaleString('en-IN')}
                   </button>
                 </div>
               </div>
@@ -594,14 +702,26 @@ export default function CheckoutPage() {
                   <span className="text-[#6B6B6B]">Subtotal</span>
                   <span className="font-medium text-[#2D2D2D]">₹{totalPrice.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-[#6B6B6B]">Delivery</span>
-                  <span className="text-green-600 font-semibold">Free</span>
+                  {shippingLoading ? (
+                    <span className="text-xs text-[#9CA3AF]">Checking…</span>
+                  ) : shippingCost === 0 ? (
+                    <span className="text-green-600 font-semibold">Free</span>
+                  ) : (
+                    <span className="font-medium text-[#2D2D2D]">₹{shippingCost.toLocaleString('en-IN')}</span>
+                  )}
                 </div>
+                {shippingInfo?.deliveryDays && !shippingLoading && (
+                  <div className="flex justify-between text-xs text-[#9CA3AF]">
+                    <span>Est. delivery</span>
+                    <span>{shippingInfo.deliveryDays} business days</span>
+                  </div>
+                )}
               </div>
               <div className="border-t border-[#E8E2D9] mt-3 pt-3 flex justify-between">
                 <span className="font-bold text-[#2D2D2D]">Total</span>
-                <span className="font-bold text-[#722F37]">₹{totalPrice.toLocaleString('en-IN')}</span>
+                <span className="font-bold text-[#722F37]">₹{grandTotal.toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>
