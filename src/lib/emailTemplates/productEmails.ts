@@ -137,10 +137,10 @@ export function productSubmittedEmail(data: ProductSubmittedData): { subject: st
     <div style="background:${BRAND.colors.altBg};border-radius:10px;padding:18px;border:1px solid rgba(196,154,60,0.15);margin-bottom:20px;">
       <div style="font-size:13px;font-weight:700;color:${BRAND.colors.maroon};margin-bottom:8px;">What happens next?</div>
       <div style="font-size:13px;color:${BRAND.colors.text};line-height:1.7;">
-        ✓ Our team reviews your product photos, description, and pricing<br/>
-        ✓ If everything looks good, your product goes live within 24 hours<br/>
-        ✓ If changes are needed, we'll send you specific feedback<br/>
-        ✓ You'll receive a notification once the review is complete
+         Our team reviews your product photos, description, and pricing<br/>
+         If everything looks good, your product goes live within 24 hours<br/>
+         If changes are needed, we'll send you specific feedback<br/>
+         You'll receive a notification once the review is complete
       </div>
     </div>
 
@@ -153,7 +153,7 @@ export function productSubmittedEmail(data: ProductSubmittedData): { subject: st
     ${ctaButton('View Product Status', BRAND.dashboardUrl + '/products')}
 
     <div style="border-top:1px solid ${BRAND.colors.border};padding-top:16px;">
-      <div style="font-size:12px;color:${BRAND.colors.gold};font-weight:700;margin-bottom:8px;">💡 Tip: Products with videos get 3x more orders!</div>
+      <div style="font-size:12px;color:${BRAND.colors.gold};font-weight:700;margin-bottom:8px;"> Tip: Products with videos get 3x more orders!</div>
       <div style="font-size:12px;color:${BRAND.colors.muted};line-height:1.6;">
         If you haven't added a product video yet, you can edit your listing and add a 15–30 second video to boost visibility.
       </div>
@@ -206,7 +206,7 @@ export function productApprovedEmail(data: ProductApprovedData): { subject: stri
       ${infoRow('Product ID', data.productId)}
       <div style="display:flex;justify-content:space-between;padding:10px 0;">
         <span style="font-size:13px;color:${BRAND.colors.muted};">Status</span>
-        ${statusBadge('✅ Live', BRAND.colors.success, BRAND.colors.successBg)}
+        ${statusBadge(' Live', BRAND.colors.success, BRAND.colors.successBg)}
       </div>
     </div>
 
@@ -217,7 +217,7 @@ export function productApprovedEmail(data: ProductApprovedData): { subject: stri
     </div>` : ''}
 
     <div style="background:${BRAND.colors.altBg};border-radius:10px;padding:18px;border:1px solid rgba(196,154,60,0.15);margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:700;color:${BRAND.colors.maroon};margin-bottom:8px;">🚀 Boost your sales</div>
+      <div style="font-size:13px;font-weight:700;color:${BRAND.colors.maroon};margin-bottom:8px;"> Boost your sales</div>
       <div style="font-size:13px;color:${BRAND.colors.text};line-height:1.7;">
         • Share your product link on WhatsApp groups<br/>
         • Add more products to increase your store visibility<br/>
@@ -239,7 +239,7 @@ export function productApprovedEmail(data: ProductApprovedData): { subject: stri
     html: emailLayout(
       `linear-gradient(135deg,${BRAND.colors.success},#43A047)`,
       '#A5D6A7',
-      'Your Product is Now Live! 🎉',
+      'Your Product is Now Live! ',
       'आपका प्रोडक्ट अब लाइव है!',
       bodyContent,
     ),

@@ -135,7 +135,7 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
       // 2. All product listings (also used for inventory & pricing)
       supabaseAdmin
         .from('spf_productdetails')
-        .select('id, product_id, name, category, sub_category, price, original_price, price_range, stock_quantity, approval_status, is_active, main_image, images, colors, sizes, created_at, updated_at')
+        .select('id, product_id, name, category, sub_category, l1_category_id, l2_category_id, l3_category_id, price, original_price, price_range, stock_quantity, approval_status, is_active, main_image, images, colors, sizes, created_at, updated_at')
         .eq('seller_id', sellerId)
         .is('deleted_at', null),
 
@@ -207,10 +207,10 @@ export async function migrateSellerDataToCache(sellerId: string): Promise<void> 
       sellerCacheSet(sellerId, 'reviews',   reviewsRes.data || []),
     ]);
 
-    console.log(`[SellerCache] ✅ Migrated 7 keys for seller ${sellerId} (TTL: ${SELLER_CACHE_TTL}s)`);
+    console.log(`[SellerCache]  Migrated 7 keys for seller ${sellerId} (TTL: ${SELLER_CACHE_TTL}s)`);
   } catch (err) {
     // Never block login — fail silently
-    console.error(`[SellerCache] ❌ Migration failed for seller ${sellerId}:`, err);
+    console.error(`[SellerCache]  Migration failed for seller ${sellerId}:`, err);
   }
 }
 

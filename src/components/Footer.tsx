@@ -122,7 +122,7 @@ export default function Footer() {
                 >
                   <span className="w-1 h-1 rounded-full bg-[#C49A3C] flex-shrink-0" />
                   {language === 'hi' ? 'विक्रेता बनें' : 'Become a Seller'}
-                  <span className="text-xs">✨</span>
+                  <span className="text-xs"></span>
                 </Link>
               </li>
             </ul>

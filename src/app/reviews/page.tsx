@@ -48,11 +48,11 @@ export default function PublicReviewsPage() {
 
   const starFilters: { key: StarFilter; label: string }[] = [
     { key: 'all', label: 'All' },
-    { key: '5', label: '5★' },
-    { key: '4', label: '4★' },
-    { key: '3', label: '3★' },
-    { key: '2', label: '2★' },
-    { key: '1', label: '1★' },
+    { key: '5', label: '5' },
+    { key: '4', label: '4' },
+    { key: '3', label: '3' },
+    { key: '2', label: '2' },
+    { key: '1', label: '1' },
   ];
 
   return (
@@ -107,7 +107,7 @@ export default function PublicReviewsPage() {
           </div>
         ) : reviews.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-10 text-center">
-            <div className="text-4xl mb-3">⭐</div>
+            <div className="text-4xl mb-3"></div>
             <p className="text-sm font-medium text-gray-600">No reviews yet</p>
             <p className="text-xs text-gray-400 mt-1">Be the first to share your experience!</p>
           </div>

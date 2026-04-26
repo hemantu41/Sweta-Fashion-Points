@@ -93,10 +93,10 @@ export default function WhyChooseUs() {
                 {/* Icon Circle */}
                 <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/40 flex items-center justify-center mb-4 transform group-hover:scale-110 transition-transform duration-300">
                   <div className="text-2xl">
-                    {index === 0 && '✨'}
-                    {index === 1 && '💰'}
-                    {index === 2 && '🎁'}
-                    {index === 3 && '💖'}
+                    {index === 0 && ''}
+                    {index === 1 && ''}
+                    {index === 2 && ''}
+                    {index === 3 && ''}
                   </div>
                 </div>
 
@@ -125,7 +125,7 @@ export default function WhyChooseUs() {
           <div className="inline-flex items-center gap-8 px-8 py-4 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-[#E8E2D9]">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-[#722F37]/10 flex items-center justify-center">
-                <span className="text-2xl">⭐</span>
+                <span className="text-2xl"></span>
               </div>
               <div className="text-left">
                 <p className="text-2xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>5000+</p>
@@ -137,7 +137,7 @@ export default function WhyChooseUs() {
 
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-[#722F37]/10 flex items-center justify-center">
-                <span className="text-2xl">📦</span>
+                <span className="text-2xl"></span>
               </div>
               <div className="text-left">
                 <p className="text-2xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>10+</p>
@@ -149,7 +149,7 @@ export default function WhyChooseUs() {
 
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-[#722F37]/10 flex items-center justify-center">
-                <span className="text-2xl">🏆</span>
+                <span className="text-2xl"></span>
               </div>
               <div className="text-left">
                 <p className="text-2xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>100%</p>

@@ -4,6 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+// ─── Image URL helper ─────────────────────────────────────────────────────────
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
+}
+
 // ─── Seeded mock helpers (consistent per product, no real reviews table yet) ──
 function seededVal(id: string, salt: number): number {
   let h = salt;
@@ -98,13 +106,8 @@ export default function ProductCard({ product }: { product: Product }) {
   // Rating breakdown — real data preferred, mock fallback
   const breakdown = product.rating_breakdown?.breakdown ?? mockBreakdown(product.id);
 
-  const stock = product.stockQuantity ?? 999;
-  const dealBadge: 'few_left' | 'hot_deal' | null =
-    stock <= 5     ? 'few_left' :
-    discount >= 60 ? 'hot_deal' :
-                     null;
-
-  const discountColor = discount >= 50 ? '#16A34A' : '#C49A3C';
+  // Discount always shown in bold dark green
+  const discountColor = '#16A34A';
 
   return (
     <Link
@@ -118,25 +121,33 @@ export default function ProductCard({ product }: { product: Product }) {
           background: '#fff',
           cursor: 'pointer',
           fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
-          boxShadow: hovered ? '0 4px 20px rgba(0,0,0,0.12)' : 'none',
-          transition: 'box-shadow 200ms ease',
+          border: hovered ? '1.5px solid #5B1A3A' : '1.5px solid #E8E0E4',
+          borderRadius: 10,
+          overflow: 'hidden',
+          boxShadow: hovered ? '0 8px 24px rgba(91,26,58,0.13)' : '0 1px 4px rgba(0,0,0,0.06)',
+          transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+          transition: 'border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease',
         }}
       >
 
-        {/* ── Image Block — Change 1: bg-white, no border/ring/outline ── */}
+        {/* ── Image Block ── */}
         <div className="relative aspect-[3/4] overflow-hidden bg-white">
           {imgSrc ? (
             <Image
-              src={imgSrc}
+              src={toImageUrl(imgSrc)}
               alt={product.name}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover"
               loading="lazy"
+              style={{
+                transform: hovered ? 'scale(1.06)' : 'scale(1)',
+                transition: 'transform 350ms ease',
+              }}
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#E5E7EB' }}>
-              👗
+              
             </div>
           )}
 
@@ -199,23 +210,6 @@ export default function ProductCard({ product }: { product: Product }) {
             )}
           </div>
 
-          {/* Deal / urgency badge */}
-          {dealBadge && (
-            <div style={{ marginBottom: 5 }}>
-              {dealBadge === 'few_left' && (
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#DC2626' }}>Only few left</span>
-              )}
-              {dealBadge === 'hot_deal' && (
-                <span style={{
-                  display: 'inline-block', fontSize: 11, fontWeight: 700,
-                  background: '#16A34A', color: '#fff',
-                  padding: '2px 8px', borderRadius: 4,
-                }}>
-                  Hot Deal
-                </span>
-              )}
-            </div>
-          )}
 
           {/* Change 3: Rating row with hover tooltip breakdown */}
           <div className="relative group/rating inline-flex items-center gap-1 pt-0.5 cursor-default">
@@ -238,7 +232,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 Overall Rating
               </p>
               <div className="flex items-center gap-1 mb-2">
-                <span style={{ color: '#5B1A3A', fontSize: 13 }}>★</span>
+                <span style={{ color: '#5B1A3A', fontSize: 13 }}></span>
                 <span className="text-[13px] font-bold text-gray-900"
                       style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
                   {rating.toFixed(1)}
@@ -256,7 +250,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 <div key={star} className="flex items-center gap-1.5 mb-1">
                   <span className="text-[11px] text-gray-500 w-5 text-right"
                         style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
-                    {star}★
+                    {star}
                   </span>
                   <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div
@@ -275,7 +269,7 @@ export default function ProductCard({ product }: { product: Product }) {
             {/* Visible rating badge */}
             <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold"
                  style={{ background: '#F5EDF2', color: '#5B1A3A', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
-              <span>★</span>
+              <span></span>
               <span>{rating.toFixed(1)}</span>
             </div>
             <span className="text-[11px] text-gray-400"

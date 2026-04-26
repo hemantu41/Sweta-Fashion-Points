@@ -1,41 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MultiImageUpload from '@/components/MultiImageUpload';
+import { useCategories, type CategoryNode } from '@/hooks/useCategories';
 
 // Product type tabs
 type ProductTab = 'clothes' | 'footwear' | 'beauty';
-
-// Define sub-categories for clothes
-// IMPORTANT: values must exactly match the category page tab filter strings
-// Mens page tabs:   shirts, tshirts, jeans, shorts
-// Womens page tabs: daily, party, ethnic, seasonal
-// Sarees page tabs: daily, party, wedding, festival
-// Kids page tabs:   0-3, 4-7, 8-12
-const clothesSubCategories = {
-  mens: ['shirts', 'tshirts', 'jeans', 'shorts'],
-  womens: ['daily', 'party', 'ethnic', 'seasonal'],
-  sarees: ['daily', 'party', 'wedding', 'festival'],
-  kids: ['0-3', '4-7', '8-12'],
-};
-
-// Define sub-categories for footwear
-const footwearSubCategories = {
-  mens: ['casual-shoes', 'formal-shoes', 'sports-shoes', 'sandals', 'slippers', 'boots'],
-  womens: ['casual-shoes', 'formal-shoes', 'heels', 'sandals', 'slippers', 'boots', 'flats'],
-  kids: ['casual-shoes', 'sports-shoes', 'sandals', 'slippers'],
-};
-
-// Define categories for beauty & makeup
-const beautyCategories = {
-  skincare: ['moisturizer', 'cleanser', 'serum', 'face-wash', 'sunscreen', 'face-mask', 'toner', 'scrub'],
-  makeup: ['lipstick', 'foundation', 'eyeliner', 'mascara', 'blush', 'eyeshadow', 'kajal', 'compact', 'lip-gloss'],
-  haircare: ['shampoo', 'conditioner', 'hair-oil', 'hair-serum', 'hair-mask', 'hair-gel'],
-  fragrance: ['perfume', 'deodorant', 'body-mist', 'body-spray'],
-};
 
 // Common fabric options for clothes
 const fabricOptions = ['Cotton', 'Silk', 'Polyester', 'Rayon', 'Linen', 'Denim', 'Georgette', 'Chiffon', 'Velvet', 'Wool', 'Blend'];
@@ -117,7 +90,31 @@ export default function SellerAddProductPage() {
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<ProductTab>('clothes');
 
-  // Common shop information
+  // ── Dynamic category tree (L1 → L2 → L3) ──────────────────────────────────
+  const { tree } = useCategories();
+
+  // Shared category selection state across all product tabs
+  const [catIds, setCatIds] = useState({ l1: '', l2: '', l3: '' });
+
+  const l1Nodes: CategoryNode[] = useMemo(() => tree, [tree]);
+
+  const l2Nodes: CategoryNode[] = useMemo(() => {
+    if (!catIds.l1) return [];
+    const l1 = l1Nodes.find(n => n.id === catIds.l1);
+    return l1?.children ?? [];
+  }, [l1Nodes, catIds.l1]);
+
+  const l3Nodes: CategoryNode[] = useMemo(() => {
+    if (!catIds.l2) return [];
+    const l2 = l2Nodes.find(n => n.id === catIds.l2);
+    return l2?.children ?? [];
+  }, [l2Nodes, catIds.l2]);
+
+  const l1Node = useMemo(() => l1Nodes.find(n => n.id === catIds.l1) ?? null, [l1Nodes, catIds.l1]);
+  const l2Node = useMemo(() => l2Nodes.find(n => n.id === catIds.l2) ?? null, [l2Nodes, catIds.l2]);
+  const l3Node = useMemo(() => l3Nodes.find(n => n.id === catIds.l3) ?? null, [l3Nodes, catIds.l3]);
+
+  // ── Common shop information
   const [shopInfo, setShopInfo] = useState({
     shopName: '',
     shopMobile: '',
@@ -180,75 +177,53 @@ export default function SellerAddProductPage() {
   const [newColor, setNewColor] = useState({ name: '', hex: '#000000' });
   const [newSize, setNewSize] = useState('');
 
-  // Auto-generate product ID for clothes
+  // Auto-generate product ID whenever L1/L2/L3 selection changes
   useEffect(() => {
-    if (activeTab === 'clothes' && clothesData.category && clothesData.subCategory) {
-      const randomNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
-      const generatedId = `${clothesData.category}_${clothesData.subCategory}_${randomNum}`;
-      setClothesData(prev => ({ ...prev, productId: generatedId }));
-    }
-  }, [activeTab, clothesData.category, clothesData.subCategory]);
+    if (!catIds.l1) return;
+    const l1Slug = l1Node?.slug || catIds.l1;
+    const l2Slug = l2Node?.slug || '';
+    const l3Slug = l3Node?.slug || '';
+    const parts = [l1Slug, l2Slug, l3Slug].filter(Boolean);
+    const randomNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
+    const generatedId = `${parts.join('_')}_${randomNum}`;
 
-  // Auto-generate product ID for footwear
-  useEffect(() => {
-    if (activeTab === 'footwear' && footwearData.category && footwearData.subCategory) {
-      const randomNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
-      const generatedId = `footwear_${footwearData.category}_${footwearData.subCategory}_${randomNum}`;
-      setFootwearData(prev => ({ ...prev, productId: generatedId }));
-    }
-  }, [activeTab, footwearData.category, footwearData.subCategory]);
-
-  // Auto-generate product ID for beauty
-  useEffect(() => {
-    if (activeTab === 'beauty' && beautyData.category && beautyData.subCategory) {
-      const randomNum = Date.now().toString().slice(-4) + Math.floor(Math.random() * 100);
-      const generatedId = `beauty_${beautyData.category}_${beautyData.subCategory}_${randomNum}`;
-      setBeautyData(prev => ({ ...prev, productId: generatedId }));
-    }
-  }, [activeTab, beautyData.category, beautyData.subCategory]);
+    setClothesData(prev => ({ ...prev, productId: generatedId }));
+    setFootwearData(prev => ({ ...prev, productId: generatedId }));
+    setBeautyData(prev => ({ ...prev, productId: generatedId }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catIds.l1, catIds.l2, catIds.l3]);
 
   // Auto-generate description for clothes (15 words)
   useEffect(() => {
-    if (activeTab === 'clothes' && clothesData.name && clothesData.category && clothesData.subCategory) {
-      const categoryName = clothesData.category === 'mens' ? "Men's" :
-                          clothesData.category === 'womens' ? "Women's" :
-                          clothesData.category === 'sarees' ? 'Sarees' : "Kids'";
-      const subCategoryName = clothesData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-      const autoDescription = `${clothesData.name} - ${categoryName} ${subCategoryName}. Premium quality fabric with excellent fit and comfort for all-day wear.`;
-
+    if (activeTab === 'clothes' && clothesData.name && l1Node) {
+      const cat = l1Node.name;
+      const sub = l2Node?.name || '';
+      const autoDescription = `${clothesData.name}${sub ? ` - ${cat} ${sub}` : ` - ${cat}`}. Premium quality fabric with excellent fit and comfort for all-day wear.`;
       setClothesData(prev => ({ ...prev, description: autoDescription }));
     }
-  }, [activeTab, clothesData.name, clothesData.category, clothesData.subCategory]);
+  }, [activeTab, clothesData.name, l1Node, l2Node]);
 
   // Auto-generate description for footwear (15 words)
   useEffect(() => {
-    if (activeTab === 'footwear' && footwearData.category && footwearData.subCategory) {
-      const categoryName = footwearData.category === 'mens' ? "Men's" :
-                          footwearData.category === 'womens' ? "Women's" : "Kids'";
-      const subCategoryName = footwearData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (activeTab === 'footwear' && l1Node) {
+      const cat = l1Node.name;
+      const sub = l2Node?.name || '';
       const brandName = footwearData.brand || 'Premium';
-
-      const autoDescription = `${brandName} ${categoryName} ${subCategoryName}. Comfortable and durable footwear with superior quality material and stylish design perfect for daily use.`;
-
-      // Auto-generate name from brand + category + subcategory
-      const autoName = `${brandName} ${categoryName} ${subCategoryName}`;
-
+      const autoDescription = `${brandName} ${cat}${sub ? ` ${sub}` : ''}. Comfortable and durable footwear with superior quality material and stylish design perfect for daily use.`;
+      const autoName = `${brandName} ${cat}${sub ? ` ${sub}` : ''}`;
       setFootwearData(prev => ({ ...prev, name: autoName, description: autoDescription }));
     }
-  }, [activeTab, footwearData.brand, footwearData.category, footwearData.subCategory]);
+  }, [activeTab, footwearData.brand, l1Node, l2Node]);
 
   // Auto-generate description for beauty (15 words)
   useEffect(() => {
-    if (activeTab === 'beauty' && beautyData.name && beautyData.category && beautyData.subCategory) {
-      const categoryName = beautyData.category.replace(/\b\w/g, l => l.toUpperCase());
-      const subCategoryName = beautyData.subCategory.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-      const autoDescription = `${beautyData.name} - ${categoryName} ${subCategoryName}. High-quality beauty product with premium ingredients for best results and satisfaction.`;
-
+    if (activeTab === 'beauty' && beautyData.name && l1Node) {
+      const cat = l1Node.name;
+      const sub = l2Node?.name || '';
+      const autoDescription = `${beautyData.name}${sub ? ` - ${cat} ${sub}` : ` - ${cat}`}. High-quality beauty product with premium ingredients for best results and satisfaction.`;
       setBeautyData(prev => ({ ...prev, description: autoDescription }));
     }
-  }, [activeTab, beautyData.name, beautyData.category, beautyData.subCategory]);
+  }, [activeTab, beautyData.name, l1Node, l2Node]);
 
   // Fetch seller profile and pre-populate shop information
   useEffect(() => {
@@ -317,8 +292,11 @@ export default function SellerAddProductPage() {
       productPayload = {
         productId: clothesData.productId,
         name: clothesData.name,
-        category: clothesData.category,
-        subCategory: clothesData.subCategory,
+        category: l1Node?.slug || l1Node?.name || '',
+        subCategory: l2Node?.slug || l2Node?.name || '',
+        l1CategoryId: catIds.l1 || null,
+        l2CategoryId: catIds.l2 || null,
+        l3CategoryId: catIds.l3 || null,
         price: parseInt(clothesData.price),
         originalPrice: clothesData.originalPrice ? parseInt(clothesData.originalPrice) : undefined,
         priceRange: clothesData.priceRange,
@@ -351,8 +329,11 @@ export default function SellerAddProductPage() {
       productPayload = {
         productId: footwearData.productId,
         name: footwearData.name,
-        category: 'footwear',
-        subCategory: `${footwearData.category}-${footwearData.subCategory}`,
+        category: l1Node?.slug || l1Node?.name || '',
+        subCategory: l2Node?.slug || l2Node?.name || '',
+        l1CategoryId: catIds.l1 || null,
+        l2CategoryId: catIds.l2 || null,
+        l3CategoryId: catIds.l3 || null,
         price: parseInt(footwearData.price),
         originalPrice: footwearData.originalPrice ? parseInt(footwearData.originalPrice) : undefined,
         priceRange: footwearData.priceRange,
@@ -385,8 +366,11 @@ export default function SellerAddProductPage() {
       productPayload = {
         productId: beautyData.productId,
         name: beautyData.name,
-        category: 'beauty',
-        subCategory: `${beautyData.category}-${beautyData.subCategory}`,
+        category: l1Node?.slug || l1Node?.name || '',
+        subCategory: l2Node?.slug || l2Node?.name || '',
+        l1CategoryId: catIds.l1 || null,
+        l2CategoryId: catIds.l2 || null,
+        l3CategoryId: catIds.l3 || null,
         price: parseInt(beautyData.price),
         originalPrice: beautyData.originalPrice ? parseInt(beautyData.originalPrice) : undefined,
         priceRange: beautyData.priceRange,
@@ -513,11 +497,11 @@ export default function SellerAddProductPage() {
           {/* Shop Information (Common for all tabs) */}
           <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-[#722F37] mb-2 flex items-center gap-2">
-              <span>🏪</span> Shop Information
+              <span></span> Shop Information
               {loadingProfile ? (
                 <span className="text-sm font-normal text-gray-500">(Loading...)</span>
               ) : (
-                <span className="text-sm font-normal text-green-600">✓ Auto-filled from your profile</span>
+                <span className="text-sm font-normal text-green-600"> Auto-filled from your profile</span>
               )}
             </h2>
             <p className="text-xs text-gray-600 mb-4">
@@ -589,38 +573,55 @@ export default function SellerAddProductPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                      Category <span className="text-red-500">*</span>
+                      Category (L1) <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
-                      value={clothesData.category}
-                      onChange={(e) => setClothesData({ ...clothesData, category: e.target.value, subCategory: '' })}
+                      value={catIds.l1}
+                      onChange={(e) => setCatIds({ l1: e.target.value, l2: '', l3: '' })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                     >
-                      <option value="mens">Men's</option>
-                      <option value="womens">Women's</option>
-                      <option value="sarees">Sarees</option>
-                      <option value="kids">Kids</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                      Sub-Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={clothesData.subCategory}
-                      onChange={(e) => setClothesData({ ...clothesData, subCategory: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                    >
-                      <option value="">Select Sub-Category</option>
-                      {clothesSubCategories[clothesData.category as keyof typeof clothesSubCategories]?.map((sub) => (
-                        <option key={sub} value={sub}>
-                          {sub.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </option>
+                      <option value="">Select Category</option>
+                      {l1Nodes.map(n => (
+                        <option key={n.id} value={n.id}>{n.name}</option>
                       ))}
                     </select>
                   </div>
+                  {l2Nodes.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                        Sub-Category (L2) <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={catIds.l2}
+                        onChange={(e) => setCatIds(prev => ({ ...prev, l2: e.target.value, l3: '' }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      >
+                        <option value="">Select Sub-Category</option>
+                        {l2Nodes.map(n => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {l3Nodes.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                        Type (L3)
+                      </label>
+                      <select
+                        value={catIds.l3}
+                        onChange={(e) => setCatIds(prev => ({ ...prev, l3: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      >
+                        <option value="">Select Type (optional)</option>
+                        {l3Nodes.map(n => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -923,37 +924,55 @@ export default function SellerAddProductPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                      Category <span className="text-red-500">*</span>
+                      Category (L1) <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
-                      value={footwearData.category}
-                      onChange={(e) => setFootwearData({ ...footwearData, category: e.target.value, subCategory: '' })}
+                      value={catIds.l1}
+                      onChange={(e) => setCatIds({ l1: e.target.value, l2: '', l3: '' })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                     >
-                      <option value="mens">Men's</option>
-                      <option value="womens">Women's</option>
-                      <option value="kids">Kids</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                      Sub-Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={footwearData.subCategory}
-                      onChange={(e) => setFootwearData({ ...footwearData, subCategory: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                    >
-                      <option value="">Select Sub-Category</option>
-                      {footwearSubCategories[footwearData.category as keyof typeof footwearSubCategories]?.map((sub) => (
-                        <option key={sub} value={sub}>
-                          {sub.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </option>
+                      <option value="">Select Category</option>
+                      {l1Nodes.map(n => (
+                        <option key={n.id} value={n.id}>{n.name}</option>
                       ))}
                     </select>
                   </div>
+                  {l2Nodes.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                        Sub-Category (L2) <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={catIds.l2}
+                        onChange={(e) => setCatIds(prev => ({ ...prev, l2: e.target.value, l3: '' }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      >
+                        <option value="">Select Sub-Category</option>
+                        {l2Nodes.map(n => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {l3Nodes.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                        Type (L3)
+                      </label>
+                      <select
+                        value={catIds.l3}
+                        onChange={(e) => setCatIds(prev => ({ ...prev, l3: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      >
+                        <option value="">Select Type (optional)</option>
+                        {l3Nodes.map(n => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
                       Material <span className="text-red-500">*</span>
@@ -1196,7 +1215,7 @@ export default function SellerAddProductPage() {
 
                 {sizes.length > 0 && (
                   <p className="text-sm text-green-600 mt-2">
-                    ✓ Selected sizes: {sizes.join(', ')}
+                     Selected sizes: {sizes.join(', ')}
                   </p>
                 )}
               </div>
@@ -1255,38 +1274,55 @@ export default function SellerAddProductPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                      Category <span className="text-red-500">*</span>
+                      Category (L1) <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
-                      value={beautyData.category}
-                      onChange={(e) => setBeautyData({ ...beautyData, category: e.target.value, subCategory: '' })}
+                      value={catIds.l1}
+                      onChange={(e) => setCatIds({ l1: e.target.value, l2: '', l3: '' })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
                     >
-                      <option value="skincare">Skincare</option>
-                      <option value="makeup">Makeup</option>
-                      <option value="haircare">Haircare</option>
-                      <option value="fragrance">Fragrance</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                      Sub-Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={beautyData.subCategory}
-                      onChange={(e) => setBeautyData({ ...beautyData, subCategory: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
-                    >
-                      <option value="">Select Sub-Category</option>
-                      {beautyCategories[beautyData.category as keyof typeof beautyCategories]?.map((sub) => (
-                        <option key={sub} value={sub}>
-                          {sub.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </option>
+                      <option value="">Select Category</option>
+                      {l1Nodes.map(n => (
+                        <option key={n.id} value={n.id}>{n.name}</option>
                       ))}
                     </select>
                   </div>
+                  {l2Nodes.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                        Sub-Category (L2) <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={catIds.l2}
+                        onChange={(e) => setCatIds(prev => ({ ...prev, l2: e.target.value, l3: '' }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      >
+                        <option value="">Select Sub-Category</option>
+                        {l2Nodes.map(n => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {l3Nodes.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                        Type (L3)
+                      </label>
+                      <select
+                        value={catIds.l3}
+                        onChange={(e) => setCatIds(prev => ({ ...prev, l3: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                      >
+                        <option value="">Select Type (optional)</option>
+                        {l3Nodes.map(n => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
                       Shade/Color

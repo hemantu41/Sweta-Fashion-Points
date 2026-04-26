@@ -16,21 +16,21 @@ interface CatOption {
 
 /* ─── Occasion tags ─────────────────────────────────────────────────────────── */
 const OCCASION_TAGS = [
-  { id: 'wedding',        label: 'Wedding Season',   labelHi: 'वेडिंग सीज़न',   icon: '💍' },
-  { id: 'chhath',         label: 'Chhath Puja',      labelHi: 'छठ पूजा',         icon: '🙏' },
-  { id: 'diwali',         label: 'Diwali',            labelHi: 'दिवाली',           icon: '🪔' },
-  { id: 'eid',            label: 'Eid',               labelHi: 'ईद',              icon: '🌙' },
-  { id: 'navratri',       label: 'Navratri',          labelHi: 'नवरात्रि',         icon: '🎭' },
-  { id: 'daily-office',   label: 'Daily Office',      labelHi: 'ऑफिस वियर',       icon: '👔' },
-  { id: 'college',        label: 'College / Campus',  labelHi: 'कॉलेज',            icon: '🎓' },
-  { id: 'party',          label: 'Party Wear',        labelHi: 'पार्टी वियर',      icon: '🎉' },
-  { id: 'anniversary',    label: 'Anniversary',       labelHi: 'एनिवर्सरी',        icon: '💕' },
-  { id: 'mehendi',        label: 'Mehendi / Haldi',   labelHi: 'मेहंदी/हल्दी',     icon: '🌸' },
-  { id: 'sangeet',        label: 'Sangeet',           labelHi: 'संगीत',            icon: '🎵' },
-  { id: 'raksha-bandhan', label: 'Raksha Bandhan',    labelHi: 'रक्षाबंधन',         icon: '🎀' },
-  { id: 'karwa-chauth',   label: 'Karwa Chauth',      labelHi: 'करवाचौथ',           icon: '🌕' },
-  { id: 'holi',           label: 'Holi',              labelHi: 'होली',             icon: '🎨' },
-  { id: 'casual',         label: 'Casual Everyday',   labelHi: 'कैजुअल',           icon: '☀️' },
+  { id: 'wedding',        label: 'Wedding Season',   labelHi: 'वेडिंग सीज़न',   icon: '' },
+  { id: 'chhath',         label: 'Chhath Puja',      labelHi: 'छठ पूजा',         icon: '' },
+  { id: 'diwali',         label: 'Diwali',            labelHi: 'दिवाली',           icon: '' },
+  { id: 'eid',            label: 'Eid',               labelHi: 'ईद',              icon: '' },
+  { id: 'navratri',       label: 'Navratri',          labelHi: 'नवरात्रि',         icon: '' },
+  { id: 'daily-office',   label: 'Daily Office',      labelHi: 'ऑफिस वियर',       icon: '' },
+  { id: 'college',        label: 'College / Campus',  labelHi: 'कॉलेज',            icon: '' },
+  { id: 'party',          label: 'Party Wear',        labelHi: 'पार्टी वियर',      icon: '' },
+  { id: 'anniversary',    label: 'Anniversary',       labelHi: 'एनिवर्सरी',        icon: '' },
+  { id: 'mehendi',        label: 'Mehendi / Haldi',   labelHi: 'मेहंदी/हल्दी',     icon: '' },
+  { id: 'sangeet',        label: 'Sangeet',           labelHi: 'संगीत',            icon: '' },
+  { id: 'raksha-bandhan', label: 'Raksha Bandhan',    labelHi: 'रक्षाबंधन',         icon: '' },
+  { id: 'karwa-chauth',   label: 'Karwa Chauth',      labelHi: 'करवाचौथ',           icon: '' },
+  { id: 'holi',           label: 'Holi',              labelHi: 'होली',             icon: '' },
+  { id: 'casual',         label: 'Casual Everyday',   labelHi: 'कैजुअल',           icon: '' },
 ];
 
 const COLORS_LIST = [
@@ -750,7 +750,7 @@ export default function AddProductPage() {
                   <button key={w} type="button" onClick={() => toggleMulti(workTypes, setWorkTypes, w)}
                     className="px-2.5 py-1 rounded-full border text-xs transition-all"
                     style={workTypes.includes(w) ? { borderColor: '#C49A3C', borderWidth: '2px', background: 'rgba(196,154,60,0.08)', color: '#5B1A3A', fontWeight: 700 } : { background: 'white', color: '#666', borderColor: '#E8E0E4' }}>
-                    {workTypes.includes(w) && '✓ '}{w}
+                    {workTypes.includes(w) && ' '}{w}
                   </button>
                 ))}
               </div>
@@ -1039,7 +1039,7 @@ export default function AddProductPage() {
 
             {/* GST Calculator card */}
             <div className="bg-white rounded-[14px] border border-[rgba(196,154,60,0.08)] shadow-[0_2px_16px_rgba(91,26,58,0.04)] p-4">
-              <p className="text-xs font-semibold text-[#5B1A3A] mb-3">💰 GST Price Calculator</p>
+              <p className="text-xs font-semibold text-[#5B1A3A] mb-3"> GST Price Calculator</p>
               {price ? (
                 <div className="space-y-1.5 text-xs">
                   {[

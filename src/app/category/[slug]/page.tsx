@@ -144,15 +144,16 @@ export default function CategoryPage() {
     setChildCategories(result.node.children ?? []);
   }, [tree, treeLoading, slug]);
 
-  // ── 3. Fetch products for this category ──
+  // ── 3. Fetch products for all levels ──
+  // L1 → all products under this L1; L2 → all products under this L2; L3 → exact match.
+  // Sub-category chips let the user drill down without losing the product grid.
   const fetchProducts = useCallback(async (cat: CategoryNode) => {
     setProdsLoading(true);
     try {
-      const param = cat.level === 1
-        ? `category=${encodeURIComponent(cat.id)}`
-        : cat.level === 2
-          ? `subCategory=${encodeURIComponent(cat.id)}`
-          : `subCategory=${encodeURIComponent(cat.parent_id ?? cat.id)}`; // L3 → show L2 products
+      let param: string;
+      if (cat.level === 1)      param = `l1CategoryId=${encodeURIComponent(cat.id)}`;
+      else if (cat.level === 2) param = `l2CategoryId=${encodeURIComponent(cat.id)}`;
+      else                      param = `l3CategoryId=${encodeURIComponent(cat.id)}`;
 
       const res  = await fetch(`/api/products?${param}`, { cache: 'no-store' });
       const data = await res.json();
@@ -221,7 +222,7 @@ export default function CategoryPage() {
         style={{ background: '#FAFAFA', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}
       >
         <div className="text-center max-w-md">
-          <div className="text-[72px] mb-4">🔍</div>
+          <div className="text-[72px] mb-4"></div>
           <h1
             className="text-[44px] font-extrabold mb-2"
             style={{ fontFamily: 'var(--font-playfair, Playfair Display, serif)', color: '#5B1A3A' }}
@@ -274,7 +275,7 @@ export default function CategoryPage() {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-5">
         <div className="flex gap-6 items-start">
 
-          {/* ── Filter Sidebar (desktop) ── */}
+          {/* ── Filter Sidebar ── */}
           <FilterSidebar
             filters={filters}
             onChange={updateFilters}
@@ -296,15 +297,15 @@ export default function CategoryPage() {
               pageSize={PAGE_SIZE}
             />
 
-            {/* Subcategory chips */}
+            {/* ── Sub-category chips (for all levels that have children) ── */}
             {!treeLoading && childCategories.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-3 mt-1" style={{ scrollbarWidth: 'none' }}>
                 <Link
                   href={`/category/${slug}`}
                   className="flex-shrink-0 px-4 py-1.5 rounded-full text-[12px] font-semibold text-white"
                   style={{ background: '#5B1A3A' }}
                 >
-                  All {category?.name}
+                  All
                 </Link>
                 {childCategories.map(child => (
                   <Link
@@ -313,19 +314,13 @@ export default function CategoryPage() {
                     className="flex-shrink-0 px-4 py-1.5 rounded-full text-[12px] font-medium border transition-colors"
                     style={{ borderColor: '#E5E7EB', color: '#374151', background: '#fff' }}
                   >
-                    {child.icon && <span className="mr-1">{child.icon}</span>}
                     {child.name}
-                    {(child.product_count ?? 0) > 0 && (
-                      <span className="ml-1 text-[10px]" style={{ color: '#C49A3C' }}>
-                        ({child.product_count})
-                      </span>
-                    )}
                   </Link>
                 ))}
               </div>
             )}
 
-            {/* Sort bar */}
+            {/* ── Sort bar ── */}
             <div className="mb-3">
               <SortBar
                 sort={sortBy}
@@ -337,8 +332,8 @@ export default function CategoryPage() {
             </div>
 
             {/* ── Loading skeletons ── */}
-            {isLoading && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
+            {prodsLoading && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-xl overflow-hidden border border-gray-100">
                     <div
@@ -361,12 +356,12 @@ export default function CategoryPage() {
             )}
 
             {/* ── Empty state ── */}
-            {!isLoading && paginated.length === 0 && (
+            {!prodsLoading && paginated.length === 0 && (
               <div
                 className="text-center py-20 rounded-2xl border"
                 style={{ background: '#fff', borderColor: 'rgba(196,154,60,0.1)' }}
               >
-                <div className="text-[56px] mb-4">🛍️</div>
+                <div className="text-[56px] mb-4"></div>
                 <h2
                   className="text-[20px] font-bold mb-2"
                   style={{ fontFamily: 'var(--font-playfair, Playfair Display, serif)', color: '#5B1A3A' }}
@@ -404,8 +399,8 @@ export default function CategoryPage() {
             )}
 
             {/* ── Product grid ── */}
-            {!isLoading && paginated.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-px bg-gray-200">
+            {!prodsLoading && paginated.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {paginated.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -413,7 +408,7 @@ export default function CategoryPage() {
             )}
 
             {/* ── Pagination ── */}
-            {!isLoading && totalPages > 1 && (
+            {!prodsLoading && totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-10 flex-wrap">
                 {page > 1 && (
                   <button

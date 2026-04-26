@@ -47,9 +47,6 @@ export default function CategoryHeader({
 
       {/* Title row */}
       <div className="flex items-start gap-3">
-        {category?.icon && (
-          <span className="text-[26px] leading-none mt-0.5">{category.icon}</span>
-        )}
         <div>
           <h1
             className="text-[28px] font-bold leading-tight"
@@ -71,24 +68,26 @@ export default function CategoryHeader({
         </div>
       </div>
 
-      {/* Product count */}
-      <p className="text-[13px] text-gray-400 mt-2">
-        {filteredTotal === 0 ? (
-          'No products found'
-        ) : filteredTotal < totalProducts ? (
-          <>
-            Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
-            <span className="font-semibold text-gray-700">{filteredTotal}</span> filtered results
-            {' '}
-            <span className="text-gray-300">({totalProducts} total)</span>
-          </>
-        ) : (
-          <>
-            Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
-            <span className="font-semibold text-gray-700">{filteredTotal}</span> products
-          </>
-        )}
-      </p>
+      {/* Product count — only shown on leaf (L3) category pages */}
+      {filteredTotal >= 0 && (
+        <p className="text-[13px] text-gray-400 mt-2">
+          {filteredTotal === 0 ? (
+            'No products found'
+          ) : filteredTotal < totalProducts ? (
+            <>
+              Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
+              <span className="font-semibold text-gray-700">{filteredTotal}</span> filtered results
+              {' '}
+              <span className="text-gray-300">({totalProducts} total)</span>
+            </>
+          ) : (
+            <>
+              Showing <span className="font-semibold text-gray-700">{from}–{to}</span> of{' '}
+              <span className="font-semibold text-gray-700">{filteredTotal}</span> products
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

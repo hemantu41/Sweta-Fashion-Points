@@ -44,7 +44,7 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
           <span className="text-white font-bold text-xs">SF</span>
         </div>
         <span className="text-sm font-medium text-gray-700 hidden lg:block">
-          {getGreeting()} 👋
+          {getGreeting()} 
         </span>
         <div className="relative hidden sm:block">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -62,7 +62,7 @@ export default function TopBar({ sidebarWidth }: TopBarProps) {
         {/* Weather pill */}
         {weather && (
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 rounded-full text-xs font-medium text-blue-700">
-            🌤 {weather.temp}°C Gaya
+             {weather.temp}°C Gaya
           </div>
         )}
 

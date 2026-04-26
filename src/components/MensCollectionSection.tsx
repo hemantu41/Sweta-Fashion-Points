@@ -23,7 +23,7 @@ const mensCategories: MensCategory[] = [
     nameHi: 'शर्ट',
     description: 'Formal & Casual Shirts',
     descriptionHi: 'फॉर्मल और कैजुअल शर्ट',
-    icon: '👔',
+    icon: '',
     link: '/mens?category=shirts',
     bgGradient: 'from-blue-50 to-cyan-100',
     bgImage: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&h=800&q=90&auto=format&fit=crop',
@@ -34,7 +34,7 @@ const mensCategories: MensCategory[] = [
     nameHi: 'टी-शर्ट',
     description: 'Trendy & Comfortable',
     descriptionHi: 'ट्रेंडी और आरामदायक',
-    icon: '👕',
+    icon: '',
     link: '/mens?category=tshirts',
     bgGradient: 'from-pink-50 to-purple-100',
     bgImage: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=800&q=90&auto=format&fit=crop',
@@ -45,7 +45,7 @@ const mensCategories: MensCategory[] = [
     nameHi: 'जींस',
     description: 'Denim Perfection',
     descriptionHi: 'डेनिम परफेक्शन',
-    icon: '👖',
+    icon: '',
     link: '/mens?category=jeans',
     bgGradient: 'from-pink-50 to-purple-100',
     bgImage: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=800&h=800&q=90&auto=format&fit=crop',
@@ -56,7 +56,7 @@ const mensCategories: MensCategory[] = [
     nameHi: 'शॉर्ट्स और ट्राउज़र',
     description: 'Comfortable & Stylish',
     descriptionHi: 'आरामदायक और स्टाइलिश',
-    icon: '🩳',
+    icon: '',
     link: '/mens?category=shorts',
     bgGradient: 'from-purple-50 to-indigo-100',
     bgImage: 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=800&h=800&q=90&auto=format&fit=crop',
@@ -65,8 +65,8 @@ const mensCategories: MensCategory[] = [
 
 function resolveLink(tree: CategoryNode[], l1Kw: string, subKw: string, fallback: string): string {
   if (tree.length === 0) return fallback;
-  const re = new RegExp(`\\b${l1Kw}\\b`, 'i');
-  const l1 = tree.find(n => re.test(n.name) || re.test(n.slug));
+  const kw = l1Kw.toLowerCase();
+  const l1 = tree.find(n => n.name.toLowerCase().startsWith(kw) || n.slug.toLowerCase().startsWith(kw));
   if (!l1) return fallback;
   if (subKw) {
     const l2 = (l1.children || []).find(n => n.name.toLowerCase().includes(subKw.toLowerCase()));

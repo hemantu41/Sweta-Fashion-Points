@@ -23,7 +23,7 @@ const footwearCategories: FootwearCategory[] = [
     nameHi: 'स्पोर्ट शूज़',
     description: 'Performance & Comfort',
     descriptionHi: 'प्रदर्शन और आराम',
-    icon: '👟',
+    icon: '',
     link: '/footwear?category=sport-shoes',
     bgGradient: 'from-blue-50 to-cyan-100',
     bgImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=800&q=90&auto=format&fit=crop',
@@ -34,7 +34,7 @@ const footwearCategories: FootwearCategory[] = [
     nameHi: 'स्नीकर्स',
     description: 'Street Style',
     descriptionHi: 'स्ट्रीट स्टाइल',
-    icon: '👟',
+    icon: '',
     link: '/footwear?category=sneakers',
     bgGradient: 'from-purple-50 to-pink-100',
     bgImage: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&h=800&q=90&auto=format&fit=crop',
@@ -45,7 +45,7 @@ const footwearCategories: FootwearCategory[] = [
     nameHi: 'फॉर्मल शूज़',
     description: 'Elegant & Professional',
     descriptionHi: 'सुरुचिपूर्ण और पेशेवर',
-    icon: '👞',
+    icon: '',
     link: '/footwear?category=formal-shoes',
     bgGradient: 'from-gray-50 to-slate-100',
     bgImage: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=800&h=800&q=90&auto=format&fit=crop',
@@ -56,7 +56,7 @@ const footwearCategories: FootwearCategory[] = [
     nameHi: 'चप्पल',
     description: 'Casual & Comfortable',
     descriptionHi: 'आरामदायक और कैजुअल',
-    icon: '🩴',
+    icon: '',
     link: '/footwear?category=slippers',
     bgGradient: 'from-orange-50 to-amber-100',
     bgImage: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?w=800&h=800&q=90&auto=format&fit=crop',
@@ -65,8 +65,8 @@ const footwearCategories: FootwearCategory[] = [
 
 function resolveLink(tree: CategoryNode[], l1Kw: string, subKw: string, fallback: string): string {
   if (tree.length === 0) return fallback;
-  const re = new RegExp(`\\b${l1Kw}\\b`, 'i');
-  const l1 = tree.find(n => re.test(n.name) || re.test(n.slug));
+  const kw = l1Kw.toLowerCase();
+  const l1 = tree.find(n => n.name.toLowerCase().startsWith(kw) || n.slug.toLowerCase().startsWith(kw));
   if (!l1) return fallback;
   if (subKw) {
     const l2 = (l1.children || []).find(n => n.name.toLowerCase().includes(subKw.toLowerCase()));

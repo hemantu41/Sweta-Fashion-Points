@@ -336,10 +336,10 @@ export async function migrateAdminDataToCache(): Promise<void> {
       redisSetex(adminKey('analytics'), TTL, JSON.stringify(analytics)),
     ]);
 
-    console.log(`[AdminCache] ✅ Migrated 7 keys to Redis (TTL: ${TTL}s)`);
+    console.log(`[AdminCache]  Migrated 7 keys to Redis (TTL: ${TTL}s)`);
   } catch (err) {
     // Never block login — fail silently
-    console.error('[AdminCache] ❌ Migration failed:', err);
+    console.error('[AdminCache]  Migration failed:', err);
   }
 }
 

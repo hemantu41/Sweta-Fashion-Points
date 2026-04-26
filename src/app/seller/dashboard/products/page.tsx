@@ -7,6 +7,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import QcPipeline, { QcStage } from '@/components/seller/QcPipeline';
 
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
+}
+
 interface Product {
   id: string;
   productId: string;
@@ -40,7 +47,6 @@ function qcStage(status?: string): QcStage {
   }
 }
 
-const CATEGORIES = ['All', 'Clothes', 'Footwear', 'Beauty & Makeup', 'Sarees', 'Kids'];
 const STATUSES = ['All', 'approved', 'pending', 'under_review', 'rejected'];
 const STOCKS = ['All', 'In Stock', 'Low Stock', 'Out of Stock'];
 
@@ -75,10 +81,15 @@ function ProductsContent() {
     } finally { setDeletingId(null); setConfirmDelete(null); }
   }
 
+  // Derive unique category options from actual product data
+  const categoryOptions = ['All', ...Array.from(new Set(
+    products.map(p => p.category).filter((c): c is string => !!c)
+  ))];
+
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
     if (q && !p.name.toLowerCase().includes(q) && !p.productId?.toLowerCase().includes(q)) return false;
-    if (catFilter !== 'All' && !p.category?.toLowerCase().includes(catFilter.toLowerCase())) return false;
+    if (catFilter !== 'All' && p.category !== catFilter) return false;
     if (statusFilter !== 'All' && p.approvalStatus !== statusFilter) return false;
     if (stockFilter === 'In Stock' && p.stockQuantity <= 5) return false;
     if (stockFilter === 'Low Stock' && (p.stockQuantity === 0 || p.stockQuantity > 5)) return false;
@@ -108,7 +119,7 @@ function ProductsContent() {
           className="flex-1 min-w-48 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-[#5B1A3A]/30"
         />
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none">
-          {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+          {categoryOptions.map(c => <option key={c}>{c}</option>)}
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none">
           {STATUSES.map(s => <option key={s}>{s === 'All' ? 'All Status' : STATUS_CONFIG[s]?.label || s}</option>)}
@@ -154,7 +165,7 @@ function ProductsContent() {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                             {img ? (
-                              <Image src={img} alt={p.name} width={40} height={40} className="w-full h-full object-cover" />
+                              <Image src={toImageUrl(img)} alt={p.name} width={40} height={40} className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-gray-300">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>

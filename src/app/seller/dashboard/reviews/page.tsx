@@ -44,9 +44,9 @@ export default function SellerReviewsPage() {
 
   const filters: { key: FilterType; label: string }[] = [
     { key: 'all', label: 'All Reviews' },
-    { key: '5', label: '5★' },
-    { key: '4', label: '4★' },
-    { key: '3', label: '3★' },
+    { key: '5', label: '5' },
+    { key: '4', label: '4' },
+    { key: '3', label: '3' },
     { key: 'negative', label: 'Needs Response' },
   ];
 
@@ -102,7 +102,7 @@ export default function SellerReviewsPage() {
         </div>
       ) : reviews.length === 0 ? (
         <div className="bg-white rounded-xl border border-[#E8E0E4] p-10 text-center">
-          <div className="text-4xl mb-3">⭐</div>
+          <div className="text-4xl mb-3"></div>
           <p className="text-sm font-medium text-gray-600">
             {filter === 'negative' ? 'No reviews need your response' : 'No reviews found'}
           </p>

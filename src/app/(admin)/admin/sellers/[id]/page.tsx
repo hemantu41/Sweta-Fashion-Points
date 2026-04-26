@@ -207,7 +207,7 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
               disabled={actioning}
               className="px-5 py-2 bg-green-600 text-white text-sm rounded-full font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {actioning ? 'Reactivating...' : '✓ Reactivate Seller'}
+              {actioning ? 'Reactivating...' : ' Reactivate Seller'}
             </button>
           )}
         </div>
@@ -249,7 +249,7 @@ export default function SellerDetailPage({ params }: { params: Promise<{ id: str
                 disabled={actioning}
                 className="shrink-0 px-5 py-2 bg-green-600 text-white text-sm rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
-                {actioning ? 'Reactivating...' : '✓ Reactivate Now'}
+                {actioning ? 'Reactivating...' : ' Reactivate Now'}
               </button>
             </div>
           </div>

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { useCategories, type CategoryNode } from '@/hooks/useCategories';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,9 @@ interface Product {
   nameHi?: string;
   category: string;
   subCategory?: string;
+  l1CategoryId?: string | null;
+  l2CategoryId?: string | null;
+  l3CategoryId?: string | null;
   price: number;
   originalPrice?: number;
   description?: string;
@@ -30,6 +34,24 @@ interface Product {
   stockQuantity: number;
   isNewArrival: boolean;
   isBestSeller: boolean;
+  seller?: {
+    id: string;
+    businessName: string;
+    businessNameHi?: string;
+    city?: string;
+    state?: string;
+    businessPhone?: string;
+  } | null;
+}
+
+// ─── Image URL helper ─────────────────────────────────────────────────────────
+// Images may be stored as Cloudinary public IDs (e.g. "insta-fashion-points/xyz")
+// or as full https:// URLs. Normalise to a full URL before passing to <Image>.
+const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+function toImageUrl(src: string | undefined | null): string {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  return `${CLOUD}/${src}`;
 }
 
 // ─── Deterministic mock rating seeded from product id ─────────────────────────
@@ -41,6 +63,9 @@ function hashId(id: string): number {
 }
 function mockRating(id: string)      { return +(3.5 + (hashId(id) % 20) / 10).toFixed(1); }
 function mockReviewCount(id: string) { return 50 + (hashId(id + 'r') % 950); }
+function mockStat(id: string, salt: string, min: number, max: number) {
+  return min + (hashId(id + salt) % (max - min));
+}
 
 // ─── Tiny SVG helper ──────────────────────────────────────────────────────────
 
@@ -92,6 +117,19 @@ const C = {
   red:        '#DC2626',
 };
 
+// ─── Breadcrumb builder ───────────────────────────────────────────────────────
+// Walks the category tree to find nodes by ID, returning ordered path entries.
+function findNodeById(nodes: CategoryNode[], id: string): CategoryNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.children?.length) {
+      const found = findNodeById(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProductDetailPage() {
@@ -101,6 +139,7 @@ export default function ProductDetailPage() {
   const router    = useRouter();
 
   const { addToCart } = useCart();
+  const { tree } = useCategories();
 
   const [product,  setProduct]  = useState<Product | null>(null);
   const [loading,  setLoading]  = useState(true);
@@ -110,12 +149,29 @@ export default function ProductDetailPage() {
   const [activeThumb, setActiveThumb] = useState(0);
 
   // Interactions
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [quantity,     setQuantity]     = useState(1);
-  const [wishlisted,   setWishlisted]   = useState(false);
+  const [selectedSize,   setSelectedSize]   = useState<string | null>(null);
+  const [wishlisted,     setWishlisted]     = useState(false);
+  const [sizeGuideOpen,       setSizeGuideOpen]       = useState(false);
+  const [imgHovered,          setImgHovered]          = useState(false);
+  const [productInfoExpanded, setProductInfoExpanded] = useState(false);
 
   // Add-to-cart feedback
   const [cartMsg, setCartMsg] = useState('');
+
+  // Price info popover
+  const [priceInfoOpen, setPriceInfoOpen] = useState(false);
+  const priceInfoRef = useRef<HTMLDivElement>(null);
+
+  // Close price popover on outside click
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (priceInfoRef.current && !priceInfoRef.current.contains(e.target as Node)) {
+        setPriceInfoOpen(false);
+      }
+    }
+    if (priceInfoOpen) document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [priceInfoOpen]);
 
   // Pincode
   const [pincode,       setPincode]       = useState('');
@@ -175,17 +231,43 @@ export default function ProductDetailPage() {
     router.push('/checkout');
   }
 
+  // ── Breadcrumb: resolve L1 → L2 → L3 from category tree ───────────────────
+  const breadcrumb = useMemo(() => {
+    const crumbs: { name: string; slug: string }[] = [];
+    if (!product || tree.length === 0) return crumbs;
+    const l1 = product.l1CategoryId ? findNodeById(tree, product.l1CategoryId) : null;
+    const l2 = product.l2CategoryId ? findNodeById(tree, product.l2CategoryId) : null;
+    const l3 = product.l3CategoryId ? findNodeById(tree, product.l3CategoryId) : null;
+    if (l1) crumbs.push({ name: l1.name, slug: l1.slug });
+    if (l2) crumbs.push({ name: l2.name, slug: l2.slug });
+    if (l3) crumbs.push({ name: l3.name, slug: l3.slug });
+    // Fallback: if no IDs, use raw string fields
+    if (crumbs.length === 0 && product.category) {
+      crumbs.push({ name: product.category, slug: product.category.toLowerCase().replace(/\s+/g, '-') });
+      if (product.subCategory) crumbs.push({ name: product.subCategory, slug: product.subCategory.toLowerCase().replace(/\s+/g, '-') });
+    }
+    return crumbs;
+  }, [product, tree]);
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const allImages    = product ? [product.mainImage, ...product.images].filter(Boolean) as string[] : [];
   const currentImage = allImages[activeThumb] ?? null;
   const discount     = product && (product.originalPrice ?? 0) > product.price
     ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
     : null;
-  const maxQty       = product ? Math.min(8, Math.max(1, product.stockQuantity)) : 8;
-  const lowStock     = product ? product.stockQuantity > 0 && product.stockQuantity <= 10 : false;
-  const rating       = product ? mockRating(product.id) : 4.2;
-  const reviewCount  = product ? mockReviewCount(product.id) : 284;
-  const positivePct  = Math.round((rating / 5) * 100);
+  const lowStock    = product ? product.stockQuantity > 0 && product.stockQuantity <= 10 : false;
+  const rating      = product ? mockRating(product.id) : 4.2;
+  const reviewCount = product ? mockReviewCount(product.id) : 284;
+  const positivePct = Math.round((rating / 5) * 100);
+
+  // Detect size guide category from L1 breadcrumb or product.category
+  const sizeGuideType = useMemo(() => {
+    const cat = (breadcrumb[0]?.name || product?.category || '').toLowerCase();
+    if (/foot|shoe|sandal|slipper|heel|boot|sneaker/i.test(cat)) return 'footwear' as const;
+    if (/kid|child|boy|toddler|infant|baby/i.test(cat))           return 'kids'     as const;
+    if (/women|lady|ladies|kurti|saree|lehenga|girl/i.test(cat))  return 'womens'   as const;
+    return 'mens' as const;
+  }, [breadcrumb, product]);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
@@ -204,7 +286,7 @@ export default function ProductDetailPage() {
     return (
       <div style={{ minHeight: '60vh', background: C.cream, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', padding: '0 24px' }}>
-          <p style={{ fontSize: 48, margin: '0 0 16px' }}>🔍</p>
+          <p style={{ fontSize: 48, margin: '0 0 16px' }}></p>
           <h1 style={{ fontFamily: 'var(--font-playfair)', fontSize: 22, color: C.maroon, margin: '0 0 8px' }}>
             Product not found
           </h1>
@@ -219,8 +301,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  const thumbs = allImages.slice(0, 5);
-  const OOS    = new Set(['XS']); // XS shown as out-of-stock for demo
+  const thumbs    = allImages.slice(0, 5);
+  const sizeList  = product.sizes.length > 0 ? product.sizes : [];
 
   // ────────────────────────────────────────────────────────────────────────────
   return (
@@ -231,29 +313,15 @@ export default function ProductDetailPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '10px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', fontSize: 12, color: C.muted }}>
             <Link href="/" style={{ color: C.muted, textDecoration: 'none' }}>Home</Link>
+            {breadcrumb.map(crumb => (
+              <span key={crumb.slug} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Svg d={I.chevron} size={11} />
+                <Link href={`/category/${crumb.slug}`} style={{ color: C.muted, textDecoration: 'none' }}>
+                  {crumb.name}
+                </Link>
+              </span>
+            ))}
             <Svg d={I.chevron} size={11} />
-            {product.category && (
-              <>
-                <Link
-                  href={`/category/${product.category.toLowerCase().replace(/\s+/g, '-')}`}
-                  style={{ color: C.muted, textDecoration: 'none' }}
-                >
-                  {product.category}
-                </Link>
-                <Svg d={I.chevron} size={11} />
-              </>
-            )}
-            {product.subCategory && (
-              <>
-                <Link
-                  href={`/category/${product.subCategory.toLowerCase().replace(/\s+/g, '-')}`}
-                  style={{ color: C.muted, textDecoration: 'none' }}
-                >
-                  {product.subCategory}
-                </Link>
-                <Svg d={I.chevron} size={11} />
-              </>
-            )}
             <span style={{ color: C.maroon, fontWeight: 500, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {product.name}
             </span>
@@ -284,7 +352,7 @@ export default function ProductDetailPage() {
                     }}
                   >
                     <Image
-                      src={img} alt={`View ${i + 1}`}
+                      src={toImageUrl(img)} alt={`View ${i + 1}`}
                       width={64} height={74}
                       style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />
@@ -293,42 +361,26 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Main image */}
-              <div style={{ flex: 1, position: 'relative', height: 480, borderRadius: 12, overflow: 'hidden', background: C.cream }}>
-                {discount && (
-                  <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
-                    <span style={{ background: C.maroon, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>
-                      {discount}% OFF
-                    </span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setWishlisted(v => !v)}
-                  style={{
-                    position: 'absolute', top: 12, right: 12, zIndex: 2,
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: '#fff', border: `1px solid ${C.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  <svg width={18} height={18} viewBox="0 0 24 24"
-                    fill={wishlisted ? '#e11d48' : 'none'}
-                    stroke={wishlisted ? '#e11d48' : '#9E9892'}
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d={I.heart} />
-                  </svg>
-                </button>
+              <div
+                onMouseEnter={() => setImgHovered(true)}
+                onMouseLeave={() => setImgHovered(false)}
+                style={{ flex: 1, position: 'relative', height: 480, borderRadius: 12, overflow: 'hidden', background: C.cream, cursor: 'zoom-in' }}
+              >
                 {currentImage ? (
                   <Image
-                    src={currentImage} alt={product.name}
-                    fill style={{ objectFit: 'contain' }}
+                    src={toImageUrl(currentImage)} alt={product.name}
+                    fill
+                    style={{
+                      objectFit: 'contain',
+                      transform: imgHovered ? 'scale(1.5)' : 'scale(1)',
+                      transition: 'transform 350ms ease',
+                    }}
                     sizes="(max-width:768px) 100vw, 50vw"
                     priority
                   />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 72, opacity: 0.25 }}>👗</span>
+                    <span style={{ fontSize: 72, opacity: 0.25 }}></span>
                   </div>
                 )}
               </div>
@@ -337,36 +389,11 @@ export default function ProductDetailPage() {
             {/* Mobile: main image on top, horizontal thumbnails below */}
             <div className="md:hidden">
               <div style={{ position: 'relative', aspectRatio: '3/4', borderRadius: 12, overflow: 'hidden', background: C.cream, marginBottom: 10 }}>
-                {discount && (
-                  <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
-                    <span style={{ background: C.maroon, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 4 }}>
-                      {discount}% OFF
-                    </span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setWishlisted(v => !v)}
-                  style={{
-                    position: 'absolute', top: 12, right: 12, zIndex: 2,
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: '#fff', border: `1px solid ${C.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <svg width={18} height={18} viewBox="0 0 24 24"
-                    fill={wishlisted ? '#e11d48' : 'none'}
-                    stroke={wishlisted ? '#e11d48' : '#9E9892'}
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d={I.heart} />
-                  </svg>
-                </button>
                 {currentImage ? (
-                  <Image src={currentImage} alt={product.name} fill style={{ objectFit: 'contain' }} sizes="100vw" priority />
+                  <Image src={toImageUrl(currentImage)} alt={product.name} fill style={{ objectFit: 'contain' }} sizes="100vw" priority />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 72, opacity: 0.25 }}>👗</span>
+                    <span style={{ fontSize: 72, opacity: 0.25 }}></span>
                   </div>
                 )}
               </div>
@@ -382,124 +409,228 @@ export default function ProductDetailPage() {
                       border: i === activeThumb ? `1.5px solid ${C.maroon}` : `1.5px solid ${C.border}`,
                     }}
                   >
-                    <Image src={img} alt={`View ${i + 1}`} width={64} height={74} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                    <Image src={toImageUrl(img)} alt={`View ${i + 1}`} width={64} height={74} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* ── CTA buttons — below image on both mobile and desktop ──── */}
+            {cartMsg && (
+              <div style={{ marginTop: 14, padding: '8px 14px', background: '#DCFCE7', borderRadius: 6, fontSize: 13, color: '#16A34A', fontWeight: 500 }}>
+                 {cartMsg}
+              </div>
+            )}
+            {lowStock && (
+              <p style={{ margin: '10px 0 0', fontSize: 12, color: C.red, fontWeight: 500 }}>
+                Only {product.stockQuantity} left in stock
+              </p>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
+              <button
+                onClick={handleAddToCart}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '13px 0', borderRadius: 8,
+                  border: `1.5px solid ${C.maroon}`, background: C.maroonPale,
+                  color: C.maroon, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                <Svg d={I.bag} size={16} />
+                Add to Cart
+              </button>
+              <button
+                onClick={handleBuyNow}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '13px 0', borderRadius: 8,
+                  border: 'none', background: C.maroon,
+                  color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Buy Now
+              </button>
             </div>
           </div>
 
           {/* ── RIGHT: Product Info ──────────────────────────────────────────── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-            {/* Title */}
-            <h1 style={{ fontFamily: 'var(--font-playfair)', fontSize: 24, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.35 }}>
-              {product.name}
-            </h1>
+            {/* ── Top info card: name + rating + price ──────────────────────── */}
+            <div style={{
+              border: `1.5px solid ${C.border}`,
+              borderRadius: 12,
+              padding: '16px 18px 18px',
+              background: '#fff',
+              marginBottom: 16,
+            }}>
+              {/* Product name */}
+              <h1 style={{ fontFamily: 'var(--font-playfair)', fontSize: 22, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.35 }}>
+                {product.name}
+              </h1>
 
-            {/* Subtitle */}
-            {(product.fabric || product.fit || product.subCategory) && (
-              <p style={{ fontSize: 13, color: C.muted, margin: '6px 0 0', lineHeight: 1.5 }}>
-                {[product.fabric, product.fit, product.subCategory].filter(Boolean).join(' · ')}
-              </p>
-            )}
-
-            {/* Price row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-              <span style={{ fontSize: 26, fontWeight: 700, color: C.maroon, fontFamily: 'var(--font-playfair)' }}>
-                ₹{product.price.toLocaleString('en-IN')}
-              </span>
-              {(product.originalPrice ?? 0) > product.price && (
-                <>
-                  <span style={{ fontSize: 16, color: C.muted, textDecoration: 'line-through' }}>
-                    ₹{product.originalPrice!.toLocaleString('en-IN')}
-                  </span>
-                  {discount && (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#16A34A', background: '#DCFCE7', padding: '3px 10px', borderRadius: 20 }}>
-                      {discount}% off
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Rating pill */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: C.green, borderRadius: 4, padding: '3px 9px' }}>
-                <Svg d={I.star} size={11} fill="#fff" stroke="none" />
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{rating}</span>
-              </div>
-              <span style={{ fontSize: 12, color: C.muted }}>{reviewCount.toLocaleString()} ratings</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 56, height: 4, background: C.border, borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ width: `${positivePct}%`, height: '100%', background: C.green, borderRadius: 2 }} />
+              {/* Rating row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: C.green, borderRadius: 4, padding: '3px 9px' }}>
+                  <Svg d={I.star} size={11} fill="#fff" stroke="none" />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{rating}</span>
                 </div>
-                <span style={{ fontSize: 11, color: C.muted }}>{positivePct}% positive</span>
+                <span style={{ fontSize: 12, color: C.muted }}>{reviewCount.toLocaleString()} ratings</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ width: 48, height: 3.5, background: C.border, borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ width: `${positivePct}%`, height: '100%', background: C.green, borderRadius: 2 }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: C.muted }}>{positivePct}% positive</span>
+                </div>
+              </div>
+
+              {/* Thin divider */}
+              <div style={{ borderTop: `0.5px solid ${C.border}`, margin: '14px 0' }} />
+
+              {/* Price row with info icon */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 28, fontWeight: 900, color: '#111', fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', letterSpacing: '-0.5px' }}>
+                  ₹{product.price.toLocaleString('en-IN')}
+                </span>
+                {(product.originalPrice ?? 0) > product.price && (
+                  <>
+                    <span style={{ fontSize: 15, color: C.muted, textDecoration: 'line-through' }}>
+                      ₹{product.originalPrice!.toLocaleString('en-IN')}
+                    </span>
+                    {discount && (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16A34A', background: '#DCFCE7', padding: '3px 10px', borderRadius: 20 }}>
+                        {discount}% off
+                      </span>
+                    )}
+                  </>
+                )}
+
+                {/* (i) price info icon + popover */}
+                <div ref={priceInfoRef} style={{ position: 'relative', display: 'inline-flex' }}>
+                  <button
+                    onClick={() => setPriceInfoOpen(v => !v)}
+                    title="Price details"
+                    style={{
+                      width: 20, height: 20, borderRadius: '50%',
+                      border: `1.5px solid ${C.muted}`, background: 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: C.muted, fontSize: 12, fontWeight: 700,
+                      lineHeight: 1, padding: 0, flexShrink: 0,
+                    }}
+                  >
+                    i
+                  </button>
+
+                  {/* Popover */}
+                  {priceInfoOpen && (
+                    <div style={{
+                      position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#fff', border: `1px solid ${C.border}`,
+                      borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                      padding: '14px 16px', minWidth: 280, zIndex: 100,
+                    }}>
+                      {/* Arrow */}
+                      <div style={{
+                        position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                        width: 0, height: 0,
+                        borderLeft: '7px solid transparent',
+                        borderRight: '7px solid transparent',
+                        borderTop: `7px solid ${C.border}`,
+                      }} />
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% - 1px)', left: '50%', transform: 'translateX(-50%)',
+                        width: 0, height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        borderTop: '6px solid #fff',
+                      }} />
+
+                      {/* Header */}
+                      <p style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, color: C.text, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                        Price Details
+                      </p>
+
+                      {/* Rows */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 13, color: C.muted }}>Maximum Retail Price (MRP)</span>
+                          <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>
+                            ₹{(product.originalPrice ?? product.price).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 13, color: C.muted }}>Product Price</span>
+                          <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>
+                            ₹{product.price.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <div style={{ borderTop: `0.5px solid ${C.border}`, paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Final Price</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: C.maroon }}>
+                            ₹{product.price.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Disclaimers */}
+                      <div style={{ marginTop: 12, paddingTop: 10, borderTop: `0.5px solid ${C.border}` }}>
+                        <p style={{ margin: '0 0 6px', fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+                          Prices are inclusive of all taxes.
+                        </p>
+                        <p style={{ margin: 0, fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+                          The MRP and the Product Price has been set by the supplier. Product price may additionally include applicable charges.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Divider */}
-            <div style={{ borderTop: `0.5px solid ${C.border}`, margin: '16px 0' }} />
+            <div style={{ borderTop: `0.5px solid ${C.border}`, margin: '0 0 16px' }} />
 
-            {/* Size selector */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Select size</span>
-                <a href="#" style={{ fontSize: 12, color: C.gold, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                  Size guide
-                </a>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {(product.sizes.length > 0 ? product.sizes : ['S', 'M', 'L', 'XL', 'XXL']).map(size => {
-                  const oos      = OOS.has(size);
-                  const selected = selectedSize === size;
-                  return (
-                    <button
-                      key={size}
-                      onClick={() => !oos && setSelectedSize(s => s === size ? null : size)}
-                      disabled={oos}
-                      style={{
-                        minWidth: 44, padding: '6px 14px', borderRadius: 20,
-                        border:     selected ? `1.5px solid ${C.maroon}` : `1px solid #D1C5C0`,
-                        background: selected ? C.maroonPale : '#fff',
-                        color:      oos ? C.muted : selected ? C.maroon : C.text,
-                        fontSize: 13, fontWeight: selected ? 600 : 400,
-                        cursor:     oos ? 'not-allowed' : 'pointer',
-                        opacity:    oos ? 0.35 : 1,
-                        textDecoration: oos ? 'line-through' : 'none',
-                        transition: 'all 0.12s',
-                      }}
-                    >
-                      {size}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Quantity + stock label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden' }}>
+            {/* ── Size selector ─────────────────────────────────────────── */}
+            <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', background: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Select Size</span>
                 <button
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  style={{ width: 36, height: 36, background: C.cream, border: 'none', cursor: 'pointer', fontSize: 20, color: C.maroon, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={() => setSizeGuideOpen(true)}
+                  style={{ fontSize: 12, color: C.gold, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
-                  −
-                </button>
-                <span style={{ width: 36, textAlign: 'center', fontSize: 14, fontWeight: 600, color: C.text, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, lineHeight: '36px' }}>
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-                  style={{ width: 36, height: 36, background: C.cream, border: 'none', cursor: 'pointer', fontSize: 20, color: C.maroon, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  +
+                  Size Guide
                 </button>
               </div>
-              {lowStock && (
-                <span style={{ fontSize: 12, color: C.red, fontWeight: 500 }}>
-                  Only {product.stockQuantity} left in stock
-                </span>
+
+              {sizeList.length === 0 ? (
+                <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>No sizes available</p>
+              ) : (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {sizeList.map(size => {
+                    const selected = selectedSize === size;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(s => s === size ? null : size)}
+                        style={{
+                          padding: '8px 18px',
+                          borderRadius: 24,
+                          border: selected ? `2px solid ${C.maroon}` : `1.5px solid #D1C5C0`,
+                          background: selected ? C.maroonPale : '#fff',
+                          color: selected ? C.maroon : C.text,
+                          fontSize: 13,
+                          fontWeight: selected ? 700 : 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          boxShadow: selected ? `0 0 0 3px ${C.maroon}22` : 'none',
+                        }}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
@@ -520,7 +651,7 @@ export default function ProductDetailPage() {
                   <div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Standard Delivery</span>
                     <p style={{ margin: '2px 0 0', fontSize: 11, color: C.muted }}>
-                      Delivered in 4–7 business days · Enter pincode to check availability
+                      Delivered in 3–5 business days · Enter pincode to check availability
                     </p>
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.gold, background: C.goldPale, padding: '2px 8px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -576,61 +707,146 @@ export default function ProductDetailPage() {
                 </div>
                 {pincodeMsg && (
                   <p style={{ margin: 0, fontSize: 12, color: pincodeStatus === 'ok' ? '#16A34A' : C.red, paddingLeft: 22 }}>
-                    {pincodeStatus === 'ok' ? '✓ ' : '✕ '}{pincodeMsg}
+                    {pincodeStatus === 'ok' ? ' ' : ' '}{pincodeMsg}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Cart feedback */}
-            {cartMsg && (
-              <div style={{ marginTop: 10, padding: '8px 14px', background: '#DCFCE7', borderRadius: 6, fontSize: 13, color: '#16A34A', fontWeight: 500 }}>
-                ✓ {cartMsg}
-              </div>
-            )}
+            {/* ── Product Info (seller-provided details) ────────────────── */}
+            {(() => {
+              const allFields = [
+                { k: 'Category', v: [product.category, product.subCategory].filter(Boolean).join(' / ') },
+                { k: 'Fabric',   v: product.fabric   },
+                { k: 'Fit',      v: product.fit      },
+                { k: 'Collar',   v: product.collar   },
+                { k: 'Pattern',  v: product.pattern  },
+                { k: 'Occasion', v: product.occasion },
+              ].filter(f => f.v);
 
-            {/* CTA buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-              <button
-                onClick={handleAddToCart}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  padding: 12, borderRadius: 8,
-                  border: `1.5px solid ${C.maroon}`, background: C.maroonPale,
-                  color: C.maroon, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                <Svg d={I.bag} size={16} />
-                Add to cart
-              </button>
-              <button
-                onClick={handleBuyNow}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 12, borderRadius: 8,
-                  border: 'none', background: C.maroon,
-                  color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                Buy Now
-              </button>
-            </div>
+              // Always-visible: first 2 fields (Category + Fabric if present)
+              const visibleFields = allFields.slice(0, 2);
+              const hiddenFields  = allFields.slice(2);
+              const hasMore = hiddenFields.length > 0 || !!product.description;
 
-            {/* Trust highlights */}
-            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 9 }}>
-              {[
-                { d: I.shield, text: 'Secure payments · UPI, cards, COD accepted' },
-                { d: I.home,   text: '7-day easy returns & exchange' },
-                { d: I.clock,  text: 'Order before 12 PM for same-day dispatch' },
-              ].map(({ d, text }) => (
-                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ color: C.gold, flexShrink: 0 }}>
-                    <Svg d={d} size={15} />
-                  </span>
-                  <span style={{ fontSize: 12, color: '#4A3F35' }}>{text}</span>
+              if (allFields.length === 0 && !product.description) return null;
+
+              const rowStyle = (last: boolean): React.CSSProperties => ({
+                borderBottom: last ? 'none' : `1px solid ${C.subtle}`,
+              });
+
+              return (
+                <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#fff', overflow: 'hidden', marginTop: 16 }}>
+
+                  {/* Header — clickable to toggle */}
+                  <button
+                    onClick={() => setProductInfoExpanded(v => !v)}
+                    style={{
+                      width: '100%', padding: '12px 16px',
+                      borderBottom: `1px solid ${C.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'none', border: 'none', borderBottom: `1px solid ${C.border}`,
+                      cursor: 'pointer', textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Product Info</span>
+                    <svg
+                      width={16} height={16} viewBox="0 0 24 24"
+                      fill="none" stroke={C.muted} strokeWidth={2}
+                      strokeLinecap="round" strokeLinejoin="round"
+                      style={{ transition: 'transform 250ms ease', transform: productInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+
+                  {/* Always-visible rows */}
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <tbody>
+                      {visibleFields.map(({ k, v }, i) => (
+                        <tr key={k} style={rowStyle(!productInfoExpanded && i === visibleFields.length - 1)}>
+                          <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
+                          <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Expandable content */}
+                  {productInfoExpanded && (
+                    <>
+                      {/* Remaining attribute rows */}
+                      {hiddenFields.length > 0 && (
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <tbody>
+                            {hiddenFields.map(({ k, v }) => (
+                              <tr key={k} style={{ borderBottom: `1px solid ${C.subtle}` }}>
+                                <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
+                                <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+
+                      {/* Description */}
+                      {product.description && (
+                        <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.subtle}` }}>
+                          <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.7 }}>{product.description}</p>
+                        </div>
+                      )}
+
+                      {/* Care & Wash */}
+                      <div style={{ borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ padding: '10px 16px 4px' }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Care &amp; Wash</span>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <tbody>
+                            {[
+                              { k: 'Wash',              v: 'Hand wash or gentle machine wash' },
+                              { k: 'Dry',               v: 'Shade dry only' },
+                              { k: 'Iron',              v: 'Medium heat · Do not iron on print' },
+                              { k: 'Bleach',            v: 'Do not bleach' },
+                              { k: 'Country of origin', v: 'India' },
+                            ].map(({ k, v }, i, arr) => (
+                              <tr key={k} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${C.subtle}` : 'none' }}>
+                                <td style={{ fontSize: 13, color: C.muted, padding: '9px 16px', width: '44%' }}>{k}</td>
+                                <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 16px' }}>{v}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Expand / collapse toggle row */}
+                  {hasMore && (
+                    <button
+                      onClick={() => setProductInfoExpanded(v => !v)}
+                      style={{
+                        width: '100%', padding: '10px 16px',
+                        borderTop: `1px solid ${C.border}`,
+                        background: C.cream, border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        fontSize: 13, fontWeight: 600, color: C.maroon,
+                      }}
+                    >
+                      {productInfoExpanded ? 'Show less' : 'View all details'}
+                      <svg
+                        width={14} height={14} viewBox="0 0 24 24"
+                        fill="none" stroke={C.maroon} strokeWidth={2.2}
+                        strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transition: 'transform 250ms ease', transform: productInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
 
           </div>
           {/* end product info */}
@@ -646,7 +862,6 @@ export default function ProductDetailPage() {
               { d: I.refresh, text: '7-day returns' },
               { d: I.check,   text: 'Free size exchange' },
               { d: I.shield,  text: '100% authentic products' },
-              { d: I.zap,     text: 'Fast local delivery' },
             ].map(({ d, text }) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Svg d={d} size={14} stroke={C.gold} />
@@ -657,61 +872,140 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* ── Product details + Care & wash ───────────────────────────────────── */}
+      {/* ── Seller Information ───────────────────────────────────────────────── */}
       <div style={{ background: '#fff', borderTop: `0.5px solid ${C.border}` }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_1fr]">
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px', fontFamily: 'var(--font-playfair)' }}>
+            Sold By
+          </h2>
+          {product.seller ? (() => {
+            const sid = product.seller!.id;
+            const sellerRating  = +(3.5 + (hashId(sid) % 20) / 10).toFixed(1);
+            const ratingCount   = mockStat(sid, 'rat', 120, 4800);
+            const followers     = mockStat(sid, 'fol', 50,  1200);
+            const productCount  = mockStat(sid, 'prd', 10,  280);
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', background: C.cream }}>
+                {/* Left: avatar + info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  {/* Avatar circle */}
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: C.maroonPale, border: `2px solid ${C.maroon}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: C.maroon }}>
+                      {product.seller!.businessName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.text }}>{product.seller!.businessName}</p>
+                    {(product.seller!.city || product.seller!.state) && (
+                      <p style={{ margin: '2px 0 8px', fontSize: 12, color: C.muted }}>
+                        {[product.seller!.city, product.seller!.state].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                    {/* Stats row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: C.green, borderRadius: 4, padding: '2px 7px' }}>
+                          <Svg d={I.star} size={10} fill="#fff" stroke="none" />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{sellerRating}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{ratingCount.toLocaleString()}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>Ratings</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{followers.toLocaleString()}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>Followers</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{productCount}</span>
+                        <span style={{ fontSize: 12, color: C.muted }}>Products</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })() : (
+            <p style={{ fontSize: 13, color: C.muted }}>Seller information not available.</p>
+          )}
+        </div>
+      </div>
 
-            {/* Left: Product details */}
-            <div className="md:pr-8">
-              <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
-                Product details
-              </h2>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <tbody>
-                  {[
-                    { k: 'Category', v: [product.category, product.subCategory].filter(Boolean).join(' / ') || '—' },
-                    { k: 'Fabric',   v: product.fabric   || '—' },
-                    { k: 'Fit',      v: product.fit      || '—' },
-                    { k: 'Collar',   v: product.collar   || '—' },
-                    { k: 'Pattern',  v: product.pattern  || '—' },
-                    { k: 'Occasion', v: product.occasion || '—' },
-                  ].map(({ k, v }) => (
-                    <tr key={k} style={{ borderBottom: `0.5px solid ${C.subtle}` }}>
-                      <td style={{ fontSize: 13, color: C.muted, padding: '9px 0', width: '44%' }}>{k}</td>
-                      <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 0', textAlign: 'right' }}>{v}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* ── Product Ratings & Reviews ────────────────────────────────────────── */}
+      <div style={{ background: C.cream, borderTop: `0.5px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 20px', fontFamily: 'var(--font-playfair)' }}>
+            Product Ratings &amp; Reviews
+          </h2>
+
+          {/* Rating summary + breakdown */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'flex-start', marginBottom: 28 }}>
+
+            {/* Big number */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 100 }}>
+              <span style={{ fontSize: 52, fontWeight: 900, color: C.text, lineHeight: 1, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+                {rating.toFixed(1)}
+              </span>
+              <div style={{ display: 'flex', gap: 3, marginTop: 8 }}>
+                {[1,2,3,4,5].map(s => (
+                  <svg key={s} width={16} height={16} viewBox="0 0 24 24" fill={s <= Math.round(rating) ? C.gold : C.border} stroke="none">
+                    <path d={I.star} />
+                  </svg>
+                ))}
+              </div>
+              <span style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>
+                {reviewCount.toLocaleString()} ratings
+              </span>
             </div>
 
-            {/* Vertical divider — desktop only */}
-            <div className="hidden md:block" style={{ background: C.border }} />
-
-            {/* Right: Care & wash */}
-            <div className="md:pl-8 mt-8 md:mt-0">
-              <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
-                Care &amp; wash
-              </h2>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <tbody>
-                  {[
-                    { k: 'Wash',              v: 'Hand wash or gentle machine wash' },
-                    { k: 'Dry',               v: 'Shade dry only' },
-                    { k: 'Iron',              v: 'Medium heat · Do not iron on print' },
-                    { k: 'Bleach',            v: 'Do not bleach' },
-                    { k: 'Country of origin', v: 'India' },
-                  ].map(({ k, v }) => (
-                    <tr key={k} style={{ borderBottom: `0.5px solid ${C.subtle}` }}>
-                      <td style={{ fontSize: 13, color: C.muted, padding: '9px 0', width: '44%' }}>{k}</td>
-                      <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '9px 0', textAlign: 'right' }}>{v}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Breakdown bars */}
+            <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {(['Excellent','Very Good','Good','Average','Poor'] as const).map((label, i) => {
+                const star = 5 - i;
+                // Weight: higher stars get higher %
+                const weights = [55, 25, 11, 6, 3];
+                const pct = weights[i];
+                return (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 12, color: C.muted, width: 68, flexShrink: 0 }}>{label}</span>
+                    <div style={{ flex: 1, height: 6, background: C.border, borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: star >= 4 ? C.green : star === 3 ? C.gold : C.red }} />
+                    </div>
+                    <span style={{ fontSize: 12, color: C.muted, width: 30, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
+                  </div>
+                );
+              })}
             </div>
+          </div>
 
+          {/* Mock review cards — TODO: replace with real spf_reviews data */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { name: 'Meenakshi S.',  stars: 5, text: 'Absolutely love this product! The quality is outstanding and delivery was super fast. Highly recommend.' },
+              { name: 'Rahul T.',      stars: 4, text: 'Good product, matches the description. Fabric is comfortable. Slightly slow delivery but overall happy.' },
+              { name: 'Priya Verma',   stars: 5, text: 'Perfect fit, exactly as shown. The seller was responsive and packaging was very good.' },
+            ].map(({ name, stars, text }) => (
+              <div key={name} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  {/* Avatar */}
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.maroonPale, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.maroon }}>{name.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</p>
+                    <div style={{ display: 'flex', gap: 2, marginTop: 2 }}>
+                      {[1,2,3,4,5].map(s => (
+                        <svg key={s} width={12} height={12} viewBox="0 0 24 24" fill={s <= stars ? C.gold : C.border} stroke="none">
+                          <path d={I.star} />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -721,6 +1015,179 @@ export default function ProductDetailPage() {
         .ifp-spin { animation: ifp-spin 0.8s linear infinite; }
         @keyframes ifp-spin { to { transform: rotate(360deg); } }
       `}</style>
+
+      {/* ── Size Guide Modal ─────────────────────────────────────────────────── */}
+      {sizeGuideOpen && (
+        <div
+          onClick={() => setSizeGuideOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 14, width: '100%', maxWidth: 560,
+              maxHeight: '90vh', overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            {/* Modal header */}
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>Size Guide</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: C.muted }}>
+                  {sizeGuideType === 'footwear' ? 'Footwear sizing' :
+                   sizeGuideType === 'kids'     ? 'Kids clothing' :
+                   sizeGuideType === 'womens'   ? 'Women\'s clothing' :
+                                                  'Men\'s clothing'}
+                </p>
+              </div>
+              <button onClick={() => setSizeGuideOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: C.muted, lineHeight: 1, padding: 4 }}>
+                ×
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div style={{ padding: '20px' }}>
+
+              {sizeGuideType === 'footwear' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>Measure your foot length and match it to the size below.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['UK', 'EU', 'US (M)', 'US (F)', 'Foot (cm)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['4', '37', '5',  '6',  '22.5'],
+                        ['5', '38', '6',  '7',  '23.5'],
+                        ['6', '39', '7',  '8',  '24.5'],
+                        ['7', '40', '8',  '9',  '25.5'],
+                        ['8', '41', '9',  '10', '26.5'],
+                        ['9', '42', '10', '11', '27.5'],
+                        ['10','43', '11', '12', '28.5'],
+                        ['11','44', '12', '13', '29.5'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {sizeGuideType === 'kids' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>Select by your child's age and height for the best fit.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['Size', 'Age', 'Height (cm)', 'Chest (in)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['2Y',  '1–2 yrs',   '80–92',   '21'],
+                        ['3Y',  '2–3 yrs',   '92–98',   '22'],
+                        ['4Y',  '3–4 yrs',   '98–104',  '23'],
+                        ['5Y',  '4–5 yrs',   '104–110', '24'],
+                        ['6Y',  '5–6 yrs',   '110–116', '25'],
+                        ['8Y',  '7–8 yrs',   '122–128', '27'],
+                        ['10Y', '9–10 yrs',  '134–140', '29'],
+                        ['12Y', '11–12 yrs', '146–152', '31'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {sizeGuideType === 'womens' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>All measurements are in inches. Choose the size closest to your bust measurement.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['Size', 'Bust (in)', 'Waist (in)', 'Hip (in)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['XS',  '31–32', '24–25', '33–34'],
+                        ['S',   '33–34', '26–27', '35–36'],
+                        ['M',   '35–36', '28–29', '37–38'],
+                        ['L',   '37–38', '30–31', '39–40'],
+                        ['XL',  '39–40', '32–33', '41–42'],
+                        ['XXL', '41–42', '34–35', '43–44'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {sizeGuideType === 'mens' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: C.muted }}>All measurements are in inches. Choose the size closest to your chest measurement.</p>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: C.maroonPale }}>
+                        {['Size', 'Chest (in)', 'Waist (in)', 'Hip (in)'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: 'center', color: C.maroon, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['S',   '36–38', '30–32', '38–40'],
+                        ['M',   '38–40', '32–34', '40–42'],
+                        ['L',   '40–42', '34–36', '42–44'],
+                        ['XL',  '42–44', '36–38', '44–46'],
+                        ['XXL', '44–46', '38–40', '46–48'],
+                      ].map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : C.cream }}>
+                          {row.map((cell, j) => (
+                            <td key={j} style={{ padding: '8px 10px', textAlign: 'center', color: C.text, borderBottom: `1px solid ${C.subtle}` }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              <p style={{ margin: '16px 0 0', fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
+                Sizes may vary slightly between styles. If you are between sizes, we recommend sizing up.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

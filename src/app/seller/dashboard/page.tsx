@@ -17,6 +17,13 @@ interface Seller {
   commissionPercentage: number;
   latitude?: number | null;
   longitude?: number | null;
+  pincode?: string | null;
+  pickupPincode?: string | null;
+  addressLine1?: string | null;
+  city?: string | null;
+  state?: string | null;
+  businessPhone?: string | null;
+  businessEmail?: string | null;
 }
 
 interface Product {
@@ -88,6 +95,12 @@ export default function SellerDashboardPage() {
   const [pendingCoords, setPendingCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [savingLocation, setSavingLocation] = useState(false);
   const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  // ── Pickup address modal ──────────────────────────────────────────────────
+  const [showPickupModal, setShowPickupModal]   = useState(false);
+  const [pickupPincodeInput, setPickupPincodeInput] = useState('');
+  const [savingPickup, setSavingPickup]         = useState(false);
+  const [pickupSaveError, setPickupSaveError]   = useState('');
 
   useEffect(() => {
     if (!user?.id) return;
@@ -165,6 +178,29 @@ export default function SellerDashboardPage() {
     );
   }
 
+  async function savePickupPincode() {
+    if (!seller || !/^\d{6}$/.test(pickupPincodeInput)) {
+      setPickupSaveError('Please enter a valid 6-digit pincode.');
+      return;
+    }
+    setSavingPickup(true);
+    setPickupSaveError('');
+    try {
+      const res = await fetch(`/api/sellers/${seller.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pickupPincode: pickupPincodeInput }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setSeller(s => s ? { ...s, pickupPincode: pickupPincodeInput } : s);
+      setShowPickupModal(false);
+    } catch {
+      setPickupSaveError('Failed to save. Please try again.');
+    } finally {
+      setSavingPickup(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -175,6 +211,28 @@ export default function SellerDashboardPage() {
 
   return (
     <div className="space-y-5" style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+
+      {/* ── Pickup address missing banner ── */}
+      {seller && !seller.pickupPincode && !seller.pincode && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-red-700">Pickup address not set</p>
+              <p className="text-xs text-red-600 mt-0.5">Customers cannot get accurate delivery charges until you set your pickup pincode.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setPickupPincodeInput(seller.pincode || ''); setPickupSaveError(''); setShowPickupModal(true); }}
+            className="flex-shrink-0 px-4 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Set Now
+          </button>
+        </div>
+      )}
 
       {/* ── Alert banner ── */}
       {(pending.length > 0 || ordersToPack.length > 0) && (
@@ -386,7 +444,7 @@ export default function SellerDashboardPage() {
         </div>
         {seller?.latitude ? (
           <p className="text-sm text-gray-600 mb-4">
-            📍 Lat: {seller.latitude.toFixed(4)}, Lng: {seller.longitude?.toFixed(4)} — Amas, Gaya, Bihar
+             Lat: {seller.latitude.toFixed(4)}, Lng: {seller.longitude?.toFixed(4)} — Amas, Gaya, Bihar
           </p>
         ) : (
           <p className="text-sm text-[#999999] mb-4">No location set. Add your shop location for delivery radius calculation.</p>
@@ -408,6 +466,67 @@ export default function SellerDashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Pickup address modal ── */}
+      {showPickupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={e => { if (e.target === e.currentTarget) setShowPickupModal(false); }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E0E4]">
+              <div>
+                <h3 className="font-semibold text-[#333333]">Set Pickup Pincode</h3>
+                <p className="text-xs text-[#999999] mt-0.5">Used to calculate delivery charges for your products</p>
+              </div>
+              <button onClick={() => setShowPickupModal(false)} className="text-[#999999] hover:text-gray-600">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-5 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#2D2D2D] mb-1.5">
+                  Pickup Pincode <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={pickupPincodeInput}
+                  onChange={e => { setPickupPincodeInput(e.target.value.replace(/\D/g, '').slice(0, 6)); setPickupSaveError(''); }}
+                  placeholder="e.g. 824219"
+                  maxLength={6}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#5B1A3A] focus:border-transparent text-sm tracking-widest"
+                />
+                <p className="text-xs text-[#9CA3AF] mt-1">Enter the 6-digit pincode where your products will be picked up from.</p>
+                {pickupSaveError && <p className="text-xs text-red-600 mt-1">{pickupSaveError}</p>}
+              </div>
+              {seller?.addressLine1 && (
+                <div className="p-3 bg-[#FAF7F2] rounded-lg text-xs text-[#6B6B6B]">
+                  <p className="font-medium text-[#2D2D2D] mb-0.5">Your registered address</p>
+                  <p>{seller.addressLine1}, {seller.city}, {seller.state} – {seller.pincode || '—'}</p>
+                  {seller.pincode && (
+                    <button
+                      onClick={() => setPickupPincodeInput(seller.pincode!)}
+                      className="mt-1.5 text-[#5B1A3A] font-medium hover:underline"
+                    >
+                      Use this pincode →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button onClick={() => setShowPickupModal(false)} className="flex-1 py-2.5 text-sm border border-gray-200 rounded-lg text-[#6B6B6B] hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={savePickupPincode}
+                disabled={savingPickup || pickupPincodeInput.length !== 6}
+                className="flex-1 py-2.5 text-sm font-semibold rounded-lg text-white disabled:opacity-50 transition-all"
+                style={{ background: 'linear-gradient(135deg, #5B1A3A, #7A2350)' }}
+              >
+                {savingPickup ? 'Saving…' : 'Save Pincode'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Location modal */}
       {showLocationModal && (

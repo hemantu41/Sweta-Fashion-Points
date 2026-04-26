@@ -382,13 +382,13 @@ export default function AdminSellersPage() {
                                 onClick={() => handleApprove(seller.id)}
                                 className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700"
                               >
-                                ✓ Approve
+                                 Approve
                               </button>
                               <button
                                 onClick={() => handleReject(seller.id)}
                                 className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700"
                               >
-                                ✗ Reject
+                                 Reject
                               </button>
                             </>
                           )}

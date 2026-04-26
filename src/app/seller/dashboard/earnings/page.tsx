@@ -25,10 +25,10 @@ const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> =
 };
 
 const CYCLE_STATUS_CFG = {
-  paid: { label: 'Paid', bg: '#EBF7EF', color: '#2E7D32', icon: '✓' },
+  paid: { label: 'Paid', bg: '#EBF7EF', color: '#2E7D32', icon: '' },
   processing: { label: 'Processing', bg: '#EBF2FB', color: '#1565C0', icon: '↻' },
-  pending: { label: 'Upcoming', bg: '#FEF7EA', color: '#C49A3C', icon: '⏳' },
-  on_hold: { label: 'On Hold', bg: '#FDF3F3', color: '#C62828', icon: '⚠' },
+  pending: { label: 'Upcoming', bg: '#FEF7EA', color: '#C49A3C', icon: '' },
+  on_hold: { label: 'On Hold', bg: '#FDF3F3', color: '#C62828', icon: '' },
 };
 
 const fmt = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');

@@ -79,7 +79,7 @@ export async function notifyOutForDelivery(
   partner: DeliveryPartner,
   config: NotificationConfig = { sendSMS: true, sendEmail: false, sendWhatsApp: true }
 ) {
-  const message = `📦 Your order #${order.orderNumber} is out for delivery!
+  const message = ` Your order #${order.orderNumber} is out for delivery!
 
 Delivery Partner: ${partner.name}
 Contact: ${partner.mobile}
@@ -104,13 +104,13 @@ export async function notifyOrderDelivered(
   order: OrderDetails,
   config: NotificationConfig = { sendSMS: true, sendEmail: false, sendWhatsApp: true }
 ) {
-  const message = `✅ Order #${order.orderNumber} delivered successfully!
+  const message = ` Order #${order.orderNumber} delivered successfully!
 
 Thank you for shopping with Insta Fashion Points.
 
 Rate your delivery experience: ${process.env.NEXT_PUBLIC_BASE_URL}/orders/${order.trackingNumber}/track
 
-We hope to serve you again! 🛍️`;
+We hope to serve you again! `;
 
   if (config.sendSMS && order.customerPhone) {
     await sendSMS(order.customerPhone, message);
@@ -129,7 +129,7 @@ export async function notifyDeliveryFailed(
   reason: string,
   config: NotificationConfig = { sendSMS: true, sendEmail: false, sendWhatsApp: false }
 ) {
-  const message = `⚠️ Delivery attempt failed for order #${order.orderNumber}.
+  const message = ` Delivery attempt failed for order #${order.orderNumber}.
 
 Reason: ${reason}
 

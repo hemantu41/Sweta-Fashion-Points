@@ -562,7 +562,7 @@ export default function AdminProductsPage() {
                           >
                             <div className="flex items-center justify-between mb-2">
                               <span className={`text-xs font-semibold ${index === 0 ? 'text-red-900' : 'text-red-700'}`}>
-                                {index === 0 ? '🔴 Most Recent' : `Deletion #${deletionHistory.length - index}`}
+                                {index === 0 ? ' Most Recent' : `Deletion #${deletionHistory.length - index}`}
                               </span>
                               <span className="text-xs text-red-600">
                                 {new Date(history.deletedAt).toLocaleDateString('en-IN', {
@@ -578,8 +578,8 @@ export default function AdminProductsPage() {
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-medium text-red-700">Deleted By:</span>
                                 <span className="text-sm font-semibold text-red-900">
-                                  {history.deletedByRole === 'admin' && '🛡️ Admin'}
-                                  {history.deletedByRole === 'seller' && '🏪 Seller'}
+                                  {history.deletedByRole === 'admin' && ' Admin'}
+                                  {history.deletedByRole === 'seller' && ' Seller'}
                                   {!history.deletedByRole && 'User'}
                                 </span>
                               </div>
@@ -596,8 +596,8 @@ export default function AdminProductsPage() {
                         <div>
                           <p className="text-xs font-medium text-red-700 mb-1">Deleted By:</p>
                           <p className="text-sm font-semibold text-red-900">
-                            {selectedProduct.deletedByRole === 'admin' && '🛡️ Admin'}
-                            {selectedProduct.deletedByRole === 'seller' && '🏪 Seller'}
+                            {selectedProduct.deletedByRole === 'admin' && ' Admin'}
+                            {selectedProduct.deletedByRole === 'seller' && ' Seller'}
                             {!selectedProduct.deletedByRole && 'User'}
                           </p>
                         </div>

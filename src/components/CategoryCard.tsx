@@ -12,10 +12,10 @@ export default function CategoryCard({ category }: CategoryCardProps) {
   const { language } = useLanguage();
 
   const emojis: Record<string, string> = {
-    mens: '👔',
-    womens: '👗',
-    sarees: '🥻',
-    kids: '👶',
+    mens: '',
+    womens: '',
+    sarees: '',
+    kids: '',
   };
 
   return (
@@ -51,7 +51,7 @@ export default function CategoryCard({ category }: CategoryCardProps) {
         {category.id === 'sarees' && (
           <div className="absolute top-4 right-4">
             <span className="bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1">
-              Popular <span className="text-[#C9A962]">✦</span>
+              Popular <span className="text-[#C9A962]"></span>
             </span>
           </div>
         )}

@@ -104,12 +104,19 @@ const banners: Banner[] = [
   },
 ];
 
+// Match a category node by keyword — checks that name/slug STARTS WITH the
+// keyword so that "men" does not accidentally match "women".
+function matchesCatKeyword(node: CategoryNode, kw: string): boolean {
+  const name = node.name.toLowerCase();
+  const slug = node.slug.toLowerCase();
+  const k = kw.toLowerCase();
+  return name.startsWith(k) || slug.startsWith(k);
+}
+
 // Resolves the banner link to a live category-tree page when possible.
-// Searches L1 nodes whose name contains the keyword; falls back to banner.link.
 function getBannerLink(banner: Banner, tree: CategoryNode[]): string {
   if (!banner.catKeyword || tree.length === 0) return banner.link;
-  const kw = banner.catKeyword.toLowerCase();
-  const match = tree.find((node) => node.name.toLowerCase().includes(kw));
+  const match = tree.find((node) => matchesCatKeyword(node, banner.catKeyword!));
   return match ? `/category/${match.slug}` : banner.link;
 }
 
@@ -128,9 +135,7 @@ export default function BannerCarousel() {
     ? banners.filter((b) => !b.catKeyword)
     : banners.filter((b) => {
         if (!b.catKeyword) return true;
-        return tree.some((node) =>
-          node.name.toLowerCase().includes(b.catKeyword!.toLowerCase())
-        );
+        return tree.some((node) => matchesCatKeyword(node, b.catKeyword!));
       });
 
   // Clamp currentSlide whenever visibleBanners length shrinks

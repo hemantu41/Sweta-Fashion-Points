@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const subCategory = searchParams.get('subCategory');
+    const l1CategoryId = searchParams.get('l1CategoryId');
+    const l2CategoryId = searchParams.get('l2CategoryId');
+    const l3CategoryId = searchParams.get('l3CategoryId');
     const isNewArrival = searchParams.get('isNewArrival');
     const isBestSeller = searchParams.get('isBestSeller');
     const priceRange = searchParams.get('priceRange');
@@ -34,13 +37,16 @@ export async function GET(request: NextRequest) {
     // Public cache only for unauthenticated, non-search, non-location queries.
     // Seller / admin queries and search are always real-time (no public cache).
     const isPublicQuery = !search && !(userLat && userLng) && !sellerId && searchParams.get('includeAllStatuses') !== 'true';
-    const cacheKey = `pub:products:${category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}`;
+    const cacheKey = `pub:products:${l3CategoryId || l2CategoryId || l1CategoryId || category || 'all'}:${subCategory || 'all'}:${isNewArrival || 'any'}:${isBestSeller || 'any'}:${priceRange || 'any'}:${isActive || 'active'}`;
 
     // Function to fetch products
     const fetchProducts = async () => {
       // Build query with seller information
       let query = supabase.from('spf_productdetails').select(`
         *,
+        l1_category_id,
+        l2_category_id,
+        l3_category_id,
         seller:spf_sellers!spf_productdetails_seller_id_fkey (
           id,
           business_name,
@@ -53,11 +59,17 @@ export async function GET(request: NextRequest) {
         )
       `);
 
-      // Apply filters
-      if (category) {
+      // Apply filters — L3 > L2 > L1 > legacy string filters
+      if (l3CategoryId) {
+        query = query.eq('l3_category_id', l3CategoryId);
+      } else if (l2CategoryId) {
+        query = query.eq('l2_category_id', l2CategoryId);
+      } else if (l1CategoryId) {
+        query = query.eq('l1_category_id', l1CategoryId);
+      } else if (category) {
         query = query.eq('category', category);
       }
-      if (subCategory) {
+      if (!l3CategoryId && !l2CategoryId && !l1CategoryId && subCategory) {
         query = query.eq('sub_category', subCategory);
       }
       if (isNewArrival === 'true') {
@@ -133,6 +145,9 @@ export async function GET(request: NextRequest) {
         nameHi: p.name_hi,
         category: p.category,
         subCategory: p.sub_category,
+        l1CategoryId: p.l1_category_id,
+        l2CategoryId: p.l2_category_id,
+        l3CategoryId: p.l3_category_id,
         price: p.price,
         originalPrice: p.original_price,
         priceRange: p.price_range,
@@ -287,6 +302,9 @@ export async function POST(request: NextRequest) {
         name_hi: product.nameHi,
         category: product.category,
         sub_category: product.subCategory,
+        l1_category_id: product.l1CategoryId || null,
+        l2_category_id: product.l2CategoryId || null,
+        l3_category_id: product.l3CategoryId || null,
         price: product.price,
         original_price: product.originalPrice,
         price_range: product.priceRange,

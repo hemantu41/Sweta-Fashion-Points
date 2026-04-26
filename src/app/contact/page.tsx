@@ -29,25 +29,25 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Why Visit */}
             <div className="bg-[#FAF7F2] rounded-2xl p-6">
-              <span className="text-4xl mb-4 block">🛍️</span>
+              <span className="text-4xl mb-4 block"></span>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {language === 'hi' ? 'स्टोर पर क्यों आएं?' : 'Why Visit Our Store?'}
               </h3>
               <ul className="space-y-2 text-gray-600">
                 <li className="flex items-start gap-2">
-                  <span className="text-[#722F37]">✓</span>
+                  <span className="text-[#722F37]"></span>
                   <span>{language === 'hi' ? 'पूरा कलेक्शन देखें' : 'See the full collection'}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#722F37]">✓</span>
+                  <span className="text-[#722F37]"></span>
                   <span>{language === 'hi' ? 'कपड़े को छूकर देखें' : 'Touch and feel the fabric'}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#722F37]">✓</span>
+                  <span className="text-[#722F37]"></span>
                   <span>{language === 'hi' ? 'ट्राई करके खरीदें' : 'Try before you buy'}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#722F37]">✓</span>
+                  <span className="text-[#722F37]"></span>
                   <span>{language === 'hi' ? 'स्टाइलिंग टिप्स पाएं' : 'Get styling tips'}</span>
                 </li>
               </ul>
@@ -55,7 +55,7 @@ export default function ContactPage() {
 
             {/* Shop Online */}
             <div className="bg-[#FAF7F2] rounded-2xl p-6">
-              <span className="text-4xl mb-4 block">🛒</span>
+              <span className="text-4xl mb-4 block"></span>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {language === 'hi' ? 'ऑनलाइन शॉपिंग करें' : 'Shop Online'}
               </h3>
@@ -77,7 +77,7 @@ export default function ContactPage() {
 
             {/* Area Served */}
             <div className="bg-[#FAF7F2] rounded-2xl p-6">
-              <span className="text-4xl mb-4 block">📍</span>
+              <span className="text-4xl mb-4 block"></span>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {language === 'hi' ? 'सेवा क्षेत्र' : 'Areas We Serve'}
               </h3>

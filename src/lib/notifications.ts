@@ -92,15 +92,15 @@ export async function sendSMS(params: SMSParams): Promise<{ success: boolean; er
     try { data = JSON.parse(responseText); } catch { data = { raw: responseText }; }
 
     if (response.ok && (data.type === 'success' || String(data.message).toLowerCase().includes('success'))) {
-      console.log('[SMS] ✅ Sent successfully to:', formattedPhone);
+      console.log('[SMS]  Sent successfully to:', formattedPhone);
       return { success: true };
     } else {
-      console.error('[SMS] ❌ Failed. MSG91 response:', data);
+      console.error('[SMS]  Failed. MSG91 response:', data);
       console.error('[SMS] Check: 1) auth key valid  2) template approved on DLT  3) sender ID matches DLT  4) account has balance');
       return { success: false, error: String(data.message ?? data.raw ?? 'SMS send failed') };
     }
   } catch (error) {
-    console.error('[SMS] ❌ Network/fetch error:', error);
+    console.error('[SMS]  Network/fetch error:', error);
     return { success: false, error: String(error) };
   }
 }

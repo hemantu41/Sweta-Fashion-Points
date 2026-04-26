@@ -181,10 +181,10 @@ export default function UserManagement() {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total Users', value: totalUsers, icon: '👥', bg: 'bg-indigo-50', text: 'text-indigo-600' },
-          { label: 'Active', value: activeUsers, icon: '✅', bg: 'bg-green-50', text: 'text-green-600' },
-          { label: 'Inactive', value: inactiveUsers, icon: '⏸️', bg: 'bg-amber-50', text: 'text-amber-600' },
-          { label: 'Admin Accounts', value: adminCount, icon: '🛡️', bg: 'bg-red-50', text: 'text-red-600' },
+          { label: 'Total Users', value: totalUsers, icon: '', bg: 'bg-indigo-50', text: 'text-indigo-600' },
+          { label: 'Active', value: activeUsers, icon: '', bg: 'bg-green-50', text: 'text-green-600' },
+          { label: 'Inactive', value: inactiveUsers, icon: '', bg: 'bg-amber-50', text: 'text-amber-600' },
+          { label: 'Admin Accounts', value: adminCount, icon: '', bg: 'bg-red-50', text: 'text-red-600' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-xl border border-[rgba(196,154,60,0.08)] p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center text-lg`}>
@@ -207,7 +207,7 @@ export default function UserManagement() {
             className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors
               ${activeTab === tab ? 'bg-[#5B1A3A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
-            {tab === 'users' ? '👥 Users' : '🔐 Roles & Permissions'}
+            {tab === 'users' ? ' Users' : ' Roles & Permissions'}
           </button>
         ))}
       </div>
@@ -218,7 +218,7 @@ export default function UserManagement() {
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <div className="flex-1 min-w-[200px] relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></span>
               <input
                 type="text"
                 placeholder="Search by name or email..."
@@ -320,7 +320,7 @@ export default function UserManagement() {
                                 title="Edit"
                                 className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center hover:bg-indigo-100 transition-colors text-sm"
                               >
-                                ✏️
+                                
                               </button>
                               <button
                                 onClick={() => toggleStatus(user.id)}
@@ -328,7 +328,7 @@ export default function UserManagement() {
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-sm
                                   ${user.status === 'active' ? 'bg-amber-50 text-amber-500 hover:bg-amber-100' : 'bg-green-50 text-green-500 hover:bg-green-100'}`}
                               >
-                                {user.status === 'active' ? '⏸' : '▶'}
+                                {user.status === 'active' ? '' : '▶'}
                               </button>
                               {user.role !== 'admin' && (
                                 <button
@@ -336,7 +336,7 @@ export default function UserManagement() {
                                   title="Remove"
                                   className="w-8 h-8 rounded-lg bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-100 transition-colors text-sm"
                                 >
-                                  🗑
+                                  
                                 </button>
                               )}
                             </div>
@@ -399,7 +399,7 @@ export default function UserManagement() {
 
                 {config.locked && (
                   <div className="flex items-center gap-2 mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
-                    <span className="text-sm">🔒</span>
+                    <span className="text-sm"></span>
                     <span className="text-[11px] text-red-600 font-medium">Admin permissions are locked and cannot be modified</span>
                   </div>
                 )}
@@ -421,7 +421,7 @@ export default function UserManagement() {
                 onClick={() => setEditUser(null)}
                 className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
               >
-                ✕
+                
               </button>
             </div>
 
@@ -487,7 +487,7 @@ export default function UserManagement() {
                         : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
                       }`}
                   >
-                    ✅ Active
+                     Active
                   </button>
                   <button
                     onClick={() => { if (editUser.status !== 'inactive') toggleStatus(editUser.id); }}
@@ -497,7 +497,7 @@ export default function UserManagement() {
                         : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
                       }`}
                   >
-                    ⏸ Inactive
+                     Inactive
                   </button>
                 </div>
               </div>
@@ -508,7 +508,7 @@ export default function UserManagement() {
                   onClick={() => removeUser(editUser.id)}
                   className="w-full py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
                 >
-                  🗑 Remove User
+                   Remove User
                 </button>
               )}
             </div>
@@ -527,7 +527,7 @@ export default function UserManagement() {
                 onClick={() => setShowAddModal(false)}
                 className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
               >
-                ✕
+                
               </button>
             </div>
 

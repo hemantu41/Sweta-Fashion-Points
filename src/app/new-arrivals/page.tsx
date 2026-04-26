@@ -24,7 +24,7 @@ export default function NewArrivalsPage() {
       <div className="bg-gradient-to-r from-[#722F37] to-[#8B3D47] text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
-            <span className="text-6xl">✨</span>
+            <span className="text-6xl"></span>
             <div>
               <h1 className="text-4xl md:text-5xl font-bold mb-2">
                 {language === 'hi' ? 'नए आगमन' : 'New Arrivals'}
@@ -55,7 +55,7 @@ export default function NewArrivalsPage() {
           </div>
         ) : (
           <div className="text-center py-16">
-            <span className="text-6xl mb-4 block">✨</span>
+            <span className="text-6xl mb-4 block"></span>
             <h3 className="text-xl font-medium text-gray-900 mb-2">
               {language === 'hi' ? 'नए प्रोडक्ट्स जल्द आ रहे हैं!' : 'New Products Coming Soon!'}
             </h3>

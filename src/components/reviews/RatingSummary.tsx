@@ -53,7 +53,7 @@ export default function RatingSummary({ averageRating, totalCount, ratingBreakdo
             const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
             return (
               <div key={star} className="flex items-center gap-3">
-                <span className="text-xs font-medium text-gray-500 w-8 text-right">{star}★</span>
+                <span className="text-xs font-medium text-gray-500 w-8 text-right">{star}</span>
                 <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"

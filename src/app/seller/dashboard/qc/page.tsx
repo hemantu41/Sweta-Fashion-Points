@@ -258,7 +258,7 @@ function ProductCard({ product, sellerId }: { product: Product; sellerId: string
 
           {resubmitted && (
             <div className="mx-4 sm:mx-5 mt-4 mb-4 p-4 rounded-xl bg-green-50 border border-green-100">
-              <p className="text-sm font-semibold text-green-700">✓ Resubmitted successfully</p>
+              <p className="text-sm font-semibold text-green-700"> Resubmitted successfully</p>
               <p className="text-xs text-green-600 mt-1">Your product is back in the QC queue. We'll review it within 24–48 hours.</p>
             </div>
           )}
@@ -332,9 +332,9 @@ export default function QcPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Pending QC', count: pending.length, bg: '#FEF7EA', color: '#C49A3C', icon: '⏳' },
-          { label: 'Under Review', count: underReview.length, bg: '#EBF2FB', color: '#1565C0', icon: '🔍' },
-          { label: 'Needs Fix', count: rejected.length, bg: '#FDF3F3', color: '#C62828', icon: '⚡' },
+          { label: 'Pending QC', count: pending.length, bg: '#FEF7EA', color: '#C49A3C', icon: '' },
+          { label: 'Under Review', count: underReview.length, bg: '#EBF2FB', color: '#1565C0', icon: '' },
+          { label: 'Needs Fix', count: rejected.length, bg: '#FDF3F3', color: '#C62828', icon: '' },
         ].map(s => (
           <div key={s.label} className="rounded-xl p-4 text-center" style={{ background: s.bg }}>
             <p className="text-lg mb-1">{s.icon}</p>
@@ -347,7 +347,7 @@ export default function QcPage() {
       {/* Tips banner if there are rejected products */}
       {rejected.length > 0 && (
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50">
-          <span className="text-xl">💡</span>
+          <span className="text-xl"></span>
           <div>
             <p className="text-sm font-semibold text-amber-800">You have {rejected.length} product{rejected.length > 1 ? 's' : ''} that need{rejected.length === 1 ? 's' : ''} attention</p>
             <p className="text-xs text-amber-700 mt-0.5">Click on each product card to view detailed QC feedback and resubmit once fixed. Our team reviews resubmissions within 24–48 hours.</p>

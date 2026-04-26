@@ -20,6 +20,8 @@ export default function Navbar() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [catSuggestions, setCatSuggestions] = useState<any[]>([]);
+  const [prodSuggestions, setProdSuggestions] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -66,26 +68,44 @@ export default function Navbar() {
     setIsUserMenuOpen(false);
   };
 
+  const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
+  const toImgUrl = (src?: string) => {
+    if (!src) return '';
+    return src.startsWith('http') ? src : `${CLOUD}/${src}`;
+  };
+
   const handleSearchInput = useCallback((value: string) => {
     setSearchQuery(value);
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    if (value.trim().length < 2) {
+    if (value.trim().length < 1) {
+      setCatSuggestions([]);
+      setProdSuggestions([]);
       setSuggestions([]);
       setShowDropdown(false);
       return;
     }
     searchDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/categories/search?q=${encodeURIComponent(value.trim())}`);
-        const data = await res.json();
-        const cats = (data.data || []).slice(0, 7);
+        const q = encodeURIComponent(value.trim());
+        const [catRes, prodRes] = await Promise.all([
+          fetch(`/api/categories/search?q=${q}`),
+          fetch(`/api/products?search=${q}&limit=5&isActive=true`),
+        ]);
+        const catData = await catRes.json();
+        const prodData = await prodRes.json();
+        const cats = (catData.data || []).slice(0, 4);
+        const prods = (prodData.products || []).slice(0, 4);
+        setCatSuggestions(cats);
+        setProdSuggestions(prods);
         setSuggestions(cats);
-        setShowDropdown(cats.length > 0);
+        setShowDropdown(cats.length > 0 || prods.length > 0);
       } catch {
+        setCatSuggestions([]);
+        setProdSuggestions([]);
         setSuggestions([]);
         setShowDropdown(false);
       }
-    }, 300);
+    }, 250);
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -112,7 +132,7 @@ export default function Navbar() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
-                onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
+                onFocus={() => { if (catSuggestions.length > 0 || prodSuggestions.length > 0) setShowDropdown(true); }}
                 onKeyDown={(e) => { if (e.key === 'Escape') setShowDropdown(false); }}
                 placeholder="Search for products..."
                 className="w-full px-4 py-2.5 pl-11 pr-4 bg-[#F5F0E8] border border-[#E8E2D9] rounded-full text-sm text-[#2D2D2D] placeholder-[#6B6B6B] focus:outline-none focus:ring-2 focus:ring-[#722F37] focus:border-transparent transition-all"
@@ -126,33 +146,75 @@ export default function Navbar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
 
-              {/* Category Autocomplete Dropdown */}
-              {showDropdown && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden">
-                  <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">
-                    Categories
-                  </p>
-                  {suggestions.map(cat => (
-                    <Link
-                      key={cat.id}
-                      href={`/category/${cat.slug}`}
-                      onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); }}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
-                    >
-                      <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                        <span className="text-lg">{cat.icon || '🛍️'}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
-                        {cat.breadcrumb && cat.breadcrumb !== cat.name && (
-                          <p className="text-xs text-[#6B6B6B]">{cat.breadcrumb}</p>
-                        )}
-                      </div>
-                      <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  ))}
+              {/* Search Suggestions Dropdown */}
+              {showDropdown && (catSuggestions.length > 0 || prodSuggestions.length > 0) && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden max-h-[480px] overflow-y-auto">
+
+                  {/* Product suggestions */}
+                  {prodSuggestions.length > 0 && (
+                    <>
+                      <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">Products</p>
+                      {prodSuggestions.map(prod => {
+                        const imgUrl = toImgUrl(prod.mainImage || prod.images?.[0]);
+                        return (
+                          <Link
+                            key={prod.id}
+                            href={`/product/${prod.productId || prod.id}`}
+                            onClick={() => { setShowDropdown(false); setSearchQuery(''); setCatSuggestions([]); setProdSuggestions([]); setSuggestions([]); }}
+                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-[#F0EDE8] flex-shrink-0 overflow-hidden">
+                              {imgUrl
+                                ? <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover" />
+                                : <div className="w-full h-full flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-[#2D2D2D] truncate">{prod.name}</p>
+                              <p className="text-xs text-[#C49A3C] font-semibold">₹{prod.price?.toLocaleString('en-IN')}</p>
+                            </div>
+                            <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                          </Link>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Category suggestions */}
+                  {catSuggestions.length > 0 && (
+                    <>
+                      <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">Categories</p>
+                      {catSuggestions.map(cat => (
+                        <Link
+                          key={cat.id}
+                          href={`/category/${cat.slug}`}
+                          onClick={() => { setShowDropdown(false); setSearchQuery(''); setCatSuggestions([]); setProdSuggestions([]); setSuggestions([]); }}
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B1A3A" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
+                            {cat.breadcrumb && cat.breadcrumb !== cat.name && (
+                              <p className="text-xs text-[#6B6B6B]">{cat.breadcrumb}</p>
+                            )}
+                          </div>
+                          <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        </Link>
+                      ))}
+                    </>
+                  )}
+
+                  {/* View all results link */}
+                  <Link
+                    href={`/search?q=${encodeURIComponent(searchQuery.trim())}`}
+                    onClick={() => { setShowDropdown(false); }}
+                    className="flex items-center justify-center gap-1 px-4 py-2.5 text-xs font-semibold text-[#5B1A3A] hover:bg-[#F5EDF2] transition-colors border-t border-[#F0EDE8]"
+                  >
+                    View all results for &ldquo;{searchQuery}&rdquo;
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 5l7 7-7 7"/></svg>
+                  </Link>
                 </div>
               )}
             </div>
@@ -165,7 +227,7 @@ export default function Navbar() {
 
           {/* Right side - Language, Cart & User Menu */}
           <div className="hidden lg:flex items-center space-x-4">
-            <LanguageSwitcher />
+            {/* <LanguageSwitcher /> — temporarily disabled */}
 
             {/* Cart Icon */}
             <Link
@@ -387,7 +449,7 @@ export default function Navbar() {
 
           {/* Mobile menu button */}
           <div className="lg:hidden flex items-center space-x-3">
-            <LanguageSwitcher />
+            {/* <LanguageSwitcher /> — temporarily disabled */}
 
             {/* User Menu Button - Mobile */}
             <button
@@ -602,33 +664,69 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
 
-                {/* Category Autocomplete Dropdown - Mobile */}
-                {showDropdown && suggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden">
-                    <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">
-                      Categories
-                    </p>
-                    {suggestions.map(cat => (
-                      <Link
-                        key={cat.id}
-                        href={`/category/${cat.slug}`}
-                        onClick={() => { setShowDropdown(false); setSearchQuery(''); setSuggestions([]); setIsMenuOpen(false); }}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
-                          <span className="text-lg">{cat.icon || '🛍️'}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
-                          {cat.breadcrumb && cat.breadcrumb !== cat.name && (
-                            <p className="text-xs text-[#6B6B6B]">{cat.breadcrumb}</p>
-                          )}
-                        </div>
-                        <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    ))}
+                {/* Search Suggestions Dropdown - Mobile */}
+                {showDropdown && (catSuggestions.length > 0 || prodSuggestions.length > 0) && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-[#E8E2D9] z-[60] overflow-hidden max-h-[400px] overflow-y-auto">
+                    {prodSuggestions.length > 0 && (
+                      <>
+                        <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">Products</p>
+                        {prodSuggestions.map(prod => {
+                          const imgUrl = toImgUrl(prod.mainImage || prod.images?.[0]);
+                          return (
+                            <Link
+                              key={prod.id}
+                              href={`/product/${prod.productId || prod.id}`}
+                              onClick={() => { setShowDropdown(false); setSearchQuery(''); setCatSuggestions([]); setProdSuggestions([]); setSuggestions([]); setIsMenuOpen(false); }}
+                              className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                            >
+                              <div className="w-10 h-10 rounded-lg bg-[#F0EDE8] flex-shrink-0 overflow-hidden">
+                                {imgUrl
+                                  ? <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover" />
+                                  : <div className="w-full h-full flex items-center justify-center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                                }
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[#2D2D2D] truncate">{prod.name}</p>
+                                <p className="text-xs text-[#C49A3C] font-semibold">₹{prod.price?.toLocaleString('en-IN')}</p>
+                              </div>
+                              <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            </Link>
+                          );
+                        })}
+                      </>
+                    )}
+                    {catSuggestions.length > 0 && (
+                      <>
+                        <p className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-widest uppercase text-[#6B6B6B]">Categories</p>
+                        {catSuggestions.map(cat => (
+                          <Link
+                            key={cat.id}
+                            href={`/category/${cat.slug}`}
+                            onClick={() => { setShowDropdown(false); setSearchQuery(''); setCatSuggestions([]); setProdSuggestions([]); setSuggestions([]); setIsMenuOpen(false); }}
+                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F5F0E8] transition-colors border-b border-[#F0EDE8] last:border-b-0"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-[#F0EDE8] flex-shrink-0 flex items-center justify-center">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B1A3A" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-[#2D2D2D]">{cat.name}</p>
+                              {cat.breadcrumb && cat.breadcrumb !== cat.name && (
+                                <p className="text-xs text-[#6B6B6B]">{cat.breadcrumb}</p>
+                              )}
+                            </div>
+                            <svg className="w-4 h-4 text-[#C49A3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                          </Link>
+                        ))}
+                      </>
+                    )}
+                    <Link
+                      href={`/search?q=${encodeURIComponent(searchQuery.trim())}`}
+                      onClick={() => { setShowDropdown(false); setIsMenuOpen(false); }}
+                      className="flex items-center justify-center gap-1 px-4 py-2.5 text-xs font-semibold text-[#5B1A3A] hover:bg-[#F5EDF2] transition-colors border-t border-[#F0EDE8]"
+                    >
+                      View all results for &ldquo;{searchQuery}&rdquo;
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 5l7 7-7 7"/></svg>
+                    </Link>
                   </div>
                 )}
               </div>
@@ -642,7 +740,6 @@ export default function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                   className="px-4 py-3 rounded-lg text-base font-bold transition-colors text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8]"
                 >
-                  {l1.icon && <span className="mr-2">{l1.icon}</span>}
                   {l1.name}
                 </Link>
               ))}

@@ -12,7 +12,7 @@ export default function CategoryNotFound() {
       padding: 20,
     }}>
       <div style={{ textAlign: 'center', maxWidth: 480 }}>
-        <div style={{ fontSize: 72, marginBottom: 16 }}>🔍</div>
+        <div style={{ fontSize: 72, marginBottom: 16 }}></div>
         <h1 style={{
           fontFamily: 'var(--font-playfair, Playfair Display, serif)',
           fontSize: 48, fontWeight: 800, color: '#5B1A3A', margin: '0 0 8px',

@@ -96,7 +96,7 @@ export default function HealthPage() {
                   <p className="text-[11px] text-gray-500 mt-0.5">{m.desc}</p>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: `${color}15`, color }}>
-                  {isGood ? '✓ On Track' : '↑ Improve'}
+                  {isGood ? ' On Track' : '↑ Improve'}
                 </span>
               </div>
               <p className="text-3xl font-bold mb-3" style={{ color, fontFamily: 'var(--font-playfair)' }}>{m.value}{m.unit}</p>
@@ -116,7 +116,7 @@ export default function HealthPage() {
       {NEXT_TIER && WORST_METRIC && (
         <div className="flex items-start gap-4 p-5 rounded-xl border border-amber-200 bg-amber-50">
           <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <span className="text-xl">💡</span>
+            <span className="text-xl"></span>
           </div>
           <div>
             <p className="font-semibold text-amber-900 text-sm">

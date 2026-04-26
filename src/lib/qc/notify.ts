@@ -13,8 +13,8 @@ async function fireInAppNotification(payload: NotifyPayload): Promise<NotifyResu
   try {
     const title =
       payload.type === 'approved'
-        ? `✅ "${payload.product.name}" is now live!`
-        : `❌ "${payload.product.name}" needs changes`;
+        ? ` "${payload.product.name}" is now live!`
+        : ` "${payload.product.name}" needs changes`;
 
     const message =
       payload.type === 'approved'
@@ -199,7 +199,7 @@ export async function dispatchQCNotification(
 function buildEmailHtml(payload: NotifyPayload): string {
   const isApproved = payload.type === 'approved';
   const headerBg = isApproved ? '#2D4A22' : '#8B2020';
-  const headerText = isApproved ? '✅ Product Approved!' : '❌ Product Needs Changes';
+  const headerText = isApproved ? ' Product Approved!' : ' Product Needs Changes';
   const accentColor = isApproved ? '#2D4A22' : '#8B2020';
 
   const reasonsHtml =
@@ -263,7 +263,7 @@ function buildEmailHtml(payload: NotifyPayload): string {
               ${
                 isApproved
                   ? `<p style="color:#2D4A22;background:#EEF4EB;padding:14px 18px;border-radius:8px;margin:0">
-                       🎉 Your product is now <strong>live and visible to customers</strong> on Insta Fashion Points.
+                        Your product is now <strong>live and visible to customers</strong> on Insta Fashion Points.
                      </p>`
                   : `<p style="color:#8B2020;background:#FDF0F0;padding:14px 18px;border-radius:8px;margin:0">
                        Your product requires changes before it can go live. Please review and fix the issues below.

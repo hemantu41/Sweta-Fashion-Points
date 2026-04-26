@@ -118,8 +118,8 @@ export default function ReturnPolicyPage() {
               <div className="bg-[#722F37] bg-opacity-10 rounded-lg p-4 mt-4 border border-[#722F37]">
                 <p className="text-[#722F37] font-semibold">
                   {language === 'hi'
-                    ? '📦 रिटर्न पता: Insta Fashion Points, Hyderabad, Telangana – 500032'
-                    : '📦 Return Address: Insta Fashion Points, Hyderabad, Telangana – 500032'}
+                    ? ' रिटर्न पता: Insta Fashion Points, Hyderabad, Telangana – 500032'
+                    : ' Return Address: Insta Fashion Points, Hyderabad, Telangana – 500032'}
                 </p>
               </div>
             </section>
@@ -267,26 +267,26 @@ export default function ReturnPolicyPage() {
                     : 'For any questions regarding returns, please contact us:'}
                 </p>
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? '📧 ईमेल:' : '📧 Email:'}</strong> info@instafashionpoints.com
+                  <strong>{language === 'hi' ? ' ईमेल:' : ' Email:'}</strong> info@instafashionpoints.com
                 </p>
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? '📞 फोन:' : '📞 Phone:'}</strong> +91 82941 53256
+                  <strong>{language === 'hi' ? ' फोन:' : ' Phone:'}</strong> +91 82941 53256
                 </p>
                 <p className="mb-2">
-                  <strong>{language === 'hi' ? '⏰ समय:' : '⏰ Hours:'}</strong>{' '}
+                  <strong>{language === 'hi' ? ' समय:' : ' Hours:'}</strong>{' '}
                   {language === 'hi'
                     ? 'सोमवार - शनिवार, सुबह 10:00 बजे - शाम 6:00 बजे'
                     : 'Monday - Saturday, 10:00 AM - 6:00 PM'}
                 </p>
                 <p>
-                  <strong>{language === 'hi' ? '📍 पता:' : '📍 Address:'}</strong> Hyderabad, Telangana – 500032
+                  <strong>{language === 'hi' ? ' पता:' : ' Address:'}</strong> Hyderabad, Telangana – 500032
                 </p>
               </div>
             </section>
 
             <div className="mt-12 p-6 bg-green-50 rounded-lg border border-green-200">
               <p className="text-green-800 font-semibold text-center mb-2">
-                {language === 'hi' ? '✅ हमारी प्रतिबद्धता' : '✅ Our Commitment'}
+                {language === 'hi' ? ' हमारी प्रतिबद्धता' : ' Our Commitment'}
               </p>
               <p className="text-green-700 text-center">
                 {language === 'hi'

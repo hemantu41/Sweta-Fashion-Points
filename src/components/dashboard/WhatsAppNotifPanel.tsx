@@ -13,10 +13,10 @@ const MOCK_LOGS: WhatsAppNotification[] = [
 ];
 
 const TEMPLATES = [
-  { key: 'wa.orderConfirm', emoji: '📦' },
-  { key: 'wa.shipmentUpdate', emoji: '🚚' },
-  { key: 'wa.deliveryComplete', emoji: '✅' },
-  { key: 'wa.paymentReminder', emoji: '💰' },
+  { key: 'wa.orderConfirm', emoji: '' },
+  { key: 'wa.shipmentUpdate', emoji: '' },
+  { key: 'wa.deliveryComplete', emoji: '' },
+  { key: 'wa.paymentReminder', emoji: '' },
 ];
 
 const STATUS_ICONS = {

@@ -22,7 +22,7 @@ const collections: Collection[] = [
     nameHi: 'पुरुष',
     description: 'Sophisticated & Contemporary',
     descriptionHi: 'परिष्कृत और आधुनिक',
-    icon: '👔',
+    icon: '',
     link: '/mens',
     bgGradient: 'from-slate-900 via-gray-800 to-slate-900',
     accentColor: '#60A5FA',
@@ -33,7 +33,7 @@ const collections: Collection[] = [
     nameHi: 'महिला',
     description: 'Elegant & Timeless',
     descriptionHi: 'सुरुचिपूर्ण और कालातीत',
-    icon: '👗',
+    icon: '',
     link: '/womens',
     bgGradient: 'from-rose-900 via-pink-800 to-rose-900',
     accentColor: '#FB7185',
@@ -44,7 +44,7 @@ const collections: Collection[] = [
     nameHi: 'बच्चे',
     description: 'Playful & Comfortable',
     descriptionHi: 'खिलंड़ा और आरामदायक',
-    icon: '👶',
+    icon: '',
     link: '/kids',
     bgGradient: 'from-amber-600 via-orange-600 to-amber-600',
     accentColor: '#FBBF24',
@@ -55,7 +55,7 @@ const collections: Collection[] = [
     nameHi: 'साड़ी',
     description: 'Graceful & Traditional',
     descriptionHi: 'लावण्यमय और पारंपरिक',
-    icon: '🥻',
+    icon: '',
     link: '/sarees',
     bgGradient: 'from-purple-900 via-violet-800 to-purple-900',
     accentColor: '#A78BFA',
@@ -66,7 +66,7 @@ const collections: Collection[] = [
     nameHi: 'ब्यूटी',
     description: 'Radiant & Confident',
     descriptionHi: 'उज्ज्वल और आत्मविश्वासी',
-    icon: '💄',
+    icon: '',
     link: '/makeup',
     bgGradient: 'from-red-800 via-pink-700 to-red-800',
     accentColor: '#F472B6',
@@ -133,11 +133,6 @@ export default function CollectionSection() {
 
                 {/* Content */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-white">
-                  {/* Icon */}
-                  <div className="text-6xl mb-4 transform group-hover:scale-110 transition-transform duration-300">
-                    {collection.icon}
-                  </div>
-
                   {/* Title */}
                   <h3 className="text-2xl font-bold mb-2 tracking-wide" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>
                     {language === 'hi' ? collection.nameHi : collection.name}
