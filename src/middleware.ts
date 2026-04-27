@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { unsealData } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 
-const PROTECTED = ['/account', '/orders', '/checkout'];
+const PROTECTED = ['/account', '/orders', '/checkout', '/profile', '/payment-methods', '/addresses'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -46,5 +46,16 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/account/:path*', '/orders/:path*', '/checkout/:path*', '/login'],
+  matcher: [
+    '/account/:path*',
+    '/orders/:path*',
+    '/checkout/:path*',
+    '/profile/:path*',
+    '/profile',
+    '/payment-methods/:path*',
+    '/payment-methods',
+    '/addresses/:path*',
+    '/addresses',
+    '/login',
+  ],
 };
