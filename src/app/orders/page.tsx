@@ -57,6 +57,10 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
 
   useEffect(() => {
     if (isLoading) return;
@@ -105,16 +109,58 @@ export default function OrdersPage() {
     }
   };
 
+  // Statuses where the customer can still cancel
+  const CANCELLABLE_STATUSES = ['captured', 'accepted', 'label_generated'];
+
+  const handleCancelOrder = async () => {
+    if (!cancelReason.trim()) {
+      setCancelError('Please select or enter a reason for cancellation.');
+      return;
+    }
+    setCancelling(true);
+    setCancelError('');
+    try {
+      const res = await fetch(`/api/orders/${cancelOrderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: user?.id, reason: cancelReason.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setOrders(prev => prev.map(o => o.id === cancelOrderId ? { ...o, status: 'cancelled' } : o));
+        setCancelOrderId(null);
+        setCancelReason('');
+      } else {
+        setCancelError(data.error || 'Failed to cancel order. Please try again.');
+      }
+    } catch {
+      setCancelError('Something went wrong. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'captured':
+      case 'accepted':
+      case 'label_generated':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'packed':
+        return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'shipped':
+      case 'out_for_delivery':
+        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+      case 'delivered':
         return 'bg-green-100 text-green-700 border-green-200';
+      case 'cancelled':
       case 'failed':
         return 'bg-red-100 text-red-700 border-red-200';
+      case 'returned':
+        return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       case 'created':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -122,16 +168,19 @@ export default function OrdersPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'captured':
-        return 'Payment Successful';
-      case 'failed':
-        return 'Payment Failed';
-      case 'pending':
-        return 'Payment Pending';
-      case 'created':
-        return 'Order Created';
-      default:
-        return status;
+      case 'captured':       return 'Order Confirmed';
+      case 'accepted':       return 'Accepted by Seller';
+      case 'label_generated':return 'Preparing Shipment';
+      case 'packed':         return 'Packed';
+      case 'shipped':        return 'Shipped';
+      case 'out_for_delivery': return 'Out for Delivery';
+      case 'delivered':      return 'Delivered';
+      case 'cancelled':      return 'Cancelled';
+      case 'returned':       return 'Returned';
+      case 'failed':         return 'Payment Failed';
+      case 'pending':        return 'Payment Pending';
+      case 'created':        return 'Order Created';
+      default: return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
   };
 
@@ -364,14 +413,7 @@ export default function OrdersPage() {
 
                 {/* Order Actions */}
                 <div className="px-6 pb-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                      {order.razorpay_payment_id && (
-                        <p className="text-xs text-[#6B6B6B]">
-                          Payment ID: {order.razorpay_payment_id}
-                        </p>
-                      )}
-                    </div>
+                  <div className="flex flex-wrap items-center gap-3">
                     {order.awb_number ? (
                       <Link
                         href={`/track/${order.awb_number}`}
@@ -382,7 +424,7 @@ export default function OrdersPage() {
                         </svg>
                         Track Order
                       </Link>
-                    ) : order.status === 'captured' ? (
+                    ) : CANCELLABLE_STATUSES.includes(order.status) ? (
                       <span className="inline-flex items-center gap-2 text-[#6B6B6B] text-sm">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -390,6 +432,22 @@ export default function OrdersPage() {
                         Awaiting Shipment
                       </span>
                     ) : null}
+
+                    {CANCELLABLE_STATUSES.includes(order.status) && (
+                      <button
+                        onClick={() => {
+                          setCancelOrderId(order.id);
+                          setCancelReason('');
+                          setCancelError('');
+                        }}
+                        className="inline-flex items-center gap-2 border border-red-300 text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-red-50 transition-colors text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Cancel Order
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -432,6 +490,98 @@ export default function OrdersPage() {
           </a>
         </div>
       </div>
+
+      {/* ── Cancel Order Modal ─────────────────────────────────────────────── */}
+      {cancelOrderId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={e => { if (e.target === e.currentTarget) { setCancelOrderId(null); setCancelReason(''); setCancelError(''); } }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair)' }}>
+                  Cancel Order
+                </h3>
+                <p className="text-sm text-[#6B6B6B] mt-0.5">
+                  #{orders.find(o => o.id === cancelOrderId)?.order_number}
+                </p>
+              </div>
+              <button
+                onClick={() => { setCancelOrderId(null); setCancelReason(''); setCancelError(''); }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-sm text-[#6B6B6B] mb-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Once cancelled, this action cannot be undone. If you paid online, refund will be processed within 5–7 business days.
+            </p>
+
+            {/* Quick-select reasons */}
+            <p className="text-sm font-medium text-[#2D2D2D] mb-2">
+              Reason for cancellation <span className="text-red-500">*</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {['Changed my mind', 'Ordered by mistake', 'Found a better price', 'Delivery taking too long'].map(reason => (
+                <button
+                  key={reason}
+                  onClick={() => setCancelReason(reason)}
+                  className={`text-left px-3 py-2 rounded-lg text-sm border transition-colors
+                    ${cancelReason === reason
+                      ? 'bg-[#722F37]/10 border-[#722F37] text-[#722F37] font-medium'
+                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300'}`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom reason textarea */}
+            <textarea
+              placeholder="Or describe your reason here…"
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              rows={2}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#722F37]/30 focus:border-[#722F37] resize-none placeholder:text-gray-400"
+            />
+
+            {cancelError && (
+              <p className="text-red-600 text-sm mt-2">{cancelError}</p>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => { setCancelOrderId(null); setCancelReason(''); setCancelError(''); }}
+                disabled={cancelling}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={cancelling || !cancelReason.trim()}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {cancelling ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Cancelling…
+                  </>
+                ) : 'Confirm Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
