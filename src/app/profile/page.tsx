@@ -30,15 +30,33 @@ export default function ProfilePage() {
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login?callbackUrl=/profile');
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      // localStorage is empty but the iron-session cookie may still be valid.
+      // Try to restore from the server before redirecting — avoids the redirect
+      // loop where the middleware would bounce /login back to /profile (because
+      // the cookie is valid) while localStorage is still empty.
+      fetch('/api/auth/session')
+        .then(r => r.json())
+        .then(data => {
+          if (data.isLoggedIn && data.user) {
+            login(data.user); // restores localStorage; fetchProfile fires via [user] effect
+          } else {
+            // Truly unauthenticated — redirect to login with callbackUrl
+            router.replace('/login?callbackUrl=/profile');
+          }
+        })
+        .catch(() => {
+          router.replace('/login?callbackUrl=/profile');
+        });
       return;
     }
 
     if (user?.id) {
       fetchProfile();
     }
-  }, [user, isAuthenticated, isLoading, router]);
+  }, [user, isAuthenticated, isLoading, router, login]);
 
   const fetchProfile = async () => {
     try {

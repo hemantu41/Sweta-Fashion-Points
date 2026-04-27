@@ -472,6 +472,7 @@ class ShiprocketService {
         method: 'POST',
         body: JSON.stringify({ shipment_id: shipmentId }),
       });
+      console.log('[Shiprocket] auto-assign response:', JSON.stringify(assignResponse?.response?.data || assignResponse, null, 2));
       if (assignResponse.response?.data?.awb_code) {
         return {
           success: true,
@@ -481,6 +482,7 @@ class ShiprocketService {
       }
       // Fallback: pick cheapest from serviceability
       const svc = await this.request<any>(`/courier/serviceability/?shipment_id=${shipmentId}`);
+      console.log('[Shiprocket] serviceability response:', JSON.stringify(svc?.data || svc, null, 2));
       const couriers: any[] = svc.data?.available_courier_companies || [];
       if (!couriers.length) return { success: false, error: 'No couriers available' };
       const cheapest = couriers.sort((a: any, b: any) => a.rate - b.rate)[0];
