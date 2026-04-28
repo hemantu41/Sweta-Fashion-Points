@@ -11,8 +11,11 @@ export default function AdminAuthGuard({ children }: { children: React.ReactNode
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        // Not logged in - redirect to login
-        router.replace('/login');
+        // Not logged in — redirect to login, preserving the intended admin path
+        // so the user lands back here after login instead of /orders.
+        const currentPath =
+          typeof window !== 'undefined' ? window.location.pathname : '/admin/dashboard';
+        router.replace(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
       } else if (!isAdmin) {
         // Logged in but not admin - redirect to home with error
         router.push('/?error=unauthorized');

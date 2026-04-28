@@ -27,11 +27,13 @@ function isProtected(pathname: string): boolean {
 }
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading, login, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   // Prevent duplicate session-restore calls on rapid re-renders
   const restoringRef = useRef(false);
+  // Prevent duplicate session-verify calls on the login page
+  const verifyingRef = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
@@ -65,17 +67,39 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         });
 
     } else if (isAuthenticated && AUTH_ONLY_PATHS.includes(pathname)) {
-      // Authenticated user landed on /login or /signup — redirect them away.
-      // Use the callbackUrl from the query string if present; fall back to
-      // /orders (NOT '/' — going to homepage would lose their intended destination).
-      const params = new URLSearchParams(
-        typeof window !== 'undefined' ? window.location.search : ''
-      );
-      const cb = params.get('callbackUrl') || '';
-      const safe = cb.startsWith('/') && !cb.startsWith('//') ? cb : '/orders';
-      router.replace(safe);
+      // localStorage says the user is authenticated, but on mobile the
+      // iron-session cookie may have been cleared while localStorage persisted.
+      // Without this check the result is an infinite redirect loop:
+      //   /orders → middleware (no cookie) → /login → AuthGuard → /orders → …
+      // Verify the server-side session FIRST; only then redirect away.
+      if (verifyingRef.current) return;
+      verifyingRef.current = true;
+
+      fetch('/api/auth/session')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.isLoggedIn && data.user) {
+            // Cookie is valid — safe to leave the login page.
+            const params = new URLSearchParams(
+              typeof window !== 'undefined' ? window.location.search : ''
+            );
+            const cb = params.get('callbackUrl') || '';
+            const safe = cb.startsWith('/') && !cb.startsWith('//') ? cb : '/orders';
+            router.replace(safe);
+          } else {
+            // Cookie is gone / expired but localStorage has stale data.
+            // Clear it so the redirect loop breaks and the user can log in fresh.
+            logout();
+          }
+        })
+        .catch(() => {
+          // Network error — stay on the login page so the user can try again.
+        })
+        .finally(() => {
+          verifyingRef.current = false;
+        });
     }
-  }, [isAuthenticated, isLoading, pathname, router, login]);
+  }, [isAuthenticated, isLoading, pathname, router, login, logout]);
 
   // Show a full-screen spinner while auth is resolving on a protected route.
   if (isLoading && isProtected(pathname)) {
