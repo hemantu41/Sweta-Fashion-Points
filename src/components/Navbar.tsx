@@ -20,6 +20,7 @@ export default function Navbar() {
   const { tree: navTree } = useCategories();
   const pathname = usePathname();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileUserMenuRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [catSuggestions, setCatSuggestions] = useState<any[]>([]);
@@ -30,7 +31,16 @@ export default function Navbar() {
   // Close menus when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      // Don't close the user menu if the tap/click is inside the mobile menu panel —
+      // mousedown fires before click, so closing here would unmount the Link before
+      // the click event reaches it, swallowing navigation on mobile.
+      const insideMobileUserMenu =
+        mobileUserMenuRef.current?.contains(event.target as Node) ?? false;
+      if (
+        !insideMobileUserMenu &&
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setIsUserMenuOpen(false);
       }
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -521,7 +531,7 @@ export default function Navbar() {
 
         {/* Mobile User Menu — Logged Out */}
         {isUserMenuOpen && !isAuthenticated && !authLoading && (
-          <div className="lg:hidden py-4 border-t border-[#E8E2D9]">
+          <div className="lg:hidden py-4 border-t border-[#E8E2D9]" ref={mobileUserMenuRef}>
             <div className="px-4 py-2 mb-1">
               <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#6B6B6B]">My Account</p>
             </div>
@@ -550,7 +560,7 @@ export default function Navbar() {
 
         {/* Mobile User Menu — Logged In */}
         {isUserMenuOpen && isAuthenticated && (
-          <div className="lg:hidden py-4 border-t border-[#E8E2D9]">
+          <div className="lg:hidden py-4 border-t border-[#E8E2D9]" ref={mobileUserMenuRef}>
             {/* User Info */}
             <div className="px-4 py-3 bg-[#F5F0E8] rounded-lg mb-3">
               <p className="font-medium text-[#2D2D2D]">{user?.name}</p>

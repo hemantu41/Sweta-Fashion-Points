@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // GET /api/auth/me?userId=xxx
-// Returns the latest seller + delivery partner status for a logged-in user.
+// Returns the latest isAdmin + seller + delivery partner status for a logged-in user.
 // Called by AuthContext on mount to sync localStorage with DB.
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +12,15 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
+
+    // Fetch isAdmin from users table
+    const { data: userRow } = await supabase
+      .from('spf_users')
+      .select('is_admin')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const isAdmin = userRow?.is_admin || false;
 
     // Seller status
     const { data: seller } = await supabase
@@ -46,6 +55,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
+      isAdmin,
       ...sellerInfo,
       ...deliveryPartnerInfo,
     });
