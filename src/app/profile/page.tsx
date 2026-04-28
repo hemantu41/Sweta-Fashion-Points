@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, login } = useAuth();
@@ -23,7 +22,6 @@ export default function ProfilePage() {
     citizenship: 'Indian',
     profile_photo: '',
   });
-  const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -85,9 +83,7 @@ export default function ProfilePage() {
           citizenship: data.profile.citizenship || 'Indian',
           profile_photo: data.profile.profile_photo || '',
         });
-        if (data.profile.latitude != null && data.profile.longitude != null) {
-          setGeoStatus('success');
-        }
+
       } else {
         setFormData({
           name: user?.name || '',
@@ -299,35 +295,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Delivery Partner Status Section */}
-          {user?.isDeliveryPartner && (
-            <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-[#E8E2D9]">
-              <h2 className="text-xl font-bold text-[#722F37] mb-4">Delivery Partner Status</h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#6B6B6B] mb-2">Account Status:</p>
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium border ${
-                    user.deliveryPartnerStatus === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
-                    user.deliveryPartnerStatus === 'pending_approval' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                    user.deliveryPartnerStatus === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
-                    'bg-gray-100 text-gray-700 border-gray-200'
-                  }`}>
-                    {user.deliveryPartnerStatus === 'pending_approval' ? 'Pending Approval' :
-                     user.deliveryPartnerStatus === 'active' ? 'Active' :
-                     user.deliveryPartnerStatus === 'rejected' ? 'Rejected' :
-                     user.deliveryPartnerStatus?.replace('_', ' ').toUpperCase()}
-                  </span>
-                </div>
-                <Link
-                  href="/delivery-partner/status"
-                  className="text-[#722F37] hover:underline font-medium"
-                >
-                  View Details →
-                </Link>
-              </div>
-            </div>
-          )}
-
           {/* Message */}
           {message.text && (
             <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
@@ -397,74 +364,6 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {/* Location (GPS) */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    My Location
-                    <span className="ml-1 text-xs text-[#6B6B6B] font-normal">(for nearby products)</span>
-                  </label>
-                  {formData.latitude && formData.longitude ? (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
-                      <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-sm text-green-700 font-medium">Location saved ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})</span>
-                      {isEditing && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setGeoStatus('loading');
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => {
-                                setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                                setGeoStatus('success');
-                              },
-                              () => setGeoStatus('error')
-                            );
-                          }}
-                          className="ml-auto text-xs text-[#722F37] hover:underline"
-                        >
-                          Update
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-[#F5F0E8] rounded-lg">
-                      <svg className="w-4 h-4 text-[#6B6B6B] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-sm text-[#6B6B6B]">Not set — enable to see nearby products</span>
-                      {isEditing && (
-                        <button
-                          type="button"
-                          disabled={geoStatus === 'loading'}
-                          onClick={() => {
-                            if (!navigator.geolocation) {
-                              setGeoStatus('error');
-                              return;
-                            }
-                            setGeoStatus('loading');
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => {
-                                setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                                setGeoStatus('success');
-                              },
-                              () => setGeoStatus('error')
-                            );
-                          }}
-                          className="ml-auto px-3 py-1.5 bg-[#722F37] text-white text-xs rounded-lg hover:bg-[#5a252c] transition-colors disabled:opacity-50"
-                        >
-                          {geoStatus === 'loading' ? 'Detecting...' : 'Use My Location'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {geoStatus === 'error' && (
-                    <p className="text-xs text-red-500 mt-1">Could not get location. Please allow browser location access and try again.</p>
-                  )}
-                </div>
               </div>
             </div>
 
