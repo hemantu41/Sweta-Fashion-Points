@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notifyCustomerOrderRejected } from '@/lib/notifications/sellerNotify';
 
-const PACKING_SLA_MS = 4 * 60 * 60 * 1000; // 4 hours
+const PACKING_SLA_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function PUT(
   request: NextRequest,
