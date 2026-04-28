@@ -84,7 +84,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
               typeof window !== 'undefined' ? window.location.search : ''
             );
             const cb = params.get('callbackUrl') || '';
-            const safe = cb.startsWith('/') && !cb.startsWith('//') ? cb : '/orders';
+            // Exclude '/' — landing on homepage after login is not useful
+            const safe =
+              cb && cb.startsWith('/') && !cb.startsWith('//') && cb !== '/'
+                ? cb
+                : '/orders';
             router.replace(safe);
           } else {
             // Cookie is gone / expired but localStorage has stale data.

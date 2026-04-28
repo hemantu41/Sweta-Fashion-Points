@@ -274,7 +274,7 @@ export default function Navbar() {
                       <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#6B6B6B]">My Account</p>
                     </div>
                     <Link
-                      href={`/login${pathname && pathname !== '/login' && pathname !== '/signup' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''}`}
+                      href={`/login${pathname && pathname !== '/login' && pathname !== '/signup' && pathname !== '/' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''}`}
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center space-x-3 px-4 py-2.5 text-[#2D2D2D] hover:bg-[#F5F0E8] transition-colors"
                     >
@@ -526,7 +526,7 @@ export default function Navbar() {
               <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#6B6B6B]">My Account</p>
             </div>
             <Link
-              href={`/login${pathname && pathname !== '/login' && pathname !== '/signup' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''}`}
+              href={`/login${pathname && pathname !== '/login' && pathname !== '/signup' && pathname !== '/' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''}`}
               onClick={() => setIsUserMenuOpen(false)}
               className="flex items-center space-x-3 px-4 py-3 text-[#2D2D2D] hover:bg-[#F5F0E8] rounded-lg transition-colors"
             >

@@ -38,8 +38,11 @@ export async function middleware(request: NextRequest) {
   if (isLoginPage && isLoggedIn) {
     const raw = request.nextUrl.searchParams.get('callbackUrl') || '';
     // Security: only allow same-origin relative paths to prevent open-redirect.
-    // Fall back to /orders (not /) so users land somewhere useful.
-    const safe = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/orders';
+    // Also exclude '/' (homepage) — landing there after login is not useful.
+    const safe =
+      raw && raw.startsWith('/') && !raw.startsWith('//') && raw !== '/'
+        ? raw
+        : '/orders';
     return NextResponse.redirect(new URL(safe, request.url));
   }
 
