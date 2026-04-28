@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
-// Routes that require login — keep in sync with src/middleware.ts PROTECTED array
+// Routes that require login
 const PROTECTED_PREFIXES = [
   '/cart',
   '/checkout',
@@ -26,36 +26,39 @@ function isProtected(pathname: string): boolean {
   );
 }
 
+function Spinner() {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ background: '#FAF8F5' }}
+    >
+      <div className="w-10 h-10 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, login, logout } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  // Prevent duplicate session-restore calls on rapid re-renders
-  const restoringRef = useRef(false);
-  // Prevent duplicate session-verify calls on the login page
-  const verifyingRef = useRef(false);
+  const checkingRef = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
 
     if (!isAuthenticated && isProtected(pathname)) {
-      // Don't redirect to /login immediately — the iron-session cookie may still
-      // be valid even though localStorage is empty (e.g. after a browser clear
-      // or a transient network error during AuthContext's session-restore).
-      // Try the session API first; only redirect if the server also says "no session".
-      if (restoringRef.current) return;
-      restoringRef.current = true;
+      // AuthContext already tried session-restore. As a final fallback, call
+      // /api/auth/session (Node.js, reliable) before redirecting to login.
+      if (checkingRef.current) return;
+      checkingRef.current = true;
 
       fetch('/api/auth/session')
         .then((r) => r.json())
         .then((data) => {
           if (data.isLoggedIn && data.user) {
-            // Cookie is valid — restore user into AuthContext & localStorage.
-            // This triggers a re-render; the next effect run will see
-            // isAuthenticated = true and won't redirect.
+            // Cookie valid — hydrate state without touching the URL.
             login(data.user);
           } else {
-            // Truly unauthenticated — send to login with a return URL.
             router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
           }
         })
@@ -63,71 +66,37 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
         })
         .finally(() => {
-          restoringRef.current = false;
+          checkingRef.current = false;
         });
 
     } else if (isAuthenticated && AUTH_ONLY_PATHS.includes(pathname)) {
-      // localStorage says the user is authenticated, but on mobile the
-      // iron-session cookie may have been cleared while localStorage persisted.
-      // Without this check the result is an infinite redirect loop:
-      //   /orders → middleware (no cookie) → /login → AuthGuard → /orders → …
-      // Verify the server-side session FIRST; only then redirect away.
-      if (verifyingRef.current) return;
-      verifyingRef.current = true;
-
-      fetch('/api/auth/session')
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.isLoggedIn && data.user) {
-            // Cookie is valid — safe to leave the login page.
-            const params = new URLSearchParams(
-              typeof window !== 'undefined' ? window.location.search : ''
-            );
-            const cb = params.get('callbackUrl') || '';
-            // Exclude '/' — landing on homepage after login is not useful
-            const safe =
-              cb && cb.startsWith('/') && !cb.startsWith('//') && cb !== '/'
-                ? cb
-                : '/orders';
-            router.replace(safe);
-          } else {
-            // Cookie is gone / expired but localStorage has stale data.
-            // Clear it so the redirect loop breaks and the user can log in fresh.
-            logout();
-          }
-        })
-        .catch(() => {
-          // Network error — stay on the login page so the user can try again.
-        })
-        .finally(() => {
-          verifyingRef.current = false;
-        });
+      // User is authenticated but landed on /login or /signup.
+      // Redirect them away. We no longer verify the cookie here because:
+      //   (a) the middleware no longer redirects protected routes, so there
+      //       is no redirect loop to break, and
+      //   (b) calling logout() if the cookie isn't immediately readable on
+      //       mobile was wiping localStorage right after login.
+      const params = new URLSearchParams(
+        typeof window !== 'undefined' ? window.location.search : ''
+      );
+      const cb = params.get('callbackUrl') || '';
+      // '/' is excluded — landing on the homepage after login is not useful.
+      const safe =
+        cb && cb.startsWith('/') && !cb.startsWith('//') && cb !== '/'
+          ? cb
+          : '/orders';
+      router.replace(safe);
     }
-  }, [isAuthenticated, isLoading, pathname, router, login, logout]);
+  }, [isAuthenticated, isLoading, pathname, router, login]);
 
-  // Show a full-screen spinner while auth is resolving on a protected route.
+  // Spinner while AuthContext is resolving (session-restore in flight).
   if (isLoading && isProtected(pathname)) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: '#FAF8F5' }}
-      >
-        <div className="w-10 h-10 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <Spinner />;
   }
 
-  // Render nothing while the session-restore probe is in flight (prevents a
-  // flash of protected content before auth is confirmed or denied).
+  // Spinner while the /api/auth/session fallback check is in flight.
   if (!isLoading && !isAuthenticated && isProtected(pathname)) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: '#FAF8F5' }}
-      >
-        <div className="w-10 h-10 border-4 border-[#722F37] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <Spinner />;
   }
 
   return <>{children}</>;
