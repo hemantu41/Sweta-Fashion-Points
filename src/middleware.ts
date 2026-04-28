@@ -36,9 +36,10 @@ export async function middleware(request: NextRequest) {
 
   // Already logged in → skip /login; honour callbackUrl if present
   if (isLoginPage && isLoggedIn) {
-    const raw = request.nextUrl.searchParams.get('callbackUrl') || '/';
-    // Security: only allow same-origin relative paths to prevent open-redirect
-    const safe = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+    const raw = request.nextUrl.searchParams.get('callbackUrl') || '';
+    // Security: only allow same-origin relative paths to prevent open-redirect.
+    // Fall back to /orders (not /) so users land somewhere useful.
+    const safe = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/orders';
     return NextResponse.redirect(new URL(safe, request.url));
   }
 

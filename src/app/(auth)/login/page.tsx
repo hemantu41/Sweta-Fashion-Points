@@ -55,7 +55,11 @@ function Spinner() {
 function LoginForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl  = searchParams.get('callbackUrl') || '/';
+  const _rawCb       = searchParams.get('callbackUrl') || '';
+  // Treat missing OR '/' (homepage) the same — send logged-in users to /orders
+  const callbackUrl  = _rawCb && _rawCb.startsWith('/') && !_rawCb.startsWith('//') && _rawCb !== '/'
+    ? _rawCb
+    : '/orders';
   const { login }    = useAuth();
 
   const [tab,        setTab]        = useState<Tab>('password');
