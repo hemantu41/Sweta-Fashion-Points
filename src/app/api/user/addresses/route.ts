@@ -115,11 +115,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update address (set as default)
+// PUT - Update address fields and/or set as default
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, addressId, isDefault } = body;
+    const { userId, addressId, isDefault, name, phone, addressLine1, addressLine2, city, state, pincode } = body;
 
     if (!userId || !addressId) {
       return NextResponse.json(
@@ -128,24 +128,39 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // If setting as default, remove default from other addresses
+    // If setting as default, clear default on all other addresses first
     if (isDefault) {
       await supabaseAdmin
         .from('spf_addresses')
         .update({ is_default: false })
         .eq('user_id', userId);
-
-      await supabaseAdmin
-        .from('spf_addresses')
-        .update({ is_default: true })
-        .eq('id', addressId)
-        .eq('user_id', userId);
     }
 
-    return NextResponse.json(
-      { message: 'Address updated successfully' },
-      { status: 200 }
-    );
+    // Build update object from whichever fields were provided
+    const updateFields: Record<string, unknown> = {};
+    if (isDefault !== undefined) updateFields.is_default = isDefault;
+    if (name !== undefined) updateFields.name = name;
+    if (phone !== undefined) updateFields.phone = phone;
+    if (addressLine1 !== undefined) updateFields.address_line1 = addressLine1;
+    if (addressLine2 !== undefined) updateFields.address_line2 = addressLine2 || null;
+    if (city !== undefined) updateFields.city = city;
+    if (state !== undefined) updateFields.state = state;
+    if (pincode !== undefined) updateFields.pincode = pincode;
+
+    const { data, error } = await supabaseAdmin
+      .from('spf_addresses')
+      .update(updateFields)
+      .eq('id', addressId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Address update error:', error);
+      return NextResponse.json({ error: 'Failed to update address' }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Address updated successfully', address: data }, { status: 200 });
   } catch (error) {
     console.error('Address update error:', error);
     return NextResponse.json(
