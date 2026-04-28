@@ -80,11 +80,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         typeof window !== 'undefined' ? window.location.search : ''
       );
       const cb = params.get('callbackUrl') || '';
-      // '/' is excluded — landing on the homepage after login is not useful.
       const safe =
-        cb && cb.startsWith('/') && !cb.startsWith('//') && cb !== '/'
+        cb && cb.startsWith('/') && !cb.startsWith('//')
           ? cb
-          : '/orders';
+          : '/';
       router.replace(safe);
     }
   }, [isAuthenticated, isLoading, pathname, router, login]);

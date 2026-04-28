@@ -42,14 +42,13 @@ export async function middleware(request: NextRequest) {
   // Already logged in → redirect away from /login.
   if (isLoggedIn) {
     const callbackRaw = request.nextUrl.searchParams.get('callbackUrl') || '';
-    // Security: same-origin paths only; '/' is excluded (not useful post-login).
+    // Security: same-origin paths only.
     const safe =
       callbackRaw &&
       callbackRaw.startsWith('/') &&
-      !callbackRaw.startsWith('//') &&
-      callbackRaw !== '/'
+      !callbackRaw.startsWith('//')
         ? callbackRaw
-        : '/orders';
+        : '/';
     return NextResponse.redirect(new URL(safe, request.url));
   }
 

@@ -56,10 +56,10 @@ function LoginForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const _rawCb       = searchParams.get('callbackUrl') || '';
-  // Treat missing OR '/' (homepage) the same — send logged-in users to /orders
-  const callbackUrl  = _rawCb && _rawCb.startsWith('/') && !_rawCb.startsWith('//') && _rawCb !== '/'
+  // Use the callbackUrl if valid, otherwise fall back to the homepage.
+  const callbackUrl  = _rawCb && _rawCb.startsWith('/') && !_rawCb.startsWith('//')
     ? _rawCb
-    : '/orders';
+    : '/';
   const { login }    = useAuth();
 
   const [tab,        setTab]        = useState<Tab>('password');
