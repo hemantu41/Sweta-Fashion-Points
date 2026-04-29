@@ -47,6 +47,7 @@ function transformOrder(o: any, productMap: Map<string, { main_image: string | n
     packing_deadline: o.packing_sla_deadline    ?? null,
     packed_at:        o.packed_at    ?? null,
     shipped_at:       o.picked_up_at ?? null,
+    delivered_at:     o.delivered_at ?? null,
     created_at:       o.created_at,
     awb_number:       o.awb_number   ?? null,
     courier_partner:  o.courier_partner ?? null,

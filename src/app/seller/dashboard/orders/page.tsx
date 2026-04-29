@@ -19,8 +19,10 @@ interface Order {
   sla_deadline?: string;
   packed_at?: string;
   shipped_at?: string;
+  delivered_at?: string;
   created_at: string;
   delivery_address?: any;
+  awb_number?: string;
 }
 
 interface Filters {
@@ -631,7 +633,7 @@ function OrdersTable({
             const isCancelledOrRejected = ['CANCELLED', 'RETURNED', 'REJECTED'].includes(statusStr);
 
             // AWB — can live on order or first item
-            const awb = (order as any).awb_number || order.items?.[0]?.awb || '';
+            const awb = order.awb_number || order.items?.[0]?.awb || '';
 
             return (
               <tr key={order.id}
@@ -663,7 +665,7 @@ function OrdersTable({
                 <td className="px-4 py-3 hidden md:table-cell">
                   <span className="text-xs text-[#6B7280]">
                     {isDeliveredTab
-                      ? fmtTime((order as any).delivered_at || order.shipped_at)
+                      ? fmtTime(order.delivered_at || order.shipped_at)
                       : fmtTime(order.created_at)}
                   </span>
                 </td>
