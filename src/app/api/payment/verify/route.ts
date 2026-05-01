@@ -3,6 +3,151 @@ import crypto from 'crypto';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notifySellerNewOrder, notifyCustomerNewOrder } from '@/lib/notifications/sellerNotify';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared helper: sync a captured payment order into spf_orders
+// Called from both /api/payment/verify and /api/payment/webhook
+// ─────────────────────────────────────────────────────────────────────────────
+export async function syncPaymentOrderToSpfOrders(
+  paymentOrder: any,
+  razorpay_order_id: string,
+  razorpay_payment_id: string,
+): Promise<void> {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Skip if already synced
+  const { data: existingOrder } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id')
+    .eq('transaction_id', razorpay_payment_id)
+    .maybeSingle();
+  if (existingOrder) {
+    console.log('[OrderSync] Already exists in spf_orders — skipping');
+    return;
+  }
+
+  const items: any[] = paymentOrder.items || [];
+  const deliveryAddr: any = paymentOrder.delivery_address || {};
+
+  // Try to get sellerId from the items payload first
+  let sellerId: string | null = items.find((i: any) => i.sellerId)?.sellerId ?? null;
+
+  // Fallback: look up seller_id from spf_productdetails using product UUIDs
+  if (!sellerId) {
+    const productUUIDs = items
+      .map((i: any) => (UUID_RE.test(i.id) ? i.id : UUID_RE.test(i.productId) ? i.productId : null))
+      .filter(Boolean) as string[];
+
+    if (productUUIDs.length > 0) {
+      const { data: products } = await supabaseAdmin
+        .from('spf_productdetails')
+        .select('id, seller_id')
+        .in('id', productUUIDs)
+        .limit(1);
+      sellerId = products?.[0]?.seller_id ?? null;
+      console.log(`[OrderSync] sellerId resolved from DB: ${sellerId}`);
+    }
+  }
+
+  if (!sellerId) {
+    console.error('[OrderSync] Cannot resolve sellerId — spf_orders insert skipped. items:', JSON.stringify(items));
+    return;
+  }
+
+  const subtotal = items.reduce(
+    (sum: number, i: any) => Math.round((sum + Number(i.price) * Number(i.quantity)) * 100) / 100,
+    0,
+  );
+  const orderTotalInr  = paymentOrder.amount / 100;
+  const shippingCharge = Math.max(0, Math.round((orderTotalInr - subtotal) * 100) / 100);
+
+  const shippingAddress = {
+    name:    deliveryAddr.name          || '',
+    phone:   deliveryAddr.phone         || '',
+    house:   deliveryAddr.address_line1 || '',
+    area:    deliveryAddr.address_line2 || '',
+    city:    deliveryAddr.city          || '',
+    state:   deliveryAddr.state         || '',
+    pincode: deliveryAddr.pincode       || '',
+  };
+
+  const payMethod = paymentOrder.upi_id ? 'UPI' : 'CARD';
+  const now = new Date();
+
+  const { data: newOrder, error: orderInsertErr } = await supabaseAdmin
+    .from('spf_orders')
+    .insert({
+      order_number:            paymentOrder.order_number,
+      customer_id:             paymentOrder.user_id,
+      seller_id:               sellerId,
+      status:                  'CONFIRMED',
+      payment_method:          payMethod,
+      payment_status:          'captured',
+      payment_gateway_ref:     razorpay_order_id,
+      transaction_id:          razorpay_payment_id,
+      subtotal,
+      shipping_charge:         shippingCharge,
+      platform_fee:            0,
+      pg_fee:                  0,
+      seller_payout_amount:    subtotal,
+      shipping_address:        shippingAddress,
+      acceptance_sla_deadline: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+      packing_sla_deadline:    new Date(now.getTime() + 48 * 3600 * 1000).toISOString(),
+    })
+    .select('id')
+    .single();
+
+  if (orderInsertErr) {
+    console.error('[OrderSync] spf_orders insert error:', orderInsertErr.message);
+    return;
+  }
+
+  if (!newOrder) return;
+
+  // Insert order items
+  if (items.length > 0) {
+    const itemRows = items.map((item: any) => {
+      const candidateId = UUID_RE.test(item.id) ? item.id
+        : UUID_RE.test(item.productId) ? item.productId
+        : null;
+      return {
+        order_id:        newOrder.id,
+        product_id:      candidateId,
+        seller_id:       item.sellerId || sellerId,
+        product_name:    item.name     || 'Product',
+        variant_details: item.size     ? { size: item.size } : null,
+        quantity:        Number(item.quantity) || 1,
+        unit_price:      Number(item.price)    || 0,
+        total_price:     Math.round(Number(item.price) * Number(item.quantity) * 100) / 100,
+      };
+    }).filter((r: any) => r.product_id !== null);
+
+    if (itemRows.length > 0) {
+      const { error: itemsErr } = await supabaseAdmin.from('spf_order_items').insert(itemRows);
+      if (itemsErr) console.error('[OrderSync] spf_order_items insert error:', itemsErr.message);
+    }
+  }
+
+  // Status history
+  await supabaseAdmin.from('spf_order_status_history').insert({
+    order_id:    newOrder.id,
+    from_status: null,
+    to_status:   'CONFIRMED',
+    actor_type:  'SYSTEM',
+    actor_id:    null,
+    note:        'Payment captured via Razorpay',
+  });
+
+  // Invalidate seller Redis cache so the dashboard shows the new order immediately
+  invalidateSellerKeys(sellerId, 'orders').catch(() => {});
+
+  // Email notifications — fire-and-forget
+  void notifySellerNewOrder(newOrder.id);
+  void notifyCustomerNewOrder(newOrder.id);
+
+  console.log(`[OrderSync] Created spf_orders entry: ${newOrder.id} for seller ${sellerId}`);
+}
 
 interface VerifyPaymentRequest {
   razorpay_order_id: string;
@@ -96,114 +241,7 @@ export async function POST(request: NextRequest) {
 
     // Sync to spf_orders so seller/buyer dashboards show this order
     try {
-      const { data: existingOrder } = await supabaseAdmin
-        .from('spf_orders')
-        .select('id')
-        .eq('transaction_id', razorpay_payment_id)
-        .maybeSingle();
-
-      if (!existingOrder) {
-        const items: any[] = paymentOrder.items || [];
-        const deliveryAddr: any = paymentOrder.delivery_address || {};
-        const sellerId = items.find((i: any) => i.sellerId)?.sellerId ?? null;
-
-        if (sellerId) {
-          const subtotal = items.reduce(
-            (sum: number, i: any) =>
-              Math.round((sum + Number(i.price) * Number(i.quantity)) * 100) / 100,
-            0,
-          );
-          const orderTotalInr  = paymentOrder.amount / 100;
-          const shippingCharge = Math.max(0, Math.round((orderTotalInr - subtotal) * 100) / 100);
-
-          const shippingAddress = {
-            name:    deliveryAddr.name           || '',
-            phone:   deliveryAddr.phone          || '',
-            house:   deliveryAddr.address_line1  || '',
-            area:    deliveryAddr.address_line2  || '',
-            city:    deliveryAddr.city           || '',
-            state:   deliveryAddr.state          || '',
-            pincode: deliveryAddr.pincode        || '',
-          };
-
-          const payMethod = paymentOrder.upi_id ? 'UPI' : 'CARD';
-          const now        = new Date();
-
-          const { data: newOrder, error: orderInsertErr } = await supabaseAdmin
-            .from('spf_orders')
-            .insert({
-              order_number:            paymentOrder.order_number,
-              customer_id:             paymentOrder.user_id,
-              seller_id:               sellerId,
-              status:                  'CONFIRMED',
-              payment_method:          payMethod,
-              payment_status:          'captured',
-              payment_gateway_ref:     razorpay_order_id,
-              transaction_id:          razorpay_payment_id,
-              subtotal,
-              shipping_charge:         shippingCharge,
-              platform_fee:            0,
-              pg_fee:                  0,
-              seller_payout_amount:    subtotal,
-              shipping_address:        shippingAddress,
-              acceptance_sla_deadline: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
-              packing_sla_deadline:    new Date(now.getTime() + 48 * 3600 * 1000).toISOString(),
-            })
-            .select('id')
-            .single();
-
-          if (orderInsertErr) {
-            console.error('[Verify Payment] spf_orders insert error:', orderInsertErr.message);
-          } else if (newOrder) {
-            console.log('[Verify Payment] raw items from spf_payment_orders:', JSON.stringify(items));
-            if (items.length > 0) {
-              // item.id = p.id (UUID primary key of spf_productdetails)
-              // item.productId = p.product_id (non-UUID short ID — do NOT use for FK)
-              const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-              const itemRows = items.map((item: any) => {
-                // Prefer item.id (UUID PK), fall back to item.productId only if it's a UUID
-                const candidateId = UUID_RE.test(item.id) ? item.id
-                  : UUID_RE.test(item.productId) ? item.productId
-                  : null;
-                return {
-                  order_id:        newOrder.id,
-                  product_id:      candidateId,
-                  seller_id:       item.sellerId || sellerId,
-                  product_name:    item.name     || 'Product',
-                  variant_details: item.size     ? { size: item.size } : null,
-                  quantity:        Number(item.quantity) || 1,
-                  unit_price:      Number(item.price)    || 0,
-                  total_price:     Math.round(Number(item.price) * Number(item.quantity) * 100) / 100,
-                };
-              }).filter((r: any) => r.product_id !== null);
-
-              console.log('[Verify Payment] inserting item rows:', JSON.stringify(itemRows));
-
-              const { error: itemsErr } = await supabaseAdmin
-                .from('spf_order_items')
-                .insert(itemRows);
-
-              if (itemsErr) {
-                console.error('[Verify Payment] spf_order_items insert error:', itemsErr.message);
-              }
-            }
-            await supabaseAdmin.from('spf_order_status_history').insert({
-              order_id:    newOrder.id,
-              from_status: null,
-              to_status:   'CONFIRMED',
-              actor_type:  'SYSTEM',
-              actor_id:    null,
-              note:        'Payment captured via Razorpay',
-            });
-
-            // Email notifications to seller + customer — fire-and-forget
-            void notifySellerNewOrder(newOrder.id);
-            void notifyCustomerNewOrder(newOrder.id);
-          }
-        } else {
-          console.warn('[Verify Payment] No sellerId in items — spf_orders insert skipped');
-        }
-      }
+      await syncPaymentOrderToSpfOrders(paymentOrder, razorpay_order_id, razorpay_payment_id);
     } catch (orderSyncErr: any) {
       console.error('[Verify Payment] spf_orders sync failed (non-fatal):', orderSyncErr?.message);
     }
