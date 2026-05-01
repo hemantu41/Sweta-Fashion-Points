@@ -136,10 +136,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (emailError) {
-        console.error('Email send error:', emailError);
+        console.warn('[OTP] Email could not be sent to', value, '— Error:', emailError);
+        // UAT: domain not yet verified in Resend — return OTP on screen so testers can proceed.
+        // TODO: remove devOtp before going live once fashionpoints.co.in is verified in Resend.
         return NextResponse.json(
-          { error: 'Failed to send OTP email. Please try again.' },
-          { status: 500 }
+          { message: 'OTP sent successfully', devOtp: otp, devNote: 'Email not configured — use this OTP for testing' },
+          { status: 200 }
         );
       }
     } else if (type === 'mobile') {

@@ -100,7 +100,7 @@ export default function SignupPage() {
   const [success,   setSuccess]   = useState('');
 
   const [emailVerification, setEmailVerification] = useState({
-    otpSent: false, otp: '', verified: false, loading: false, error: '',
+    otpSent: false, otp: '', verified: false, loading: false, error: '', devOtp: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +128,7 @@ export default function SignupPage() {
       const res  = await fetch('/api/auth/send-signup-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'email', value: formData.email }) });
       const data = await res.json();
       res.ok
-        ? setEmailVerification(p => ({ ...p, otpSent: true, loading: false }))
+        ? setEmailVerification(p => ({ ...p, otpSent: true, loading: false, devOtp: data.devOtp || '' }))
         : setEmailVerification(p => ({ ...p, error: data.error || 'Failed to send OTP', loading: false }));
     } catch {
       setEmailVerification(p => ({ ...p, error: 'Error sending OTP', loading: false }));
@@ -300,6 +300,13 @@ export default function SignupPage() {
                 onVerify={verifyEmailOTP}
                 loading={emailVerification.loading}
               />
+            )}
+            {emailVerification.devOtp && !emailVerification.verified && (
+              <div className="border border-dashed border-amber-400 bg-amber-50 rounded px-3 py-2 text-center mt-2">
+                <p className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold mb-1">UAT — Email not configured</p>
+                <p className="text-lg font-bold tracking-[0.4em] text-amber-800">{emailVerification.devOtp}</p>
+                <p className="text-[10px] text-amber-500 mt-0.5">Use this OTP to verify your email</p>
+              </div>
             )}
             {emailVerification.error && (
               <p className="text-[11px] mt-1.5" style={{ color: burgundy }}>{emailVerification.error}</p>
