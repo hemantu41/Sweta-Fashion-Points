@@ -48,6 +48,46 @@ function Spinner() {
   );
 }
 
+/* ── Verified badge ── */
+function VerifiedBadge() {
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-semibold tracking-widest uppercase text-emerald-600 whitespace-nowrap">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+      </svg>
+      Verified
+    </span>
+  );
+}
+
+/* ── OTP input row ── */
+function OTPBox({ value, onChange, onVerify, loading }: {
+  value: string; onChange: (v: string) => void; onVerify: () => void; loading: boolean;
+}) {
+  return (
+    <div className="mt-3 flex gap-2 items-center">
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        maxLength={6}
+        placeholder="6-digit OTP"
+        className="flex-1 bg-transparent border-b border-[#C9A84C]/40 focus:border-[#C9A84C] outline-none py-2 text-sm text-center tracking-[0.3em] text-[#1A1A1A] placeholder:text-[#ccc] transition-colors"
+        style={{ fontFamily: "'Jost', sans-serif" }}
+      />
+      <button
+        type="button"
+        onClick={onVerify}
+        disabled={loading || value.length !== 6}
+        style={{ fontFamily: "'Jost', sans-serif", color: burgundy, borderColor: `${burgundy}60` }}
+        className="px-3 py-1.5 text-[10px] font-semibold tracking-widest uppercase border hover:bg-[#7B1C2E] hover:text-white transition-all duration-200 disabled:opacity-40"
+      >
+        {loading ? '…' : 'Verify'}
+      </button>
+    </div>
+  );
+}
+
 export default function SignupPage() {
   const router = useRouter();
 
@@ -59,6 +99,10 @@ export default function SignupPage() {
   const [error,     setError]     = useState('');
   const [success,   setSuccess]   = useState('');
 
+  const [emailVerification, setEmailVerification] = useState({
+    otpSent: false, otp: '', verified: false, loading: false, error: '',
+  });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === 'mobile') {
@@ -67,6 +111,41 @@ export default function SignupPage() {
       setFormData({ ...formData, [name]: value.replace(/\D/g, '').slice(0, 6) });
     } else {
       setFormData({ ...formData, [name]: value });
+    }
+    // Reset email verification if email is changed after verifying
+    if (name === 'email' && emailVerification.verified) {
+      setEmailVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
+    }
+  };
+
+  /* ── Email OTP ── */
+  const sendEmailOTP = async () => {
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setEmailVerification(p => ({ ...p, error: 'Please enter a valid email address' })); return;
+    }
+    setEmailVerification(p => ({ ...p, loading: true, error: '' }));
+    try {
+      const res  = await fetch('/api/auth/send-signup-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'email', value: formData.email }) });
+      const data = await res.json();
+      res.ok
+        ? setEmailVerification(p => ({ ...p, otpSent: true, loading: false }))
+        : setEmailVerification(p => ({ ...p, error: data.error || 'Failed to send OTP', loading: false }));
+    } catch {
+      setEmailVerification(p => ({ ...p, error: 'Error sending OTP', loading: false }));
+    }
+  };
+
+  const verifyEmailOTP = async () => {
+    if (emailVerification.otp.length !== 6) { setEmailVerification(p => ({ ...p, error: 'Enter 6-digit OTP' })); return; }
+    setEmailVerification(p => ({ ...p, loading: true, error: '' }));
+    try {
+      const res  = await fetch('/api/auth/verify-signup-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'email', value: formData.email, otp: emailVerification.otp }) });
+      const data = await res.json();
+      res.ok && data.verified
+        ? setEmailVerification(p => ({ ...p, verified: true, loading: false }))
+        : setEmailVerification(p => ({ ...p, error: data.error || 'Invalid OTP', loading: false }));
+    } catch {
+      setEmailVerification(p => ({ ...p, error: 'Error verifying OTP', loading: false }));
     }
   };
 
@@ -77,6 +156,10 @@ export default function SignupPage() {
 
     if (formData.mobile && !/^[6-9]\d{9}$/.test(formData.mobile)) {
       setError('Enter a valid 10-digit mobile number'); return;
+    }
+    // If email entered, it must be verified
+    if (formData.email && !emailVerification.verified) {
+      setError('Please verify your email address before signing up'); return;
     }
     if (!/^\d{6}$/.test(formData.pincode)) {
       setError('Pincode must be a 6-digit number'); return;
@@ -162,7 +245,7 @@ export default function SignupPage() {
               style={{ fontFamily: "'Jost', sans-serif" }} />
           </div>
 
-          {/* Mobile (optional) */}
+          {/* Mobile (optional, no OTP) */}
           <div>
             <label className={labelClass}>
               Mobile Number{' '}
@@ -182,16 +265,45 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* Email (optional) */}
+          {/* Email (optional, OTP verification) */}
           <div>
             <label className={labelClass}>
               Email Address{' '}
               <span className="text-[#bbb] normal-case font-normal tracking-normal">(optional)</span>
             </label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange}
-              placeholder="your@email.com"
-              className={inputClass}
-              style={{ fontFamily: "'Jost', sans-serif" }} />
+            <div className="flex items-end gap-3">
+              <input
+                type="email" name="email" value={formData.email} onChange={handleChange}
+                disabled={emailVerification.verified}
+                placeholder="your@email.com"
+                className={`flex-1 ${inputClass} disabled:opacity-70`}
+                style={{ fontFamily: "'Jost', sans-serif" }}
+              />
+              {emailVerification.verified
+                ? <VerifiedBadge />
+                : formData.email
+                  ? (
+                    <button type="button" onClick={sendEmailOTP}
+                      disabled={emailVerification.loading}
+                      className="pb-2.5 text-[10px] font-semibold tracking-[0.15em] uppercase transition-opacity disabled:opacity-40 whitespace-nowrap"
+                      style={{ color: burgundy, fontFamily: "'Jost', sans-serif" }}
+                    >
+                      {emailVerification.loading ? '…' : emailVerification.otpSent ? 'Resend' : 'Verify'}
+                    </button>
+                  ) : null
+              }
+            </div>
+            {emailVerification.otpSent && !emailVerification.verified && (
+              <OTPBox
+                value={emailVerification.otp}
+                onChange={v => setEmailVerification(p => ({ ...p, otp: v, error: '' }))}
+                onVerify={verifyEmailOTP}
+                loading={emailVerification.loading}
+              />
+            )}
+            {emailVerification.error && (
+              <p className="text-[11px] mt-1.5" style={{ color: burgundy }}>{emailVerification.error}</p>
+            )}
           </div>
 
           {/* Address (optional) */}
@@ -239,6 +351,13 @@ export default function SignupPage() {
               required placeholder="Re-enter your password" className={inputClass}
               style={{ fontFamily: "'Jost', sans-serif" }} />
           </div>
+
+          {/* Email unverified hint */}
+          {formData.email && !emailVerification.verified && (
+            <p className="text-[11px]" style={{ color: `${gold}bb` }}>
+              Verify your email address to continue
+            </p>
+          )}
 
           {/* Error / Success */}
           {error && (
