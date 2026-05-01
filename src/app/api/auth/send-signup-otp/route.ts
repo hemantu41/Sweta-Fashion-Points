@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       }
 
       const { error: emailError } = await resend.emails.send({
-        from: 'Insta Fashion Points <noreply@fashionpoints.co.in>',
+        from: 'Insta Fashion Points <noreply@instafashionpoints.com>',
         to: value,
         subject: 'Verify Your Email - Insta Fashion Points',
         html: `
@@ -136,12 +136,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (emailError) {
-        console.warn('[OTP] Email could not be sent to', value, '— Error:', emailError);
-        // UAT: domain not yet verified in Resend — return OTP on screen so testers can proceed.
-        // TODO: remove devOtp before going live once fashionpoints.co.in is verified in Resend.
+        console.error('Email send error:', emailError);
         return NextResponse.json(
-          { message: 'OTP sent successfully', devOtp: otp, devNote: 'Email not configured — use this OTP for testing' },
-          { status: 200 }
+          { error: 'Failed to send OTP email. Please try again.' },
+          { status: 500 }
         );
       }
     } else if (type === 'mobile') {
