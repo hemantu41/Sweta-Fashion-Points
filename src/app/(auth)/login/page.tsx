@@ -66,30 +66,28 @@ function LoginForm() {
   const [identifier, setIdentifier] = useState('');
   const [password,   setPassword]   = useState('');
   const [showPass,   setShowPass]   = useState(false);
-  const [mobile,     setMobile]     = useState('');
+  const [email,      setEmail]      = useState('');
   const [otp,        setOtp]        = useState('');
   const [otpSent,    setOtpSent]    = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
   const [error,      setError]      = useState('');
   const [success,    setSuccess]    = useState('');
-  const [devOtp,     setDevOtp]     = useState('');
 
   const switchTab = (t: Tab) => {
-    setTab(t); setOtpSent(false); setOtp(''); setMobile(''); setError(''); setSuccess(''); setDevOtp('');
+    setTab(t); setOtpSent(false); setOtp(''); setEmail(''); setError(''); setSuccess('');
   };
 
-  /* ── Send OTP (mobile) ── */
+  /* ── Send OTP (email) ── */
   const handleSendOtp = async () => {
     setError(''); setSuccess('');
-    if (!/^[6-9]\d{9}$/.test(mobile)) { setError('Please enter a valid 10-digit mobile number'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Please enter a valid email address'); return; }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/send-login-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mobile }) });
+      const res  = await fetch('/api/auth/send-login-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
       const data = await res.json();
       if (res.ok) {
         setOtpSent(true);
-        setSuccess('OTP sent to your mobile number');
-        if (data.devOtp) setDevOtp(data.devOtp); // UAT only — remove when SMS is live
+        setSuccess('OTP sent to your email address');
       } else {
         setError(data.error || 'Failed to send OTP');
       }
@@ -97,13 +95,13 @@ function LoginForm() {
     finally  { setIsLoading(false); }
   };
 
-  /* ── OTP Login (mobile) ── */
+  /* ── OTP Login (email) ── */
   const handleOtpLogin = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setSuccess('');
     if (!otp || otp.length !== 6) { setError('Please enter a valid 6-digit OTP'); return; }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/verify-login-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mobile, otp }) });
+      const res  = await fetch('/api/auth/verify-login-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, otp }) });
       const data = await res.json();
       if (res.ok) { login(data.user); setSuccess('Login successful! Redirecting…'); setTimeout(() => router.push(callbackUrl), 900); }
       else          setError(data.error || 'Invalid OTP');
@@ -163,7 +161,7 @@ function LoginForm() {
                 className="flex-1 pb-3 text-[10px] font-semibold tracking-[0.18em] uppercase relative transition-colors duration-200"
                 style={{ fontFamily: "'Jost', sans-serif", color: active ? burgundy : '#bbb' }}
               >
-                {t === 'password' ? 'Password' : 'Mobile OTP'}
+                {t === 'password' ? 'Password' : 'Email OTP'}
                 {active && (
                   <span
                     className="absolute bottom-0 left-0 right-0 h-[2px]"
@@ -244,37 +242,22 @@ function LoginForm() {
         {tab === 'otp' && (
           <form onSubmit={handleOtpLogin} className="space-y-5">
 
-            {/* Demo mode banner */}
-            {process.env.NEXT_PUBLIC_MSG91_DEMO_MODE === 'true' && (
-              <div className="border border-dashed border-amber-400 bg-amber-50 rounded px-3 py-2 text-center">
-                <p className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold mb-0.5">Demo Mode Active</p>
-                <p className="text-base font-bold tracking-[0.4em] text-amber-800">123456</p>
-                <p className="text-[10px] text-amber-500">Use OTP 123456 for any mobile number</p>
-              </div>
-            )}
-
             <div>
-              <label className={labelClass}>Mobile Number</label>
+              <label className={labelClass}>Email Address</label>
               <div className="flex items-end gap-3">
-                <div
-                  className="flex items-end flex-1"
-                  style={{ borderBottom: `1px solid ${otpSent ? '#C9A84C' : '#C9A84C59'}` }}
-                >
-                  <span className="text-xs text-[#aaa] pb-2.5 pr-2 tracking-wider select-none">+91</span>
-                  <input
-                    type="tel"
-                    value={mobile}
-                    onChange={e => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    required disabled={otpSent} maxLength={10}
-                    placeholder="10-digit number"
-                    className="flex-1 bg-transparent border-0 outline-none py-2.5 text-sm text-[#1A1A1A] placeholder:text-[#ccc] disabled:opacity-70"
-                    style={{ fontFamily: "'Jost', sans-serif" }}
-                  />
-                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => { setEmail(e.target.value); if (otpSent) { setOtpSent(false); setOtp(''); setSuccess(''); } }}
+                  required disabled={otpSent}
+                  placeholder="Enter your email address"
+                  className={`${inputClass} flex-1`}
+                  style={{ fontFamily: "'Jost', sans-serif" }}
+                />
                 {!otpSent ? (
                   <button
                     type="button" onClick={handleSendOtp}
-                    disabled={isLoading || mobile.length !== 10}
+                    disabled={isLoading || !email}
                     className="pb-2.5 text-[10px] font-semibold tracking-[0.15em] uppercase transition-opacity disabled:opacity-40 whitespace-nowrap"
                     style={{ color: burgundy, fontFamily: "'Jost', sans-serif" }}
                   >
@@ -282,7 +265,7 @@ function LoginForm() {
                   </button>
                 ) : (
                   <button
-                    type="button" onClick={() => { setOtpSent(false); setOtp(''); setMobile(''); setSuccess(''); }}
+                    type="button" onClick={() => { setOtpSent(false); setOtp(''); setEmail(''); setSuccess(''); }}
                     className="pb-2.5 text-[10px] font-semibold tracking-[0.12em] uppercase transition-opacity hover:opacity-70 whitespace-nowrap"
                     style={{ color: `${gold}99`, fontFamily: "'Jost', sans-serif" }}
                   >
@@ -314,24 +297,16 @@ function LoginForm() {
               </div>
             )}
 
-            {devOtp && (
-              <div className="border border-dashed border-amber-400 bg-amber-50 rounded px-3 py-2 text-center">
-                <p className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold mb-1">UAT — SMS not configured</p>
-                <p className="text-lg font-bold tracking-[0.4em] text-amber-800">{devOtp}</p>
-                <p className="text-[10px] text-amber-500 mt-0.5">Use this OTP to complete login</p>
-              </div>
-            )}
-
             {error   && <div className="border-l-2 pl-3 py-2 text-sm" style={{ borderColor: burgundy, color: burgundy, background: '#7b1c2e07' }}>{error}</div>}
-            {success && !devOtp && <div className="border-l-2 pl-3 py-2 text-sm border-emerald-500 text-emerald-700 bg-emerald-50">{success}</div>}
+            {success && <div className="border-l-2 pl-3 py-2 text-sm border-emerald-500 text-emerald-700 bg-emerald-50">{success}</div>}
 
             {!otpSent ? (
               <button
                 type="button" onClick={handleSendOtp}
-                disabled={isLoading || mobile.length !== 10}
-                style={{ fontFamily: "'Jost', sans-serif", background: isLoading || mobile.length !== 10 ? `${burgundy}70` : burgundy, color: gold, letterSpacing: '0.2em', borderRadius: 2, transition: 'background 0.2s' }}
-                onMouseEnter={e => { if (!isLoading && mobile.length === 10) (e.currentTarget as HTMLButtonElement).style.background = '#9b2438'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isLoading || mobile.length !== 10 ? `${burgundy}70` : burgundy; }}
+                disabled={isLoading || !email}
+                style={{ fontFamily: "'Jost', sans-serif", background: isLoading || !email ? `${burgundy}70` : burgundy, color: gold, letterSpacing: '0.2em', borderRadius: 2, transition: 'background 0.2s' }}
+                onMouseEnter={e => { if (!isLoading && email) (e.currentTarget as HTMLButtonElement).style.background = '#9b2438'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isLoading || !email ? `${burgundy}70` : burgundy; }}
                 className="w-full py-3.5 mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? <><Spinner /> Sending…</> : 'Send OTP'}
