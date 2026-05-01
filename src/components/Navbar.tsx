@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -19,6 +19,7 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const { tree: navTree } = useCategories();
   const pathname = usePathname();
+  const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileUserMenuRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -78,6 +79,10 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     setIsUserMenuOpen(false);
+    // Navigate to homepage immediately so AuthGuard (which only fires on
+    // protected routes) never has a chance to re-authenticate via the
+    // iron-session cookie before /api/logout finishes destroying it.
+    router.replace('/');
   };
 
   const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
