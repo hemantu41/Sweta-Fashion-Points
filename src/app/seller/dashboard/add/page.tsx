@@ -92,10 +92,10 @@ const WEAVE_OPTS    = ['Chambray', 'Corduroy', 'Denim', 'Dobby', 'Knitted', 'Oxf
 // Minimum charged weight is 801g (>800g rule) — applied before calling this fn.
 function calcShippingCost(weightGrams: number): number {
   const g = Math.max(0, weightGrams);
-  if (g <= 500)  return 68;
-  if (g <= 1000) return 85;
-  if (g <= 1500) return 125;
-  if (g <= 2000) return 155;
+  if (g <= 500)  return 63;
+  if (g <= 1000) return 77;
+  if (g <= 1500) return 120;
+  if (g <= 2000) return 165;
   if (g <= 2500) return 180;
   if (g <= 3000) return 210;
   return 210 + Math.ceil((g - 3000) / 500) * 30;
@@ -882,18 +882,6 @@ export default function AddProductPage() {
                 <span>{sellerBasePrice > 0 ? `₹${sellerBasePrice.toLocaleString('en-IN')}` : '—'}</span>
               </div>
 
-              {/* Rate slab reference */}
-              <div className="pt-1.5 border-t border-[rgba(196,154,60,0.1)]">
-                <p className="text-[10px] text-[#999] font-medium mb-1">Rate Slabs (all weights charged as &gt;800g minimum)</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-[#999]">
-                  <span>≤ 500g → ₹68</span>
-                  <span>≤ 1 kg → ₹85</span>
-                  <span>≤ 1.5 kg → ₹125</span>
-                  <span>≤ 2 kg → ₹155</span>
-                  <span>≤ 2.5 kg → ₹180</span>
-                  <span>≤ 3 kg → ₹210</span>
-                </div>
-              </div>
             </div>
           </SectionCard>
 
