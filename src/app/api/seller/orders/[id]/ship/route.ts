@@ -136,6 +136,16 @@ export async function POST(
     // 3. Parse delivery address from shipping_address JSONB
     const addr = (order.shipping_address as any) || {};
 
+    // Fetch customer email — used as billing_email in Shiprocket so tracking
+    // communications (OTP, delivery notifications) reach the actual buyer,
+    // NOT the seller.
+    const { data: customerRow } = await supabaseAdmin
+      .from('spf_users')
+      .select('email')
+      .eq('id', (order as any).customer_id)
+      .maybeSingle();
+    const customerEmail = (customerRow as any)?.email as string | null ?? null;
+
     // Fetch items — fallback to direct query if join returned nothing
     let items = (order.spf_order_items as any[]) || [];
     if (items.length === 0) {
@@ -167,7 +177,7 @@ export async function POST(
       pickupLocation: pickupLocation!,
       billingName:    addr.name    || 'Customer',
       billingPhone:   phone10,
-      billingEmail:   seller.business_email || 'noreply@instafashionpoints.com',
+      billingEmail:   customerEmail || 'noreply@instafashionpoints.com',
       billingAddress: addr.house   || addr.address_line1 || addr.area || '',
       billingCity:    addr.city    || '',
       billingState:   addr.state   || '',
