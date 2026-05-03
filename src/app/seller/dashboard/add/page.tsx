@@ -88,16 +88,17 @@ const POCKETS_OPTS  = ['1', '2', '3', 'No Pockets'];
 const WEAVE_OPTS    = ['Chambray', 'Corduroy', 'Denim', 'Dobby', 'Knitted', 'Oxford', 'Regular'];
 
 /* ─── Shipping cost calculator ──────────────────────────────────────────────── */
-// Standard courier rate slabs (grams → ₹) based on Shiprocket surface rates
+// Standard courier rate slabs (grams → ₹) based on Shiprocket surface rates.
+// Minimum charged weight is 801g (>800g rule) — applied before calling this fn.
 function calcShippingCost(weightGrams: number): number {
   const g = Math.max(0, weightGrams);
-  if (g <= 500)  return 65;
+  if (g <= 500)  return 68;
   if (g <= 1000) return 85;
-  if (g <= 1500) return 120;
-  if (g <= 2000) return 150;
-  if (g <= 2500) return 175;
-  if (g <= 3000) return 200;
-  return 200 + Math.ceil((g - 3000) / 500) * 25;
+  if (g <= 1500) return 125;
+  if (g <= 2000) return 155;
+  if (g <= 2500) return 180;
+  if (g <= 3000) return 210;
+  return 210 + Math.ceil((g - 3000) / 500) * 30;
 }
 
 /* ─── Sub-components ────────────────────────────────────────────────────────── */
@@ -183,7 +184,7 @@ export default function AddProductPage() {
   const [occasionTags, setOccasionTags] = useState<string[]>([]);
 
   /* Shipping */
-  const [weight, setWeight]           = useState('1200'); // default 1.2 kg
+  const [weight, setWeight]           = useState('1000'); // default 1 kg
   const [dispatchTime, setDispatchTime] = useState('2');
 
   /* Seller details (editable on this form) */
@@ -291,10 +292,13 @@ export default function AddProductPage() {
   }, [catSearch, runSearch]);
 
   /* Derived values */
-  const weightGrams        = Math.max(0, parseFloat(weight) || 1200);
-  const shippingCost       = calcShippingCost(weightGrams);
-  const sellerBasePrice    = parseFloat(price) || 0;
-  const totalCustomerPrice = sellerBasePrice > 0 ? sellerBasePrice + shippingCost : 0;
+  const weightGrams           = Math.max(0, parseFloat(weight) || 1000);
+  // Always charge for >800g — even lightweight packages use the >800g slab
+  const chargedWeightGrams    = Math.max(weightGrams, 801);
+  const isMinWeightApplied    = chargedWeightGrams > weightGrams;
+  const shippingCost          = calcShippingCost(chargedWeightGrams);
+  const sellerBasePrice       = parseFloat(price) || 0;
+  const totalCustomerPrice    = sellerBasePrice > 0 ? sellerBasePrice + shippingCost : 0;
   const discountPct = mrp && totalCustomerPrice && parseFloat(mrp) > totalCustomerPrice
     ? Math.round((1 - totalCustomerPrice / parseFloat(mrp)) * 100) : 0;
   const l1Label = l1Cats.find(c => c.id === l1);
@@ -716,7 +720,7 @@ export default function AddProductPage() {
                 {[
                   { label: 'MRP', val: mrp ? `₹${parseFloat(mrp).toLocaleString('en-IN')}` : '—' },
                   { label: 'Seller Base Price', val: `₹${sellerBasePrice.toLocaleString('en-IN')}`, highlight: true },
-                  { label: `Shipping Cost (${(weightGrams / 1000).toFixed(1)} kg)`, val: `₹${shippingCost}` },
+                  { label: `Shipping Cost (${(chargedWeightGrams / 1000).toFixed(1)} kg charged)`, val: `₹${shippingCost}` },
                   { label: `GST (${gst}%)`, val: `₹${(totalCustomerPrice * gst / (100 + gst)).toFixed(0)}` },
                   { label: `Customer Pays${discountPct > 0 ? ` (${discountPct}% off MRP)` : ''}`, val: `₹${totalCustomerPrice.toLocaleString('en-IN')}`, bold: true },
                   { label: 'You Receive (0% commission)', val: `₹${sellerBasePrice.toLocaleString('en-IN')}`, bold: true, color: '#2E7D32' },
@@ -823,7 +827,7 @@ export default function AddProductPage() {
                 <FieldLabel>Package Weight (grams)</FieldLabel>
                 <div className="relative">
                   <Package size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" />
-                  <input type="number" value={weight} onChange={e => setWeight(e.target.value)} min="0" placeholder="1200"
+                  <input type="number" value={weight} onChange={e => setWeight(e.target.value)} min="0" placeholder="1000"
                     className={`${INPUT_CLS} pl-8`} />
                 </div>
                 <p className="text-[10px] text-[#999] mt-0.5">{(weightGrams / 1000).toFixed(2)} kg</p>
@@ -842,30 +846,54 @@ export default function AddProductPage() {
               </div>
             </div>
 
-            {/* Shipping cost calculator */}
-            <div className="p-3 border border-[rgba(196,154,60,0.2)] rounded-xl bg-[#FFFBEB] text-xs space-y-2">
-              <p className="font-semibold text-[#5B1A3A]">Shipping Cost Estimate</p>
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-[#666]">Package Weight</span>
-                  <span className="font-medium text-[#333]">{(weightGrams / 1000).toFixed(2)} kg ({weightGrams} g)</span>
+            {/* Shipping Cost Calculator — styled like GST Price Calculator */}
+            <div className="p-3 border border-[rgba(196,154,60,0.2)] rounded-xl bg-[#FFFBEB] text-xs space-y-1.5">
+              <p className="font-semibold text-[#5B1A3A] mb-2">Shipping Cost Calculator</p>
+
+              {/* Weight rows */}
+              <div className="flex justify-between">
+                <span className="text-[#666]">Package Weight</span>
+                <span className="font-medium text-[#333]">{(weightGrams / 1000).toFixed(2)} kg ({weightGrams} g)</span>
+              </div>
+              {isMinWeightApplied && (
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-600">Charged Weight <span className="text-[9px]">(min &gt;800g rule)</span></span>
+                  <span className="font-medium text-amber-700">{(chargedWeightGrams / 1000).toFixed(2)} kg ({chargedWeightGrams} g)</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#666]">Calculated Shipping</span>
-                  <span className="font-semibold text-[#5B1A3A]">₹{shippingCost}</span>
-                </div>
-                <div className="border-t border-[rgba(196,154,60,0.15)] pt-1.5 flex justify-between">
-                  <span className="text-[#666]">Seller Base Price</span>
-                  <span className="font-medium text-[#333]">{sellerBasePrice > 0 ? `₹${sellerBasePrice.toLocaleString('en-IN')}` : '—'}</span>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <span className="text-[#5B1A3A]">Total Customer Price</span>
-                  <span className="text-[#5B1A3A]">{totalCustomerPrice > 0 ? `₹${totalCustomerPrice.toLocaleString('en-IN')}` : '—'}</span>
+              )}
+
+              {/* Shipping cost */}
+              <div className="flex justify-between border-t border-[rgba(196,154,60,0.15)] pt-1.5">
+                <span className="text-[#666]">Shipping Cost</span>
+                <span className="font-semibold text-[#5B1A3A]">₹{shippingCost}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#666]">Seller Base Price</span>
+                <span className="font-medium text-[#333]">{sellerBasePrice > 0 ? `₹${sellerBasePrice.toLocaleString('en-IN')}` : '—'}</span>
+              </div>
+
+              {/* Total */}
+              <div className="flex justify-between font-semibold border-t border-[rgba(196,154,60,0.15)] pt-1.5">
+                <span className="text-[#5B1A3A]">Customer Price</span>
+                <span className="text-[#5B1A3A]">{totalCustomerPrice > 0 ? `₹${totalCustomerPrice.toLocaleString('en-IN')}` : '—'}</span>
+              </div>
+              <div className="flex justify-between font-semibold" style={{ color: '#2E7D32' }}>
+                <span>You Receive</span>
+                <span>{sellerBasePrice > 0 ? `₹${sellerBasePrice.toLocaleString('en-IN')}` : '—'}</span>
+              </div>
+
+              {/* Rate slab reference */}
+              <div className="pt-1.5 border-t border-[rgba(196,154,60,0.1)]">
+                <p className="text-[10px] text-[#999] font-medium mb-1">Rate Slabs (all weights charged as &gt;800g minimum)</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-[#999]">
+                  <span>≤ 500g → ₹68</span>
+                  <span>≤ 1 kg → ₹85</span>
+                  <span>≤ 1.5 kg → ₹125</span>
+                  <span>≤ 2 kg → ₹155</span>
+                  <span>≤ 2.5 kg → ₹180</span>
+                  <span>≤ 3 kg → ₹210</span>
                 </div>
               </div>
-              <p className="text-[10px] text-[#999] pt-1 border-t border-[rgba(196,154,60,0.1)]">
-                Shipping rates: up to 500g = ₹65 · up to 1kg = ₹85 · up to 1.5kg = ₹120 · up to 2kg = ₹150
-              </p>
             </div>
           </SectionCard>
 
