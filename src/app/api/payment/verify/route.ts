@@ -16,14 +16,40 @@ export async function syncPaymentOrderToSpfOrders(
 ): Promise<void> {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  // Skip if already synced
+  // Check if this payment already has an spf_orders entry
   const { data: existingOrder } = await supabaseAdmin
     .from('spf_orders')
-    .select('id')
+    .select('id, status')
     .eq('transaction_id', razorpay_payment_id)
     .maybeSingle();
+
   if (existingOrder) {
-    console.log('[OrderSync] Already exists in spf_orders — skipping');
+    const existing = existingOrder as any;
+    // Order was pre-created via /api/orders/create (new flow) with PENDING_PAYMENT status.
+    // Now that payment is captured, update it to CONFIRMED and send notifications.
+    if (existing.status === 'PENDING_PAYMENT') {
+      const now = new Date().toISOString();
+      await supabaseAdmin
+        .from('spf_orders')
+        .update({ status: 'CONFIRMED', payment_status: 'captured', updated_at: now })
+        .eq('id', existing.id);
+
+      await supabaseAdmin.from('spf_order_status_history').insert({
+        order_id:    existing.id,
+        from_status: 'PENDING_PAYMENT',
+        to_status:   'CONFIRMED',
+        actor_type:  'SYSTEM',
+        actor_id:    null,
+        note:        `Payment captured — razorpay_payment_id=${razorpay_payment_id}`,
+        created_at:  now,
+      });
+
+      void notifySellerNewOrder(existing.id);
+      void notifyCustomerNewOrder(existing.id);
+      console.log(`[OrderSync] PENDING_PAYMENT → CONFIRMED for ${existing.id}; notifications queued`);
+    } else {
+      console.log(`[OrderSync] Already exists in spf_orders (status=${existing.status}) — skipping`);
+    }
     return;
   }
 

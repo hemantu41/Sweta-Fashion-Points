@@ -21,6 +21,22 @@ export async function sendEmail({ to, subject, html, replyTo }: SendEmailOptions
     return { success: false, error: 'RESEND_API_KEY not configured' };
   }
 
+  // Warn when using Resend's shared onboarding address.
+  // ⚠️  FREE TIER RESTRICTION: onboarding@resend.dev can ONLY deliver to the
+  // email address registered on your Resend account.  Every other recipient is
+  // silently dropped (or redirected to the account owner).
+  // FIX: verify instafashionpoints.com in Resend → Domains, then set
+  //   EMAIL_FROM=Insta Fashion Points <noreply@instafashionpoints.com>
+  // in your Vercel / production environment variables.
+  if (FROM_EMAIL.includes('onboarding@resend.dev')) {
+    console.warn(
+      `[Email] ⚠️  Using onboarding@resend.dev — Resend free tier only delivers to the account owner.\n` +
+      `  Attempting to send to: ${to}\n` +
+      `  If this is NOT the Resend account email, the message will NOT be delivered.\n` +
+      `  Fix: verify instafashionpoints.com in Resend Domains and set EMAIL_FROM in env vars.`
+    );
+  }
+
   try {
     // Lazy-init so the real key is always read at call time, not at module load
     const resend = new Resend(apiKey);
