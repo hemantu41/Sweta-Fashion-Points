@@ -506,15 +506,9 @@ export async function notifyCustomerNewOrder(orderId: string): Promise<void> {
 
     const customerEmail = (userRow as any)?.email as string | undefined;
     if (!customerEmail) {
-      console.warn(
-        `[sellerNotify] notifyCustomerNewOrder: no email on file for customer_id=${o.customer_id}.\n` +
-        `  The customer account may have been created with a mobile number only.\n` +
-        `  Ask the customer to add their email in profile settings, or collect email at checkout.`
-      );
+      console.warn(`[sellerNotify] No email for customer ${o.customer_id}`);
       return;
     }
-
-    console.log(`[sellerNotify] Sending order confirmation to customer ${o.customer_id} <${customerEmail}>`);
 
     const paymentLabel = o.payment_method === 'COD' ? 'Cash on Delivery' : 'Online Payment';
     const estimatedDelivery = new Date(Date.now() + 5 * 86400 * 1000).toLocaleDateString('en-IN', {
