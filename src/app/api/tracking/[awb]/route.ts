@@ -26,6 +26,18 @@ const ORDER_TO_SHIPMENT_STATUS: Record<string, string> = {
   RETURNED:         'returned',
 };
 
+// Numeric rank — higher = further along in the journey
+const STATUS_RANK: Record<string, number> = {
+  label_generated:  0,
+  pickup_scheduled: 1,
+  picked_up:        2,
+  in_transit:       3,
+  out_for_delivery: 4,
+  delivered:        5,
+  cancelled:        -1,
+  returned:         -1,
+};
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ awb: string }> }
@@ -56,21 +68,36 @@ export async function GET(
     .maybeSingle();
 
   if (shipment) {
-    // Enrich with order status from spf_orders (not the old spf_payment_orders)
+    // Enrich with order status from spf_orders.
+    // spf_shipments.status can lag behind if the webhook updated spf_orders
+    // but not spf_shipments (e.g. during the Prisma-bug window).
+    // Use whichever status is FURTHER ALONG the delivery journey.
     let orderInfo: { id: string; status: string } | null = null;
+    let resolvedStatus: string = (shipment as any).status;
+
     if ((shipment as any).order_id) {
       const { data: ord } = await supabaseAdmin
         .from('spf_orders')
         .select('id, status')
         .eq('id', (shipment as any).order_id)
         .maybeSingle();
-      if (ord) orderInfo = { id: ord.id, status: ord.status };
+      if (ord) {
+        orderInfo = { id: ord.id, status: ord.status };
+        const orderMapped = ORDER_TO_SHIPMENT_STATUS[ord.status];
+        if (
+          orderMapped &&
+          (STATUS_RANK[orderMapped] ?? -1) > (STATUS_RANK[resolvedStatus] ?? -1)
+        ) {
+          // spf_orders is ahead — use its status so the UI stays in sync
+          resolvedStatus = orderMapped;
+        }
+      }
     }
 
     const { order_id: _oid, ...rest } = shipment as any;
     return NextResponse.json({
       success: true,
-      shipment: { ...rest, order: orderInfo },
+      shipment: { ...rest, status: resolvedStatus, order: orderInfo },
     });
   }
 

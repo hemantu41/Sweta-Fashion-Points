@@ -157,7 +157,7 @@ export async function syncTrackingStatus(orderId: string): Promise<SyncResult> {
   const [updateResult] = await Promise.all([
     supabaseAdmin.from('spf_orders').update(patch).eq('id', orderId),
     supabaseAdmin.from('spf_order_status_history').insert({
-      order_id:   orderId,
+      order_id:    orderId,
       from_status: o.status,
       to_status:   newStatus,
       actor_type:  'COURIER',
@@ -171,6 +171,48 @@ export async function syncTrackingStatus(orderId: string): Promise<SyncResult> {
     console.error(`[SR:tracking] DB update failed for ${orderId}:`, updateResult.error.message);
     return { updated: false, error: updateResult.error.message };
   }
+
+  // ── Also sync spf_shipments + spf_shipment_tracking (keeps tracking page in sync) ──
+  void (async () => {
+    try {
+      const { data: legacyShipment } = await supabaseAdmin
+        .from('spf_shipments')
+        .select('id, status')
+        .eq('awb_number', o.awb_number)
+        .maybeSingle();
+
+      if (legacyShipment) {
+        // Map IFP enum → legacy shipment status
+        const LEGACY_STATUS: Record<string, string> = {
+          PICKUP_SCHEDULED: 'pickup_scheduled',
+          IN_TRANSIT:       'in_transit',
+          OUT_FOR_DELIVERY: 'out_for_delivery',
+          DELIVERED:        'delivered',
+          RETURN_INITIATED: 'rto_initiated',
+          RETURNED:         'rto_delivered',
+          CANCELLED:        'cancelled',
+        };
+        const legacyNew = LEGACY_STATUS[newStatus];
+        if (legacyNew && legacyNew !== (legacyShipment as any).status) {
+          const shipPatch: Record<string, any> = { status: legacyNew, updated_at: now };
+          if (newStatus === 'IN_TRANSIT')  shipPatch.picked_up_at = now;
+          if (newStatus === 'DELIVERED')   shipPatch.delivered_at = now;
+          await supabaseAdmin.from('spf_shipments').update(shipPatch).eq('id', (legacyShipment as any).id);
+        }
+
+        // Insert a tracking history entry
+        await supabaseAdmin.from('spf_shipment_tracking').insert({
+          shipment_id: (legacyShipment as any).id,
+          status:      trackData.current_status || newStatus,
+          location:    activities[0]?.location ?? null,
+          description: historyNote || null,
+          created_at:  now,
+        });
+      }
+    } catch (e: any) {
+      console.warn('[SR:tracking] spf_shipments sync error (non-critical):', e?.message);
+    }
+  })();
 
   // Invalidate seller's Redis order cache so dashboard shows fresh status
   if (o.seller_id) {
