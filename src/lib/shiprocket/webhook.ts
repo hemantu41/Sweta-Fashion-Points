@@ -1,18 +1,18 @@
 /**
  * Shiprocket webhook handler — Supabase-backed (no Prisma / DATABASE_URL needed).
  *
+ * KEY DESIGN: the webhook applies the status DIRECTLY from the Shiprocket
+ * payload without making any extra API calls back to Shiprocket. This makes
+ * webhook processing reliable and fast regardless of Shiprocket API availability.
+ *
  * Signature verification:
  *   Shiprocket signs payloads with HMAC-SHA256 using SHIPROCKET_WEBHOOK_SECRET.
  *   Digest is sent in the X-Shiprocket-Hmac header (hex, optionally "sha256=" prefixed).
- *
- * On DELIVERED:
- *   Sets delivered_at + return_window_closes_at on spf_orders.
- *   Invalidates seller Redis cache.
  */
 
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { syncTrackingStatus } from './tracking';
+import { applyStatusFromPayload, STATUS_MAP } from './tracking';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HMAC verification
@@ -54,17 +54,18 @@ export interface ShiprocketWebhookPayload {
   current_status_description?: string;
   courier_name?:               string;
   etd?:                        string;
-  scans?:                      unknown[];
-  tracking_data?:              unknown;
+  delivered_date?:             string;
+  scans?:                      any[];
+  tracking_data?:              any;
   [key: string]: unknown;
 }
 
 export interface WebhookHandlerResult {
-  processed: boolean;
-  orderId?:  string;
+  processed:  boolean;
+  orderId?:   string;
   newStatus?: string;
-  skipped?:  string;
-  error?:    string;
+  skipped?:   string;
+  error?:     string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,12 +84,35 @@ export async function handleShiprocketWebhook(
   }
 
   // ── 2. Extract AWB ────────────────────────────────────────────────────────
-  const awbNumber = payload.awb ?? payload.awb_number ?? null;
+  const awbNumber =
+    payload.awb ??
+    payload.awb_number ??
+    (payload as any).tracking_number ??
+    null;
+
   if (!awbNumber) {
     return { processed: false, skipped: 'No AWB in payload — likely a test ping' };
   }
 
-  // ── 3. Look up order by AWB in spf_orders (supabaseAdmin, no Prisma) ─────
+  // ── 3. Resolve IFP status directly from the payload ───────────────────────
+  // Shiprocket sends current_status as a readable string (e.g. "Delivered").
+  // We map it directly — NO extra Shiprocket API call here.
+  const rawStatus = (
+    payload.current_status ??
+    payload.current_status_description ??
+    ''
+  ).toLowerCase().trim();
+
+  const newStatus = STATUS_MAP[rawStatus];
+
+  if (!newStatus) {
+    console.log(`[SR:webhook] AWB=${awbNumber} status "${rawStatus}" has no IFP mapping — skipped`);
+    return { processed: false, skipped: `Unmapped status: "${rawStatus}"` };
+  }
+
+  console.log(`[SR:webhook] AWB=${awbNumber} resolved status: ${rawStatus} → ${newStatus}`);
+
+  // ── 4. Look up order by AWB in spf_orders ────────────────────────────────
   const { data: order, error: lookupErr } = await supabaseAdmin
     .from('spf_orders')
     .select('id, status')
@@ -101,24 +125,43 @@ export async function handleShiprocketWebhook(
   }
 
   if (!order) {
-    // AWB belongs to legacy spf_payment_orders — route layer will call handleLegacyWebhook
+    // AWB belongs to legacy spf_payment_orders — route layer calls handleLegacyWebhook
     return { processed: false, skipped: `AWB ${awbNumber} not found in spf_orders` };
   }
 
-  // ── 4. Sync tracking status ───────────────────────────────────────────────
-  const syncResult = await syncTrackingStatus(order.id);
+  // ── 5. Extract scan metadata from payload ─────────────────────────────────
+  const scans: any[] =
+    payload.scans ??
+    (payload as any).tracking_data?.shipment_track_activities ??
+    [];
+  const latestScan = scans[0] ?? {};
 
-  if (syncResult.error) {
-    return { processed: false, orderId: order.id, error: syncResult.error };
+  const deliveredAt =
+    payload.delivered_date ??
+    (payload as any).etd ??
+    null;
+
+  const description = [
+    payload.current_status_description ?? payload.current_status,
+    latestScan?.activity ?? latestScan?.sr_status_label ?? '',
+  ].filter(Boolean).join(' — ') || null;
+
+  // ── 6. Apply status to DB — using payload data, no extra API call ─────────
+  const result = await applyStatusFromPayload(order.id, newStatus, {
+    courierName: payload.courier_name ?? null,
+    deliveredAt: deliveredAt,
+    location:    latestScan?.location ?? null,
+    description,
+    note: description,
+  });
+
+  if (result.error) {
+    return { processed: false, orderId: order.id, error: result.error };
   }
 
   console.log(
-    `[SR:webhook] AWB=${awbNumber} orderId=${order.id} updated=${syncResult.updated} status=${syncResult.newStatus ?? 'unchanged'}`,
+    `[SR:webhook] AWB=${awbNumber} orderId=${order.id} → ${newStatus} (updated=${result.updated})`,
   );
 
-  return {
-    processed: true,
-    orderId:   order.id,
-    newStatus: syncResult.newStatus,
-  };
+  return { processed: true, orderId: order.id, newStatus };
 }
