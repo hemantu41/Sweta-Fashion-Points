@@ -49,6 +49,7 @@ interface Order {
   payment_method?: string;
   created_at: string;
   payment_completed_at?: string;
+  return_window_closes_at?: string | null;
 }
 
 export default function OrdersPage() {
@@ -61,6 +62,15 @@ export default function OrdersPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
+
+  // Return flow state
+  const [returnOrderId,      setReturnOrderId]      = useState<string | null>(null);
+  const [returnCategory,     setReturnCategory]     = useState('');
+  const [returnDetail,       setReturnDetail]       = useState('');
+  const [returnCondition,    setReturnCondition]    = useState('');
+  const [returningOrder,     setReturningOrder]     = useState(false);
+  const [returnError,        setReturnError]        = useState('');
+  const [returnSuccess,      setReturnSuccess]      = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
@@ -158,6 +168,9 @@ export default function OrdersPage() {
         return 'bg-red-100 text-red-700 border-red-200';
       case 'returned':
         return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'return_initiated':
+      case 'return_requested':
+        return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'pending':
       case 'created':
         return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -177,6 +190,8 @@ export default function OrdersPage() {
       case 'delivered':      return 'Delivered';
       case 'cancelled':      return 'Cancelled';
       case 'returned':       return 'Returned';
+      case 'return_initiated':
+      case 'return_requested': return 'Return Requested';
       case 'failed':         return 'Payment Failed';
       case 'pending':        return 'Payment Pending';
       case 'created':        return 'Order Created';
@@ -249,6 +264,53 @@ export default function OrdersPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  // Return eligibility: delivered + within 7-day window
+  const canReturn = (order: Order) => {
+    if (order.status !== 'delivered') return false;
+    if (!order.return_window_closes_at) return false;
+    return Date.now() < new Date(order.return_window_closes_at).getTime();
+  };
+
+  const daysLeftToReturn = (order: Order) => {
+    if (!order.return_window_closes_at) return 0;
+    const msLeft = new Date(order.return_window_closes_at).getTime() - Date.now();
+    return Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+  };
+
+  const handleReturn = async () => {
+    if (!returnCategory) {
+      setReturnError('Please select a reason for the return.');
+      return;
+    }
+    setReturningOrder(true);
+    setReturnError('');
+    try {
+      const res = await fetch(`/api/orders/${returnOrderId}/return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId:     user?.id,
+          reasonCategory: returnCategory,
+          reasonDetail:   returnDetail.trim() || undefined,
+          itemCondition:  returnCondition || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setReturnSuccess(true);
+        setOrders(prev =>
+          prev.map(o => o.id === returnOrderId ? { ...o, status: 'return_initiated' } : o),
+        );
+      } else {
+        setReturnError(data.error || 'Failed to submit return request. Please try again.');
+      }
+    } catch {
+      setReturnError('Something went wrong. Please try again.');
+    } finally {
+      setReturningOrder(false);
+    }
   };
 
   if (isLoading || loading) {
@@ -448,6 +510,28 @@ export default function OrdersPage() {
                         Cancel Order
                       </button>
                     )}
+
+                    {canReturn(order) && (
+                      <button
+                        onClick={() => {
+                          setReturnOrderId(order.id);
+                          setReturnCategory('');
+                          setReturnDetail('');
+                          setReturnCondition('');
+                          setReturnError('');
+                          setReturnSuccess(false);
+                        }}
+                        className="inline-flex items-center gap-2 border border-purple-300 text-purple-700 px-4 py-2 rounded-lg font-medium hover:bg-purple-50 transition-colors text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                        Request Return
+                        <span className="ml-1 text-xs font-normal text-purple-500">
+                          {daysLeftToReturn(order)}d left
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -579,6 +663,159 @@ export default function OrdersPage() {
                 ) : 'Confirm Cancel'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Request Return Modal ───────────────────────────────────────────── */}
+      {returnOrderId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={e => {
+            if (e.target === e.currentTarget && !returningOrder) {
+              setReturnOrderId(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+
+            {/* Success State */}
+            {returnSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-[#2D2D2D] mb-2" style={{ fontFamily: 'var(--font-playfair)' }}>
+                  Return Request Submitted
+                </h3>
+                <p className="text-sm text-[#6B6B6B] mb-6">
+                  Our team will review your request within 24–48 hours. You&apos;ll receive an email confirmation shortly.
+                </p>
+                <button
+                  onClick={() => setReturnOrderId(null)}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#722F37] text-white text-sm font-medium hover:bg-[#8B3D47] transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Modal Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#2D2D2D]" style={{ fontFamily: 'var(--font-playfair)' }}>
+                      Request Return
+                    </h3>
+                    <p className="text-sm text-[#6B6B6B] mt-0.5">
+                      #{orders.find(o => o.id === returnOrderId)?.order_number}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setReturnOrderId(null)}
+                    disabled={returningOrder}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <p className="text-sm text-[#6B6B6B] mb-5 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+                  Once submitted, our team will verify the reason with the seller and contact you within 24–48 hours.
+                </p>
+
+                {/* Reason Category */}
+                <p className="text-sm font-medium text-[#2D2D2D] mb-2">
+                  Reason for return <span className="text-red-500">*</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-5">
+                  {[
+                    { value: 'damaged',         label: 'Damaged / Defective' },
+                    { value: 'wrong_item',       label: 'Wrong Item Received' },
+                    { value: 'size_issue',       label: 'Size Doesn\'t Fit' },
+                    { value: 'quality_issue',    label: 'Quality Issue' },
+                    { value: 'not_as_described', label: 'Not as Described' },
+                    { value: 'changed_mind',     label: 'Changed My Mind' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setReturnCategory(value)}
+                      className={`text-left px-3 py-2.5 rounded-lg text-sm border transition-colors
+                        ${returnCategory === value
+                          ? 'bg-purple-50 border-purple-500 text-purple-700 font-medium'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Item Condition */}
+                <p className="text-sm font-medium text-[#2D2D2D] mb-2">Item condition</p>
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {[
+                    { value: 'unopened',      label: 'Unopened / Sealed' },
+                    { value: 'opened_unused', label: 'Opened, Unused' },
+                    { value: 'used',          label: 'Used' },
+                    { value: 'damaged',       label: 'Damaged' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setReturnCondition(prev => prev === value ? '' : value)}
+                      className={`px-3 py-1.5 rounded-full text-xs border transition-colors
+                        ${returnCondition === value
+                          ? 'bg-purple-50 border-purple-500 text-purple-700 font-medium'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Additional details */}
+                <p className="text-sm font-medium text-[#2D2D2D] mb-2">Additional details (optional)</p>
+                <textarea
+                  placeholder="Describe the issue in more detail…"
+                  value={returnDetail}
+                  onChange={e => setReturnDetail(e.target.value)}
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 resize-none placeholder:text-gray-400 mb-4"
+                />
+
+                {returnError && (
+                  <p className="text-red-600 text-sm mb-3">{returnError}</p>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setReturnOrderId(null)}
+                    disabled={returningOrder}
+                    className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleReturn}
+                    disabled={returningOrder || !returnCategory}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-purple-700 text-white text-sm font-medium hover:bg-purple-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {returningOrder ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Submitting…
+                      </>
+                    ) : 'Submit Return Request'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

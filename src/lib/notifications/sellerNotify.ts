@@ -683,4 +683,232 @@ export async function notifyCustomerSelfCancelled(
 
 // Support ticket notifications have been moved to:
 // src/lib/notifications/ticketNotify.ts
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RETURN NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+const REASON_LABELS: Record<string, string> = {
+  damaged:         'Item arrived damaged',
+  wrong_item:      'Wrong item received',
+  size_issue:      'Size does not fit',
+  quality_issue:   'Quality not as expected',
+  not_as_described:'Item not as described',
+  changed_mind:    'Changed my mind',
+  other:           'Other reason',
+};
+
+/**
+ * Notify the customer that their return request has been received.
+ */
+export async function notifyCustomerReturnInitiated(
+  customerEmail: string,
+  orderNumber:   string,
+  reasonCategory:string,
+  isPrepaid:     boolean,
+  orderTotal:    number,
+): Promise<void> {
+  try {
+    const reasonLabel = REASON_LABELS[reasonCategory] ?? reasonCategory;
+    const refundNote  = isPrepaid
+      ? `<p style="color:${C.text};font-size:14px;">
+           If your return is approved, a refund of <strong>₹${orderTotal.toLocaleString('en-IN')}</strong>
+           will be credited to your original payment method within 5–7 business days after we receive the item.
+         </p>`
+      : `<p style="color:${C.text};font-size:14px;">
+           Since this was a Cash on Delivery order, no refund is applicable unless otherwise decided by our team.
+         </p>`;
+
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello,</p>
+      <p style="color:${C.text};font-size:14px;">
+        We have received your return request for order <strong>#${orderNumber}</strong>.
+        Our team will review it within <strong>24–48 hours</strong>.
+      </p>
+      <div style="background:${C.altBg};border-radius:8px;padding:16px;margin:20px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${infoRow('Order Number', `#${orderNumber}`)}
+          ${infoRow('Return Reason', reasonLabel)}
+          ${infoRow('Review Time', '24–48 hours')}
+        </table>
+      </div>
+      <div style="background:${C.warnBg};border-left:4px solid ${C.warn};padding:12px 16px;border-radius:4px;margin-bottom:20px;">
+        <p style="margin:0;font-size:13px;color:${C.warn};font-weight:600;">What happens next?</p>
+        <ol style="margin:8px 0 0;padding-left:20px;font-size:13px;color:${C.text};">
+          <li style="margin-bottom:4px;">Our team reviews your request and verifies with the seller.</li>
+          <li style="margin-bottom:4px;">If approved, we arrange a reverse pickup from your address.</li>
+          <li style="margin-bottom:4px;">Once we receive and inspect the item, your refund is processed.</li>
+        </ol>
+      </div>
+      ${refundNote}
+      ${ctaButton('View My Orders →', `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com'}/orders`)}
+      <p style="font-size:12px;color:${C.muted};text-align:center;">
+        Questions? Contact <a href="mailto:support@instafashionpoints.com" style="color:${C.maroon};">support@instafashionpoints.com</a>
+      </p>`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Return Request Received — Order #${orderNumber}`,
+      html:    emailShell(C.warn, 'Return Request Received', `We'll review your request within 24–48 hours`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerReturnInitiated error:', err?.message);
+  }
+}
+
+/**
+ * Notify the seller that a customer has raised a return request.
+ */
+export async function notifySellerReturnInitiated(
+  sellerEmail:   string,
+  businessName:  string,
+  orderNumber:   string,
+  reasonCategory:string,
+): Promise<void> {
+  try {
+    const reasonLabel = REASON_LABELS[reasonCategory] ?? reasonCategory;
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello <strong>${businessName}</strong>,</p>
+      <p style="color:${C.text};font-size:14px;">
+        A customer has raised a return request for order <strong>#${orderNumber}</strong>.
+        Our admin team will review the request and may contact you for verification.
+      </p>
+      <div style="background:${C.altBg};border-radius:8px;padding:16px;margin:20px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${infoRow('Order Number', `#${orderNumber}`)}
+          ${infoRow('Return Reason', reasonLabel)}
+          ${infoRow('Next Step', 'Admin review — you may be contacted')}
+        </table>
+      </div>
+      <p style="color:${C.text};font-size:13px;">
+        Please be available to respond if our team reaches out for verification.
+        Do not re-dispatch or reroute this order until you hear from us.
+      </p>
+      ${ctaButton('View Dashboard →', DASHBOARD_URL)}`;
+
+    await sendEmail({
+      to:      sellerEmail,
+      subject: `Return Request — Order #${orderNumber}`,
+      html:    emailShell(C.warn, 'Return Request Raised', `Order #${orderNumber}`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifySellerReturnInitiated error:', err?.message);
+  }
+}
+
+/**
+ * Notify the customer when their return is approved.
+ */
+export async function notifyCustomerReturnApproved(
+  customerEmail: string,
+  orderNumber:   string,
+  isPrepaid:     boolean,
+  orderTotal:    number,
+): Promise<void> {
+  try {
+    const refundNote = isPrepaid
+      ? `<p style="color:${C.text};font-size:14px;">
+           Your refund of <strong>₹${orderTotal.toLocaleString('en-IN')}</strong> will be initiated
+           once we receive and inspect the returned item (typically 5–7 business days after pickup).
+         </p>`
+      : `<p style="color:${C.text};font-size:14px;">As this was a COD order, no monetary refund is applicable.</p>`;
+
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello,</p>
+      <p style="color:${C.text};font-size:14px;">
+        Great news! Your return request for order <strong>#${orderNumber}</strong> has been
+        <strong style="color:${C.success};">approved</strong>.
+      </p>
+      <div style="background:${C.successBg};border-left:4px solid ${C.success};padding:12px 16px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:13px;color:${C.success};font-weight:600;">Next Steps</p>
+        <ol style="margin:8px 0 0;padding-left:20px;font-size:13px;color:${C.text};">
+          <li style="margin-bottom:4px;">Pack the item securely in its original packaging if possible.</li>
+          <li style="margin-bottom:4px;">A reverse pickup will be arranged within 1–2 business days.</li>
+          <li style="margin-bottom:4px;">Keep the item ready at your delivery address.</li>
+        </ol>
+      </div>
+      ${refundNote}
+      ${ctaButton('View My Orders →', `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com'}/orders`)}`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Return Approved — Order #${orderNumber}`,
+      html:    emailShell(C.success, 'Return Approved!', `Order #${orderNumber}`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerReturnApproved error:', err?.message);
+  }
+}
+
+/**
+ * Notify the customer when their return request is rejected.
+ */
+export async function notifyCustomerReturnRejected(
+  customerEmail: string,
+  orderNumber:   string,
+  adminNotes:    string,
+): Promise<void> {
+  try {
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello,</p>
+      <p style="color:${C.text};font-size:14px;">
+        We have reviewed your return request for order <strong>#${orderNumber}</strong>
+        and unfortunately we are unable to approve it at this time.
+      </p>
+      <div style="background:${C.dangerBg};border-left:4px solid ${C.danger};padding:12px 16px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:13px;font-weight:600;color:${C.danger};">Reason:</p>
+        <p style="margin:4px 0 0;font-size:13px;color:${C.text};">${adminNotes}</p>
+      </div>
+      <p style="color:${C.text};font-size:14px;">
+        If you believe this decision is incorrect, please contact our support team.
+      </p>
+      ${ctaButton('Contact Support →', 'mailto:support@instafashionpoints.com', C.maroon)}`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Return Request Update — Order #${orderNumber}`,
+      html:    emailShell(C.danger, 'Return Not Approved', `Order #${orderNumber}`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerReturnRejected error:', err?.message);
+  }
+}
+
+/**
+ * Notify the customer when the refund has been successfully processed.
+ */
+export async function notifyCustomerRefundProcessed(
+  customerEmail:   string,
+  orderNumber:     string,
+  refundAmount:    number,
+  razorpayRefundId:string,
+): Promise<void> {
+  try {
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello,</p>
+      <p style="color:${C.text};font-size:14px;">
+        Your refund for order <strong>#${orderNumber}</strong> has been successfully processed.
+      </p>
+      <div style="background:${C.successBg};border-radius:8px;padding:16px;margin:20px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${infoRow('Refund Amount', `₹${refundAmount.toLocaleString('en-IN')}`)}
+          ${infoRow('Refund Reference', razorpayRefundId)}
+          ${infoRow('Credit Timeline', '5–7 business days')}
+        </table>
+      </div>
+      <p style="color:${C.text};font-size:14px;">
+        The amount will appear in your original payment method within 5–7 business days,
+        depending on your bank's processing time.
+      </p>
+      ${ctaButton('Continue Shopping →', process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com', C.maroon)}`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Refund Processed — ₹${refundAmount.toLocaleString('en-IN')} for Order #${orderNumber}`,
+      html:    emailShell(C.success, 'Refund Processed!', `₹${refundAmount.toLocaleString('en-IN')} on its way`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerRefundProcessed error:', err?.message);
+  }
+}
 // (separate file — no Prisma dependency)

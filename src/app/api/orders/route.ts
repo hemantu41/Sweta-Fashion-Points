@@ -47,7 +47,9 @@ function transformOrder(o: any, productMap: Map<string, { main_image: string | n
     packing_deadline: o.packing_sla_deadline    ?? null,
     packed_at:        o.packed_at    ?? null,
     shipped_at:       o.picked_up_at ?? null,
-    delivered_at:     o.delivered_at ?? null,
+    delivered_at:           o.delivered_at           ?? null,
+    return_window_closes_at: o.return_window_closes_at ?? null,
+    payment_method:          o.payment_method          ?? null,
     created_at:       o.created_at,
     awb_number:       o.awb_number   ?? null,
     courier_partner:  o.courier_partner ?? null,
@@ -99,9 +101,9 @@ async function fetchProductMap(productIds: string[]): Promise<Map<string, { main
 
 const ORDER_SELECT = `
   id, order_number, seller_id, customer_id, status,
-  subtotal, shipping_charge,
+  subtotal, shipping_charge, payment_method,
   acceptance_sla_deadline, packing_sla_deadline,
-  packed_at, picked_up_at, delivered_at,
+  packed_at, picked_up_at, delivered_at, return_window_closes_at,
   shipping_address, created_at,
   awb_number, courier_partner, tracking_url,
   spf_order_items (
