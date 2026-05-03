@@ -169,9 +169,100 @@ export async function applyStatusFromPayload(
     }
   })();
 
-  // Invalidate seller Redis cache
+  // On delivery: create spf_seller_earnings rows if the Razorpay webhook missed them (fire-and-forget)
+  if (newStatus === 'DELIVERED') {
+    void (async () => {
+      try {
+        // Idempotency: skip if earnings already exist for this order
+        const { data: existing } = await supabaseAdmin
+          .from('spf_seller_earnings')
+          .select('id')
+          .eq('order_id', orderId)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          console.log(`[SR:tracking] Earnings already exist for order ${orderId} — skipped`);
+          return;
+        }
+
+        // Fetch order with line items
+        const { data: fullOrder } = await supabaseAdmin
+          .from('spf_orders')
+          .select(`
+            id, order_number, seller_id,
+            spf_order_items ( product_id, product_name, quantity, unit_price )
+          `)
+          .eq('id', orderId)
+          .single();
+
+        if (!fullOrder) return;
+
+        const items: any[] = (fullOrder as any).spf_order_items || [];
+        if (items.length === 0) {
+          // Fallback: fetch items directly in case the join returned nothing
+          const { data: directItems } = await supabaseAdmin
+            .from('spf_order_items')
+            .select('product_id, product_name, quantity, unit_price')
+            .eq('order_id', orderId);
+          items.push(...(directItems || []));
+        }
+
+        if (items.length === 0) {
+          console.warn(`[SR:tracking] No items found for order ${orderId} — earnings skipped`);
+          return;
+        }
+
+        // Fetch seller commission rate
+        const { data: seller } = await supabaseAdmin
+          .from('spf_sellers')
+          .select('commission_percentage')
+          .eq('id', (fullOrder as any).seller_id)
+          .maybeSingle();
+
+        const commissionPct = (seller as any)?.commission_percentage ?? 0;
+
+        const earningRows = items.map((item: any) => {
+          const totalItemPrice   = Number(item.unit_price) * Number(item.quantity);
+          const commissionAmount = totalItemPrice * (commissionPct / 100);
+          return {
+            seller_id:             (fullOrder as any).seller_id,
+            order_id:              orderId,
+            product_id:            item.product_id || null,
+            item_name:             item.product_name || 'Product',
+            quantity:              Number(item.quantity) || 1,
+            unit_price:            Number(item.unit_price),
+            total_item_price:      totalItemPrice,
+            commission_percentage: commissionPct,
+            commission_amount:     commissionAmount,
+            seller_earning:        totalItemPrice - commissionAmount,
+            payment_status:        'pending',
+            order_date:            now,
+            order_number:          (fullOrder as any).order_number,
+          };
+        });
+
+        const { error: earnErr } = await supabaseAdmin
+          .from('spf_seller_earnings')
+          .insert(earningRows);
+
+        if (earnErr) {
+          console.error(`[SR:tracking] Failed to create earnings for order ${orderId}:`, earnErr.message);
+        } else {
+          console.log(`[SR:tracking] Created ${earningRows.length} earning record(s) for order ${orderId}`);
+        }
+      } catch (e: any) {
+        console.warn('[SR:tracking] Earnings creation error (non-critical):', e?.message);
+      }
+    })();
+  }
+
+  // Invalidate seller Redis cache — orders always; analytics on delivery (earnings changed)
   if (o.seller_id) {
-    invalidateSellerKeys(o.seller_id, 'orders').catch(() => {});
+    if (newStatus === 'DELIVERED') {
+      invalidateSellerKeys(o.seller_id, 'orders', 'analytics').catch(() => {});
+    } else {
+      invalidateSellerKeys(o.seller_id, 'orders').catch(() => {});
+    }
   }
 
   console.log(`[SR:tracking] orderId=${orderId} AWB=${o.awb_number} ${o.status} → ${newStatus}`);
