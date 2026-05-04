@@ -39,7 +39,7 @@ export async function POST(
     // Fetch return request
     const { data: returnReq, error: fetchErr } = await supabaseAdmin
       .from('spf_return_requests')
-      .select('id, order_id, customer_id, status, refund_status, razorpay_refund_id')
+      .select('id, order_id, customer_id, seller_id, status, refund_status, razorpay_refund_id')
       .eq('id', returnRequestId)
       .single();
 
@@ -49,10 +49,10 @@ export async function POST(
 
     const rr = returnReq as any;
 
-    // Must be APPROVED
-    if (rr.status !== 'APPROVED') {
+    // Must be RETURN_RECEIVED (seller confirmed they got the product back)
+    if (rr.status !== 'RETURN_RECEIVED') {
       return NextResponse.json(
-        { error: `Return must be APPROVED before issuing a refund. Current status: ${rr.status}` },
+        { error: `Refund can only be issued after the seller confirms receipt. Current status: ${rr.status}. Expected: RETURN_RECEIVED` },
         { status: 400 },
       );
     }
@@ -123,6 +123,18 @@ export async function POST(
         updated_at:          now,
       })
       .eq('id', returnRequestId);
+
+    // Update order status → RETURNED
+    await supabaseAdmin
+      .from('spf_orders')
+      .update({ status: 'RETURNED', updated_at: now })
+      .eq('id', rr.order_id);
+
+    // Reverse seller earnings — mark as returned (idempotent with confirm-receipt step)
+    await supabaseAdmin
+      .from('spf_seller_earnings')
+      .update({ payment_status: 'returned', updated_at: now })
+      .eq('order_id', rr.order_id);
 
     // Fire-and-forget: notify customer
     void (async () => {

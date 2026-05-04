@@ -911,4 +911,86 @@ export async function notifyCustomerRefundProcessed(
     console.error('[sellerNotify] notifyCustomerRefundProcessed error:', err?.message);
   }
 }
+/**
+ * Notify the seller that the customer has shipped the product back.
+ * Includes AWB + courier so seller can track the incoming package.
+ */
+export async function notifySellerReturnShipping(
+  sellerEmail:  string,
+  businessName: string,
+  orderNumber:  string,
+  awbNumber:    string,
+  courierName:  string,
+): Promise<void> {
+  try {
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello <strong>${businessName}</strong>,</p>
+      <p style="color:${C.text};font-size:14px;">
+        The customer has shipped the return for order <strong>#${orderNumber}</strong>.
+        Please expect the package and confirm receipt once it arrives.
+      </p>
+      <div style="background:${C.altBg};border-radius:8px;padding:16px;margin:20px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${infoRow('Order Number', `#${orderNumber}`)}
+          ${infoRow('Return Courier', courierName)}
+          ${infoRow('AWB / Tracking', awbNumber)}
+          ${infoRow('Next Step', 'Confirm receipt in your seller dashboard once package arrives')}
+        </table>
+      </div>
+      <p style="color:${C.text};font-size:13px;">
+        Once you receive the package, please confirm receipt in your seller dashboard.
+        This triggers the customer refund.
+      </p>
+      ${ctaButton('Go to Seller Dashboard →', DASHBOARD_URL)}`;
+
+    await sendEmail({
+      to:      sellerEmail,
+      subject: `Return Shipped — Order #${orderNumber} | AWB: ${awbNumber}`,
+      html:    emailShell(C.warn, 'Return Package on the Way', `Order #${orderNumber}`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifySellerReturnShipping error:', err?.message);
+  }
+}
+
+/**
+ * Notify the customer that the seller has confirmed receipt of the returned product.
+ * Prepaid: refund is being initiated. COD: manual refund process.
+ */
+export async function notifyCustomerReturnReceived(
+  customerEmail: string,
+  orderNumber:   string,
+  isPrepaid:     boolean,
+  orderTotal:    number,
+): Promise<void> {
+  try {
+    const refundNote = isPrepaid
+      ? `A refund of <strong>₹${orderTotal.toLocaleString('en-IN')}</strong> will be credited to your original payment method within 5–7 business days.`
+      : `Since this was a COD order, our team will contact you to arrange a manual refund.`;
+
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello,</p>
+      <p style="color:${C.text};font-size:14px;">
+        Great news! The seller has confirmed receipt of your returned product for order <strong>#${orderNumber}</strong>.
+      </p>
+      <div style="background:${C.successBg};border-radius:8px;padding:16px;margin:20px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${infoRow('Order Number', `#${orderNumber}`)}
+          ${infoRow('Return Status', 'Product received by seller')}
+          ${infoRow('Refund', isPrepaid ? `₹${orderTotal.toLocaleString('en-IN')} — being processed` : 'Manual refund — team will contact you')}
+        </table>
+      </div>
+      <p style="color:${C.text};font-size:14px;">${refundNote}</p>
+      ${ctaButton('View Order Status →', process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com')}`;
+
+    await sendEmail({
+      to:      customerEmail,
+      subject: `Return Received — Refund Processing for Order #${orderNumber}`,
+      html:    emailShell(C.success, 'Return Received!', `Refund is being processed`, body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifyCustomerReturnReceived error:', err?.message);
+  }
+}
+
 // (separate file — no Prisma dependency)
