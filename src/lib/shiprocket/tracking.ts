@@ -173,29 +173,30 @@ export async function applyStatusFromPayload(
   if (newStatus === 'DELIVERED') {
     void (async () => {
       try {
-        // Idempotency: skip if earnings already exist for this order
-        const { data: existing } = await supabaseAdmin
-          .from('spf_seller_earnings')
-          .select('id')
-          .eq('order_id', orderId)
-          .limit(1);
-
-        if (existing && existing.length > 0) {
-          console.log(`[SR:tracking] Earnings already exist for order ${orderId} — skipped`);
-          return;
-        }
-
-        // Fetch order with line items
+        // Fetch order with line items first (needed for idempotency check by order_number)
         const { data: fullOrder } = await supabaseAdmin
           .from('spf_orders')
           .select(`
-            id, order_number, seller_id,
+            id, order_number, seller_id, delivered_at,
             spf_order_items ( product_id, product_name, quantity, unit_price )
           `)
           .eq('id', orderId)
           .single();
 
         if (!fullOrder) return;
+
+        // Idempotency: check by order_number (webhook uses spf_payment_orders.id as order_id,
+        // so checking by order_id alone would miss webhook-created rows and cause duplicates)
+        const { data: existing } = await supabaseAdmin
+          .from('spf_seller_earnings')
+          .select('id')
+          .eq('order_number', (fullOrder as any).order_number)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          console.log(`[SR:tracking] Earnings already exist for order ${(fullOrder as any).order_number} — skipped`);
+          return;
+        }
 
         const items: any[] = (fullOrder as any).spf_order_items || [];
         if (items.length === 0) {
@@ -236,7 +237,7 @@ export async function applyStatusFromPayload(
             commission_amount:     commissionAmount,
             seller_earning:        totalItemPrice - commissionAmount,
             payment_status:        'pending',
-            order_date:            now,
+            order_date:            (fullOrder as any).delivered_at || now,
             order_number:          (fullOrder as any).order_number,
           };
         });
