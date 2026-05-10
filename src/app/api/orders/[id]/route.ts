@@ -19,13 +19,13 @@ export async function GET(
         .from('spf_orders')
         .select(`
           id, order_number, status, subtotal, shipping_charge, payment_method,
-          transaction_id, customer_id, seller_id, delivery_address,
+          transaction_id, customer_id, seller_id, shipping_address,
           awb_number, courier_partner, tracking_url,
-          created_at, updated_at, delivered_at, shipped_at, packed_at,
+          created_at, updated_at, delivered_at, picked_up_at, packed_at,
           packing_sla_deadline,
           spf_order_items (
-            id, product_id, product_name, variant_details, sku,
-            quantity, unit_price, total_price, image_url
+            id, product_id, seller_id, product_name,
+            variant_details, sku, quantity, unit_price, total_price
           )
         `)
         .eq('id', orderId)
@@ -43,13 +43,44 @@ export async function GET(
     ]);
 
     if (orderRes.error || !orderRes.data) {
+      console.error('[Order GET] fetch error:', orderRes.error?.message);
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    const o = orderRes.data as any;
+
+    // Fetch product images separately (not stored in spf_order_items)
+    const productIds = (o.spf_order_items || []).map((i: any) => i.product_id).filter(Boolean);
+    const productMap = new Map<string, string>();
+    if (productIds.length > 0) {
+      const { data: products } = await supabaseAdmin
+        .from('spf_productdetails')
+        .select('id, main_image')
+        .in('id', productIds);
+      (products || []).forEach((p: any) => { if (p.main_image) productMap.set(p.id, p.main_image); });
+    }
+
+    // Normalise shipping_address → delivery_address (same shape as the list API)
+    const sa = o.shipping_address || {};
+    const delivery_address = {
+      name:          sa.name          || '',
+      phone:         sa.phone         || '',
+      address_line1: sa.house         || sa.address_line1 || '',
+      address_line2: sa.area          || sa.address_line2 || '',
+      city:          sa.city          || '',
+      state:         sa.state         || '',
+      pincode:       sa.pincode       || '',
+    };
+
+    const items = (o.spf_order_items || []).map((item: any) => ({
+      ...item,
+      image_url: productMap.get(item.product_id) || null,
+    }));
+
     return NextResponse.json({
-      order:         orderRes.data,
-      history:       historyRes.data   || [],
-      returnRequest: returnRes.data    || null,
+      order:         { ...o, delivery_address, shipped_at: o.picked_up_at, spf_order_items: items },
+      history:       historyRes.data || [],
+      returnRequest: returnRes.data  || null,
     });
   } catch (err: any) {
     console.error('[Order GET] error:', err?.message);
