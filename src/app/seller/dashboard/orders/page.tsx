@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Calendar, Clock, Truck, Tag, Search, X, ChevronDown, Eye,
-  Package, CheckCircle, ExternalLink,
+  Calendar, Clock, Truck, Tag, Search, X, ChevronDown,
+  Package, CheckCircle, ExternalLink, MapPin,
+  RotateCcw, History,
 } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
@@ -265,6 +266,284 @@ function DateRangeDropdown({ label: labelProp, icon, from, to, onApply, onClear,
         </div>
       )}
     </DropdownShell>
+  );
+}
+
+/* ─── Order Detail Modal ─────────────────────────────────────────────────────── */
+
+const STATUS_LABELS: Record<string, string> = {
+  captured:         'Order Placed',
+  confirmed:        'Order Confirmed',
+  seller_notified:  'Seller Notified',
+  accepted:         'Accepted by Seller',
+  label_generated:  'Shipping Label Generated',
+  packed:           'Packed',
+  ready_to_ship:    'Ready to Ship',
+  shipped:          'Shipped',
+  out_for_delivery: 'Out for Delivery',
+  delivered:        'Delivered',
+  cancelled:        'Cancelled',
+  rejected:         'Rejected by Seller',
+  return_initiated: 'Return Requested',
+  return_shipped:   'Return Shipped by Customer',
+  return_received:  'Return Received by Seller',
+  refund_initiated: 'Refund Initiated',
+  returned:         'Returned & Refunded',
+};
+
+function statusLabel(s: string) {
+  return STATUS_LABELS[s.toLowerCase()] ?? s.replace(/_/g, ' ');
+}
+
+function statusDotColor(s: string) {
+  const k = s.toLowerCase();
+  if (['delivered', 'returned', 'refund_initiated'].includes(k)) return '#16A34A';
+  if (['shipped', 'out_for_delivery', 'ready_to_ship', 'packed', 'label_generated'].includes(k)) return '#7C3AED';
+  if (['cancelled', 'rejected'].includes(k)) return '#DC2626';
+  if (k.startsWith('return')) return '#D97706';
+  return '#5B1A3A';
+}
+
+function actorBadge(actorType: string) {
+  const t = (actorType || '').toUpperCase();
+  if (t === 'SELLER')   return { label: 'Seller',   bg: '#F5EDF2', color: '#5B1A3A' };
+  if (t === 'ADMIN')    return { label: 'Admin',    bg: '#EEF2FF', color: '#4338CA' };
+  if (t === 'CUSTOMER') return { label: 'Customer', bg: '#F0FDF4', color: '#16A34A' };
+  if (t === 'SYSTEM')   return { label: 'System',   bg: '#F9FAFB', color: '#6B7280' };
+  return { label: actorType, bg: '#F9FAFB', color: '#6B7280' };
+}
+
+function OrderDetailModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [data, setData]       = useState<any>(null);
+  const [err, setErr]         = useState('');
+
+  useEffect(() => {
+    fetch(`/api/orders/${orderId}`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setErr('Failed to load order details.'); setLoading(false); });
+  }, [orderId]);
+
+  const order    = data?.order;
+  const history  = data?.history  || [];
+  const rr       = data?.returnRequest;
+  const items    = order?.spf_order_items || [];
+  const addr     = order?.delivery_address || {};
+  const total    = order ? (Number(order.subtotal || 0) + Number(order.shipping_charge || 0)) : 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-end"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative h-full w-full max-w-lg bg-white flex flex-col overflow-hidden"
+        style={{ boxShadow: '-8px 0 32px rgba(0,0,0,0.18)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5DDD5] flex-shrink-0"
+          style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+          <div>
+            <p className="text-[11px] text-[#DDB868] font-semibold uppercase tracking-wider">Order Details</p>
+            <h3 className="text-white font-bold text-base mt-0.5" style={{ fontFamily: 'var(--font-playfair)' }}>
+              {loading ? '…' : `#${order?.order_number || '—'}`}
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors">
+            <X size={18} className="text-white" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          {loading && (
+            <div className="flex justify-center py-20">
+              <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#5B1A3A', borderTopColor: 'transparent' }} />
+            </div>
+          )}
+          {err && <p className="text-sm text-red-600 p-6">{err}</p>}
+          {!loading && !err && order && (
+            <div className="space-y-0 divide-y divide-[#F0EAE4]">
+
+              {/* Summary strip */}
+              <div className="px-5 py-4 flex items-center justify-between bg-[#FAF8F5]">
+                <div>
+                  <p className="text-[10px] text-[#6B7280] uppercase tracking-wide">Total Amount</p>
+                  <p className="text-lg font-bold text-[#5B1A3A]" style={{ fontFamily: 'var(--font-playfair)' }}>
+                    ₹{total.toLocaleString('en-IN')}
+                  </p>
+                  <p className="text-[10px] text-[#6B7280] mt-0.5">
+                    ₹{Number(order.subtotal||0).toLocaleString('en-IN')} + ₹{Number(order.shipping_charge||0).toLocaleString('en-IN')} shipping
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                    style={{ background: '#F5EDF2', color: '#5B1A3A' }}>
+                    {statusLabel(order.status || '')}
+                  </span>
+                  <p className="text-[10px] text-[#6B7280] mt-1.5">
+                    {order.payment_method?.toUpperCase() || '—'}
+                    {order.awb_number && (
+                      <span className="ml-2 font-medium text-[#5B1A3A]">AWB: {order.awb_number}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Package size={11} /> Items ({items.length})
+                </p>
+                <div className="space-y-3">
+                  {items.map((item: any) => {
+                    const v = item.variant_details || {};
+                    return (
+                      <div key={item.id} className="flex items-start gap-3">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.product_name}
+                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-[#E5DDD5]" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-[#F5EDF2] flex items-center justify-center flex-shrink-0">
+                            <Package size={18} className="text-[#C49A3C]" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#1F2937] truncate">{item.product_name || 'Product'}</p>
+                          <p className="text-[10px] text-[#6B7280] mt-0.5">
+                            Qty: {item.quantity}
+                            {v.size  && <span className="ml-2">Size: {v.size}</span>}
+                            {v.color && <span className="ml-2">Color: {v.color}</span>}
+                          </p>
+                        </div>
+                        <p className="text-xs font-semibold text-[#1F2937] flex-shrink-0">
+                          ₹{Number(item.total_price || 0).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Delivery address */}
+              {(addr.name || addr.address_line1 || addr.city) && (
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <MapPin size={11} /> Delivery Address
+                  </p>
+                  <p className="text-xs font-semibold text-[#1F2937]">{addr.name || '—'}</p>
+                  <p className="text-xs text-[#6B7280] mt-0.5 leading-relaxed">
+                    {[addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode]
+                      .filter(Boolean).join(', ')}
+                  </p>
+                  {addr.phone && <p className="text-xs text-[#6B7280] mt-0.5">{addr.phone}</p>}
+                </div>
+              )}
+
+              {/* Courier / tracking */}
+              {(order.awb_number || order.courier_partner) && (
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Truck size={11} /> Shipment Info
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {order.courier_partner && <p className="text-xs font-semibold text-[#1F2937]">{order.courier_partner}</p>}
+                      {order.awb_number      && <p className="text-[10px] text-[#6B7280] mt-0.5">AWB: {order.awb_number}</p>}
+                    </div>
+                    {order.awb_number && (
+                      <a href={`/track/${order.awb_number}`} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg"
+                        style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+                        <ExternalLink size={10} /> Track
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Return request */}
+              {rr && (
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <RotateCcw size={11} /> Return Request
+                  </p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-amber-800">{statusLabel(rr.status || '')}</span>
+                      <span className="text-[10px] text-amber-600">{fmtTime(rr.created_at)}</span>
+                    </div>
+                    {rr.reverse_awb && (
+                      <p className="text-[10px] text-amber-700">
+                        Return AWB: <span className="font-semibold">{rr.reverse_awb}</span>
+                        {rr.reverse_courier && <span className="ml-1">via {rr.reverse_courier}</span>}
+                      </p>
+                    )}
+                    {rr.received_condition && (
+                      <p className="text-[10px] text-amber-700">
+                        Condition: <span className="font-semibold capitalize">{rr.received_condition}</span>
+                      </p>
+                    )}
+                    {rr.refund_amount && (
+                      <p className="text-[10px] text-amber-700">
+                        Refund: <span className="font-semibold">₹{Number(rr.refund_amount).toLocaleString('en-IN')}</span>
+                        {rr.razorpay_refund_id && <span className="ml-1 text-[9px]">({rr.razorpay_refund_id})</span>}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Status history */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                  <History size={11} /> Order Timeline
+                </p>
+                {history.length === 0 ? (
+                  <p className="text-xs text-[#6B7280]">No history recorded yet.</p>
+                ) : (
+                  <div className="relative">
+                    {/* Vertical line */}
+                    <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[#E5DDD5]" />
+                    <div className="space-y-5">
+                      {history.map((h: any, i: number) => {
+                        const badge = actorBadge(h.actor_type);
+                        const isLast = i === history.length - 1;
+                        return (
+                          <div key={h.id} className="relative flex gap-4 pl-6">
+                            {/* Dot */}
+                            <div
+                              className="absolute left-0 top-1 w-3.5 h-3.5 rounded-full border-2 border-white flex-shrink-0"
+                              style={{ background: isLast ? statusDotColor(h.to_status) : '#D1C4BE', boxShadow: '0 0 0 2px #E5DDD5' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-xs font-semibold text-[#1F2937]">
+                                  {statusLabel(h.to_status)}
+                                </p>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-semibold"
+                                  style={{ background: badge.bg, color: badge.color }}>
+                                  {badge.label}
+                                </span>
+                              </div>
+                              {h.note && <p className="text-[10px] text-[#6B7280] mt-0.5 leading-relaxed">{h.note}</p>}
+                              <p className="text-[9px] text-[#9CA3AF] mt-1">{fmtTime(h.created_at)}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -560,11 +839,13 @@ function OrdersTable({
   activeTab,
   sellerId,
   onAction,
+  onRowClick,
 }: {
   orders: Order[];
   activeTab: string;
   sellerId: string;
   onAction: (type: 'accepted' | 'rejected' | 'ship' | 'packed', order: Order) => void;
+  onRowClick: (orderId: string) => void;
 }) {
   const [busyIds,    setBusyIds]    = useState<Set<string>>(new Set());
   const [packingIds, setPackingIds] = useState<Set<string>>(new Set());
@@ -637,7 +918,8 @@ function OrdersTable({
 
             return (
               <tr key={order.id}
-                className="border-b border-[#F0EAE4] transition-colors hover:bg-[#FAF7F4]"
+                onClick={() => onRowClick(order.id)}
+                className="border-b border-[#F0EAE4] transition-colors hover:bg-[#F5EDF2] cursor-pointer"
                 style={{ background: idx % 2 === 0 ? 'white' : '#FAF7F4' }}>
 
                 {/* Order ID */}
@@ -708,8 +990,8 @@ function OrdersTable({
                   </span>
                 </td>
 
-                {/* Action */}
-                <td className="px-4 py-3">
+                {/* Action — stop row click so buttons work independently */}
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   {isPending && (
                     <div className="flex flex-col gap-1.5">
                       <button onClick={() => acceptOrder(order)} disabled={busy}
@@ -779,6 +1061,9 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+
+  // Order detail drawer
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
 
   // Ship modal state
   const [shipOrder, setShipOrder] = useState<Order | null>(null);
@@ -904,6 +1189,11 @@ export default function OrdersPage() {
 
   return (
     <div style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }} className="space-y-5 pb-8">
+
+      {/* Order detail drawer */}
+      {detailOrderId && (
+        <OrderDetailModal orderId={detailOrderId} onClose={() => setDetailOrderId(null)} />
+      )}
 
       {/* Ship modal */}
       {shipOrder && (
@@ -1047,6 +1337,7 @@ export default function OrdersPage() {
             activeTab={activeTab}
             sellerId={user?.sellerId || ''}
             onAction={handleAction}
+            onRowClick={id => setDetailOrderId(id)}
           />
         )}
       </div>
