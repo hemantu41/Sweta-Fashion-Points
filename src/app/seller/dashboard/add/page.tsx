@@ -363,8 +363,11 @@ export default function AddProductPage() {
         product: {
           productId,
           name,
-          category: l1,
-          subCategory: l2,
+          category: l1Label?.name || l1,
+          subCategory: l2Label?.name || l2,
+          l1CategoryId: l1 || null,
+          l2CategoryId: l2 || null,
+          l3CategoryId: l3 || null,
           description,
           fabric: fabric || undefined,
           price: totalCustomerPrice,          // seller price + shipping cost
