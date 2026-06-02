@@ -38,6 +38,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Returns the first available slug by appending -2, -3, ... if base slug is taken
+async function resolveUniqueSlug(base: string, excludeId?: string): Promise<string> {
+  let candidate = base;
+  let suffix = 2;
+  while (true) {
+    let query = supabaseAdmin
+      .from('spf_categories')
+      .select('id')
+      .eq('slug', candidate);
+    if (excludeId) query = query.neq('id', excludeId);
+    const { data } = await query.maybeSingle();
+    if (!data) return candidate;
+    candidate = `${base}-${suffix++}`;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -47,9 +63,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'name, slug, and level are required' }, { status: 400 });
     }
 
+    const uniqueSlug = await resolveUniqueSlug(slug);
+
     const { data, error } = await supabaseAdmin
       .from('spf_categories')
-      .insert({ name, name_hindi, slug, parent_id: parent_id || null, level, icon, display_order: display_order || 0, is_active: is_active ?? true, is_occasion: is_occasion ?? false })
+      .insert({ name, name_hindi, slug: uniqueSlug, parent_id: parent_id || null, level, icon, display_order: display_order || 0, is_active: is_active ?? true, is_occasion: is_occasion ?? false })
       .select()
       .single();
 
@@ -58,13 +76,6 @@ export async function POST(request: NextRequest) {
     invalidateCategoryCache().catch(() => {});
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (err: any) {
-    // Postgres unique constraint violation (slug already exists)
-    if (err?.code === '23505') {
-      return NextResponse.json(
-        { success: false, error: 'A category with this slug already exists. Please change the slug to something unique (e.g. add a suffix like "-mens" or "-kids").' },
-        { status: 409 }
-      );
-    }
     const message = err?.message || 'Failed to create category';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
