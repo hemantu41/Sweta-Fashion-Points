@@ -34,7 +34,7 @@ export async function PUT(
     if (error) throw error;
     if (!data) return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
 
-    await invalidateCategoryCache();
+    invalidateCategoryCache().catch(() => {});
     return NextResponse.json({ success: true, data });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to update category';
@@ -56,7 +56,7 @@ export async function DELETE(
 
     if (error) throw error;
 
-    await invalidateCategoryCache();
+    invalidateCategoryCache().catch(() => {});
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to delete category';

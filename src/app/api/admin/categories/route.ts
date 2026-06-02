@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    await invalidateCategoryCache();
+    invalidateCategoryCache().catch(() => {});
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to create category';
