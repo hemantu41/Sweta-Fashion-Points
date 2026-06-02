@@ -57,8 +57,15 @@ export async function POST(request: NextRequest) {
 
     invalidateCategoryCache().catch(() => {});
     return NextResponse.json({ success: true, data }, { status: 201 });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to create category';
+  } catch (err: any) {
+    // Postgres unique constraint violation (slug already exists)
+    if (err?.code === '23505') {
+      return NextResponse.json(
+        { success: false, error: 'A category with this slug already exists. Please change the slug to something unique (e.g. add a suffix like "-mens" or "-kids").' },
+        { status: 409 }
+      );
+    }
+    const message = err?.message || 'Failed to create category';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

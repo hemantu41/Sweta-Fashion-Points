@@ -36,8 +36,14 @@ export async function PUT(
 
     invalidateCategoryCache().catch(() => {});
     return NextResponse.json({ success: true, data });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to update category';
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      return NextResponse.json(
+        { success: false, error: 'A category with this slug already exists. Please use a different slug.' },
+        { status: 409 }
+      );
+    }
+    const message = err?.message || 'Failed to update category';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
