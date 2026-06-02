@@ -640,7 +640,7 @@ export default function AddProductPage() {
                 <div key={i} className="aspect-[3/4] relative">
                   {images[i] ? (
                     <div className="relative w-full h-full">
-                      <img src={images[i]} alt="" className="w-full h-full object-cover object-top rounded-xl border border-[#E8E0E4]" />
+                      <img src={images[i]} alt="" className="w-full h-full object-contain rounded-xl border border-[#E8E0E4]" />
                       {i === 0 && <span className="absolute top-1 left-1 text-[8px] px-1.5 py-0.5 text-white rounded-md font-bold" style={{ background: '#5B1A3A' }}>Main</span>}
                       <button type="button" onClick={() => setImages(p => p.filter((_, j) => j !== i))}
                         className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center shadow">
@@ -1013,7 +1013,7 @@ export default function AddProductPage() {
                 {/* Image placeholder */}
                 <div className="aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-[#F5EDF2] flex items-center justify-center">
                   {images[0] ? (
-                    <img src={images[0]} alt="Preview" className="w-full h-full object-cover object-top" />
+                    <img src={images[0]} alt="Preview" className="w-full h-full object-contain" />
                   ) : (
                     <div className="text-center">
                       <ImagePlus size={32} className="text-[#C49A3C]/50 mx-auto mb-2" />
