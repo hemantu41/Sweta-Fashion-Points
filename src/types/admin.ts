@@ -25,22 +25,25 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: OrderStatus;
-  payment_mode: 'cod' | 'online' | 'upi';
+  payment_mode: 'cod' | 'online' | 'upi' | string;
   created_at: string;
   updated_at: string;
   delivery_partner?: string;
   distance_km?: number;
+  // enriched fields from API
+  seller_name?: string;
+  awb_number?: string;
+  label_url?: string | null;
 }
 
 export type OrderStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'processing'
-  | 'shipped'
-  | 'out_for_delivery'
-  | 'delivered'
-  | 'cancelled'
-  | 'returned';
+  | 'pending' | 'confirmed' | 'processing' | 'shipped'
+  | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned'
+  // Actual DB values (uppercase):
+  | 'CONFIRMED' | 'SELLER_NOTIFIED' | 'ACCEPTED' | 'LABEL_GENERATED'
+  | 'PACKED' | 'PICKUP_SCHEDULED' | 'READY_TO_SHIP' | 'IN_TRANSIT'
+  | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED' | 'REJECTED' | 'RETURNED'
+  | string;
 
 export interface OrderItem {
   product_id: string;

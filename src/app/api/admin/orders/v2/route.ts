@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     // Batch-fetch customer names
     const customerIds = [...new Set(orders.map((o: any) => o.customer_id))].filter(Boolean);
     const { data: customers } = customerIds.length
-      ? await supabaseAdmin.from('spf_users').select('id, full_name, email').in('id', customerIds)
+      ? await supabaseAdmin.from('spf_users').select('id, name, email').in('id', customerIds)
       : { data: [] };
 
     const customerMap = new Map((customers ?? []).map((c: any) => [c.id, c]));
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       riskStatus:            o.risk_status,
       riskScore:             o.risk_score ?? 0,
       customerId:            o.customer_id,
-      customerName:          customerMap.get(o.customer_id)?.full_name ?? '—',
+      customerName:          customerMap.get(o.customer_id)?.name ?? '—',
       customerEmail:         customerMap.get(o.customer_id)?.email ?? '—',
       paymentMethod:         o.payment_method,
       subtotal:              Number(o.subtotal),

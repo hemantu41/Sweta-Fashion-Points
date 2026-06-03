@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, login } = useAuth();
@@ -23,53 +22,79 @@ export default function ProfilePage() {
     citizenship: 'Indian',
     profile_photo: '',
   });
-  const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [addressData, setAddressData] = useState({
+    addressId: '',
+    addressName: '',
+    phone: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: 'Bihar',
+    pincode: '',
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login?callbackUrl=/profile');
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      // localStorage is empty but the iron-session cookie may still be valid.
+      // Try to restore from the server before redirecting — avoids the redirect
+      // loop where the middleware would bounce /login back to /profile (because
+      // the cookie is valid) while localStorage is still empty.
+      fetch('/api/auth/session')
+        .then(r => r.json())
+        .then(data => {
+          if (data.isLoggedIn && data.user) {
+            login(data.user); // restores localStorage; fetchProfile fires via [user] effect
+          } else {
+            // Truly unauthenticated — redirect to login with callbackUrl
+            router.replace('/login?callbackUrl=/profile');
+          }
+        })
+        .catch(() => {
+          router.replace('/login?callbackUrl=/profile');
+        });
       return;
     }
 
     if (user?.id) {
       fetchProfile();
     }
-  }, [user, isAuthenticated, isLoading, router]);
+  }, [user, isAuthenticated, isLoading, router, login]);
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(`/api/user/profile?userId=${user?.id}`);
-      const data = await response.json();
+      const [profileRes, addressRes] = await Promise.all([
+        fetch(`/api/user/profile?userId=${user?.id}`),
+        fetch(`/api/user/addresses?userId=${user?.id}`),
+      ]);
+      const profileData = await profileRes.json();
+      const addressData = await addressRes.json();
 
-      if (response.ok && data.profile) {
-        // Format date_of_birth to YYYY-MM-DD for input type="date"
+      if (profileRes.ok && profileData.profile) {
         let formattedDate = '';
-        if (data.profile.date_of_birth) {
-          const date = new Date(data.profile.date_of_birth);
+        if (profileData.profile.date_of_birth) {
+          const date = new Date(profileData.profile.date_of_birth);
           if (!isNaN(date.getTime())) {
             formattedDate = date.toISOString().split('T')[0];
           }
         }
-
         setFormData({
-          name: data.profile.name || user?.name || '',
-          email: data.profile.email || user?.email || '',
-          mobile: data.profile.mobile || user?.mobile || '',
-          location: data.profile.location || '',
-          latitude: data.profile.latitude != null ? Number(data.profile.latitude) : null,
-          longitude: data.profile.longitude != null ? Number(data.profile.longitude) : null,
-          gender: data.profile.gender || '',
+          name: profileData.profile.name || user?.name || '',
+          email: profileData.profile.email || user?.email || '',
+          mobile: profileData.profile.mobile || user?.mobile || '',
+          location: profileData.profile.location || '',
+          latitude: profileData.profile.latitude != null ? Number(profileData.profile.latitude) : null,
+          longitude: profileData.profile.longitude != null ? Number(profileData.profile.longitude) : null,
+          gender: profileData.profile.gender || '',
           date_of_birth: formattedDate,
-          citizenship: data.profile.citizenship || 'Indian',
-          profile_photo: data.profile.profile_photo || '',
+          citizenship: profileData.profile.citizenship || 'Indian',
+          profile_photo: profileData.profile.profile_photo || '',
         });
-        if (data.profile.latitude != null && data.profile.longitude != null) {
-          setGeoStatus('success');
-        }
       } else {
         setFormData({
           name: user?.name || '',
@@ -82,6 +107,21 @@ export default function ProfilePage() {
           date_of_birth: '',
           citizenship: 'Indian',
           profile_photo: '',
+        });
+      }
+
+      // Load default address (first address ordered by is_default desc)
+      if (addressRes.ok && addressData.addresses?.length > 0) {
+        const def = addressData.addresses[0];
+        setAddressData({
+          addressId: def.id || '',
+          addressName: def.name || '',
+          phone: def.phone || '',
+          addressLine1: def.address_line1 || '',
+          addressLine2: def.address_line2 || '',
+          city: def.city || '',
+          state: def.state || 'Bihar',
+          pincode: def.pincode || '',
         });
       }
     } catch (error) {
@@ -167,37 +207,78 @@ export default function ProfilePage() {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch('/api/user/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          ...formData,
+      // Save profile and address concurrently
+      const saves: Promise<Response>[] = [
+        fetch('/api/user/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user?.id, ...formData }),
         }),
-      });
+      ];
 
-      const data = await response.json();
+      // Only save address if at least address line 1 is filled
+      const hasAddress = addressData.addressLine1.trim();
+      if (hasAddress) {
+        if (addressData.addressId) {
+          // Update existing address
+          saves.push(
+            fetch('/api/user/addresses', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: user?.id,
+                addressId: addressData.addressId,
+                name: addressData.addressName || formData.name,
+                phone: addressData.phone || formData.mobile,
+                addressLine1: addressData.addressLine1,
+                addressLine2: addressData.addressLine2,
+                city: addressData.city,
+                state: addressData.state,
+                pincode: addressData.pincode,
+              }),
+            })
+          );
+        } else {
+          // Create new default address
+          saves.push(
+            fetch('/api/user/addresses', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: user?.id,
+                name: addressData.addressName || formData.name,
+                phone: addressData.phone || formData.mobile,
+                addressLine1: addressData.addressLine1,
+                addressLine2: addressData.addressLine2,
+                city: addressData.city,
+                state: addressData.state,
+                pincode: addressData.pincode,
+                isDefault: true,
+              }),
+            })
+          );
+        }
+      }
 
-      if (response.ok) {
+      const [profileRes] = await Promise.all(saves);
+      const profileData = await profileRes.json();
+
+      if (profileRes.ok) {
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
         setIsEditing(false);
-
-        // Update AuthContext with new user data
-        if (user && data.profile) {
+        if (user && profileData.profile) {
           login({
             ...user,
-            name: data.profile.name,
-            mobile: data.profile.mobile,
-            location: data.profile.location,
-            latitude: data.profile.latitude != null ? Number(data.profile.latitude) : undefined,
-            longitude: data.profile.longitude != null ? Number(data.profile.longitude) : undefined,
+            name: profileData.profile.name,
+            mobile: profileData.profile.mobile,
+            location: profileData.profile.location,
+            latitude: profileData.profile.latitude != null ? Number(profileData.profile.latitude) : undefined,
+            longitude: profileData.profile.longitude != null ? Number(profileData.profile.longitude) : undefined,
           });
         }
-
-        // Refresh profile data from database
         await fetchProfile();
       } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to save profile' });
+        setMessage({ type: 'error', text: profileData.error || 'Failed to save profile' });
       }
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -281,35 +362,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Delivery Partner Status Section */}
-          {user?.isDeliveryPartner && (
-            <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-[#E8E2D9]">
-              <h2 className="text-xl font-bold text-[#722F37] mb-4">Delivery Partner Status</h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#6B6B6B] mb-2">Account Status:</p>
-                  <span className={`px-4 py-2 rounded-full text-sm font-medium border ${
-                    user.deliveryPartnerStatus === 'active' ? 'bg-green-100 text-green-700 border-green-200' :
-                    user.deliveryPartnerStatus === 'pending_approval' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                    user.deliveryPartnerStatus === 'rejected' ? 'bg-red-100 text-red-700 border-red-200' :
-                    'bg-gray-100 text-gray-700 border-gray-200'
-                  }`}>
-                    {user.deliveryPartnerStatus === 'pending_approval' ? 'Pending Approval' :
-                     user.deliveryPartnerStatus === 'active' ? 'Active' :
-                     user.deliveryPartnerStatus === 'rejected' ? 'Rejected' :
-                     user.deliveryPartnerStatus?.replace('_', ' ').toUpperCase()}
-                  </span>
-                </div>
-                <Link
-                  href="/delivery-partner/status"
-                  className="text-[#722F37] hover:underline font-medium"
-                >
-                  View Details →
-                </Link>
-              </div>
-            </div>
-          )}
-
           {/* Message */}
           {message.text && (
             <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
@@ -379,72 +431,129 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {/* Location (GPS) */}
+              </div>
+            </div>
+
+            {/* Address Section */}
+            <div className="border-b border-gray-200 pb-6">
+              <h3 className="text-lg font-semibold text-[#2D2D2D] mb-4">Address</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Contact Name */}
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Contact Name</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={addressData.addressName}
+                      onChange={e => setAddressData(p => ({ ...p, addressName: e.target.value }))}
+                      placeholder="Name for delivery"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    />
+                  ) : (
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{addressData.addressName || '-'}</p>
+                  )}
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Contact Phone</label>
+                  {isEditing ? (
+                    <input
+                      type="tel"
+                      value={addressData.phone}
+                      onChange={e => setAddressData(p => ({ ...p, phone: e.target.value }))}
+                      placeholder="10-digit mobile number"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    />
+                  ) : (
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{addressData.phone || '-'}</p>
+                  )}
+                </div>
+
+                {/* Address Line 1 */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Address Line 1</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={addressData.addressLine1}
+                      onChange={e => setAddressData(p => ({ ...p, addressLine1: e.target.value }))}
+                      placeholder="House no., Street, Area"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    />
+                  ) : (
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{addressData.addressLine1 || '-'}</p>
+                  )}
+                </div>
+
+                {/* Address Line 2 */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
-                    My Location
-                    <span className="ml-1 text-xs text-[#6B6B6B] font-normal">(for nearby products)</span>
+                    Address Line 2
+                    <span className="ml-1 text-xs text-[#6B6B6B] font-normal">(optional)</span>
                   </label>
-                  {formData.latitude && formData.longitude ? (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
-                      <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-sm text-green-700 font-medium">Location saved ({formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)})</span>
-                      {isEditing && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setGeoStatus('loading');
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => {
-                                setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                                setGeoStatus('success');
-                              },
-                              () => setGeoStatus('error')
-                            );
-                          }}
-                          className="ml-auto text-xs text-[#722F37] hover:underline"
-                        >
-                          Update
-                        </button>
-                      )}
-                    </div>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={addressData.addressLine2}
+                      onChange={e => setAddressData(p => ({ ...p, addressLine2: e.target.value }))}
+                      placeholder="Landmark, Colony, Near..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    />
                   ) : (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-[#F5F0E8] rounded-lg">
-                      <svg className="w-4 h-4 text-[#6B6B6B] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-sm text-[#6B6B6B]">Not set — enable to see nearby products</span>
-                      {isEditing && (
-                        <button
-                          type="button"
-                          disabled={geoStatus === 'loading'}
-                          onClick={() => {
-                            if (!navigator.geolocation) {
-                              setGeoStatus('error');
-                              return;
-                            }
-                            setGeoStatus('loading');
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => {
-                                setFormData(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                                setGeoStatus('success');
-                              },
-                              () => setGeoStatus('error')
-                            );
-                          }}
-                          className="ml-auto px-3 py-1.5 bg-[#722F37] text-white text-xs rounded-lg hover:bg-[#5a252c] transition-colors disabled:opacity-50"
-                        >
-                          {geoStatus === 'loading' ? 'Detecting...' : 'Use My Location'}
-                        </button>
-                      )}
-                    </div>
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{addressData.addressLine2 || '-'}</p>
                   )}
-                  {geoStatus === 'error' && (
-                    <p className="text-xs text-red-500 mt-1">Could not get location. Please allow browser location access and try again.</p>
+                </div>
+
+                {/* City */}
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">City / Town</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={addressData.city}
+                      onChange={e => setAddressData(p => ({ ...p, city: e.target.value }))}
+                      placeholder="e.g. Gaya"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    />
+                  ) : (
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{addressData.city || '-'}</p>
+                  )}
+                </div>
+
+                {/* Pincode */}
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">Pincode</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={addressData.pincode}
+                      onChange={e => setAddressData(p => ({ ...p, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                      placeholder="6-digit pincode"
+                      maxLength={6}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    />
+                  ) : (
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{addressData.pincode || '-'}</p>
+                  )}
+                </div>
+
+                {/* State */}
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">State</label>
+                  {isEditing ? (
+                    <select
+                      value={addressData.state}
+                      onChange={e => setAddressData(p => ({ ...p, state: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#722F37] focus:border-transparent"
+                    >
+                      {['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Delhi','Goa','Gujarat','Haryana','Himachal Pradesh','Jammu & Kashmir','Jharkhand','Karnataka','Kerala','Ladakh','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="px-4 py-3 bg-[#F5F0E8] rounded-lg text-[#2D2D2D]">{addressData.state || '-'}</p>
                   )}
                 </div>
               </div>

@@ -181,6 +181,17 @@ export default function Sidebar({ activePage, onNavigate, ndrCount = 0 }: Sideba
             <ClipboardCheck size={20} className="flex-shrink-0" />
             {!collapsed && <span>{t('nav.qc')}</span>}
           </a>
+
+          {/* Returns Management link */}
+          <a
+            href="/admin/returns"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+              text-[rgba(255,255,255,0.45)] hover:bg-[rgba(196,154,60,0.06)] hover:text-[rgba(255,255,255,0.75)] transition-all"
+            title={collapsed ? 'Returns' : undefined}
+          >
+            <RotateCcw size={20} className="flex-shrink-0" />
+            {!collapsed && <span>Returns</span>}
+          </a>
         </nav>
 
         {/* Collapse toggle + Logout */}

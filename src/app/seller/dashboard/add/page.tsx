@@ -87,6 +87,20 @@ const CLOSURE_OPTS  = ['Asymmetrical', 'Symmetrical'];
 const POCKETS_OPTS  = ['1', '2', '3', 'No Pockets'];
 const WEAVE_OPTS    = ['Chambray', 'Corduroy', 'Denim', 'Dobby', 'Knitted', 'Oxford', 'Regular'];
 
+/* ─── Shipping cost calculator ──────────────────────────────────────────────── */
+// Standard courier rate slabs (grams → ₹) based on Shiprocket surface rates.
+// Minimum charged weight is 801g (>800g rule) — applied before calling this fn.
+function calcShippingCost(weightGrams: number): number {
+  const g = Math.max(0, weightGrams);
+  if (g <= 500)  return 63;
+  if (g <= 1000) return 77;
+  if (g <= 1500) return 120;
+  if (g <= 2000) return 165;
+  if (g <= 2500) return 180;
+  if (g <= 3000) return 210;
+  return 210 + Math.ceil((g - 3000) / 500) * 30;
+}
+
 /* ─── Sub-components ────────────────────────────────────────────────────────── */
 
 function SectionCard({ title, badge, children }: { title: string; badge?: React.ReactNode; children: React.ReactNode }) {
@@ -170,7 +184,7 @@ export default function AddProductPage() {
   const [occasionTags, setOccasionTags] = useState<string[]>([]);
 
   /* Shipping */
-  const [weight, setWeight]           = useState('');
+  const [weight, setWeight]           = useState('1000'); // default 1 kg
   const [dispatchTime, setDispatchTime] = useState('2');
 
   /* Seller details (editable on this form) */
@@ -278,8 +292,15 @@ export default function AddProductPage() {
   }, [catSearch, runSearch]);
 
   /* Derived values */
-  const discountPct = mrp && price && parseFloat(mrp) > parseFloat(price)
-    ? Math.round((1 - parseFloat(price) / parseFloat(mrp)) * 100) : 0;
+  const weightGrams           = Math.max(0, parseFloat(weight) || 1000);
+  // Always charge for >800g — even lightweight packages use the >800g slab
+  const chargedWeightGrams    = Math.max(weightGrams, 801);
+  const isMinWeightApplied    = chargedWeightGrams > weightGrams;
+  const shippingCost          = calcShippingCost(chargedWeightGrams);
+  const sellerBasePrice       = parseFloat(price) || 0;
+  const totalCustomerPrice    = sellerBasePrice > 0 ? sellerBasePrice + shippingCost : 0;
+  const discountPct = mrp && totalCustomerPrice && parseFloat(mrp) > totalCustomerPrice
+    ? Math.round((1 - totalCustomerPrice / parseFloat(mrp)) * 100) : 0;
   const l1Label = l1Cats.find(c => c.id === l1);
   const l2Label = l2Cats.find(c => c.id === l2);
   const l3Label = l3Cats.find(c => c.id === l3);
@@ -342,12 +363,15 @@ export default function AddProductPage() {
         product: {
           productId,
           name,
-          category: l1,
-          subCategory: l2,
+          category: l1Label?.name || l1,
+          subCategory: l2Label?.name || l2,
+          l1CategoryId: l1 || null,
+          l2CategoryId: l2 || null,
+          l3CategoryId: l3 || null,
           description,
           fabric: fabric || undefined,
-          price: parseFloat(price),
-          originalPrice: parseFloat(mrp) || parseFloat(price),
+          price: totalCustomerPrice,          // seller price + shipping cost
+          originalPrice: parseFloat(mrp) || totalCustomerPrice,
           stockQuantity: parseInt(stock),
           sizes,
           colors: colors.map(c => ({ name: c, hex: COLORS_LIST.find(x => x.name === c)?.hex || '#000' })),
@@ -613,10 +637,10 @@ export default function AddProductPage() {
             {/* Image grid */}
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[0,1,2,3,4,5,6,7].map(i => (
-                <div key={i} className="aspect-square relative">
+                <div key={i} className="aspect-[3/4] relative">
                   {images[i] ? (
                     <div className="relative w-full h-full">
-                      <img src={images[i]} alt="" className="w-full h-full object-cover rounded-xl border border-[#E8E0E4]" />
+                      <img src={images[i]} alt="" className="w-full h-full object-contain rounded-xl border border-[#E8E0E4]" />
                       {i === 0 && <span className="absolute top-1 left-1 text-[8px] px-1.5 py-0.5 text-white rounded-md font-bold" style={{ background: '#5B1A3A' }}>Main</span>}
                       <button type="button" onClick={() => setImages(p => p.filter((_, j) => j !== i))}
                         className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center shadow">
@@ -666,13 +690,13 @@ export default function AddProductPage() {
                 </div>
               </div>
               <div>
-                <FieldLabel required>Selling Price (₹)</FieldLabel>
+                <FieldLabel required>Seller Base Price (₹)</FieldLabel>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#999]">₹</span>
                   <input type="number" value={price} onChange={e => setPrice(e.target.value)} min="0" placeholder="0"
                     className={`${INPUT_CLS} pl-7`} />
                 </div>
-                {discountPct > 0 && <p className="text-[10px] text-green-600 mt-0.5 font-semibold">{discountPct}% off</p>}
+                <p className="text-[10px] text-[#999] mt-0.5">Your earnings (excl. shipping)</p>
               </div>
               <div>
                 <FieldLabel required>GST Rate</FieldLabel>
@@ -698,10 +722,11 @@ export default function AddProductPage() {
                 <p className="font-semibold text-[#5B1A3A] mb-1">Price Breakdown</p>
                 {[
                   { label: 'MRP', val: mrp ? `₹${parseFloat(mrp).toLocaleString('en-IN')}` : '—' },
-                  { label: `Selling Price${discountPct > 0 ? ` (${discountPct}% off)` : ''}`, val: `₹${parseFloat(price).toLocaleString('en-IN')}`, highlight: true },
-                  { label: `GST (${gst}%)`, val: `₹${(parseFloat(price) * gst / (100 + gst)).toFixed(0)}` },
-                  { label: 'Customer Pays', val: `₹${parseFloat(price).toLocaleString('en-IN')}`, bold: true },
-                  { label: 'You Receive (0% commission)', val: `₹${parseFloat(price).toLocaleString('en-IN')}`, bold: true, color: '#2E7D32' },
+                  { label: 'Seller Base Price', val: `₹${sellerBasePrice.toLocaleString('en-IN')}`, highlight: true },
+                  { label: `Shipping Cost (${(chargedWeightGrams / 1000).toFixed(1)} kg charged)`, val: `₹${shippingCost}` },
+                  { label: `GST (${gst}%)`, val: `₹${(totalCustomerPrice * gst / (100 + gst)).toFixed(0)}` },
+                  { label: `Customer Pays${discountPct > 0 ? ` (${discountPct}% off MRP)` : ''}`, val: `₹${totalCustomerPrice.toLocaleString('en-IN')}`, bold: true },
+                  { label: 'You Receive (0% commission)', val: `₹${sellerBasePrice.toLocaleString('en-IN')}`, bold: true, color: '#2E7D32' },
                 ].map(r => (
                   <div key={r.label} className={`flex justify-between ${r.bold ? 'font-semibold border-t border-[rgba(196,154,60,0.1)] pt-1' : ''}`}>
                     <span className="text-[#666]">{r.label}</span>
@@ -799,15 +824,16 @@ export default function AddProductPage() {
           </SectionCard>
 
           {/* ── Section 7: Shipping ── */}
-          <SectionCard title="Shipping">
-            <div className="grid grid-cols-2 gap-3">
+          <SectionCard title="Shipping & Delivery">
+            <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
                 <FieldLabel>Package Weight (grams)</FieldLabel>
                 <div className="relative">
                   <Package size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" />
-                  <input type="number" value={weight} onChange={e => setWeight(e.target.value)} min="0" placeholder="500"
+                  <input type="number" value={weight} onChange={e => setWeight(e.target.value)} min="0" placeholder="1000"
                     className={`${INPUT_CLS} pl-8`} />
                 </div>
+                <p className="text-[10px] text-[#999] mt-0.5">{(weightGrams / 1000).toFixed(2)} kg</p>
               </div>
               <div>
                 <FieldLabel>Dispatch Time</FieldLabel>
@@ -821,6 +847,44 @@ export default function AddProductPage() {
                   </select>
                 </div>
               </div>
+            </div>
+
+            {/* Shipping Cost Calculator — styled like GST Price Calculator */}
+            <div className="p-3 border border-[rgba(196,154,60,0.2)] rounded-xl bg-[#FFFBEB] text-xs space-y-1.5">
+              <p className="font-semibold text-[#5B1A3A] mb-2">Shipping Cost Calculator</p>
+
+              {/* Weight rows */}
+              <div className="flex justify-between">
+                <span className="text-[#666]">Package Weight</span>
+                <span className="font-medium text-[#333]">{(weightGrams / 1000).toFixed(2)} kg ({weightGrams} g)</span>
+              </div>
+              {isMinWeightApplied && (
+                <div className="flex justify-between items-center">
+                  <span className="text-amber-600">Charged Weight <span className="text-[9px]">(min &gt;800g rule)</span></span>
+                  <span className="font-medium text-amber-700">{(chargedWeightGrams / 1000).toFixed(2)} kg ({chargedWeightGrams} g)</span>
+                </div>
+              )}
+
+              {/* Shipping cost */}
+              <div className="flex justify-between border-t border-[rgba(196,154,60,0.15)] pt-1.5">
+                <span className="text-[#666]">Shipping Cost</span>
+                <span className="font-semibold text-[#5B1A3A]">₹{shippingCost}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#666]">Seller Base Price</span>
+                <span className="font-medium text-[#333]">{sellerBasePrice > 0 ? `₹${sellerBasePrice.toLocaleString('en-IN')}` : '—'}</span>
+              </div>
+
+              {/* Total */}
+              <div className="flex justify-between font-semibold border-t border-[rgba(196,154,60,0.15)] pt-1.5">
+                <span className="text-[#5B1A3A]">Customer Price</span>
+                <span className="text-[#5B1A3A]">{totalCustomerPrice > 0 ? `₹${totalCustomerPrice.toLocaleString('en-IN')}` : '—'}</span>
+              </div>
+              <div className="flex justify-between font-semibold" style={{ color: '#2E7D32' }}>
+                <span>You Receive</span>
+                <span>{sellerBasePrice > 0 ? `₹${sellerBasePrice.toLocaleString('en-IN')}` : '—'}</span>
+              </div>
+
             </div>
           </SectionCard>
 
@@ -947,9 +1011,9 @@ export default function AddProductPage() {
               {/* Product preview card */}
               <div className="p-4">
                 {/* Image placeholder */}
-                <div className="aspect-square rounded-xl overflow-hidden mb-3 bg-[#F5EDF2] flex items-center justify-center">
+                <div className="aspect-[3/4] rounded-xl overflow-hidden mb-3 bg-[#F5EDF2] flex items-center justify-center">
                   {images[0] ? (
-                    <img src={images[0]} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={images[0]} alt="Preview" className="w-full h-full object-contain" />
                   ) : (
                     <div className="text-center">
                       <ImagePlus size={32} className="text-[#C49A3C]/50 mx-auto mb-2" />
@@ -969,11 +1033,11 @@ export default function AddProductPage() {
                 </p>
 
                 {/* Price */}
-                <div className="flex items-baseline gap-2 mb-2">
-                  {price ? (
+                <div className="flex items-baseline gap-2 mb-1">
+                  {totalCustomerPrice > 0 ? (
                     <>
-                      <span className="text-base font-bold text-[#5B1A3A]">₹{parseFloat(price).toLocaleString('en-IN')}</span>
-                      {mrp && parseFloat(mrp) > parseFloat(price) && (
+                      <span className="text-base font-bold text-[#5B1A3A]">₹{totalCustomerPrice.toLocaleString('en-IN')}</span>
+                      {mrp && parseFloat(mrp) > totalCustomerPrice && (
                         <>
                           <span className="text-xs text-[#999] line-through">₹{parseFloat(mrp).toLocaleString('en-IN')}</span>
                           <span className="text-[10px] font-bold text-green-600">{discountPct}% off</span>
@@ -982,6 +1046,9 @@ export default function AddProductPage() {
                     </>
                   ) : <span className="text-sm text-[#CCC]">Price not set</span>}
                 </div>
+                {totalCustomerPrice > 0 && (
+                  <p className="text-[9px] text-[#999] mb-2">Incl. ₹{shippingCost} shipping</p>
+                )}
 
                 {/* Seller info */}
                 <div className="flex items-center gap-1.5 mb-2">

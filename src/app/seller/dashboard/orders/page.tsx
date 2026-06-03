@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Calendar, Clock, Truck, Tag, Search, X, ChevronDown, Eye,
-  Package, CheckCircle, ExternalLink,
+  Calendar, Clock, Truck, Tag, Search, X, ChevronDown,
+  Package, CheckCircle, ExternalLink, MapPin,
+  RotateCcw, History,
 } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
@@ -19,8 +20,10 @@ interface Order {
   sla_deadline?: string;
   packed_at?: string;
   shipped_at?: string;
+  delivered_at?: string;
   created_at: string;
   delivery_address?: any;
+  awb_number?: string;
 }
 
 interface Filters {
@@ -36,10 +39,11 @@ interface Filters {
 /* ─── Constants ──────────────────────────────────────────────────────────────── */
 
 const TABS = [
-  { key: 'pending',       label: 'Pending',        statuses: ['captured'] },
-  { key: 'ready',         label: 'Ready to Ship',  statuses: ['accepted', 'packed'] },
-  { key: 'shipped',       label: 'Shipped',         statuses: ['shipped', 'out_for_delivery', 'delivered'] },
-  { key: 'cancelled',     label: 'Cancelled',       statuses: ['cancelled', 'returned'] },
+  { key: 'pending',   label: 'Pending',        statuses: ['captured', 'SELLER_NOTIFIED', 'CONFIRMED'] },
+  { key: 'ready',     label: 'Ready to Ship',  statuses: ['accepted', 'ACCEPTED', 'packed', 'PACKED', 'LABEL_GENERATED', 'label_generated'] },
+  { key: 'shipped',   label: 'Shipped',        statuses: ['shipped', 'SHIPPED', 'out_for_delivery', 'OUT_FOR_DELIVERY', 'delivered', 'DELIVERED', 'READY_TO_SHIP', 'ready_to_ship'] },
+  { key: 'delivered', label: 'Delivered',      statuses: ['delivered', 'DELIVERED'] },
+  { key: 'cancelled', label: 'Cancelled',      statuses: ['cancelled', 'CANCELLED', 'returned', 'RETURNED', 'rejected', 'REJECTED'] },
 ];
 
 const DEFAULT_FILTERS: Filters = {
@@ -265,6 +269,284 @@ function DateRangeDropdown({ label: labelProp, icon, from, to, onApply, onClear,
   );
 }
 
+/* ─── Order Detail Modal ─────────────────────────────────────────────────────── */
+
+const STATUS_LABELS: Record<string, string> = {
+  captured:         'Order Placed',
+  confirmed:        'Order Confirmed',
+  seller_notified:  'Seller Notified',
+  accepted:         'Accepted by Seller',
+  label_generated:  'Shipping Label Generated',
+  packed:           'Packed',
+  ready_to_ship:    'Ready to Ship',
+  shipped:          'Shipped',
+  out_for_delivery: 'Out for Delivery',
+  delivered:        'Delivered',
+  cancelled:        'Cancelled',
+  rejected:         'Rejected by Seller',
+  return_initiated: 'Return Requested',
+  return_shipped:   'Return Shipped by Customer',
+  return_received:  'Return Received by Seller',
+  refund_initiated: 'Refund Initiated',
+  returned:         'Returned & Refunded',
+};
+
+function statusLabel(s: string) {
+  return STATUS_LABELS[s.toLowerCase()] ?? s.replace(/_/g, ' ');
+}
+
+function statusDotColor(s: string) {
+  const k = s.toLowerCase();
+  if (['delivered', 'returned', 'refund_initiated'].includes(k)) return '#16A34A';
+  if (['shipped', 'out_for_delivery', 'ready_to_ship', 'packed', 'label_generated'].includes(k)) return '#7C3AED';
+  if (['cancelled', 'rejected'].includes(k)) return '#DC2626';
+  if (k.startsWith('return')) return '#D97706';
+  return '#5B1A3A';
+}
+
+function actorBadge(actorType: string) {
+  const t = (actorType || '').toUpperCase();
+  if (t === 'SELLER')   return { label: 'Seller',   bg: '#F5EDF2', color: '#5B1A3A' };
+  if (t === 'ADMIN')    return { label: 'Admin',    bg: '#EEF2FF', color: '#4338CA' };
+  if (t === 'CUSTOMER') return { label: 'Customer', bg: '#F0FDF4', color: '#16A34A' };
+  if (t === 'SYSTEM')   return { label: 'System',   bg: '#F9FAFB', color: '#6B7280' };
+  return { label: actorType, bg: '#F9FAFB', color: '#6B7280' };
+}
+
+function OrderDetailModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [data, setData]       = useState<any>(null);
+  const [err, setErr]         = useState('');
+
+  useEffect(() => {
+    fetch(`/api/orders/${orderId}`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => { setErr('Failed to load order details.'); setLoading(false); });
+  }, [orderId]);
+
+  const order    = data?.order;
+  const history  = data?.history  || [];
+  const rr       = data?.returnRequest;
+  const items    = order?.spf_order_items || [];
+  const addr     = order?.delivery_address || {};
+  const total    = order ? (Number(order.subtotal || 0) + Number(order.shipping_charge || 0)) : 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-end"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative h-full w-full max-w-lg bg-white flex flex-col overflow-hidden"
+        style={{ boxShadow: '-8px 0 32px rgba(0,0,0,0.18)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5DDD5] flex-shrink-0"
+          style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+          <div>
+            <p className="text-[11px] text-[#DDB868] font-semibold uppercase tracking-wider">Order Details</p>
+            <h3 className="text-white font-bold text-base mt-0.5" style={{ fontFamily: 'var(--font-playfair)' }}>
+              {loading ? '…' : `#${order?.order_number || '—'}`}
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors">
+            <X size={18} className="text-white" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          {loading && (
+            <div className="flex justify-center py-20">
+              <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: '#5B1A3A', borderTopColor: 'transparent' }} />
+            </div>
+          )}
+          {err && <p className="text-sm text-red-600 p-6">{err}</p>}
+          {!loading && !err && order && (
+            <div className="space-y-0 divide-y divide-[#F0EAE4]">
+
+              {/* Summary strip */}
+              <div className="px-5 py-4 flex items-center justify-between bg-[#FAF8F5]">
+                <div>
+                  <p className="text-[10px] text-[#6B7280] uppercase tracking-wide">Total Amount</p>
+                  <p className="text-lg font-bold text-[#5B1A3A]" style={{ fontFamily: 'var(--font-playfair)' }}>
+                    ₹{total.toLocaleString('en-IN')}
+                  </p>
+                  <p className="text-[10px] text-[#6B7280] mt-0.5">
+                    ₹{Number(order.subtotal||0).toLocaleString('en-IN')} + ₹{Number(order.shipping_charge||0).toLocaleString('en-IN')} shipping
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                    style={{ background: '#F5EDF2', color: '#5B1A3A' }}>
+                    {statusLabel(order.status || '')}
+                  </span>
+                  <p className="text-[10px] text-[#6B7280] mt-1.5">
+                    {order.payment_method?.toUpperCase() || '—'}
+                    {order.awb_number && (
+                      <span className="ml-2 font-medium text-[#5B1A3A]">AWB: {order.awb_number}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Package size={11} /> Items ({items.length})
+                </p>
+                <div className="space-y-3">
+                  {items.map((item: any) => {
+                    const v = item.variant_details || {};
+                    return (
+                      <div key={item.id} className="flex items-start gap-3">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.product_name}
+                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-[#E5DDD5]" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-[#F5EDF2] flex items-center justify-center flex-shrink-0">
+                            <Package size={18} className="text-[#C49A3C]" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#1F2937] truncate">{item.product_name || 'Product'}</p>
+                          <p className="text-[10px] text-[#6B7280] mt-0.5">
+                            Qty: {item.quantity}
+                            {v.size  && <span className="ml-2">Size: {v.size}</span>}
+                            {v.color && <span className="ml-2">Color: {v.color}</span>}
+                          </p>
+                        </div>
+                        <p className="text-xs font-semibold text-[#1F2937] flex-shrink-0">
+                          ₹{Number(item.total_price || 0).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Delivery address */}
+              {(addr.name || addr.address_line1 || addr.city) && (
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <MapPin size={11} /> Delivery Address
+                  </p>
+                  <p className="text-xs font-semibold text-[#1F2937]">{addr.name || '—'}</p>
+                  <p className="text-xs text-[#6B7280] mt-0.5 leading-relaxed">
+                    {[addr.address_line1, addr.address_line2, addr.city, addr.state, addr.pincode]
+                      .filter(Boolean).join(', ')}
+                  </p>
+                  {addr.phone && <p className="text-xs text-[#6B7280] mt-0.5">{addr.phone}</p>}
+                </div>
+              )}
+
+              {/* Courier / tracking */}
+              {(order.awb_number || order.courier_partner) && (
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Truck size={11} /> Shipment Info
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {order.courier_partner && <p className="text-xs font-semibold text-[#1F2937]">{order.courier_partner}</p>}
+                      {order.awb_number      && <p className="text-[10px] text-[#6B7280] mt-0.5">AWB: {order.awb_number}</p>}
+                    </div>
+                    {order.awb_number && (
+                      <a href={`/track/${order.awb_number}`} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg"
+                        style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+                        <ExternalLink size={10} /> Track
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Return request */}
+              {rr && (
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <RotateCcw size={11} /> Return Request
+                  </p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-amber-800">{statusLabel(rr.status || '')}</span>
+                      <span className="text-[10px] text-amber-600">{fmtTime(rr.created_at)}</span>
+                    </div>
+                    {rr.reverse_awb && (
+                      <p className="text-[10px] text-amber-700">
+                        Return AWB: <span className="font-semibold">{rr.reverse_awb}</span>
+                        {rr.reverse_courier && <span className="ml-1">via {rr.reverse_courier}</span>}
+                      </p>
+                    )}
+                    {rr.received_condition && (
+                      <p className="text-[10px] text-amber-700">
+                        Condition: <span className="font-semibold capitalize">{rr.received_condition}</span>
+                      </p>
+                    )}
+                    {rr.refund_amount && (
+                      <p className="text-[10px] text-amber-700">
+                        Refund: <span className="font-semibold">₹{Number(rr.refund_amount).toLocaleString('en-IN')}</span>
+                        {rr.razorpay_refund_id && <span className="ml-1 text-[9px]">({rr.razorpay_refund_id})</span>}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Status history */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                  <History size={11} /> Order Timeline
+                </p>
+                {history.length === 0 ? (
+                  <p className="text-xs text-[#6B7280]">No history recorded yet.</p>
+                ) : (
+                  <div className="relative">
+                    {/* Vertical line */}
+                    <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[#E5DDD5]" />
+                    <div className="space-y-5">
+                      {history.map((h: any, i: number) => {
+                        const badge = actorBadge(h.actor_type);
+                        const isLast = i === history.length - 1;
+                        return (
+                          <div key={h.id} className="relative flex gap-4 pl-6">
+                            {/* Dot */}
+                            <div
+                              className="absolute left-0 top-1 w-3.5 h-3.5 rounded-full border-2 border-white flex-shrink-0"
+                              style={{ background: isLast ? statusDotColor(h.to_status) : '#D1C4BE', boxShadow: '0 0 0 2px #E5DDD5' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-xs font-semibold text-[#1F2937]">
+                                  {statusLabel(h.to_status)}
+                                </p>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-semibold"
+                                  style={{ background: badge.bg, color: badge.color }}>
+                                  {badge.label}
+                                </span>
+                              </div>
+                              {h.note && <p className="text-[10px] text-[#6B7280] mt-0.5 leading-relaxed">{h.note}</p>}
+                              <p className="text-[9px] text-[#9CA3AF] mt-1">{fmtTime(h.created_at)}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Ship Modal ──────────────────────────────────────────────────────────────── */
 
 function ShipModal({
@@ -391,7 +673,7 @@ function ShipModal({
                 Generating…
               </>
             ) : (
-              <><Package size={14} /> Generate Label &amp; Schedule Pickup</>
+              <><Package size={14} /> Generate Shipping Label</>
             )}
           </button>
         </div>
@@ -415,9 +697,9 @@ function ShipSuccess({ awb, courierName, labelUrl, onClose }: {
           <CheckCircle size={32} className="text-[#16A34A]" />
         </div>
         <h3 style={{ fontFamily: 'var(--font-playfair)', color: '#5B1A3A', fontSize: 20, fontWeight: 700 }}>
-          Shipment Created!
+          Label Generated!
         </h3>
-        <p className="text-sm text-[#6B7280] mt-2">Pickup has been scheduled for tomorrow.</p>
+        <p className="text-sm text-[#6B7280] mt-2">Pack the item and click "Packing Completed" to schedule courier pickup.</p>
         <div className="mt-4 p-3 bg-[#FAF8F5] rounded-xl text-left space-y-1">
           <p className="text-xs text-[#6B7280]">AWB Number</p>
           <p className="text-sm font-bold text-[#5B1A3A]">{awb}</p>
@@ -436,6 +718,88 @@ function ShipSuccess({ awb, courierName, labelUrl, onClose }: {
             className="flex-1 py-2.5 text-sm font-semibold border rounded-xl text-[#374151] hover:bg-[#F5EDF2]"
             style={{ borderColor: '#E5DDD5' }}>
             Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Reject Modal ───────────────────────────────────────────────────────────── */
+
+function RejectModal({
+  order,
+  sellerId,
+  onClose,
+  onSuccess,
+}: {
+  order: Order;
+  sellerId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState('');
+
+  async function handleReject() {
+    if (!reason.trim()) { setError('Please provide a rejection reason.'); return; }
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected', sellerId, reason: reason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reject order');
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl w-full max-w-md" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5DDD5]">
+          <div>
+            <h3 style={{ fontFamily: 'var(--font-playfair)', color: '#C62828', fontSize: 18, fontWeight: 700 }}>Reject Order</h3>
+            <p className="text-xs text-[#6B7280] mt-0.5">#{order.order_number}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-50"><X size={16} className="text-[#6B7280]" /></button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            The customer will be notified with your reason. This action cannot be undone.
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#374151] mb-1.5">
+              Reason for rejection <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={4}
+              value={reason}
+              onChange={e => { setReason(e.target.value); setError(''); }}
+              placeholder="e.g. Item out of stock, pricing error, unable to fulfil..."
+              className="w-full px-3 py-2.5 text-sm border border-[#E5DDD5] rounded-lg focus:outline-none focus:border-red-400 resize-none"
+            />
+            {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+          </div>
+        </div>
+        <div className="px-6 pb-5 flex gap-3">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-sm font-semibold border rounded-xl text-[#374151] hover:bg-[#F5EDF2]"
+            style={{ borderColor: '#E5DDD5' }}>Cancel</button>
+          <button onClick={handleReject} disabled={loading || !reason.trim()}
+            className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl disabled:opacity-60 flex items-center justify-center gap-2"
+            style={{ background: 'linear-gradient(135deg,#C62828,#E53935)' }}>
+            {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+            {loading ? 'Rejecting…' : 'Reject Order'}
           </button>
         </div>
       </div>
@@ -475,13 +839,16 @@ function OrdersTable({
   activeTab,
   sellerId,
   onAction,
+  onRowClick,
 }: {
   orders: Order[];
   activeTab: string;
   sellerId: string;
-  onAction: (type: 'accepted' | 'ship', order: Order) => void;
+  onAction: (type: 'accepted' | 'rejected' | 'ship' | 'packed', order: Order) => void;
+  onRowClick: (orderId: string) => void;
 }) {
-  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  const [busyIds,    setBusyIds]    = useState<Set<string>>(new Set());
+  const [packingIds, setPackingIds] = useState<Set<string>>(new Set());
 
   async function acceptOrder(order: Order) {
     setBusyIds(s => new Set(s).add(order.id));
@@ -497,12 +864,28 @@ function OrdersTable({
     }
   }
 
+  async function confirmPacking(order: Order) {
+    setPackingIds(s => new Set(s).add(order.id));
+    try {
+      const res = await fetch(`/api/orders/${order.id}/packing-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId }),
+      });
+      if (res.ok) onAction('packed', order);
+    } finally {
+      setPackingIds(s => { const n = new Set(s); n.delete(order.id); return n; });
+    }
+  }
+
+  const isDeliveredTab = activeTab === 'delivered';
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[#E5DDD5]" style={{ background: '#FAF7F4' }}>
-            {['Order ID', 'Product', 'Customer City', 'Order Date', 'SLA / Dispatch', 'Amount', 'Action'].map((h, i) => (
+            {['Order ID', 'Product', 'Customer City', isDeliveredTab ? 'Delivered On' : 'Order Date', 'SLA / Status', 'Amount', 'Action'].map((h, i) => (
               <th key={h}
                 className={`px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] ${i === 2 ? 'hidden lg:table-cell' : i === 3 ? 'hidden md:table-cell' : ''}`}>
                 {h}
@@ -512,23 +895,39 @@ function OrdersTable({
         </thead>
         <tbody>
           {orders.map((order, idx) => {
-            const sla = getSla(order.packing_deadline || order.sla_deadline);
-            const slaCfg = sla ? SLA_CFG[sla] : null;
-            const firstItem = order.items?.[0];
+            const sla         = getSla(order.packing_deadline || order.sla_deadline);
+            const slaCfg      = sla ? SLA_CFG[sla] : null;
+            const firstItem   = order.items?.[0];
             const productName = firstItem?.name || firstItem?.product_name || 'Product';
-            const extraItems = (order.items?.length || 1) - 1;
-            const city = order.delivery_address?.city || order.delivery_address?.district || '—';
-            const statusStr = order.status || 'captured';
-            const busy = busyIds.has(order.id);
+            const extraItems  = (order.items?.length || 1) - 1;
+            const city        = order.delivery_address?.city || order.delivery_address?.district || '—';
+            const statusStr   = (order.status || 'captured').toUpperCase();
+            const busy        = busyIds.has(order.id);
+            const packing     = packingIds.has(order.id);
+
+            const isPending       = ['CAPTURED', 'SELLER_NOTIFIED', 'CONFIRMED'].includes(statusStr);
+            const isAccepted      = statusStr === 'ACCEPTED';
+            const isLabelGen      = statusStr === 'LABEL_GENERATED';
+            const isPacked        = ['PACKED', 'READY_TO_SHIP'].includes(statusStr);
+            const isInTransit     = ['SHIPPED', 'OUT_FOR_DELIVERY'].includes(statusStr);
+            const isDelivered     = statusStr === 'DELIVERED';
+            const isCancelledOrRejected = ['CANCELLED', 'RETURNED', 'REJECTED'].includes(statusStr);
+
+            // AWB — can live on order or first item
+            const awb = order.awb_number || order.items?.[0]?.awb || '';
 
             return (
               <tr key={order.id}
-                className="border-b border-[#F0EAE4] transition-colors hover:bg-[#FAF7F4]"
+                onClick={() => onRowClick(order.id)}
+                className="border-b border-[#F0EAE4] transition-colors hover:bg-[#F5EDF2] cursor-pointer"
                 style={{ background: idx % 2 === 0 ? 'white' : '#FAF7F4' }}>
 
                 {/* Order ID */}
                 <td className="px-4 py-3">
                   <span className="font-semibold text-[#5B1A3A] text-xs">#{order.order_number}</span>
+                  {statusStr === 'REJECTED' && (
+                    <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-red-100 text-red-700">Rejected</span>
+                  )}
                 </td>
 
                 {/* Product */}
@@ -544,18 +943,38 @@ function OrdersTable({
                   <span className="text-xs text-[#6B7280]">{city}</span>
                 </td>
 
-                {/* Order Date */}
+                {/* Date column — delivery date for Delivered tab, order date otherwise */}
                 <td className="px-4 py-3 hidden md:table-cell">
-                  <span className="text-xs text-[#6B7280]">{fmtTime(order.created_at)}</span>
+                  <span className="text-xs text-[#6B7280]">
+                    {isDeliveredTab
+                      ? fmtTime(order.delivered_at || order.shipped_at)
+                      : fmtTime(order.created_at)}
+                  </span>
                 </td>
 
-                {/* SLA / Dispatch date */}
+                {/* SLA / Status */}
                 <td className="px-4 py-3">
-                  {slaCfg ? (
+                  {slaCfg && !isInTransit && !isDelivered && !isCancelledOrRejected && !isPacked ? (
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
                       style={{ background: slaCfg.bg, color: slaCfg.color }}>
                       <span className="w-1.5 h-1.5 rounded-full" style={{ background: slaCfg.color }} />
                       {slaCfg.label}
+                    </span>
+                  ) : isLabelGen ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700">
+                      Label Ready
+                    </span>
+                  ) : isPacked ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700">
+                      Pickup Scheduled
+                    </span>
+                  ) : isInTransit ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700">
+                      {statusStr === 'OUT_FOR_DELIVERY' ? 'Out for Delivery' : 'Shipped'}
+                    </span>
+                  ) : isDelivered ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700">
+                      Delivered
                     </span>
                   ) : order.shipped_at ? (
                     <span className="text-xs text-[#6B7280]">{fmtDate(order.shipped_at)}</span>
@@ -571,31 +990,57 @@ function OrdersTable({
                   </span>
                 </td>
 
-                {/* Action */}
-                <td className="px-4 py-3">
-                  {statusStr === 'captured' && (
-                    <button onClick={() => acceptOrder(order)} disabled={busy}
-                      className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg disabled:opacity-60 whitespace-nowrap"
-                      style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
-                      {busy ? '…' : 'Accept Order'}
-                    </button>
+                {/* Action — stop row click so buttons work independently */}
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                  {isPending && (
+                    <div className="flex flex-col gap-1.5">
+                      <button onClick={() => acceptOrder(order)} disabled={busy}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg disabled:opacity-60 whitespace-nowrap"
+                        style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+                        {busy ? '…' : 'Accept'}
+                      </button>
+                      <button onClick={() => onAction('rejected', order)} disabled={busy}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap"
+                        style={{ background: 'linear-gradient(135deg,#C62828,#E53935)' }}>
+                        Reject
+                      </button>
+                    </div>
                   )}
-                  {(statusStr === 'accepted' || statusStr === 'packed') && (
+                  {isAccepted && (
                     <button onClick={() => onAction('ship', order)}
                       className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap flex items-center gap-1"
                       style={{ background: 'linear-gradient(135deg,#C49A3C,#A07830)' }}>
                       <Package size={11} /> Generate Label
                     </button>
                   )}
-                  {['shipped', 'out_for_delivery', 'delivered'].includes(statusStr) && (
-                    <a
-                      href={`/track/${order.items?.[0]?.awb || ''}`}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#5B1A3A] hover:underline"
-                    >
-                      <Eye size={12} /> Track
+                  {isLabelGen && (
+                    <div className="flex flex-col gap-1.5">
+                      <button onClick={() => onAction('ship', order)}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap flex items-center gap-1"
+                        style={{ background: 'linear-gradient(135deg,#C49A3C,#A07830)' }}>
+                        <Package size={11} /> Download Label
+                      </button>
+                      <button onClick={() => confirmPacking(order)} disabled={packing}
+                        className="px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap flex items-center gap-1 disabled:opacity-60"
+                        style={{ background: 'linear-gradient(135deg,#16A34A,#15803D)' }}>
+                        {packing
+                          ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          : <CheckCircle size={11} />}
+                        {packing ? 'Scheduling…' : 'Packing Completed'}
+                      </button>
+                    </div>
+                  )}
+                  {isPacked && (
+                    <span className="text-[11px] text-amber-600 font-semibold">Awaiting Pickup</span>
+                  )}
+                  {(isInTransit || isDelivered) && awb && (
+                    <a href={`/track/${awb}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold text-white rounded-lg whitespace-nowrap"
+                      style={{ background: 'linear-gradient(135deg,#5B1A3A,#7A2350)' }}>
+                      <Truck size={11} /> Live Track
                     </a>
                   )}
-                  {['cancelled', 'returned'].includes(statusStr) && (
+                  {isCancelledOrRejected && (
                     <span className="text-[11px] text-[#6B7280]">—</span>
                   )}
                 </td>
@@ -617,9 +1062,15 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('pending');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
 
+  // Order detail drawer
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
+
   // Ship modal state
   const [shipOrder, setShipOrder] = useState<Order | null>(null);
   const [shipSuccess, setShipSuccess] = useState<{ awb: string; courierName: string; labelUrl?: string } | null>(null);
+
+  // Reject modal state
+  const [rejectOrder, setRejectOrder] = useState<Order | null>(null);
 
   const fetchOrders = useCallback(() => {
     if (!user?.sellerId) return;
@@ -632,11 +1083,17 @@ export default function OrdersPage() {
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  function handleAction(type: 'accepted' | 'ship', order: Order) {
+  function handleAction(type: 'accepted' | 'rejected' | 'ship' | 'packed', order: Order) {
     if (type === 'accepted') {
       // Optimistically update and move to Ready to Ship
-      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'accepted' } : o));
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'ACCEPTED' } : o));
       setActiveTab('ready');
+    } else if (type === 'rejected') {
+      setRejectOrder(order);
+    } else if (type === 'packed') {
+      // Optimistically update — PACKED shows in Shipped tab
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'PACKED' } : o));
+      setActiveTab('shipped');
     } else {
       setShipOrder(order);
     }
@@ -645,22 +1102,32 @@ export default function OrdersPage() {
   function handleShipSuccess(awb: string, courierName: string, labelUrl?: string) {
     setShipOrder(null);
     setShipSuccess({ awb, courierName, labelUrl });
-    // Refresh orders after ship
+    // Refresh orders — LABEL_GENERATED stays in the Ready to Ship tab
     fetchOrders();
-    setActiveTab('shipped');
   }
 
-  /* Tab counts */
+  function handleRejectSuccess() {
+    if (!rejectOrder) return;
+    setOrders(prev => prev.map(o => o.id === rejectOrder.id ? { ...o, status: 'REJECTED' } : o));
+    setRejectOrder(null);
+    setActiveTab('cancelled');
+  }
+
+  /* Tab counts — case-insensitive */
+  function matchesTab(orderStatus: string | undefined, tab: typeof TABS[number]) {
+    const s = (orderStatus || 'captured').toLowerCase();
+    return tab.statuses.some(ts => ts.toLowerCase() === s);
+  }
+
   const tabCounts = TABS.reduce<Record<string, number>>((acc, tab) => {
-    acc[tab.key] = orders.filter(o => tab.statuses.includes(o.status || 'captured')).length;
+    acc[tab.key] = orders.filter(o => matchesTab(o.status, tab)).length;
     return acc;
   }, {});
 
   /* Filter logic */
   const filtered = orders.filter(o => {
-    const s = o.status || 'captured';
     const tab = TABS.find(t => t.key === activeTab);
-    if (!tab?.statuses.includes(s)) return false;
+    if (!tab || !matchesTab(o.status, tab)) return false;
 
     if (filters.period) {
       const d = new Date(o.created_at);
@@ -723,6 +1190,11 @@ export default function OrdersPage() {
   return (
     <div style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }} className="space-y-5 pb-8">
 
+      {/* Order detail drawer */}
+      {detailOrderId && (
+        <OrderDetailModal orderId={detailOrderId} onClose={() => setDetailOrderId(null)} />
+      )}
+
       {/* Ship modal */}
       {shipOrder && (
         <ShipModal
@@ -740,6 +1212,16 @@ export default function OrdersPage() {
           courierName={shipSuccess.courierName}
           labelUrl={shipSuccess.labelUrl}
           onClose={() => setShipSuccess(null)}
+        />
+      )}
+
+      {/* Reject modal */}
+      {rejectOrder && (
+        <RejectModal
+          order={rejectOrder}
+          sellerId={user?.sellerId || ''}
+          onClose={() => setRejectOrder(null)}
+          onSuccess={handleRejectSuccess}
         />
       )}
 
@@ -855,6 +1337,7 @@ export default function OrdersPage() {
             activeTab={activeTab}
             sellerId={user?.sellerId || ''}
             onAction={handleAction}
+            onRowClick={id => setDetailOrderId(id)}
           />
         )}
       </div>

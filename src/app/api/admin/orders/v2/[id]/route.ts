@@ -46,7 +46,7 @@ export async function GET(
     const [{ data: customer }, { data: seller }] = await Promise.all([
       supabaseAdmin
         .from('spf_users')
-        .select('full_name, email, mobile')
+        .select('name, email, mobile')
         .eq('id', (order as any).customer_id)
         .maybeSingle(),
       supabaseAdmin
@@ -114,7 +114,7 @@ export async function GET(
         statusHistory,
         riskFlags,
         payout: null, // populated when seller payout data exists
-        customerName:  (customer as any)?.full_name      ?? '—',
+        customerName:  (customer as any)?.name            ?? '—',
         customerEmail: (customer as any)?.email           ?? '—',
         customerPhone: (customer as any)?.mobile          ?? '—',
         sellerName:    (seller as any)?.business_name     ?? '—',

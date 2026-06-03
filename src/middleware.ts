@@ -2,18 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { unsealData } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 
-const PROTECTED = ['/account', '/orders', '/checkout'];
-
+/**
+ * Middleware is intentionally minimal.
+ *
+ * We do NOT redirect unauthenticated requests to protected routes here.
+ * Reason: the Edge Runtime's unsealData() has subtle behaviour differences
+ * from the Node.js getSession() used in API routes.  When the two disagree
+ * (e.g. due to env-var timing or runtime differences on Vercel), the
+ * middleware keeps redirecting to /login while the API routes say "logged in",
+ * producing an infinite redirect loop that is impossible to break client-side.
+ *
+ * Protection for /orders, /profile, /addresses, /payment-methods, etc. is
+ * handled entirely by AuthGuard (client-side) which calls /api/auth/session
+ * (Node.js runtime) as the single source of truth.
+ *
+ * The only thing the middleware does here is redirect already-authenticated
+ * users AWAY from the /login page so they don't see it when they're logged in.
+ */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isProtected = PROTECTED.some(p => pathname === p || pathname.startsWith(p + '/'));
-  const isLoginPage = pathname === '/login';
+  // Only act on the login page — everything else passes straight through.
+  if (pathname !== '/login') return NextResponse.next();
 
-  // Only run on protected routes and login page
-  if (!isProtected && !isLoginPage) return NextResponse.next();
-
-  // Read and decrypt the session cookie
+  // Try to read the iron-session cookie.
   let isLoggedIn = false;
   const raw = request.cookies.get(sessionOptions.cookieName)?.value;
   if (raw) {
@@ -27,18 +39,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Not logged in → redirect to /login with callbackUrl
-  if (isProtected && !isLoggedIn) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Already logged in → skip /login; honour callbackUrl if present
-  if (isLoginPage && isLoggedIn) {
-    const raw = request.nextUrl.searchParams.get('callbackUrl') || '/';
-    // Security: only allow same-origin relative paths to prevent open-redirect
-    const safe = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+  // Already logged in → redirect away from /login.
+  if (isLoggedIn) {
+    const callbackRaw = request.nextUrl.searchParams.get('callbackUrl') || '';
+    // Security: same-origin paths only.
+    const safe =
+      callbackRaw &&
+      callbackRaw.startsWith('/') &&
+      !callbackRaw.startsWith('//')
+        ? callbackRaw
+        : '/';
     return NextResponse.redirect(new URL(safe, request.url));
   }
 
@@ -46,5 +56,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/account/:path*', '/orders/:path*', '/checkout/:path*', '/login'],
+  // Only intercept /login — protected routes are handled by AuthGuard.
+  matcher: ['/login'],
 };

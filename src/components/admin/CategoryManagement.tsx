@@ -51,6 +51,8 @@ export default function CategoryManagement() {
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<ModalState>({ open: false, mode: 'add', level: 1 });
   const [form, setForm] = useState({ name: '', nameHindi: '', slug: '', displayOrder: 1, active: true });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const fetchCategories = useCallback(async () => {
     setLoading(true);
@@ -75,11 +77,13 @@ export default function CategoryManagement() {
 
   const openAdd = (level: 1 | 2 | 3, parentId?: string) => {
     setForm({ name: '', nameHindi: '', slug: '', displayOrder: 1, active: true });
+    setSaveError('');
     setModal({ open: true, mode: 'add', level, parentId });
   };
 
   const openEdit = (cat: Category, level: 1 | 2 | 3) => {
     setForm({ name: cat.name, nameHindi: cat.nameHindi || '', slug: cat.slug, displayOrder: cat.displayOrder, active: cat.active });
+    setSaveError('');
     setModal({ open: true, mode: 'edit', level, category: cat });
   };
 
@@ -108,12 +112,14 @@ export default function CategoryManagement() {
     }
   };
 
-  // Keep legacy signature stub to avoid breaking downstream JSX calls that pass (id, level, parentId?)
   const handleSave = async () => {
     if (!form.name.trim()) return;
+    setSaving(true);
+    setSaveError('');
     try {
+      let res: Response;
       if (modal.mode === 'add') {
-        await fetch('/api/admin/categories', {
+        res = await fetch('/api/admin/categories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -126,8 +132,8 @@ export default function CategoryManagement() {
             is_active: form.active,
           }),
         });
-      } else if (modal.mode === 'edit' && modal.category) {
-        await fetch(`/api/admin/categories/${modal.category.id}`, {
+      } else {
+        res = await fetch(`/api/admin/categories/${modal.category!.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -139,9 +145,20 @@ export default function CategoryManagement() {
           }),
         });
       }
-      await fetchCategories();
-    } catch { /* silent */ }
-    setModal({ open: false, mode: 'add', level: 1 });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || 'Failed to save category');
+      }
+
+      // Close modal immediately — refresh tree in background
+      setModal({ open: false, mode: 'add', level: 1 });
+      fetchCategories().catch(() => {});
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const searchLower = search.toLowerCase();
@@ -304,10 +321,11 @@ export default function CategoryManagement() {
                 <input
                   type="text"
                   value={form.slug}
-                  onChange={e => setForm(p => ({ ...p, slug: slugify(e.target.value) }))}
+                  onChange={e => { setForm(p => ({ ...p, slug: slugify(e.target.value) })); setSaveError(''); }}
                   placeholder="silk-sarees"
                   className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm font-mono text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/30 bg-gray-50"
                 />
+                <p className="text-xs text-gray-400 mt-1">Auto-generated from name. A unique suffix is added automatically if needed.</p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Display Order</label>
@@ -330,19 +348,26 @@ export default function CategoryManagement() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            {saveError && (
+              <p className="mt-4 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {saveError}
+              </p>
+            )}
+
+            <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setModal({ open: false, mode: 'add', level: 1 })}
-                className="flex-1 py-2.5 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50"
+                disabled={saving}
+                className="flex-1 py-2.5 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
-                disabled={!form.name.trim()}
+                disabled={!form.name.trim() || saving}
                 className="flex-1 py-2.5 bg-gradient-to-r from-[#5B1A3A] to-[#7A2350] text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
-                {modal.mode === 'add' ? 'Add Category' : 'Save Changes'}
+                {saving ? 'Saving…' : modal.mode === 'add' ? 'Add Category' : 'Save Changes'}
               </button>
             </div>
           </div>

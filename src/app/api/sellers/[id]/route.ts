@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { addPickupLocation } from '@/lib/shiprocket';
 import { invalidateSellerKeys } from '@/lib/sellerCache';
+import { sendEmail } from '@/lib/email';
 
 // Log a seller status change to history
 async function logStatusHistory(
@@ -18,6 +19,127 @@ async function logStatusHistory(
     from_status: fromStatus,
     to_status: toStatus,
     reason: reason || null,
+  });
+}
+
+// Send a status-change email to the seller (non-blocking caller — fire and forget)
+async function sendSellerStatusEmail(
+  sellerId: string,
+  action: 'approved' | 'rejected' | 'reactivated',
+  reason?: string
+) {
+  const { data: seller } = await supabaseAdmin
+    .from('spf_sellers')
+    .select('business_name, business_email, user:spf_users!spf_sellers_user_id_fkey(email)')
+    .eq('id', sellerId)
+    .single();
+
+  const toEmail =
+    seller?.business_email ||
+    (seller?.user as any)?.email;
+
+  if (!toEmail) return;
+
+  const businessName = seller?.business_name || 'Seller';
+
+  const configs = {
+    approved: {
+      subject: 'Congratulations! Your Seller Account is Approved — Insta Fashion Points',
+      heading: 'Your Application is Approved!',
+      color: '#16A34A',
+      body: `
+        <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:16px;">
+          Hi <strong>${businessName}</strong>,
+        </p>
+        <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:16px;">
+          Great news! Your seller application on <strong>Insta Fashion Points</strong> has been
+          <strong style="color:#16A34A;">approved</strong>. Your account is now active and you can
+          start listing your products and managing your store.
+        </p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="https://www.instafashionpoints.com/seller/dashboard"
+            style="background:#5B1A3A;color:white;padding:14px 36px;border-radius:50px;
+                   text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">
+            Go to Seller Dashboard
+          </a>
+        </div>
+      `,
+    },
+    rejected: {
+      subject: 'Update on Your Seller Application — Insta Fashion Points',
+      heading: 'Application Status Update',
+      color: '#DC2626',
+      body: `
+        <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:16px;">
+          Hi <strong>${businessName}</strong>,
+        </p>
+        <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:16px;">
+          Thank you for applying to sell on <strong>Insta Fashion Points</strong>. After reviewing
+          your application, we are unable to approve it at this time.
+        </p>
+        ${reason ? `
+        <div style="background:#FEF2F2;border-left:4px solid #DC2626;padding:14px 18px;
+                    border-radius:6px;margin-bottom:16px;">
+          <p style="color:#DC2626;font-weight:600;margin:0 0 4px;">Reason:</p>
+          <p style="color:#555;margin:0;">${reason}</p>
+        </div>` : ''}
+        <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:16px;">
+          If you believe this is an error or would like to re-apply with updated details,
+          please contact our support team or re-register through the seller portal.
+        </p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="https://www.instafashionpoints.com/seller/register"
+            style="background:#5B1A3A;color:white;padding:14px 36px;border-radius:50px;
+                   text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">
+            Re-apply as Seller
+          </a>
+        </div>
+      `,
+    },
+    reactivated: {
+      subject: 'Your Seller Account Has Been Reactivated — Insta Fashion Points',
+      heading: 'Account Reactivated',
+      color: '#16A34A',
+      body: `
+        <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:16px;">
+          Hi <strong>${businessName}</strong>,
+        </p>
+        <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:16px;">
+          Your seller account on <strong>Insta Fashion Points</strong> has been
+          <strong style="color:#16A34A;">reactivated</strong> by our admin team.
+          You can now log in and continue managing your store.
+        </p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="https://www.instafashionpoints.com/seller/dashboard"
+            style="background:#5B1A3A;color:white;padding:14px 36px;border-radius:50px;
+                   text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">
+            Go to Seller Dashboard
+          </a>
+        </div>
+      `,
+    },
+  };
+
+  const cfg = configs[action];
+
+  await sendEmail({
+    to: toEmail,
+    subject: cfg.subject,
+    html: `
+      <div style="font-family:'DM Sans',Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <div style="text-align:center;margin-bottom:28px;">
+          <h1 style="color:#5B1A3A;margin:0;font-size:22px;">Insta Fashion Points</h1>
+          <p style="color:#888;margin-top:6px;font-size:13px;">Seller Notifications</p>
+        </div>
+        <div style="background:#f8f8f8;padding:28px;border-radius:12px;">
+          <h2 style="color:${cfg.color};margin:0 0 20px;font-size:20px;">${cfg.heading}</h2>
+          ${cfg.body}
+        </div>
+        <p style="color:#aaa;font-size:11px;text-align:center;margin-top:24px;">
+          If you have questions, contact us at support@instafashionpoints.com
+        </p>
+      </div>
+    `,
   });
 }
 
@@ -203,6 +325,9 @@ export async function PUT(
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, updateData.reason);
 
+        // Notify seller via email (non-blocking)
+        void sendSellerStatusEmail(sellerId, 'approved');
+
         // Register pickup address with Shiprocket (non-blocking)
         void (async () => {
           try {
@@ -256,6 +381,10 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'rejected', userId, reason);
+
+        // Notify seller via email (non-blocking)
+        void sendSellerStatusEmail(sellerId, 'rejected', reason);
+
         invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller rejected' });
       }
@@ -297,6 +426,10 @@ export async function PUT(
         }
 
         await logStatusHistory(sellerId, fromStatus, 'approved', userId, 'Reactivated by admin');
+
+        // Notify seller via email (non-blocking)
+        void sendSellerStatusEmail(sellerId, 'reactivated');
+
         invalidateSellerKeys(sellerId, 'profile').catch(() => {});
         return NextResponse.json({ success: true, message: 'Seller reactivated successfully' });
       }

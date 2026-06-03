@@ -1,27 +1,23 @@
 /**
- * Shiprocket webhook handler — modular, testable, Prisma-backed.
+ * Shiprocket webhook handler — Supabase-backed (no Prisma / DATABASE_URL needed).
+ *
+ * KEY DESIGN: the webhook applies the status DIRECTLY from the Shiprocket
+ * payload without making any extra API calls back to Shiprocket. This makes
+ * webhook processing reliable and fast regardless of Shiprocket API availability.
  *
  * Signature verification:
  *   Shiprocket signs payloads with HMAC-SHA256 using SHIPROCKET_WEBHOOK_SECRET.
- *   The digest is sent in the X-Shiprocket-Hmac header (hex, optionally prefixed "sha256=").
- *
- * On DELIVERED:
- *   startPaymentSettlementTimer() creates a SellerPayout record in spf_seller_payouts
- *   with payout_date = delivered_at + T7 (or T5 for premium sellers).
+ *   Digest is sent in the X-Shiprocket-Hmac header (hex, optionally "sha256=" prefixed).
  */
 
 import crypto from 'crypto';
-import prisma from '@/lib/prisma';
-import { syncTrackingStatus } from './tracking';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { applyStatusFromPayload, STATUS_MAP } from './tracking';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HMAC verification
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Returns true if the raw request body matches the Shiprocket HMAC signature.
- * Skips verification when SHIPROCKET_WEBHOOK_SECRET is not configured (dev mode).
- */
 export function verifyWebhookSignature(rawBody: Buffer, signature: string): boolean {
   const secret = process.env.SHIPROCKET_WEBHOOK_SECRET;
   if (!secret) {
@@ -35,7 +31,6 @@ export function verifyWebhookSignature(rawBody: Buffer, signature: string): bool
     .update(rawBody)
     .digest('hex');
 
-  // Support both "abc123…" and "sha256=abc123…" formats
   const provided = signature.replace(/^sha256=/, '').toLowerCase();
 
   try {
@@ -49,111 +44,34 @@ export function verifyWebhookSignature(rawBody: Buffer, signature: string): bool
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Payout settlement timer
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Creates a pending SellerPayout row when an order is delivered.
- * Called after syncTrackingStatus confirms DELIVERED.
- * Idempotent — safe to re-run for the same orderId.
- */
-export async function startPaymentSettlementTimer(orderId: string): Promise<void> {
-  // Check if already created
-  const existing = await prisma.sellerPayout.findUnique({
-    where:  { orderId },
-    select: { id: true },
-  });
-  if (existing) return; // Already scheduled
-
-  const order = await prisma.order.findUnique({
-    where:  { id: orderId },
-    select: {
-      id:                true,
-      sellerId:          true,
-      sellerPayoutAmount: true,
-      pgFee:             true,
-      deliveredAt:       true,
-    },
-  });
-
-  if (!order?.deliveredAt) {
-    console.warn(`[SR:webhook] startPaymentSettlementTimer: order ${orderId} has no deliveredAt`);
-    return;
-  }
-
-  // Determine payout cycle — try to read from seller record (column may not exist yet)
-  let payoutCycleDays = 7; // Default T7
-  try {
-    const { data: seller } = await import('@/lib/supabase-admin').then((m) =>
-      m.supabaseAdmin
-        .from('spf_sellers')
-        .select('payout_cycle')
-        .eq('id', order.sellerId)
-        .maybeSingle(),
-    );
-    if ((seller as any)?.payout_cycle === 'T5') payoutCycleDays = 5;
-  } catch { /* fallback to T7 */ }
-
-  const payoutDate = new Date(order.deliveredAt);
-  payoutDate.setDate(payoutDate.getDate() + payoutCycleDays);
-
-  const grossAmount = Number(order.sellerPayoutAmount);
-  const pgFeeDeduct = Number(order.pgFee);
-  const netPayout   = grossAmount; // Gross already excludes platform fee; pg deduction logged separately
-
-  await prisma.sellerPayout.create({
-    data: {
-      sellerId:          order.sellerId,
-      orderId,
-      grossAmount,
-      pgFeeDeduction:    pgFeeDeduct,
-      netPayout,
-      payoutCycle:       payoutCycleDays === 5 ? 'T5' as any : 'T7' as any,
-      status:            'PENDING' as any,
-      payoutDate,
-    },
-  });
-
-  console.log(
-    `[SR:webhook] Payout scheduled: orderId=${orderId} ₹${netPayout} on ${payoutDate.toISOString().split('T')[0]} (T${payoutCycleDays})`,
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Webhook payload type
+// Payload type
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ShiprocketWebhookPayload {
-  awb?:                     string;
-  awb_number?:              string;
-  current_status?:          string;
+  awb?:                        string;
+  awb_number?:                 string;
+  current_status?:             string;
   current_status_description?: string;
-  courier_name?:            string;
-  etd?:                     string;
-  scans?:                   unknown[];
-  tracking_data?:           unknown;
+  courier_name?:               string;
+  etd?:                        string;
+  delivered_date?:             string;
+  scans?:                      any[];
+  tracking_data?:              any;
   [key: string]: unknown;
+}
+
+export interface WebhookHandlerResult {
+  processed:  boolean;
+  orderId?:   string;
+  newStatus?: string;
+  skipped?:   string;
+  error?:     string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main handler
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface WebhookHandlerResult {
-  processed: boolean;
-  orderId?:  string;
-  newStatus?: string;
-  skipped?:  string;
-  error?:    string;
-}
-
-/**
- * Process one Shiprocket webhook delivery.
- *
- * @param rawBody   Raw request body Buffer — needed for HMAC verification.
- * @param signature Value of X-Shiprocket-Hmac header.
- * @param payload   Parsed JSON body.
- */
 export async function handleShiprocketWebhook(
   rawBody:   Buffer,
   signature: string,
@@ -166,44 +84,84 @@ export async function handleShiprocketWebhook(
   }
 
   // ── 2. Extract AWB ────────────────────────────────────────────────────────
-  const awbNumber = payload.awb ?? payload.awb_number ?? null;
+  const awbNumber =
+    payload.awb ??
+    payload.awb_number ??
+    (payload as any).tracking_number ??
+    null;
+
   if (!awbNumber) {
     return { processed: false, skipped: 'No AWB in payload — likely a test ping' };
   }
 
-  // ── 3. Look up order by AWB in spf_orders (new Prisma table) ─────────────
-  const order = await prisma.order.findFirst({
-    where:  { awbNumber },
-    select: { id: true, status: true },
-  });
+  // ── 3. Resolve IFP status directly from the payload ───────────────────────
+  // Shiprocket sends current_status as a readable string (e.g. "Delivered").
+  // We map it directly — NO extra Shiprocket API call here.
+  const rawStatus = (
+    payload.current_status ??
+    payload.current_status_description ??
+    ''
+  ).toLowerCase().trim();
+
+  const newStatus = STATUS_MAP[rawStatus];
+
+  if (!newStatus) {
+    console.log(`[SR:webhook] AWB=${awbNumber} status "${rawStatus}" has no IFP mapping — skipped`);
+    return { processed: false, skipped: `Unmapped status: "${rawStatus}"` };
+  }
+
+  console.log(`[SR:webhook] AWB=${awbNumber} resolved status: ${rawStatus} → ${newStatus}`);
+
+  // ── 4. Look up order by AWB in spf_orders ────────────────────────────────
+  const { data: order, error: lookupErr } = await supabaseAdmin
+    .from('spf_orders')
+    .select('id, status')
+    .eq('awb_number', awbNumber)
+    .maybeSingle();
+
+  if (lookupErr) {
+    console.error('[SR:webhook] DB lookup error:', lookupErr.message);
+    return { processed: false, error: lookupErr.message };
+  }
 
   if (!order) {
-    // AWB might belong to legacy spf_payment_orders — handled by the route layer
+    // AWB belongs to legacy spf_payment_orders — route layer calls handleLegacyWebhook
     return { processed: false, skipped: `AWB ${awbNumber} not found in spf_orders` };
   }
 
-  // ── 4. Sync tracking status ───────────────────────────────────────────────
-  const syncResult = await syncTrackingStatus(order.id);
+  // ── 5. Extract scan metadata from payload ─────────────────────────────────
+  const scans: any[] =
+    payload.scans ??
+    (payload as any).tracking_data?.shipment_track_activities ??
+    [];
+  const latestScan = scans[0] ?? {};
 
-  if (syncResult.error) {
-    return { processed: false, orderId: order.id, error: syncResult.error };
-  }
+  const deliveredAt =
+    payload.delivered_date ??
+    (payload as any).etd ??
+    null;
 
-  // ── 5. Post-delivery actions ─────────────────────────────────────────────
-  if (syncResult.newStatus === 'DELIVERED') {
-    // Fire-and-forget — payout scheduling must not block the 200 response
-    startPaymentSettlementTimer(order.id).catch((err) =>
-      console.error('[SR:webhook] startPaymentSettlementTimer error:', err?.message),
-    );
+  const description = [
+    payload.current_status_description ?? payload.current_status,
+    latestScan?.activity ?? latestScan?.sr_status_label ?? '',
+  ].filter(Boolean).join(' — ') || null;
+
+  // ── 6. Apply status to DB — using payload data, no extra API call ─────────
+  const result = await applyStatusFromPayload(order.id, newStatus, {
+    courierName: payload.courier_name ?? null,
+    deliveredAt: deliveredAt,
+    location:    latestScan?.location ?? null,
+    description,
+    note: description,
+  });
+
+  if (result.error) {
+    return { processed: false, orderId: order.id, error: result.error };
   }
 
   console.log(
-    `[SR:webhook] AWB=${awbNumber} orderId=${order.id} updated=${syncResult.updated} status=${syncResult.newStatus ?? 'unchanged'}`,
+    `[SR:webhook] AWB=${awbNumber} orderId=${order.id} → ${newStatus} (updated=${result.updated})`,
   );
 
-  return {
-    processed: true,
-    orderId:   order.id,
-    newStatus: syncResult.newStatus,
-  };
+  return { processed: true, orderId: order.id, newStatus };
 }

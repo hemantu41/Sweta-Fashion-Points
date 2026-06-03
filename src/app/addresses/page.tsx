@@ -35,8 +35,19 @@ export default function AddressesPage() {
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login?callbackUrl=/addresses');
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      // Middleware handles the unauthenticated case (redirects to /login).
+      // This is a safety net for edge cases (e.g. localStorage/cookie mismatch).
+      fetch('/api/auth/session')
+        .then(r => r.json())
+        .then(data => {
+          if (!data.isLoggedIn) {
+            router.replace('/login?callbackUrl=/addresses');
+          }
+          // If logged in, AuthContext will restore user via session-restore
+        })
+        .catch(() => router.replace('/login?callbackUrl=/addresses'));
       return;
     }
     if (user?.id) {

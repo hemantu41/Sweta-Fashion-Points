@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id, order_number, status, risk_status, customer_id, seller_id,
         subtotal, shipping_charge, shipping_address, payment_method,
-        created_at, updated_at,
+        awb_number, created_at, updated_at,
         spf_order_items(id, product_name, quantity, unit_price)
       `)
       .order('created_at', { ascending: false })
@@ -59,9 +59,27 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
     if (error) throw error;
 
+    // Batch-fetch label_url from spf_shipments and seller names
+    const orderIds  = (data || []).map((o: any) => o.id);
+    const sellerIds = [...new Set((data || []).map((o: any) => o.seller_id).filter(Boolean))];
+
+    const [shipmentsRes, sellersRes] = await Promise.all([
+      orderIds.length > 0
+        ? supabaseAdmin.from('spf_shipments').select('order_id, label_url').in('order_id', orderIds)
+        : Promise.resolve({ data: [] }),
+      sellerIds.length > 0
+        ? supabaseAdmin.from('spf_sellers').select('id, business_name').in('id', sellerIds as string[])
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const shipmentMap = new Map(((shipmentsRes as any).data || []).map((s: any) => [s.order_id, s]));
+    const sellerMap   = new Map(((sellersRes   as any).data || []).map((s: any) => [s.id, s]));
+
     const orders = (data || []).map((o: any) => {
-      const addr  = (o.shipping_address as any) || {};
-      const items = (o.spf_order_items as any[]) || [];
+      const addr     = (o.shipping_address as any) || {};
+      const items    = (o.spf_order_items  as any[]) || [];
+      const shipment = shipmentMap.get(o.id) as any;
+      const seller   = sellerMap.get(o.seller_id) as any;
       return {
         id:              o.id,
         order_id:        o.order_number || o.id,
@@ -77,6 +95,9 @@ export async function GET(request: NextRequest) {
         total:        Number(o.subtotal) + Number(o.shipping_charge),
         status:       o.status,
         payment_mode: o.payment_method || 'cod',
+        awb_number:   o.awb_number || null,
+        label_url:    shipment?.label_url || null,
+        seller_name:  seller?.business_name || '',
         created_at:   o.created_at,
         updated_at:   o.updated_at,
       };

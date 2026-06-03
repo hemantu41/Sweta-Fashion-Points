@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       }
 
       const { error: emailError } = await resend.emails.send({
-        from: 'Insta Fashion Points <noreply@fashionpoints.co.in>',
+        from: 'Insta Fashion Points <noreply@instafashionpoints.com>',
         to: value,
         subject: 'Verify Your Email - Insta Fashion Points',
         html: `

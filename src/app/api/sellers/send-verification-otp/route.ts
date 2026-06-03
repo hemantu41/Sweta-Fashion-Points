@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { Resend } from 'resend';
+import { sendEmail } from '@/lib/email';
 import { sendSMS } from '@/lib/notifications';
 
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function getResendClient() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
-  return new Resend(apiKey);
 }
 
 // POST /api/sellers/send-verification-otp - Send OTP for seller email/phone verification
@@ -62,20 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Send OTP based on type
     if (type === 'email') {
-      // Send OTP via email
-      let resend;
-      try {
-        resend = getResendClient();
-      } catch {
-        console.error('Resend API key not configured');
-        return NextResponse.json(
-          { error: 'Email service not configured. Please contact support.' },
-          { status: 500 }
-        );
-      }
-
-      const { error: emailError } = await resend.emails.send({
-        from: 'Insta Fashion Points <noreply@fashionpoints.co.in>',
+      const emailResult = await sendEmail({
         to: value,
         subject: 'Verify Your Business Email - Insta Fashion Points',
         html: `
@@ -103,8 +82,8 @@ export async function POST(request: NextRequest) {
         `,
       });
 
-      if (emailError) {
-        console.error('Email send error:', emailError);
+      if (!emailResult.success) {
+        console.error('Email send error:', emailResult.error);
         return NextResponse.json(
           { error: 'Failed to send OTP email. Please try again.' },
           { status: 500 }

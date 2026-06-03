@@ -102,21 +102,20 @@ export default function SignupPage() {
   const [emailVerification, setEmailVerification] = useState({
     otpSent: false, otp: '', verified: false, loading: false, error: '',
   });
-  const [mobileVerification, setMobileVerification] = useState({
-    otpSent: false, otp: '', verified: false, loading: false, error: '', devOtp: '',
-  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === 'mobile' || name === 'pincode') {
-      setFormData({ ...formData, [name]: value.replace(/\D/g, '').slice(0, name === 'mobile' ? 10 : 6) });
+    if (name === 'mobile') {
+      setFormData({ ...formData, [name]: value.replace(/\D/g, '').slice(0, 10) });
+    } else if (name === 'pincode') {
+      setFormData({ ...formData, [name]: value.replace(/\D/g, '').slice(0, 6) });
     } else {
       setFormData({ ...formData, [name]: value });
     }
-    if (name === 'email'  && emailVerification.verified)
+    // Reset email verification if email is changed after verifying
+    if (name === 'email' && emailVerification.verified) {
       setEmailVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '' });
-    if (name === 'mobile' && mobileVerification.verified)
-      setMobileVerification({ otpSent: false, otp: '', verified: false, loading: false, error: '', devOtp: '' });
+    }
   };
 
   /* ── Email OTP ── */
@@ -131,7 +130,9 @@ export default function SignupPage() {
       res.ok
         ? setEmailVerification(p => ({ ...p, otpSent: true, loading: false }))
         : setEmailVerification(p => ({ ...p, error: data.error || 'Failed to send OTP', loading: false }));
-    } catch { setEmailVerification(p => ({ ...p, error: 'Error sending OTP', loading: false })); }
+    } catch {
+      setEmailVerification(p => ({ ...p, error: 'Error sending OTP', loading: false }));
+    }
   };
 
   const verifyEmailOTP = async () => {
@@ -143,58 +144,61 @@ export default function SignupPage() {
       res.ok && data.verified
         ? setEmailVerification(p => ({ ...p, verified: true, loading: false }))
         : setEmailVerification(p => ({ ...p, error: data.error || 'Invalid OTP', loading: false }));
-    } catch { setEmailVerification(p => ({ ...p, error: 'Error verifying OTP', loading: false })); }
-  };
-
-  /* ── Mobile OTP ── */
-  const sendMobileOTP = async () => {
-    if (!/^[6-9]\d{9}$/.test(formData.mobile)) {
-      setMobileVerification(p => ({ ...p, error: 'Enter valid 10-digit mobile number' })); return;
+    } catch {
+      setEmailVerification(p => ({ ...p, error: 'Error verifying OTP', loading: false }));
     }
-    setMobileVerification(p => ({ ...p, loading: true, error: '' }));
-    try {
-      const res  = await fetch('/api/auth/send-signup-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'mobile', value: formData.mobile }) });
-      const data = await res.json();
-      if (res.ok) {
-        setMobileVerification(p => ({ ...p, otpSent: true, loading: false, devOtp: data.devOtp || '' }));
-      } else {
-        setMobileVerification(p => ({ ...p, error: data.error || 'Failed to send OTP', loading: false }));
-      }
-    } catch { setMobileVerification(p => ({ ...p, error: 'Error sending OTP', loading: false })); }
-  };
-
-  const verifyMobileOTP = async () => {
-    if (mobileVerification.otp.length !== 6) { setMobileVerification(p => ({ ...p, error: 'Enter 6-digit OTP' })); return; }
-    setMobileVerification(p => ({ ...p, loading: true, error: '' }));
-    try {
-      const res  = await fetch('/api/auth/verify-signup-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'mobile', value: formData.mobile, otp: mobileVerification.otp }) });
-      const data = await res.json();
-      res.ok && data.verified
-        ? setMobileVerification(p => ({ ...p, verified: true, loading: false }))
-        : setMobileVerification(p => ({ ...p, error: data.error || 'Invalid OTP', loading: false }));
-    } catch { setMobileVerification(p => ({ ...p, error: 'Error verifying OTP', loading: false })); }
   };
 
   /* ── Submit ── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); setSuccess('');
-    if (!/^[6-9]\d{9}$/.test(formData.mobile))              { setError('Enter a valid 10-digit mobile number'); return; }
-    if (!mobileVerification.verified)                        { setError('Please verify your mobile number before signing up'); return; }
-    if (!/^\d{6}$/.test(formData.pincode))                   { setError('Pincode must be a 6-digit number'); return; }
-    if (formData.password !== formData.confirmPassword)      { setError('Passwords do not match'); return; }
-    if (formData.password.length < 6)                       { setError('Password must be at least 6 characters'); return; }
+
+    if (formData.mobile && !/^[6-9]\d{9}$/.test(formData.mobile)) {
+      setError('Enter a valid 10-digit mobile number'); return;
+    }
+    // If email entered, it must be verified
+    if (formData.email && !emailVerification.verified) {
+      setError('Please verify your email address before signing up'); return;
+    }
+    if (!/^\d{6}$/.test(formData.pincode)) {
+      setError('Pincode must be a 6-digit number'); return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match'); return;
+    }
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters'); return;
+    }
+
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: formData.name, email: formData.email, mobile: formData.mobile, location: formData.location, address: formData.address, pincode: formData.pincode, password: formData.password }) });
+      const res  = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:     formData.name,
+          email:    formData.email,
+          mobile:   formData.mobile,
+          location: formData.location,
+          address:  formData.address,
+          pincode:  formData.pincode,
+          password: formData.password,
+        }),
+      });
       const data = await res.json();
-      if (res.ok) { setSuccess('Account created! Redirecting…'); setTimeout(() => router.push('/login'), 2000); }
-      else         setError(data.error || 'Something went wrong');
-    } catch { setError('Network error. Please try again.'); }
-    finally  { setIsLoading(false); }
+      if (res.ok) {
+        setSuccess('Account created! Redirecting…');
+        setTimeout(() => router.push('/login'), 2000);
+      } else {
+        setError(data.error || 'Something went wrong');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const btnDisabled = isLoading || !mobileVerification.verified;
 
   return (
     <div
@@ -241,57 +245,27 @@ export default function SignupPage() {
               style={{ fontFamily: "'Jost', sans-serif" }} />
           </div>
 
-          {/* Mobile + OTP */}
+          {/* Mobile (optional, no OTP) */}
           <div>
-            <label className={labelClass}>Mobile Number <span style={{ color: burgundy }}>*</span></label>
-            <div className="flex items-end gap-3">
-              <div
-                className="flex items-end flex-1"
-                style={{ borderBottom: `1px solid ${mobileVerification.verified ? '#10b981' : '#C9A84C55'}` }}
-              >
-                <span className="text-xs text-[#aaa] pb-2.5 pr-2 tracking-wider select-none">+91</span>
-                <input
-                  type="tel" name="mobile" value={formData.mobile} onChange={handleChange}
-                  required maxLength={10} disabled={mobileVerification.verified}
-                  placeholder="10-digit number"
-                  className="flex-1 bg-transparent border-0 outline-none py-2.5 text-sm text-[#1A1A1A] placeholder:text-[#ccc] disabled:opacity-70"
-                  style={{ fontFamily: "'Jost', sans-serif" }}
-                />
-              </div>
-              {mobileVerification.verified
-                ? <VerifiedBadge />
-                : (
-                  <button type="button" onClick={sendMobileOTP}
-                    disabled={mobileVerification.loading || formData.mobile.length !== 10}
-                    className="pb-2.5 text-[10px] font-semibold tracking-[0.15em] uppercase transition-opacity disabled:opacity-40 whitespace-nowrap"
-                    style={{ color: burgundy, fontFamily: "'Jost', sans-serif" }}
-                  >
-                    {mobileVerification.loading ? '…' : mobileVerification.otpSent ? 'Resend' : 'Send OTP'}
-                  </button>
-                )
-              }
-            </div>
-            {mobileVerification.otpSent && !mobileVerification.verified && (
-              <OTPBox
-                value={mobileVerification.otp}
-                onChange={v => setMobileVerification(p => ({ ...p, otp: v, error: '' }))}
-                onVerify={verifyMobileOTP}
-                loading={mobileVerification.loading}
+            <label className={labelClass}>
+              Mobile Number{' '}
+              <span className="text-[#bbb] normal-case font-normal tracking-normal">(optional)</span>
+            </label>
+            <div
+              className="flex items-end flex-1"
+              style={{ borderBottom: '1px solid #C9A84C55' }}
+            >
+              <span className="text-xs text-[#aaa] pb-2.5 pr-2 tracking-wider select-none">+91</span>
+              <input
+                type="tel" name="mobile" value={formData.mobile} onChange={handleChange}
+                maxLength={10} placeholder="10-digit number"
+                className="flex-1 bg-transparent border-0 outline-none py-2.5 text-sm text-[#1A1A1A] placeholder:text-[#ccc]"
+                style={{ fontFamily: "'Jost', sans-serif" }}
               />
-            )}
-            {mobileVerification.devOtp && !mobileVerification.verified && (
-              <div className="border border-dashed border-amber-400 bg-amber-50 rounded px-3 py-2 text-center mt-2">
-                <p className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold mb-1">UAT — SMS not configured</p>
-                <p className="text-lg font-bold tracking-[0.4em] text-amber-800">{mobileVerification.devOtp}</p>
-                <p className="text-[10px] text-amber-500 mt-0.5">Use this OTP to verify your mobile</p>
-              </div>
-            )}
-            {mobileVerification.error && (
-              <p className="text-[11px] mt-1.5" style={{ color: burgundy }}>{mobileVerification.error}</p>
-            )}
+            </div>
           </div>
 
-          {/* Email (optional) */}
+          {/* Email (optional, OTP verification) */}
           <div>
             <label className={labelClass}>
               Email Address{' '}
@@ -327,7 +301,7 @@ export default function SignupPage() {
                 loading={emailVerification.loading}
               />
             )}
-            {emailVerification.error && (
+{emailVerification.error && (
               <p className="text-[11px] mt-1.5" style={{ color: burgundy }}>{emailVerification.error}</p>
             )}
           </div>
@@ -378,10 +352,10 @@ export default function SignupPage() {
               style={{ fontFamily: "'Jost', sans-serif" }} />
           </div>
 
-          {/* Mobile not verified hint */}
-          {!mobileVerification.verified && (
+          {/* Email unverified hint */}
+          {formData.email && !emailVerification.verified && (
             <p className="text-[11px]" style={{ color: `${gold}bb` }}>
-              Verify your mobile number to enable sign-up
+              Verify your email address to continue
             </p>
           )}
 
@@ -400,17 +374,17 @@ export default function SignupPage() {
           {/* CTA */}
           <button
             type="submit"
-            disabled={btnDisabled}
+            disabled={isLoading}
             style={{
               fontFamily: "'Jost', sans-serif",
-              background: btnDisabled ? `${burgundy}70` : burgundy,
+              background: isLoading ? `${burgundy}70` : burgundy,
               color: gold,
               letterSpacing: '0.2em',
               borderRadius: 2,
               transition: 'background 0.2s',
             }}
-            onMouseEnter={e => { if (!btnDisabled) (e.currentTarget as HTMLButtonElement).style.background = '#9b2438'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = btnDisabled ? `${burgundy}70` : burgundy; }}
+            onMouseEnter={e => { if (!isLoading) (e.currentTarget as HTMLButtonElement).style.background = '#9b2438'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isLoading ? `${burgundy}70` : burgundy; }}
             className="w-full py-3.5 mt-2 text-[11px] font-semibold uppercase tracking-[0.2em] disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isLoading ? <><Spinner /> Creating Account…</> : 'Create Account'}

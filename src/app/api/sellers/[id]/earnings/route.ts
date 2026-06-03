@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sellerCacheGet, sellerCacheSet, invalidateSellerKeys } from '@/lib/sellerCache';
+import { backfillDeliveredEarnings } from '@/lib/earningsBackfill';
 
 // GET /api/sellers/[id]/earnings - Fetch seller earnings with filters
 export async function GET(
@@ -17,15 +18,23 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // ── On-demand backfill: create earnings for any DELIVERED orders that slipped through ──
+    // Runs before the cache check so the cache gets populated with complete data.
+    const backfilled = await backfillDeliveredEarnings(sellerId);
+    if (backfilled) {
+      // Bust both caches so analytics page also reflects the new rows
+      invalidateSellerKeys(sellerId, 'analytics').catch(() => {});
+    }
+
     // ── Cache-first (only for default unfiltered requests) ─────────────────
     const isDefaultQuery = !paymentStatus && !startDate && !endDate && limit === 100 && offset === 0;
-    if (isDefaultQuery) {
+    if (isDefaultQuery && !backfilled) {
       const cachedEarnings = await sellerCacheGet<any[]>(sellerId, 'analytics');
       if (cachedEarnings !== null) {
-        const total   = cachedEarnings.reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
+        const total      = cachedEarnings.reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
         const commission = cachedEarnings.reduce((s, e) => s + parseFloat(e.commission_amount?.toString() || '0'), 0);
-        const pending = cachedEarnings.filter(e => e.payment_status === 'pending').reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
-        const paid    = cachedEarnings.filter(e => ['paid', 'settled'].includes(e.payment_status || '')).reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
+        const pending    = cachedEarnings.filter(e => e.payment_status === 'pending').reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
+        const paid       = cachedEarnings.filter(e => ['paid', 'settled'].includes(e.payment_status || '')).reduce((s, e) => s + parseFloat(e.seller_earning?.toString() || '0'), 0);
         return NextResponse.json({
           earnings: cachedEarnings.slice(offset, offset + limit),
           total: cachedEarnings.length,
@@ -41,38 +50,27 @@ export async function GET(
       .eq('seller_id', sellerId)
       .order('order_date', { ascending: false });
 
-    if (paymentStatus) {
-      query = query.eq('payment_status', paymentStatus);
-    }
-
-    if (startDate) {
-      query = query.gte('order_date', startDate);
-    }
-
-    if (endDate) {
-      query = query.lte('order_date', endDate);
-    }
+    if (paymentStatus) query = query.eq('payment_status', paymentStatus);
+    if (startDate)     query = query.gte('order_date', startDate);
+    if (endDate)       query = query.lte('order_date', endDate);
 
     query = query.range(offset, offset + limit - 1);
 
     const { data: earnings, error, count } = await query;
-
     if (error) throw error;
 
-    // Calculate summary
+    // Full summary across all rows (unfiltered)
     const { data: summary } = await supabaseAdmin
       .from('spf_seller_earnings')
       .select('seller_earning, commission_amount, payment_status')
       .eq('seller_id', sellerId);
 
-    const totalEarnings = summary?.reduce((sum, e) => sum + parseFloat(e.seller_earning.toString()), 0) || 0;
-    const totalCommission = summary?.reduce((sum, e) => sum + parseFloat(e.commission_amount.toString()), 0) || 0;
-    const pendingEarnings = summary?.filter(e => e.payment_status === 'pending')
-      .reduce((sum, e) => sum + parseFloat(e.seller_earning.toString()), 0) || 0;
-    const paidEarnings = summary?.filter(e => e.payment_status === 'paid')
-      .reduce((sum, e) => sum + parseFloat(e.seller_earning.toString()), 0) || 0;
+    const totalEarnings    = summary?.reduce((s, e) => s + parseFloat(e.seller_earning.toString()), 0) || 0;
+    const totalCommission  = summary?.reduce((s, e) => s + parseFloat(e.commission_amount.toString()), 0) || 0;
+    const pendingEarnings  = summary?.filter(e => e.payment_status === 'pending').reduce((s, e) => s + parseFloat(e.seller_earning.toString()), 0) || 0;
+    const paidEarnings     = summary?.filter(e => e.payment_status === 'paid').reduce((s, e) => s + parseFloat(e.seller_earning.toString()), 0) || 0;
 
-    // Cache the raw earnings for re-use (background)
+    // Refresh cache with up-to-date rows
     if (isDefaultQuery && earnings) {
       sellerCacheSet(sellerId, 'analytics', earnings).catch(() => {});
     }

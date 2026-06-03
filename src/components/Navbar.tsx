@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -14,10 +15,13 @@ export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { t } = useLanguage();
-  const { user, logout, isAuthenticated, isAdmin, isApprovedSeller, isSeller, sellerStatus, isActiveDeliveryPartner, deliveryPartnerId } = useAuth();
+  const { user, logout, isAuthenticated, isLoading: authLoading, isAdmin, isApprovedSeller, isSeller, sellerStatus, isActiveDeliveryPartner, deliveryPartnerId } = useAuth();
   const { totalItems } = useCart();
   const { tree: navTree } = useCategories();
+  const pathname = usePathname();
+  const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileUserMenuRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [catSuggestions, setCatSuggestions] = useState<any[]>([]);
@@ -28,7 +32,16 @@ export default function Navbar() {
   // Close menus when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      // Don't close the user menu if the tap/click is inside the mobile menu panel —
+      // mousedown fires before click, so closing here would unmount the Link before
+      // the click event reaches it, swallowing navigation on mobile.
+      const insideMobileUserMenu =
+        mobileUserMenuRef.current?.contains(event.target as Node) ?? false;
+      if (
+        !insideMobileUserMenu &&
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setIsUserMenuOpen(false);
       }
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
@@ -66,6 +79,10 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     setIsUserMenuOpen(false);
+    // Navigate to homepage immediately so AuthGuard (which only fires on
+    // protected routes) never has a chance to re-authenticate via the
+    // iron-session cookie before /api/logout finishes destroying it.
+    router.replace('/');
   };
 
   const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
@@ -245,7 +262,16 @@ export default function Navbar() {
             </Link>
 
             {/* User Menu - Desktop */}
-            {!isAuthenticated && (
+            {/* Show spinner while auth is loading to avoid "Sign In" flash before session restores */}
+            {authLoading && (
+              <div className="p-2.5 rounded-full">
+                <svg className="w-6 h-6 text-[#C49A3C] animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            )}
+            {!authLoading && !isAuthenticated && (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -263,7 +289,7 @@ export default function Navbar() {
                       <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#6B6B6B]">My Account</p>
                     </div>
                     <Link
-                      href="/login"
+                      href={`/login${pathname && pathname !== '/login' && pathname !== '/signup' && pathname !== '/' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''}`}
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center space-x-3 px-4 py-2.5 text-[#2D2D2D] hover:bg-[#F5F0E8] transition-colors"
                     >
@@ -452,20 +478,31 @@ export default function Navbar() {
             {/* <LanguageSwitcher /> — temporarily disabled */}
 
             {/* User Menu Button - Mobile */}
-            <button
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="p-2 rounded-lg text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8] transition-colors"
-            >
-              {isAuthenticated ? (
-                <div className="w-8 h-8 bg-[#722F37] rounded-full flex items-center justify-center text-white font-medium text-sm">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              ) : (
-                <svg className="w-6 h-6 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            {/* During auth loading, show a spinner instead of the person/avatar icon
+                to prevent users from tapping "Sign In" before their session restores */}
+            {authLoading ? (
+              <div className="p-2">
+                <svg className="w-6 h-6 text-[#C49A3C] animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-              )}
-            </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="p-2 rounded-lg text-[#2D2D2D] hover:text-[#722F37] hover:bg-[#F5F0E8] transition-colors"
+              >
+                {isAuthenticated ? (
+                  <div className="w-8 h-8 bg-[#722F37] rounded-full flex items-center justify-center text-white font-medium text-sm">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                ) : (
+                  <svg className="w-6 h-6 text-[#722F37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                )}
+              </button>
+            )}
 
             {/* Cart Icon - Mobile */}
             <Link
@@ -498,13 +535,13 @@ export default function Navbar() {
         </div>
 
         {/* Mobile User Menu — Logged Out */}
-        {isUserMenuOpen && !isAuthenticated && (
-          <div className="lg:hidden py-4 border-t border-[#E8E2D9]">
+        {isUserMenuOpen && !isAuthenticated && !authLoading && (
+          <div className="lg:hidden py-4 border-t border-[#E8E2D9]" ref={mobileUserMenuRef}>
             <div className="px-4 py-2 mb-1">
               <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#6B6B6B]">My Account</p>
             </div>
             <Link
-              href="/login"
+              href={`/login${pathname && pathname !== '/login' && pathname !== '/signup' && pathname !== '/' ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''}`}
               onClick={() => setIsUserMenuOpen(false)}
               className="flex items-center space-x-3 px-4 py-3 text-[#2D2D2D] hover:bg-[#F5F0E8] rounded-lg transition-colors"
             >
@@ -528,7 +565,7 @@ export default function Navbar() {
 
         {/* Mobile User Menu — Logged In */}
         {isUserMenuOpen && isAuthenticated && (
-          <div className="lg:hidden py-4 border-t border-[#E8E2D9]">
+          <div className="lg:hidden py-4 border-t border-[#E8E2D9]" ref={mobileUserMenuRef}>
             {/* User Info */}
             <div className="px-4 py-3 bg-[#F5F0E8] rounded-lg mb-3">
               <p className="font-medium text-[#2D2D2D]">{user?.name}</p>

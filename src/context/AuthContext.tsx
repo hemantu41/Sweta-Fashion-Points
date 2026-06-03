@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (fresh.error) return;
               const updated = {
                 ...parsed,
+                isAdmin: fresh.isAdmin ?? parsed.isAdmin,
                 isSeller: fresh.isSeller,
                 sellerId: fresh.sellerId,
                 sellerStatus: fresh.sellerStatus,

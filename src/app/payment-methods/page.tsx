@@ -18,6 +18,10 @@ export default function PaymentMethodsPage() {
   const [selectedMethod, setSelectedMethod] = useState<'upi' | 'card'>('upi');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
+  // Middleware now protects this route — no client-side redirect needed.
+  // The effect below handles the rare case where localStorage is empty
+  // but the iron-session cookie is valid (session-restore already ran
+  // in AuthContext, so this is just a safety net).
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/login?callbackUrl=/payment-methods');

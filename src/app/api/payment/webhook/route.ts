@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { syncPaymentOrderToSpfOrders } from '@/app/api/payment/verify/route';
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,6 +100,17 @@ async function handlePaymentCaptured(payment: any, request: NextRequest) {
   }
 
   console.log('[Webhook] Order updated:', paymentOrder.order_number);
+
+  // Sync to spf_orders — critical for mobile where the JS handler may not fire
+  try {
+    await syncPaymentOrderToSpfOrders(
+      paymentOrder,
+      orderId,          // razorpay_order_id
+      payment.id,       // razorpay_payment_id
+    );
+  } catch (syncErr: any) {
+    console.error('[Webhook] spf_orders sync failed:', syncErr?.message);
+  }
 
   // Calculate seller earnings
   await calculateSellerEarnings(paymentOrder);

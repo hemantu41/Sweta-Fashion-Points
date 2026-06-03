@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sellerCacheGet, sellerCacheSet } from '@/lib/sellerCache';
+import { sellerCacheGet, sellerCacheSet, invalidateSellerKeys } from '@/lib/sellerCache';
+import { backfillDeliveredEarnings } from '@/lib/earningsBackfill';
 
 /** Compute the analytics response shape from raw earnings rows. */
 function buildAnalyticsResponse(
@@ -69,8 +70,15 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');
 
+    // ── On-demand backfill: ensure DELIVERED orders have earnings records ──────
+    const backfilled = await backfillDeliveredEarnings(sellerId);
+    if (backfilled) {
+      // Bust cache so we fetch fresh data below instead of stale cached zeros
+      invalidateSellerKeys(sellerId, 'analytics').catch(() => {});
+    }
+
     // ── Cache-first (serves 7d/30d/90d from the same cached 90-day dataset) ─
-    const cachedEarnings = await sellerCacheGet<any[]>(sellerId, 'analytics');
+    const cachedEarnings = backfilled ? null : await sellerCacheGet<any[]>(sellerId, 'analytics');
     if (cachedEarnings !== null) {
       return NextResponse.json(
         buildAnalyticsResponse(sellerId, cachedEarnings, days),

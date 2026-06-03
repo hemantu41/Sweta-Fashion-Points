@@ -419,13 +419,231 @@ function DashboardHome({ onNavigate }: { onNavigate: (page: AdminPage) => void }
 
 // ─── Module 2: Orders ───────────────────────────────────────────────────────
 
+// Tab → DB status mapping (DB returns uppercase values)
+const STATUS_TAB_MAP: Record<string, string[]> = {
+  pending:   ['CONFIRMED', 'SELLER_NOTIFIED'],
+  confirmed: ['ACCEPTED', 'LABEL_GENERATED'],
+  shipped:   ['PACKED', 'PICKUP_SCHEDULED', 'READY_TO_SHIP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'],
+  delivered: ['DELIVERED'],
+  cancelled: ['CANCELLED', 'REJECTED'],
+  returned:  ['RETURNED', 'RETURN_INITIATED'],
+};
+
+// Order detail modal — fetches from /api/admin/orders/v2/[id]
+function OrderDetailModal({ orderId, onClose }: { orderId: string; onClose: () => void }) {
+  const [data, setData]       = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/admin/orders/v2/${orderId}`)
+      .then(r => r.json())
+      .then(d => { setData(d.order); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [orderId]);
+
+  // Close on backdrop click
+  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  const STATUS_STEPS = [
+    { key: 'CONFIRMED',       label: 'Order Placed' },
+    { key: 'ACCEPTED',        label: 'Accepted' },
+    { key: 'LABEL_GENERATED', label: 'Label Generated' },
+    { key: 'PACKED',          label: 'Packed' },
+    { key: 'IN_TRANSIT',      label: 'In Transit' },
+    { key: 'OUT_FOR_DELIVERY',label: 'Out for Delivery' },
+    { key: 'DELIVERED',       label: 'Delivered' },
+  ];
+
+  const currentStepIdx = data
+    ? STATUS_STEPS.findIndex(s => s.key === data.status)
+    : -1;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
+      onClick={handleBackdrop}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <div>
+            <h3 className="font-semibold text-gray-800 text-base">
+              Order #{data?.orderNumber || orderId.slice(0, 8).toUpperCase()}
+            </h3>
+            {data && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                {new Date(data.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={18} className="text-gray-500" />
+          </button>
+        </div>
+
+        {loading && (
+          <div className="p-8 text-center text-gray-400 text-sm animate-pulse">Loading order details…</div>
+        )}
+
+        {!loading && !data && (
+          <div className="p-8 text-center text-red-500 text-sm">Failed to load order details.</div>
+        )}
+
+        {!loading && data && (
+          <div className="p-6 space-y-6">
+            {/* Status badge + timeline */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-[#5B1A3A]/10 text-[#5B1A3A]">
+                  {data.status?.replace(/_/g, ' ')}
+                </span>
+                {data.awbNumber && (
+                  <span className="text-xs text-gray-500">AWB: <span className="font-mono font-medium text-gray-700">{data.awbNumber}</span></span>
+                )}
+              </div>
+
+              {/* Status timeline */}
+              {(['CANCELLED', 'REJECTED'].includes(data.status)) ? (
+                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                  <X size={16} className="text-red-500 flex-shrink-0" />
+                  <span className="text-sm text-red-600 font-medium">
+                    Order {data.status.toLowerCase()}
+                    {data.statusHistory?.find((h: any) => h.note)?.note
+                      ? ` — ${data.statusHistory.find((h: any) => ['CANCELLED','REJECTED'].includes(h.toStatus))?.note}`
+                      : ''}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                  {STATUS_STEPS.map((step, idx) => {
+                    const done    = currentStepIdx >= 0 && idx <= currentStepIdx;
+                    const current = idx === currentStepIdx;
+                    return (
+                      <div key={step.key} className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2
+                            ${current ? 'bg-[#5B1A3A] border-[#5B1A3A] text-white'
+                            : done    ? 'bg-[#C49A3C] border-[#C49A3C] text-white'
+                                      : 'bg-gray-100 border-gray-300 text-gray-400'}`}>
+                            {done && !current ? '✓' : idx + 1}
+                          </div>
+                          <span className={`text-[9px] text-center leading-tight max-w-[52px]
+                            ${current ? 'text-[#5B1A3A] font-semibold' : done ? 'text-[#C49A3C]' : 'text-gray-400'}`}>
+                            {step.label}
+                          </span>
+                        </div>
+                        {idx < STATUS_STEPS.length - 1 && (
+                          <div className={`h-0.5 w-4 mt-[-10px] rounded ${done && idx < currentStepIdx ? 'bg-[#C49A3C]' : 'bg-gray-200'}`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Tracking */}
+            {data.trackingUrl && (
+              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                <Truck size={14} className="text-blue-600 flex-shrink-0" />
+                <span className="text-xs text-blue-700 font-medium">
+                  {data.courierPartner || 'Courier'} — AWB {data.awbNumber}
+                </span>
+                <a href={data.trackingUrl} target="_blank" rel="noreferrer"
+                  className="ml-auto text-xs text-blue-600 underline hover:text-blue-800">
+                  Track
+                </a>
+              </div>
+            )}
+
+            {/* Customer + Seller */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1.5">Customer</p>
+                <p className="text-sm font-medium text-gray-800">{data.customerName}</p>
+                <p className="text-xs text-gray-500">{data.customerPhone}</p>
+                <p className="text-xs text-gray-500">{data.customerEmail}</p>
+                {data.shippingAddress && (
+                  <p className="text-xs text-gray-500 mt-1 leading-snug">
+                    {[data.shippingAddress.house, data.shippingAddress.area, data.shippingAddress.city,
+                      data.shippingAddress.state, data.shippingAddress.pincode].filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-[10px] text-gray-400 uppercase font-semibold mb-1.5">Seller</p>
+                <p className="text-sm font-medium text-gray-800">{data.sellerName}</p>
+                <p className="text-xs text-gray-500">{data.sellerPhone}</p>
+                <p className="text-xs text-gray-500">{data.sellerEmail}</p>
+              </div>
+            </div>
+
+            {/* Items */}
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase font-semibold mb-2">Items</p>
+              <div className="space-y-2">
+                {(data.items || []).map((item: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div>
+                      <p className="text-sm text-gray-800">{item.productName}</p>
+                      {item.sku && <p className="text-[10px] text-gray-400">SKU: {item.sku}</p>}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">× {item.quantity}</p>
+                      <p className="text-sm font-semibold text-gray-800">{formatINR(item.totalPrice || item.unitPrice * item.quantity)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
+                <span className="text-sm font-semibold text-gray-700">Total</span>
+                <span className="text-base font-bold text-[#5B1A3A]">
+                  {formatINR((data.subtotal || 0) + (data.shippingCharge || 0))}
+                </span>
+              </div>
+            </div>
+
+            {/* History log */}
+            {data.statusHistory && data.statusHistory.length > 0 && (
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase font-semibold mb-2">Status History</p>
+                <div className="space-y-2">
+                  {[...data.statusHistory].reverse().map((h: any) => (
+                    <div key={h.id} className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#C49A3C] mt-1.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-gray-700">
+                            {h.fromStatus} → {h.toStatus}
+                          </span>
+                          <span className="text-[10px] text-gray-400 flex-shrink-0">
+                            {new Date(h.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        {h.note && <p className="text-[11px] text-gray-500 mt-0.5 truncate" title={h.note}>{h.note}</p>}
+                        <p className="text-[10px] text-gray-400">by {h.actorType}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OrdersPage() {
   const { t } = useAdminLang();
   const { user } = useAuth();
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter]   = useState('all');
+  const [search, setSearch]   = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const [orders, setOrders]   = useState(MOCK_ORDERS);
   const [loading, setLoading] = useState(true);
+  const [viewOrderId, setViewOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -443,7 +661,29 @@ function OrdersPage() {
   }, [user?.id]);
 
   const statuses = ['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'returned'];
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
+
+  // Fix tab filtering: map tab names to actual DB status values
+  const searchLower = search.toLowerCase().trim();
+  const filtered = (() => {
+    let result = orders as Order[];
+    // Tab filter
+    if (filter !== 'all') {
+      const allowed = STATUS_TAB_MAP[filter] || [];
+      result = result.filter(o => allowed.includes(o.status));
+    }
+    // Search filter — order number, customer name/mobile, seller name, AWB, product name
+    if (searchLower) {
+      result = result.filter(o =>
+        (o.order_id       || '').toLowerCase().includes(searchLower) ||
+        (o.customer_name  || '').toLowerCase().includes(searchLower) ||
+        (o.customer_mobile|| '').toLowerCase().includes(searchLower) ||
+        (o.seller_name    || '').toLowerCase().includes(searchLower) ||
+        (o.awb_number     || '').toLowerCase().includes(searchLower) ||
+        o.items.some(i => i.name.toLowerCase().includes(searchLower))
+      );
+    }
+    return result;
+  })();
 
   const toggleSelect = (id: string) => {
     const next = new Set(selected);
@@ -469,12 +709,12 @@ function OrdersPage() {
     toast.success(`Order marked as ${newStatus}`);
   };
 
-  const sendWA = (order: Order) => {
-    toast.success(`WhatsApp sent to ${order.customer_name}`);
-  };
-
-  const printLabel = (orderId: string) => {
-    window.open(`/api/orders/${orderId}/label`, '_blank');
+  const printLabel = (order: Order) => {
+    if (order.label_url) {
+      window.open(order.label_url, '_blank');
+    } else {
+      toast.error('No shipping label available for this order. Generate the label from the seller dashboard first.');
+    }
   };
 
   const downloadInvoice = (orderId: string) => {
@@ -490,11 +730,13 @@ function OrdersPage() {
       const zip = new JSZip();
       const ids = Array.from(selected);
       for (let i = 0; i < ids.length; i++) {
-        const order = orders.find(o => o.id === ids[i]);
-        const res = await fetch(`/api/orders/${ids[i]}/label`);
-        if (res.ok) {
-          const blob = await res.blob();
-          zip.file(`label-${order?.order_id || ids[i]}.pdf`, blob);
+        const order = orders.find(o => o.id === ids[i]) as Order | undefined;
+        if (order?.label_url) {
+          const res = await fetch(order.label_url);
+          if (res.ok) {
+            const blob = await res.blob();
+            zip.file(`label-${order.order_id || ids[i]}.pdf`, blob);
+          }
         }
         toast.loading(`Generating ${i + 1}/${ids.length}...`, { id: 'bulk-label' });
       }
@@ -517,7 +759,23 @@ function OrdersPage() {
 
   return (
     <div>
+      {viewOrderId && (
+        <OrderDetailModal orderId={viewOrderId} onClose={() => setViewOrderId(null)} />
+      )}
+
       <h2 className="text-lg font-semibold text-gray-800 mb-4">{t('orders.title')}</h2>
+
+      {/* Search bar */}
+      <div className="relative mb-4">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search by order number, customer, seller, AWB, product…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full pl-8 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C49A3C]/30 focus:border-[#C49A3C] bg-white"
+        />
+      </div>
 
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2 mb-4">
@@ -569,6 +827,13 @@ function OrdersPage() {
               </tr>
             </thead>
             <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
+                    No orders found{search ? ` matching "${search}"` : ''}.
+                  </td>
+                </tr>
+              )}
               {filtered.map(order => {
                 const statusColor = ORDER_STATUS_COLORS[order.status] || '#6b7280';
                 return (
@@ -578,7 +843,10 @@ function OrdersPage() {
                         className="rounded border-gray-300 text-[#C49A3C] focus:ring-[#C49A3C]" />
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-800">{order.order_id}</td>
-                    <td className="px-4 py-3 text-gray-700">{order.customer_name}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      <div>{order.customer_name}</div>
+                      {order.seller_name && <div className="text-[10px] text-gray-400">{order.seller_name}</div>}
+                    </td>
                     <td className="px-4 py-3 text-gray-600 text-xs">{order.items[0]?.name || '—'}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-gray-600">{order.pincode}</span>
@@ -610,11 +878,7 @@ function OrdersPage() {
                             <Truck size={14} />
                           </button>
                         )}
-                        <button onClick={() => sendWA(order)} title="Send WhatsApp"
-                          className="p-1.5 rounded-md bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
-                          <MessageCircle size={14} />
-                        </button>
-                        <button onClick={() => printLabel(order.id)} title={t('orders.printLabel')}
+                        <button onClick={() => printLabel(order as Order)} title={t('orders.printLabel')}
                           className="p-1.5 rounded-md bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
                           <Printer size={14} />
                         </button>
@@ -622,7 +886,8 @@ function OrdersPage() {
                           className="p-1.5 rounded-md bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors">
                           <FileText size={14} />
                         </button>
-                        <button title="View" className="p-1.5 rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors">
+                        <button onClick={() => setViewOrderId(order.id)} title="View order details"
+                          className="p-1.5 rounded-md bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors">
                           <Eye size={14} />
                         </button>
                       </div>
