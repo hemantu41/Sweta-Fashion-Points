@@ -38,20 +38,12 @@ export default function Footer() {
 
           {/* ── Brand ── */}
           <div>
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#5B1A3A] to-[#7A2350] flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-base">IF</span>
-              </div>
-              <span
-                className="text-xl font-bold text-white"
-                style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}
-              >
-                Insta Fashion Points
-              </span>
+            <div className="mb-4">
+              <img src="/logo.jpg" alt="Insta Fashion Points" className="h-16 w-auto object-contain" />
             </div>
 
             <p className="text-[#C49A3C] text-sm font-medium mb-2 tracking-wide">
-              Affordable &amp; Premium Fashion Products
+              Premium Fashion at Affordable Prices
             </p>
             <p className="text-[rgba(255,255,255,0.45)] text-xs leading-relaxed mb-6">
               {language === 'hi'

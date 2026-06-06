@@ -20,7 +20,7 @@ const lato = Lato({
 
 export const metadata: Metadata = {
   title: {
-    default: "Affordable & Premium Fashion Products | Insta Fashion Points",
+    default: "Insta Fashion Points | Premium Fashion at Affordable Prices",
     template: "%s | Insta Fashion Points",
   },
   description: "Shop affordable and premium fashion products from local boutiques. Fast delivery in Hyderabad and pan-India shipping.",
