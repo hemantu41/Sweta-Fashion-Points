@@ -108,6 +108,9 @@ export async function GET(
       isBestSeller: product.is_best_seller,
       isActive: product.is_active,
       approvalStatus: product.approval_status,
+      rejectionReason: product.rejection_reason ?? null,
+      createdAt: product.created_at ?? null,
+      updatedAt: product.updated_at ?? null,
       sellerId: product.seller_id,
       seller: product.seller ? {
         id: product.seller.id,
