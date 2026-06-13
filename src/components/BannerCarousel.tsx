@@ -104,7 +104,7 @@ const banners: Banner[] = [
     tag: 'Footwear',
     tagHi: 'जूते',
     link: '/footwear',
-    bgImage: '/footwear.jpg',
+    bgImage: '/footwear-new.jpg',
     catKeyword: 'footwear',
     hideText: true,
   },
