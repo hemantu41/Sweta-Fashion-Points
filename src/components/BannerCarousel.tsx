@@ -51,7 +51,7 @@ const banners: Banner[] = [
     tag: "Women's",
     tagHi: 'महिला',
     link: '/womens',
-    bgImage: '/Womens Collection.png',
+    bgImage: '/Womens Collection.jpg',
     catKeyword: 'women',
   },
   {
