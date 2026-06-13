@@ -78,8 +78,9 @@ const banners: Banner[] = [
     tag: "Kids",
     tagHi: 'बच्चे',
     link: '/kids',
-    bgImage: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/kids-collection.jpg',
     catKeyword: 'kid',
+    hideText: true,
   },
   {
     id: 'beauty',
