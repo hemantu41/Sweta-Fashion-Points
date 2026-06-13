@@ -15,7 +15,8 @@ interface Banner {
   tagHi: string;
   link: string;
   bgImage: string;
-  catKeyword?: string; // used to find matching L1 category slug dynamically
+  catKeyword?: string;
+  hideText?: boolean; // suppress overlay text when image already has baked-in text
 }
 
 const banners: Banner[] = [
@@ -28,7 +29,8 @@ const banners: Banner[] = [
     tag: 'Welcome',
     tagHi: 'स्वागत',
     link: '/',
-    bgImage: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/welcome-banner.jpg',
+    hideText: true,
   },
   {
     id: 'mens',
@@ -39,8 +41,9 @@ const banners: Banner[] = [
     tag: "Men's",
     tagHi: 'पुरुष',
     link: '/mens',
-    bgImage: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/mens-collection.jpg',
     catKeyword: 'men',
+    hideText: true,
   },
   {
     id: 'womens',
@@ -51,8 +54,9 @@ const banners: Banner[] = [
     tag: "Women's",
     tagHi: 'महिला',
     link: '/womens',
-    bgImage: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/womens-collection.jpg',
     catKeyword: 'women',
+    hideText: true,
   },
   {
     id: 'sarees',
@@ -75,8 +79,9 @@ const banners: Banner[] = [
     tag: "Kids",
     tagHi: 'बच्चे',
     link: '/kids',
-    bgImage: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/kids-collection.jpg',
     catKeyword: 'kid',
+    hideText: true,
   },
   {
     id: 'beauty',
@@ -99,8 +104,9 @@ const banners: Banner[] = [
     tag: 'Footwear',
     tagHi: 'जूते',
     link: '/footwear',
-    bgImage: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/footwear-new.jpg',
     catKeyword: 'footwear',
+    hideText: true,
   },
 ];
 
@@ -128,14 +134,19 @@ export default function BannerCarousel() {
   // Key increments each time a slide becomes active — forces animation classes to restart
   const [slideKey, setSlideKey] = useState(0);
 
-  // Only show category banners whose L1 category exists in the live tree.
+  // Only show category banners whose category exists in the live tree (L1 or L2).
   // Welcome banner (no catKeyword) always shows.
   // While the tree is still loading, show only the welcome banner to avoid flicker.
   const visibleBanners = loading
     ? banners.filter((b) => !b.catKeyword)
     : banners.filter((b) => {
         if (!b.catKeyword) return true;
-        return tree.some((node) => matchesCatKeyword(node, b.catKeyword!));
+        // Check L1 nodes first
+        if (tree.some((node) => matchesCatKeyword(node, b.catKeyword!))) return true;
+        // Also check L2 nodes (e.g. Footwear lives under Accessories L1)
+        return tree.some((node) =>
+          (node.children ?? []).some((child) => matchesCatKeyword(child, b.catKeyword!))
+        );
       });
 
   // Clamp currentSlide whenever visibleBanners length shrinks
@@ -184,40 +195,43 @@ export default function BannerCarousel() {
                 style={{ backgroundImage: `url(${banner.bgImage})` }}
               />
 
-              {/* Dark gradient — left-heavy for text legibility */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15 pointer-events-none" />
-              {/* Bottom fade for indicator readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+              {/* Dark gradient — skip for banners with baked-in text */}
+              {!banner.hideText && (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                </>
+              )}
+              {/* Bottom fade for indicator readability — always shown */}
+              {banner.hideText && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+              )}
 
-              {/* Clickable text area */}
+              {/* Clickable area */}
               <Link href={getBannerLink(banner, tree)} className="absolute inset-0">
-                <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
-
-                  {/* Collection tag */}
-                  <span
-                    key={`tag-${slideKey}-${banner.id}`}
-                    className={`banner-cta text-[10px] sm:text-[11px] text-white/65 tracking-[0.3em] uppercase mb-4 font-medium ${isActive ? '' : 'opacity-0'}`}
-                  >
-                    {language === 'hi' ? banner.tagHi : banner.tag}
-                  </span>
-
-                  {/* Heading — brand maroon with strong shadow for contrast on photo backgrounds */}
-                  <h2
-                    key={`title-${slideKey}-${banner.id}`}
-                    className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-[#722F37] leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
-                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 0 40px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.4)' }}
-                  >
-                    {language === 'hi' ? banner.titleHi : banner.title}
-                  </h2>
-
-                  {/* Subtitle */}
-                  <p
-                    key={`sub-${slideKey}-${banner.id}`}
-                    className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
-                  >
-                    {language === 'hi' ? banner.subtitleHi : banner.subtitle}
-                  </p>
-                </div>
+                {!banner.hideText && (
+                  <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
+                    <span
+                      key={`tag-${slideKey}-${banner.id}`}
+                      className={`banner-cta text-[10px] sm:text-[11px] text-white/65 tracking-[0.3em] uppercase mb-4 font-medium ${isActive ? '' : 'opacity-0'}`}
+                    >
+                      {language === 'hi' ? banner.tagHi : banner.tag}
+                    </span>
+                    <h2
+                      key={`title-${slideKey}-${banner.id}`}
+                      className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-[#722F37] leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
+                      style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 0 40px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.4)' }}
+                    >
+                      {language === 'hi' ? banner.titleHi : banner.title}
+                    </h2>
+                    <p
+                      key={`sub-${slideKey}-${banner.id}`}
+                      className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
+                    >
+                      {language === 'hi' ? banner.subtitleHi : banner.subtitle}
+                    </p>
+                  </div>
+                )}
               </Link>
             </div>
           );

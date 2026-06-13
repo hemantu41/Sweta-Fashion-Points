@@ -160,7 +160,7 @@ function ProductsContent() {
                   const isLow = p.stockQuantity > 0 && p.stockQuantity <= 5;
                   const isOut = p.stockQuantity === 0;
                   return (
-                    <tr key={p.id} className="hover:bg-[#C49A3C]/5 transition-colors">
+                    <tr key={p.id} className="hover:bg-[#C49A3C]/5 transition-colors cursor-pointer" onClick={() => window.location.href = `/seller/dashboard/products/${p.id}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
@@ -173,7 +173,7 @@ function ProductsContent() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium text-gray-800 truncate max-w-[160px]">{p.name}</p>
+                            <p className="font-medium text-gray-800 truncate max-w-[160px] hover:text-[#5B1A3A] hover:underline">{p.name}</p>
                             <p className="text-xs text-gray-400">{p.productId}</p>
                           </div>
                         </div>
@@ -209,7 +209,7 @@ function ProductsContent() {
                           {p.isActive && p.approvalStatus === 'approved' ? 'Yes' : 'No'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <Link href={`/seller/dashboard/products/edit/${p.id}`}
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors">
