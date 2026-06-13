@@ -104,8 +104,9 @@ const banners: Banner[] = [
     tag: 'Footwear',
     tagHi: 'जूते',
     link: '/footwear',
-    bgImage: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/footwear.jpg',
     catKeyword: 'footwear',
+    hideText: true,
   },
 ];
 
