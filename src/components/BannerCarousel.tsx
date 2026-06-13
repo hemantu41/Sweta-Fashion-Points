@@ -40,8 +40,9 @@ const banners: Banner[] = [
     tag: "Men's",
     tagHi: 'पुरुष',
     link: '/mens',
-    bgImage: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/mens-collection.jpg',
     catKeyword: 'men',
+    hideText: true,
   },
   {
     id: 'womens',
