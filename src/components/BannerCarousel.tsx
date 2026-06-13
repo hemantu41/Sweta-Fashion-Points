@@ -120,10 +120,16 @@ function matchesCatKeyword(node: CategoryNode, kw: string): boolean {
 }
 
 // Resolves the banner link to a live category-tree page when possible.
+// Checks L1 nodes first, then falls through to L2 children (e.g. Footwear under Accessories).
 function getBannerLink(banner: Banner, tree: CategoryNode[]): string {
   if (!banner.catKeyword || tree.length === 0) return banner.link;
-  const match = tree.find((node) => matchesCatKeyword(node, banner.catKeyword!));
-  return match ? `/category/${match.slug}` : banner.link;
+  const l1Match = tree.find((node) => matchesCatKeyword(node, banner.catKeyword!));
+  if (l1Match) return `/category/${l1Match.slug}`;
+  for (const node of tree) {
+    const l2Match = (node.children ?? []).find((child) => matchesCatKeyword(child, banner.catKeyword!));
+    if (l2Match) return `/category/${l2Match.slug}`;
+  }
+  return banner.link;
 }
 
 export default function BannerCarousel() {
