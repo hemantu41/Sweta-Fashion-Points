@@ -29,7 +29,8 @@ const banners: Banner[] = [
     tag: 'Welcome',
     tagHi: 'स्वागत',
     link: '/',
-    bgImage: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/welcome-banner.jpg',
+    hideText: true,
   },
   {
     id: 'mens',
