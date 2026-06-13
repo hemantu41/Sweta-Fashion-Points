@@ -15,7 +15,8 @@ interface Banner {
   tagHi: string;
   link: string;
   bgImage: string;
-  catKeyword?: string; // used to find matching L1 category slug dynamically
+  catKeyword?: string;
+  hideText?: boolean; // suppress overlay text when image already has baked-in text
 }
 
 const banners: Banner[] = [
@@ -51,8 +52,9 @@ const banners: Banner[] = [
     tag: "Women's",
     tagHi: 'महिला',
     link: '/womens',
-    bgImage: '/Womens Collection.jpg',
+    bgImage: '/womens-collection.jpg',
     catKeyword: 'women',
+    hideText: true,
   },
   {
     id: 'sarees',
@@ -184,40 +186,43 @@ export default function BannerCarousel() {
                 style={{ backgroundImage: `url(${banner.bgImage})` }}
               />
 
-              {/* Dark gradient — left-heavy for text legibility */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15 pointer-events-none" />
-              {/* Bottom fade for indicator readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+              {/* Dark gradient — skip for banners with baked-in text */}
+              {!banner.hideText && (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                </>
+              )}
+              {/* Bottom fade for indicator readability — always shown */}
+              {banner.hideText && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+              )}
 
-              {/* Clickable text area */}
+              {/* Clickable area */}
               <Link href={getBannerLink(banner, tree)} className="absolute inset-0">
-                <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
-
-                  {/* Collection tag */}
-                  <span
-                    key={`tag-${slideKey}-${banner.id}`}
-                    className={`banner-cta text-[10px] sm:text-[11px] text-white/65 tracking-[0.3em] uppercase mb-4 font-medium ${isActive ? '' : 'opacity-0'}`}
-                  >
-                    {language === 'hi' ? banner.tagHi : banner.tag}
-                  </span>
-
-                  {/* Heading — brand maroon with strong shadow for contrast on photo backgrounds */}
-                  <h2
-                    key={`title-${slideKey}-${banner.id}`}
-                    className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-[#722F37] leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
-                    style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 0 40px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.4)' }}
-                  >
-                    {language === 'hi' ? banner.titleHi : banner.title}
-                  </h2>
-
-                  {/* Subtitle */}
-                  <p
-                    key={`sub-${slideKey}-${banner.id}`}
-                    className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
-                  >
-                    {language === 'hi' ? banner.subtitleHi : banner.subtitle}
-                  </p>
-                </div>
+                {!banner.hideText && (
+                  <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
+                    <span
+                      key={`tag-${slideKey}-${banner.id}`}
+                      className={`banner-cta text-[10px] sm:text-[11px] text-white/65 tracking-[0.3em] uppercase mb-4 font-medium ${isActive ? '' : 'opacity-0'}`}
+                    >
+                      {language === 'hi' ? banner.tagHi : banner.tag}
+                    </span>
+                    <h2
+                      key={`title-${slideKey}-${banner.id}`}
+                      className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-[#722F37] leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
+                      style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 0 40px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.4)' }}
+                    >
+                      {language === 'hi' ? banner.titleHi : banner.title}
+                    </h2>
+                    <p
+                      key={`sub-${slideKey}-${banner.id}`}
+                      className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
+                    >
+                      {language === 'hi' ? banner.subtitleHi : banner.subtitle}
+                    </p>
+                  </div>
+                )}
               </Link>
             </div>
           );
