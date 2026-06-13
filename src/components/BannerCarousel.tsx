@@ -134,14 +134,19 @@ export default function BannerCarousel() {
   // Key increments each time a slide becomes active — forces animation classes to restart
   const [slideKey, setSlideKey] = useState(0);
 
-  // Only show category banners whose L1 category exists in the live tree.
+  // Only show category banners whose category exists in the live tree (L1 or L2).
   // Welcome banner (no catKeyword) always shows.
   // While the tree is still loading, show only the welcome banner to avoid flicker.
   const visibleBanners = loading
     ? banners.filter((b) => !b.catKeyword)
     : banners.filter((b) => {
         if (!b.catKeyword) return true;
-        return tree.some((node) => matchesCatKeyword(node, b.catKeyword!));
+        // Check L1 nodes first
+        if (tree.some((node) => matchesCatKeyword(node, b.catKeyword!))) return true;
+        // Also check L2 nodes (e.g. Footwear lives under Accessories L1)
+        return tree.some((node) =>
+          (node.children ?? []).some((child) => matchesCatKeyword(child, b.catKeyword!))
+        );
       });
 
   // Clamp currentSlide whenever visibleBanners length shrinks
