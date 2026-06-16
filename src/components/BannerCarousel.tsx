@@ -67,8 +67,9 @@ const banners: Banner[] = [
     tag: 'Sarees',
     tagHi: 'साड़ी',
     link: '/sarees',
-    bgImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1600&h=700&fit=crop&q=90',
+    bgImage: '/sarees-collection.jpg',
     catKeyword: 'saree',
+    hideText: true,
   },
   {
     id: 'kids',
