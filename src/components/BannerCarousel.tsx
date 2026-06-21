@@ -16,7 +16,7 @@ interface Banner {
   link: string;
   bgImage: string;
   catKeyword?: string;
-  hideText?: boolean; // suppress overlay text when image already has baked-in text
+  hideText?: boolean;
 }
 
 const banners: Banner[] = [
@@ -33,6 +33,32 @@ const banners: Banner[] = [
     hideText: true,
   },
   {
+    id: 'salwar',
+    title: 'Ethnic\nElegance',
+    titleHi: 'पारंपरिक\nसुंदरता',
+    subtitle: 'Where tradition meets modern grace',
+    subtitleHi: 'परंपरा और आधुनिक सौंदर्य का संगम',
+    tag: "Women's",
+    tagHi: 'महिला',
+    link: '/womens',
+    bgImage: '/banners/salwar-banner.jpg',
+    catKeyword: 'women',
+    hideText: true,
+  },
+  {
+    id: 'sarees',
+    title: 'Exquisite\nSarees',
+    titleHi: 'शानदार\nसाड़ियां',
+    subtitle: 'Tradition meets contemporary grace',
+    subtitleHi: 'परंपरा और आधुनिक सौंदर्य का संगम',
+    tag: 'Sarees',
+    tagHi: 'साड़ी',
+    link: '/sarees',
+    bgImage: '/banners/saree-banner.jpg',
+    catKeyword: 'saree',
+    hideText: true,
+  },
+  {
     id: 'mens',
     title: "Men's\nCollection",
     titleHi: 'पुरुषों का\nकलेक्शन',
@@ -46,38 +72,12 @@ const banners: Banner[] = [
     hideText: true,
   },
   {
-    id: 'womens',
-    title: "Women's\nCollection",
-    titleHi: 'महिलाओं का\nकलेक्शन',
-    subtitle: 'Elegance that speaks volumes',
-    subtitleHi: 'लालित्य जो बहुत कुछ कहता है',
-    tag: "Women's",
-    tagHi: 'महिला',
-    link: '/womens',
-    bgImage: '/womens-collection.jpg',
-    catKeyword: 'women',
-    hideText: true,
-  },
-  {
-    id: 'sarees',
-    title: 'Exquisite\nSarees',
-    titleHi: 'शानदार\nसाड़ियां',
-    subtitle: 'Tradition meets contemporary grace',
-    subtitleHi: 'परंपरा और आधुनिक सौंदर्य का संगम',
-    tag: 'Sarees',
-    tagHi: 'साड़ी',
-    link: '/sarees',
-    bgImage: '/sarees-collection.jpg',
-    catKeyword: 'saree',
-    hideText: true,
-  },
-  {
     id: 'kids',
-    title: "Kids\nCollection",
+    title: 'Kids\nCollection',
     titleHi: 'बच्चों का\nकलेक्शन',
     subtitle: 'Playful styles for little ones',
     subtitleHi: 'छोटों के लिए खिलंडी शैली',
-    tag: "Kids",
+    tag: 'Kids',
     tagHi: 'बच्चे',
     link: '/kids',
     bgImage: '/kids-collection.jpg',
@@ -111,8 +111,6 @@ const banners: Banner[] = [
   },
 ];
 
-// Match a category node by keyword — checks that name/slug STARTS WITH the
-// keyword so that "men" does not accidentally match "women".
 function matchesCatKeyword(node: CategoryNode, kw: string): boolean {
   const name = node.name.toLowerCase();
   const slug = node.slug.toLowerCase();
@@ -120,8 +118,6 @@ function matchesCatKeyword(node: CategoryNode, kw: string): boolean {
   return name.startsWith(k) || slug.startsWith(k);
 }
 
-// Resolves the banner link to a live category-tree page when possible.
-// Checks L1 nodes first, then falls through to L2 children (e.g. Footwear under Accessories).
 function getBannerLink(banner: Banner, tree: CategoryNode[]): string {
   if (!banner.catKeyword || tree.length === 0) return banner.link;
   const l1Match = tree.find((node) => matchesCatKeyword(node, banner.catKeyword!));
@@ -136,150 +132,240 @@ function getBannerLink(banner: Banner, tree: CategoryNode[]): string {
 export default function BannerCarousel() {
   const { language } = useLanguage();
   const { tree, loading } = useCategories();
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  // Key increments each time a slide becomes active — forces animation classes to restart
-  const [slideKey, setSlideKey] = useState(0);
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
 
-  // Only show category banners whose category exists in the live tree (L1 or L2).
-  // Welcome banner (no catKeyword) always shows.
-  // While the tree is still loading, show only the welcome banner to avoid flicker.
   const visibleBanners = loading
     ? banners.filter((b) => !b.catKeyword)
     : banners.filter((b) => {
         if (!b.catKeyword) return true;
-        // Check L1 nodes first
         if (tree.some((node) => matchesCatKeyword(node, b.catKeyword!))) return true;
-        // Also check L2 nodes (e.g. Footwear lives under Accessories L1)
         return tree.some((node) =>
           (node.children ?? []).some((child) => matchesCatKeyword(child, b.catKeyword!))
         );
       });
 
-  // Clamp currentSlide whenever visibleBanners length shrinks
-  useEffect(() => {
-    if (currentSlide >= visibleBanners.length) {
-      setCurrentSlide(0);
-    }
-  }, [visibleBanners.length, currentSlide]);
+  const n = visibleBanners.length;
 
   useEffect(() => {
-    if (!isAutoPlaying) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % visibleBanners.length);
-      setSlideKey((k) => k + 1);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, visibleBanners.length]);
+    if (current >= n) setCurrent(0);
+  }, [n, current]);
 
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index);
-    setSlideKey((k) => k + 1);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000);
-  };
+  useEffect(() => {
+    if (paused || n <= 1) return;
+    const t = setInterval(() => setCurrent((p) => (p + 1) % n), 6000);
+    return () => clearInterval(t);
+  }, [paused, n]);
 
-  const nextSlide = () => goToSlide((currentSlide + 1) % visibleBanners.length);
-  const prevSlide = () => goToSlide((currentSlide - 1 + visibleBanners.length) % visibleBanners.length);
+  const go = (dir: number) => setCurrent((p) => (p + dir + n) % n);
+
+  if (!n) return null;
 
   return (
-    <section className="relative w-full">
-      <div className="relative h-[500px] sm:h-[600px] md:h-[700px] overflow-hidden">
-
-        {visibleBanners.map((banner, index) => {
-          const isActive = index === currentSlide;
-          return (
+    <section
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      style={{
+        position: 'relative',
+        borderRadius: 'var(--radius-2xl)',
+        overflow: 'hidden',
+        boxShadow: 'var(--shadow-xl)',
+        border: '1px solid var(--ifp-border)',
+        background: 'var(--ifp-bg-alt)',
+        margin: '16px',
+      }}
+    >
+      {/* Slide strip */}
+      <div
+        style={{
+          display: 'flex',
+          height: 'clamp(320px, 56vw, 680px)',
+          width: `${n * 100}%`,
+          transform: `translateX(-${current * (100 / n)}%)`,
+          transition: 'transform 0.75s var(--ease-out)',
+        }}
+      >
+        {visibleBanners.map((banner, idx) => (
+          <Link
+            key={banner.id}
+            href={getBannerLink(banner, tree)}
+            style={{
+              width: `${100 / n}%`,
+              height: '100%',
+              flexShrink: 0,
+              display: 'block',
+              position: 'relative',
+            }}
+          >
+            {/* Background image */}
             <div
-              key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
-              }`}
-            >
-              {/* Background image — Ken Burns zoom only on active slide */}
-              <div
-                key={isActive ? `active-${slideKey}` : `idle-${banner.id}`}
-                className={`absolute inset-0 bg-cover bg-center ${isActive ? 'animate-ken-burns' : ''}`}
-                style={{ backgroundImage: `url(${banner.bgImage})` }}
-              />
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url(${banner.bgImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
 
-              {/* Dark gradient — skip for banners with baked-in text */}
-              {!banner.hideText && (
-                <>
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15 pointer-events-none" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-                </>
-              )}
-              {/* Bottom fade for indicator readability — always shown */}
-              {banner.hideText && (
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
-              )}
+            {/* Gradient overlay */}
+            {!banner.hideText ? (
+              <>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(31,14,23,0.78), rgba(31,14,23,0.18) 60%, transparent)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(31,14,23,0.4), transparent 50%)', pointerEvents: 'none' }} />
+              </>
+            ) : (
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(31,14,23,0.28), transparent 50%)', pointerEvents: 'none' }} />
+            )}
 
-              {/* Clickable area */}
-              <Link href={getBannerLink(banner, tree)} className="absolute inset-0">
-                {!banner.hideText && (
-                  <div className="h-full flex flex-col justify-center pl-8 sm:pl-14 lg:pl-24 pr-8 max-w-3xl">
-                    <span
-                      key={`tag-${slideKey}-${banner.id}`}
-                      className={`banner-cta text-[10px] sm:text-[11px] text-white/65 tracking-[0.3em] uppercase mb-4 font-medium ${isActive ? '' : 'opacity-0'}`}
-                    >
-                      {language === 'hi' ? banner.tagHi : banner.tag}
-                    </span>
-                    <h2
-                      key={`title-${slideKey}-${banner.id}`}
-                      className={`banner-title text-[3.2rem] sm:text-[4rem] md:text-[4.8rem] font-semibold text-[#722F37] leading-[1.04] mb-5 whitespace-pre-line tracking-[-0.02em] ${isActive ? '' : 'opacity-0'}`}
-                      style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif', textShadow: '0 0 40px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.4)' }}
-                    >
-                      {language === 'hi' ? banner.titleHi : banner.title}
-                    </h2>
-                    <p
-                      key={`sub-${slideKey}-${banner.id}`}
-                      className={`banner-subtitle text-[1rem] sm:text-[1.15rem] text-white/80 font-light tracking-[0.04em] max-w-md ${isActive ? '' : 'opacity-0'}`}
-                    >
-                      {language === 'hi' ? banner.subtitleHi : banner.subtitle}
-                    </p>
-                  </div>
-                )}
-              </Link>
-            </div>
-          );
-        })}
+            {/* Text overlay for non-hideText banners */}
+            {!banner.hideText && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                paddingLeft: 'clamp(24px, 6vw, 96px)',
+                paddingRight: '32px',
+                maxWidth: '640px',
+              }}>
+                <span style={{
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.65)',
+                  letterSpacing: '0.3em',
+                  textTransform: 'uppercase',
+                  marginBottom: '16px',
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
+                }}>
+                  {language === 'hi' ? banner.tagHi : banner.tag}
+                </span>
+                <h2 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(2.4rem, 5vw, 4.8rem)',
+                  fontWeight: 700,
+                  color: 'var(--ifp-gold-light)',
+                  lineHeight: 1.04,
+                  marginBottom: '20px',
+                  whiteSpace: 'pre-line',
+                  letterSpacing: '-0.02em',
+                }}>
+                  {language === 'hi' ? banner.titleHi : banner.title}
+                </h2>
+                <p style={{
+                  fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)',
+                  color: 'rgba(255,255,255,0.82)',
+                  fontWeight: 300,
+                  letterSpacing: '0.04em',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  {language === 'hi' ? banner.subtitleHi : banner.subtitle}
+                </p>
+              </div>
+            )}
 
-        {/* Prev arrow — circular glassmorphism */}
+            {/* Active slide indicator label */}
+            {idx === current && (
+              <div style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'rgba(196,154,60,0.18)',
+                backdropFilter: 'var(--backdrop-blur)',
+                border: '1px solid rgba(196,154,60,0.35)',
+                borderRadius: 'var(--radius-pill)',
+                padding: '6px 16px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--ifp-gold-light)',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                fontFamily: 'var(--font-body)',
+              }}>
+                {language === 'hi' ? banner.tagHi : banner.tag}
+              </div>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {/* Prev arrow */}
+      {n > 1 && (
         <button
-          onClick={prevSlide}
-          className="absolute left-4 md:left-7 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 hover:bg-white/40 hover:scale-110 hover:border-white/60 group"
+          onClick={(e) => { e.preventDefault(); go(-1); }}
           aria-label="Previous"
+          style={{
+            position: 'absolute', top: '50%', left: '16px',
+            transform: 'translateY(-50%)',
+            width: '44px', height: '44px', borderRadius: '50%',
+            background: 'rgba(31,14,23,0.32)',
+            border: '1px solid rgba(255,255,255,0.35)',
+            backdropFilter: 'var(--backdrop-blur)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', cursor: 'pointer', zIndex: 20,
+            transition: 'background 0.2s, transform 0.2s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(196,154,60,0.5)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(31,14,23,0.32)')}
         >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white transition-transform duration-200 group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+      )}
 
-        {/* Next arrow — circular glassmorphism */}
+      {/* Next arrow */}
+      {n > 1 && (
         <button
-          onClick={nextSlide}
-          className="absolute right-4 md:right-7 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 hover:bg-white/40 hover:scale-110 hover:border-white/60 group"
+          onClick={(e) => { e.preventDefault(); go(1); }}
           aria-label="Next"
+          style={{
+            position: 'absolute', top: '50%', right: '16px',
+            transform: 'translateY(-50%)',
+            width: '44px', height: '44px', borderRadius: '50%',
+            background: 'rgba(31,14,23,0.32)',
+            border: '1px solid rgba(255,255,255,0.35)',
+            backdropFilter: 'var(--backdrop-blur)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', cursor: 'pointer', zIndex: 20,
+            transition: 'background 0.2s, transform 0.2s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(196,154,60,0.5)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(31,14,23,0.32)')}
         >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+      )}
 
-        {/* Progress indicators — aligned with text left padding */}
-        <div className="absolute bottom-6 left-8 sm:left-14 lg:left-24 z-30 flex gap-2 items-center">
-          {visibleBanners.map((_, index) => (
+      {/* Gold progress dots */}
+      {n > 1 && (
+        <div style={{
+          position: 'absolute', bottom: '18px', left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex', gap: '9px', zIndex: 20,
+        }}>
+          {visibleBanners.map((_, k) => (
             <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`h-[2px] transition-all duration-500 rounded-full ${
-                index === currentSlide ? 'w-10 bg-white' : 'w-5 bg-white/35 hover:bg-white/55'
-              }`}
-              aria-label={`Slide ${index + 1}`}
+              key={k}
+              aria-label={`Slide ${k + 1}`}
+              onClick={(e) => { e.preventDefault(); setCurrent(k); }}
+              style={{
+                height: '7px',
+                width: k === current ? '26px' : '7px',
+                borderRadius: 'var(--radius-pill)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                background: k === current ? 'var(--ifp-gold)' : 'rgba(255,255,255,0.55)',
+                transition: 'width 0.3s var(--ease-out), background 0.3s var(--ease-out)',
+              }}
             />
           ))}
         </div>
-      </div>
+      )}
     </section>
   );
 }

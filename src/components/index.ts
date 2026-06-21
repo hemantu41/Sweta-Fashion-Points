@@ -17,3 +17,5 @@ export { default as SareesCollectionSection } from './SareesCollectionSection';
 export { default as KidsCollectionSection } from './KidsCollectionSection';
 export { default as BeautyMakeupCollectionSection } from './BeautyMakeupCollectionSection';
 export { default as FootwearCollectionSection } from './FootwearCollectionSection';
+export { default as CollectionGrid } from './CollectionGrid';
+export type { Collection } from './CollectionGrid';
