@@ -80,12 +80,14 @@ export default function CollectionGrid({ collections, title, titleHi }: Collecti
                 <span className={styles.rule} />
                 <p>{language === 'hi' ? c.descHi : c.desc}</p>
               </div>
-              <span className={styles.shopBtn}>
-                {language === 'hi' ? 'अभी खरीदें' : 'Shop Now'}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                  <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
+              <div className={styles.shopBtnWrap}>
+                <span className={styles.shopBtn}>
+                  {language === 'hi' ? 'अभी खरीदें' : 'Shop Now'}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </div>
             </div>
           </Link>
         ))}
