@@ -43,6 +43,16 @@ function resolveHref(tree: CategoryNode[], c: Collection): string {
     return c.fallbackHref;
   }
 
+  // Explicit 2-level lookup: l1Kw → l2Kw
+  if (c.l1Kw && c.l2Kw) {
+    const l1 = tree.find(n => nodeMatches(n, c.l1Kw!));
+    if (l1) {
+      const l2 = (l1.children ?? []).find(n => nodeMatches(n, c.l2Kw!));
+      if (l2) return `/category/${l2.slug}`;
+    }
+    return c.fallbackHref;
+  }
+
   // catKeyword: searches L1 first, then L2
   if (c.catKeyword) {
     const kw = c.catKeyword.toLowerCase();

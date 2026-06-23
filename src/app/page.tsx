@@ -49,6 +49,18 @@ const featuredCollections: Collection[] = [
     fallbackHref: '/womens?category=jeans',
   },
   {
+    id: 'mens-ethnic',
+    name: "Men's Ethnic Wear",
+    nameHi: 'पुरुष एथनिक वियर',
+    desc: 'Kurta, Sherwani & More',
+    descHi: 'कुर्ता, शेरवानी और अधिक',
+    img: '/banners/ethnic-wear-card.jpg',
+    pos: 'center top',
+    l1Kw: 'men',
+    l2Kw: 'ethnic',
+    fallbackHref: '/mens?category=ethnic',
+  },
+  {
     id: 'night-suits',
     name: 'Night Suits',
     nameHi: 'नाइट सूट',
