@@ -1,29 +1,28 @@
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
 }
 
 @media (max-width: 1024px) {
-  .grid { grid-template-columns: repeat(3, 1fr); }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
 }
 
 @media (max-width: 680px) {
-  .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .tile { height: 200px; }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .shopBtnWrap { display: none; }
-  .caption { padding: 0 12px 14px; }
-  .main h3 { font-size: 16px; margin-bottom: 4px; }
+  .caption { padding: 0 10px 12px; }
+  .main h3 { font-size: 14px; margin-bottom: 4px; }
   .rule { margin-bottom: 4px; }
-  .main p { font-size: 12px; }
+  .main p { font-size: 11px; }
   .overlay {
-    background: linear-gradient(to top, rgba(31, 14, 23, 0.92) 0%, rgba(31, 14, 23, 0.25) 55%, transparent 75%);
+    background: linear-gradient(to top, rgba(31, 14, 23, 0.92) 0%, rgba(31, 14, 23, 0.25) 50%, transparent 70%);
   }
 }
 
 .tile {
   position: relative;
-  height: 300px;
+  aspect-ratio: 4 / 5;
   border-radius: var(--radius-2xl);
   overflow: hidden;
   cursor: pointer;
@@ -54,7 +53,7 @@
 .overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(31, 14, 23, 0.88), rgba(31, 14, 23, 0.15) 55%, transparent);
+  background: linear-gradient(to top, rgba(31, 14, 23, 0.88) 0%, rgba(31, 14, 23, 0.18) 45%, transparent 65%);
 }
 
 /* Caption always anchored to the bottom */
@@ -63,7 +62,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0 22px 22px;
+  padding: 0 22px 24px;
   color: #fff;
   text-align: center;
   display: flex;
@@ -74,7 +73,7 @@
 .main h3 {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   color: #fff;
   margin: 0 0 8px;
 }
@@ -95,7 +94,7 @@
   font-family: var(--font-body);
 }
 
-/* Wrapper controls the space — collapses to zero height when not hovered */
+/* Wrapper collapses to zero height when not hovered */
 .shopBtnWrap {
   overflow: hidden;
   max-height: 0;
