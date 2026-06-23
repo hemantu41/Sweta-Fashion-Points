@@ -52,23 +52,24 @@
   background: linear-gradient(to top, rgba(31, 14, 23, 0.82), rgba(31, 14, 23, 0.15) 55%, transparent);
 }
 
+/* Text always anchored to the bottom — no gap so shopBtn can't push it up */
 .caption {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 22px;
+  padding: 0 22px 22px;
   color: #fff;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
   transition: transform 0.45s var(--ease-out);
 }
 
+/* Shift text up on hover to reveal the Shop Now button below */
 .tile:hover .caption {
-  transform: translateY(-10px);
+  transform: translateY(-46px);
 }
 
 .main h3 {
@@ -95,7 +96,12 @@
   font-family: var(--font-body);
 }
 
+/* Absolutely positioned so it NEVER takes up space when hidden */
 .shopBtn {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -109,7 +115,6 @@
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-md);
   opacity: 0;
-  transform: translateY(12px);
   pointer-events: none;
   transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out);
   font-family: var(--font-body);
@@ -117,5 +122,6 @@
 
 .tile:hover .shopBtn {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
 }
