@@ -14,19 +14,47 @@ export interface Collection {
   img: string;
   pos?: string;
   catKeyword?: string;
+  l1Kw?: string;
+  l2Kw?: string;
+  l3Kw?: string;
   fallbackHref: string;
 }
 
-function resolveHref(tree: CategoryNode[], catKeyword: string | undefined, fallback: string): string {
-  if (!catKeyword || tree.length === 0) return fallback;
-  const kw = catKeyword.toLowerCase();
-  const l1 = tree.find(n => n.name.toLowerCase().startsWith(kw) || n.slug.toLowerCase().startsWith(kw));
-  if (l1) return `/category/${l1.slug}`;
-  for (const node of tree) {
-    const l2 = (node.children ?? []).find(n => n.name.toLowerCase().startsWith(kw) || n.slug.toLowerCase().startsWith(kw));
-    if (l2) return `/category/${l2.slug}`;
+function nodeMatches(node: CategoryNode, kw: string): boolean {
+  const k = kw.toLowerCase();
+  const name = node.name.toLowerCase();
+  const slug = node.slug.toLowerCase();
+  return name.startsWith(k) || slug.startsWith(k) || name.includes(k) || slug.includes(k);
+}
+
+function resolveHref(tree: CategoryNode[], c: Collection): string {
+  if (tree.length === 0) return c.fallbackHref;
+
+  // Explicit 3-level lookup: l1Kw → l2Kw → l3Kw
+  if (c.l1Kw && c.l2Kw && c.l3Kw) {
+    const l1 = tree.find(n => nodeMatches(n, c.l1Kw!));
+    if (l1) {
+      const l2 = (l1.children ?? []).find(n => nodeMatches(n, c.l2Kw!));
+      if (l2) {
+        const l3 = (l2.children ?? []).find(n => nodeMatches(n, c.l3Kw!));
+        if (l3) return `/category/${l3.slug}`;
+      }
+    }
+    return c.fallbackHref;
   }
-  return fallback;
+
+  // catKeyword: searches L1 first, then L2
+  if (c.catKeyword) {
+    const kw = c.catKeyword.toLowerCase();
+    const l1 = tree.find(n => n.name.toLowerCase().startsWith(kw) || n.slug.toLowerCase().startsWith(kw));
+    if (l1) return `/category/${l1.slug}`;
+    for (const node of tree) {
+      const l2 = (node.children ?? []).find(n => n.name.toLowerCase().startsWith(kw) || n.slug.toLowerCase().startsWith(kw));
+      if (l2) return `/category/${l2.slug}`;
+    }
+  }
+
+  return c.fallbackHref;
 }
 
 interface CollectionGridProps {
@@ -64,7 +92,7 @@ export default function CollectionGrid({ collections, title, titleHi }: Collecti
         {collections.map((c) => (
           <Link
             key={c.id}
-            href={resolveHref(tree, c.catKeyword, c.fallbackHref)}
+            href={resolveHref(tree, c)}
             className={styles.tile}
           >
             <img

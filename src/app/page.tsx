@@ -43,7 +43,9 @@ const featuredCollections: Collection[] = [
     descHi: 'हर मूड के लिए डेनिम',
     img: '/banners/jeans-card.jpg',
     pos: 'center top',
-    catKeyword: 'jean',
+    l1Kw: 'women',
+    l2Kw: 'bottom',
+    l3Kw: 'girl',
     fallbackHref: '/womens?category=jeans',
   },
   {
