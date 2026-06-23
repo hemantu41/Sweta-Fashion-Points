@@ -10,6 +10,15 @@
 
 @media (max-width: 680px) {
   .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .tile { height: 200px; }
+  .shopBtnWrap { display: none; }
+  .caption { padding: 0 12px 14px; }
+  .main h3 { font-size: 16px; margin-bottom: 4px; }
+  .rule { margin-bottom: 4px; }
+  .main p { font-size: 12px; }
+  .overlay {
+    background: linear-gradient(to top, rgba(31, 14, 23, 0.92) 0%, rgba(31, 14, 23, 0.25) 55%, transparent 75%);
+  }
 }
 
 .tile {
@@ -27,10 +36,6 @@
 .tile:hover {
   transform: translateY(-10px);
   box-shadow: var(--shadow-xl);
-}
-
-@media (max-width: 680px) {
-  .tile { height: 200px; }
 }
 
 .img {
