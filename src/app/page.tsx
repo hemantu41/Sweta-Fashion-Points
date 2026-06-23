@@ -56,7 +56,9 @@ const featuredCollections: Collection[] = [
     descHi: 'आराम और स्टाइल का मेल',
     img: '/banners/night-suits-card.jpg',
     pos: 'center top',
-    catKeyword: 'night',
+    l1Kw: 'women',
+    l2Kw: 'inner',
+    l3Kw: 'night',
     fallbackHref: '/womens?category=night-suits',
   },
 ];
