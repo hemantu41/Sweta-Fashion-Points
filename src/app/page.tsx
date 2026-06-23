@@ -61,6 +61,18 @@ const featuredCollections: Collection[] = [
     fallbackHref: '/mens?category=ethnic',
   },
   {
+    id: 'mens-shirts',
+    name: "Men's Shirts",
+    nameHi: 'पुरुष शर्ट',
+    desc: 'Formal, Casual & More',
+    descHi: 'फॉर्मल, कैजुअल और अधिक',
+    img: '/banners/mens-shirts-card.jpg',
+    pos: 'center top',
+    l1Kw: 'men',
+    l2Kw: 'top',
+    fallbackHref: '/mens?category=topwear',
+  },
+  {
     id: 'night-suits',
     name: 'Night Suits',
     nameHi: 'नाइट सूट',
