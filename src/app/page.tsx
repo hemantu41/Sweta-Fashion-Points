@@ -73,6 +73,18 @@ const featuredCollections: Collection[] = [
     fallbackHref: '/mens?category=topwear',
   },
   {
+    id: 't-shirts',
+    name: 'T-Shirts',
+    nameHi: 'टी-शर्ट',
+    desc: 'Casual & Everyday Comfort',
+    descHi: 'कैजुअल और रोज़ाना आराम',
+    img: '/banners/t-shirts-card.jpg',
+    pos: 'center top',
+    l1Kw: 'men',
+    l2Kw: 'top',
+    fallbackHref: '/mens?category=topwear',
+  },
+  {
     id: 'night-suits',
     name: 'Night Suits',
     nameHi: 'नाइट सूट',
