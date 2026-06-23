@@ -47,15 +47,15 @@ const featuredCollections: Collection[] = [
     fallbackHref: '/womens?category=jeans',
   },
   {
-    id: 'kids',
-    name: 'Kids Fashion',
-    nameHi: 'बच्चों का फैशन',
-    desc: 'Playful & Vibrant',
-    descHi: 'खिलंदड़ा और रंगीन',
-    img: '/kids-collection.jpg',
+    id: 'night-suits',
+    name: 'Night Suits',
+    nameHi: 'नाइट सूट',
+    desc: 'Comfort Meets Style',
+    descHi: 'आराम और स्टाइल का मेल',
+    img: '/banners/night-suits-card.jpg',
     pos: 'center top',
-    catKeyword: 'kid',
-    fallbackHref: '/kids',
+    catKeyword: 'night',
+    fallbackHref: '/womens?category=night-suits',
   },
 ];
 
