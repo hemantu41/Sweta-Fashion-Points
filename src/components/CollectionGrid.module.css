@@ -11,7 +11,7 @@
 @media (max-width: 680px) {
   .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .shopBtnWrap { display: none; }
-  .caption { padding: 0 10px 12px; }
+  .caption { padding: 0 10px 14px; }
   .main h3 { font-size: 14px; margin-bottom: 4px; }
   .rule { margin-bottom: 4px; }
   .main p { font-size: 11px; }
@@ -20,6 +20,8 @@
   }
 }
 
+/* Tile: flex container so caption is a normal flow child pushed to bottom.
+   img + overlay are position:absolute so they don't affect flex layout. */
 .tile {
   position: relative;
   aspect-ratio: 4 / 5;
@@ -27,9 +29,11 @@
   overflow: hidden;
   cursor: pointer;
   box-shadow: var(--shadow-lg);
-  display: block;
-  transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   text-decoration: none;
+  transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out);
 }
 
 .tile:hover {
@@ -56,12 +60,11 @@
   background: linear-gradient(to top, rgba(31, 14, 23, 0.88) 0%, rgba(31, 14, 23, 0.18) 45%, transparent 65%);
 }
 
-/* Caption always anchored to the bottom */
+/* Caption is a flex child — always at the bottom without absolute positioning */
 .caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
+  z-index: 1;
+  width: 100%;
   padding: 0 22px 24px;
   color: #fff;
   text-align: center;
