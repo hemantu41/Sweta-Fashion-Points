@@ -10,21 +10,13 @@
 
 @media (max-width: 680px) {
   .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .shopBtnWrap { display: none; }
-  .caption { padding: 0 10px 14px; }
-  .main h3 { font-size: 14px; margin-bottom: 4px; }
-  .rule { margin-bottom: 4px; }
-  .main p { font-size: 11px; }
-  .overlay {
-    background: linear-gradient(to top, rgba(31, 14, 23, 0.92) 0%, rgba(31, 14, 23, 0.25) 50%, transparent 70%);
-  }
 }
 
-/* Tile: flex container so caption is a normal flow child pushed to bottom.
-   img + overlay are position:absolute so they don't affect flex layout. */
+/* Tile: flex column so caption is the only in-flow child and sits at bottom.
+   Explicit height per breakpoint so the tile never collapses on mobile. */
 .tile {
   position: relative;
-  aspect-ratio: 4 / 5;
+  height: 420px;
   border-radius: var(--radius-2xl);
   overflow: hidden;
   cursor: pointer;
@@ -36,11 +28,20 @@
   transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out);
 }
 
+@media (max-width: 1024px) {
+  .tile { height: 380px; }
+}
+
+@media (max-width: 680px) {
+  .tile { height: 240px; }
+}
+
 .tile:hover {
   transform: translateY(-10px);
   box-shadow: var(--shadow-xl);
 }
 
+/* Image fills the entire tile behind everything */
 .img {
   position: absolute;
   inset: 0;
@@ -54,18 +55,24 @@
   transform: scale(1.06);
 }
 
+/* Dark gradient only at the bottom so the model's face stays visible */
 .overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(31, 14, 23, 0.88) 0%, rgba(31, 14, 23, 0.18) 45%, transparent 65%);
+  background: linear-gradient(to top,
+    rgba(31, 14, 23, 0.90) 0%,
+    rgba(31, 14, 23, 0.50) 30%,
+    rgba(31, 14, 23, 0.10) 55%,
+    transparent 70%
+  );
 }
 
-/* Caption is a flex child — always at the bottom without absolute positioning */
+/* Caption is a flex child — always pinned to the bottom, never overlapping face */
 .caption {
   position: relative;
   z-index: 1;
   width: 100%;
-  padding: 0 22px 24px;
+  padding: 0 18px 20px;
   color: #fff;
   text-align: center;
   display: flex;
@@ -73,12 +80,21 @@
   align-items: center;
 }
 
+@media (max-width: 680px) {
+  .caption { padding: 0 10px 14px; }
+}
+
 .main h3 {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 20px;
   color: #fff;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+@media (max-width: 680px) {
+  .main h3 { font-size: 14px; margin-bottom: 4px; }
 }
 
 .rule {
@@ -86,23 +102,36 @@
   width: 34px;
   height: 2px;
   background: var(--ifp-gold);
-  margin: 0 auto 8px;
+  margin: 0 auto 6px;
+}
+
+@media (max-width: 680px) {
+  .rule { margin-bottom: 4px; }
 }
 
 .main p {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
   margin: 0;
   font-weight: 300;
   font-family: var(--font-body);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
-/* Wrapper collapses to zero height when not hovered */
+@media (max-width: 680px) {
+  .main p { font-size: 11px; }
+}
+
+/* Shop Now — hidden on mobile (no hover on touch) */
 .shopBtnWrap {
   overflow: hidden;
   max-height: 0;
   margin-top: 0;
   transition: max-height 0.4s var(--ease-out), margin-top 0.4s var(--ease-out);
+}
+
+@media (max-width: 680px) {
+  .shopBtnWrap { display: none; }
 }
 
 .tile:hover .shopBtnWrap {
