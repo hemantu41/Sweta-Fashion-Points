@@ -50,8 +50,8 @@ const featuredCollections: Collection[] = [
   },
   {
     id: 'mens-ethnic',
-    name: "Men's Ethnic Wear",
-    nameHi: 'पुरुष एथनिक वियर',
+    name: 'Ethnic Wear',
+    nameHi: 'एथनिक वियर',
     desc: 'Kurta, Sherwani & More',
     descHi: 'कुर्ता, शेरवानी और अधिक',
     img: '/banners/ethnic-wear-card.jpg',
@@ -62,8 +62,8 @@ const featuredCollections: Collection[] = [
   },
   {
     id: 'mens-shirts',
-    name: "Men's Shirts",
-    nameHi: 'पुरुष शर्ट',
+    name: 'Shirts',
+    nameHi: 'शर्ट',
     desc: 'Formal, Casual & More',
     descHi: 'फॉर्मल, कैजुअल और अधिक',
     img: '/banners/mens-shirts-card.jpg',
