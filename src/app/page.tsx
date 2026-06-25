@@ -3,9 +3,6 @@
 import {
   BannerCarousel,
   CollectionGrid,
-  MensCollectionSection,
-  WomensCollectionSection,
-  SareesCollectionSection,
   KidsCollectionSection,
   BeautyMakeupCollectionSection,
   FootwearCollectionSection,
@@ -113,9 +110,6 @@ export default function Home() {
       />
 
       {/* Detailed collection sections */}
-      <MensCollectionSection />
-      <WomensCollectionSection />
-      <SareesCollectionSection />
       <KidsCollectionSection />
       <BeautyMakeupCollectionSection />
       <FootwearCollectionSection />
