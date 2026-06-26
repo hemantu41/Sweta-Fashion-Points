@@ -94,6 +94,18 @@ const featuredCollections: Collection[] = [
     l3Kw: 'night',
     fallbackHref: '/womens?category=night-suits',
   },
+  {
+    id: 'casual-wear',
+    name: 'Casual Wear',
+    nameHi: 'कैजुअल वियर',
+    desc: 'Joggers, Tracks & More',
+    descHi: 'जॉगर्स, ट्रैक्स और अधिक',
+    img: '/banners/casual-wear-card.jpg',
+    pos: 'center top',
+    l1Kw: 'men',
+    l2Kw: 'bottom',
+    fallbackHref: '/mens?category=bottomwear',
+  },
 ];
 
 export default function Home() {
