@@ -115,6 +115,18 @@ const featuredCollections: Collection[] = [
     l2Kw: 'ethnic',
     fallbackHref: '/kids?category=ethnic',
   },
+  {
+    id: 'girls-tops',
+    name: 'Tops',
+    nameHi: 'टॉप्स',
+    desc: 'Trendy Tops for Girls',
+    descHi: 'लड़कियों के लिए ट्रेंडी टॉप्स',
+    img: '/banners/girls-top-card.jpg',
+    pos: 'center top',
+    l1Kw: 'kid',
+    l2Kw: 'top',
+    fallbackHref: '/kids?category=tops',
+  },
 ];
 
 export default function Home() {
