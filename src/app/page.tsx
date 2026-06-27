@@ -103,6 +103,18 @@ const featuredCollections: Collection[] = [
     l2Kw: 'bottom',
     fallbackHref: '/mens?category=bottomwear',
   },
+  {
+    id: 'girls-ethnic-wear',
+    name: 'Girls Ethnic Wear',
+    nameHi: 'गर्ल्स एथनिक वियर',
+    desc: 'Kurtas, Lehengas & More',
+    descHi: 'कुर्ता, लहंगा और अधिक',
+    img: '/banners/girls-ethnic-wear-card.jpg',
+    pos: 'center top',
+    l1Kw: 'kid',
+    l2Kw: 'ethnic',
+    fallbackHref: '/kids?category=ethnic',
+  },
 ];
 
 export default function Home() {
