@@ -141,8 +141,8 @@ const featuredCollections: Collection[] = [
   },
   {
     id: 'girls-pants',
-    name: 'Pants & Joggers',
-    nameHi: 'पैंट्स और जॉगर्स',
+    name: 'Pants',
+    nameHi: 'पैंट्स',
     desc: 'Casual Comfort for Girls',
     descHi: 'लड़कियों के लिए कैजुअल कम्फर्ट',
     img: '/banners/girls-pants-card.jpg',
