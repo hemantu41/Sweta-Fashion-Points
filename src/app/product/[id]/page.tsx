@@ -872,65 +872,6 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* ── Seller Information ───────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderTop: `0.5px solid ${C.border}` }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px', fontFamily: 'var(--font-playfair)' }}>
-            Sold By
-          </h2>
-          {product.seller ? (() => {
-            const sid = product.seller!.id;
-            const sellerRating  = +(3.5 + (hashId(sid) % 20) / 10).toFixed(1);
-            const ratingCount   = mockStat(sid, 'rat', 120, 4800);
-            const followers     = mockStat(sid, 'fol', 50,  1200);
-            const productCount  = mockStat(sid, 'prd', 10,  280);
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '16px 20px', background: C.cream }}>
-                {/* Left: avatar + info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  {/* Avatar circle */}
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: C.maroonPale, border: `2px solid ${C.maroon}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 20, fontWeight: 800, color: C.maroon }}>
-                      {product.seller!.businessName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.text }}>{product.seller!.businessName}</p>
-                    {(product.seller!.city || product.seller!.state) && (
-                      <p style={{ margin: '2px 0 8px', fontSize: 12, color: C.muted }}>
-                        {[product.seller!.city, product.seller!.state].filter(Boolean).join(', ')}
-                      </p>
-                    )}
-                    {/* Stats row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: C.green, borderRadius: 4, padding: '2px 7px' }}>
-                          <Svg d={I.star} size={10} fill="#fff" stroke="none" />
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{sellerRating}</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{ratingCount.toLocaleString()}</span>
-                        <span style={{ fontSize: 12, color: C.muted }}>Ratings</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{followers.toLocaleString()}</span>
-                        <span style={{ fontSize: 12, color: C.muted }}>Followers</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{productCount}</span>
-                        <span style={{ fontSize: 12, color: C.muted }}>Products</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })() : (
-            <p style={{ fontSize: 13, color: C.muted }}>Seller information not available.</p>
-          )}
-        </div>
-      </div>
 
       {/* ── Product Ratings & Reviews ────────────────────────────────────────── */}
       <div style={{ background: C.cream, borderTop: `0.5px solid ${C.border}` }}>
