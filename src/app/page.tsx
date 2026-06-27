@@ -127,6 +127,18 @@ const featuredCollections: Collection[] = [
     l2Kw: 'top',
     fallbackHref: '/kids?category=tops',
   },
+  {
+    id: 'party-wear',
+    name: 'Party Wear',
+    nameHi: 'पार्टी वियर',
+    desc: 'Dresses & Gowns for Girls',
+    descHi: 'लड़कियों के लिए ड्रेस और गाउन',
+    img: '/banners/party-wear-card.jpg',
+    pos: 'center top',
+    l1Kw: 'kid',
+    l2Kw: 'party',
+    fallbackHref: '/kids?category=party-wear',
+  },
 ];
 
 export default function Home() {
