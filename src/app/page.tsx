@@ -64,8 +64,8 @@ const featuredCollections: Collection[] = [
     img: '/banners/mens-shirts-card.jpg',
     pos: 'center top',
     l1Kw: 'men',
-    l2Kw: 'top wear',
-    fallbackHref: '/category/men-top',
+    l2Kw: 'top',
+    fallbackHref: '/category/mens-top',
   },
   {
     id: 't-shirts',
@@ -76,8 +76,8 @@ const featuredCollections: Collection[] = [
     img: '/banners/t-shirts-card.jpg',
     pos: 'center top',
     l1Kw: 'men',
-    l2Kw: 'top wear',
-    fallbackHref: '/category/men-top',
+    l2Kw: 'top',
+    fallbackHref: '/category/mens-top',
   },
   {
     id: 'mens-ethnic',
