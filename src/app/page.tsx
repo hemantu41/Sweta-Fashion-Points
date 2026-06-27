@@ -139,6 +139,18 @@ const featuredCollections: Collection[] = [
     l2Kw: 'party',
     fallbackHref: '/kids?category=party-wear',
   },
+  {
+    id: 'girls-pants',
+    name: 'Pants & Joggers',
+    nameHi: 'पैंट्स और जॉगर्स',
+    desc: 'Casual Comfort for Girls',
+    descHi: 'लड़कियों के लिए कैजुअल कम्फर्ट',
+    img: '/banners/girls-pants-card.jpg',
+    pos: 'center top',
+    l1Kw: 'kid',
+    l2Kw: 'bottom',
+    fallbackHref: '/kids?category=bottomwear',
+  },
 ];
 
 export default function Home() {
