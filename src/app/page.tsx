@@ -105,8 +105,8 @@ const featuredCollections: Collection[] = [
   },
   {
     id: 'girls-ethnic-wear',
-    name: 'Girls Ethnic Wear',
-    nameHi: 'गर्ल्स एथनिक वियर',
+    name: 'Ethnic Wear',
+    nameHi: 'एथनिक वियर',
     desc: 'Kurtas, Lehengas & More',
     descHi: 'कुर्ता, लहंगा और अधिक',
     img: '/banners/girls-ethnic-wear-card.jpg',
