@@ -138,8 +138,9 @@ const featuredCollections: Collection[] = [
     img: '/banners/party-wear-card.jpg',
     pos: 'center top',
     l1Kw: 'kid',
-    l2Kw: 'party',
-    fallbackHref: '/kids?category=party-wear',
+    l2Kw: 'girl',
+    l3Kw: 'party',
+    fallbackHref: '/category/party-wear',
   },
   {
     id: 'girls-pants',
@@ -150,8 +151,9 @@ const featuredCollections: Collection[] = [
     img: '/banners/girls-pants-card.jpg',
     pos: 'center top',
     l1Kw: 'kid',
-    l2Kw: 'bottom',
-    fallbackHref: '/kids?category=bottomwear',
+    l2Kw: 'girl',
+    l3Kw: 'pant',
+    fallbackHref: '/category/pants-leggings',
   },
 ];
 
