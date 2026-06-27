@@ -88,8 +88,8 @@ const featuredCollections: Collection[] = [
     img: '/banners/ethnic-wear-card.jpg',
     pos: 'center top',
     l1Kw: 'men',
-    l2Kw: 'ethnic wear',
-    fallbackHref: '/category/men-ethnic',
+    l2Kw: 'ethnic',
+    fallbackHref: '/category/mens-ethnic',
   },
   {
     id: 'casual-wear',
