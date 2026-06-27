@@ -32,6 +32,7 @@ export const metadata: Metadata = {
     siteName: "Insta Fashion Points",
     locale: "en_IN",
     type: "website",
+    images: [{ url: "https://fashionpoints.co.in/logo.jpg", width: 400, height: 400, alt: "Insta Fashion Points" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -62,53 +63,74 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "ClothingStore",
-              name: "Insta Fashion Points",
-              image: "https://fashionpoints.co.in/logo.png",
-              "@id": "https://fashionpoints.co.in",
-              url: "https://fashionpoints.co.in",
-              telephone: "+91-8294153256",
-              address: {
-                "@type": "PostalAddress",
-                streetAddress: "Amas",
-                addressLocality: "Gaya",
-                addressRegion: "Bihar",
-                postalCode: "824219",
-                addressCountry: "IN",
-              },
-              geo: {
-                "@type": "GeoCoordinates",
-                latitude: 24.79,
-                longitude: 85.0,
-              },
-              openingHoursSpecification: {
-                "@type": "OpeningHoursSpecification",
-                dayOfWeek: [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                  "Saturday",
-                  "Sunday",
-                ],
-                opens: "09:00",
-                closes: "17:30",
-              },
-              priceRange: "₹₹",
-              servesCuisine: "Clothing",
-              areaServed: {
-                "@type": "GeoCircle",
-                geoMidpoint: {
+            __html: JSON.stringify([
+              {
+                "@context": "https://schema.org",
+                "@type": "ClothingStore",
+                "@id": "https://fashionpoints.co.in/#store",
+                name: "Insta Fashion Points",
+                image: "https://fashionpoints.co.in/logo.jpg",
+                url: "https://fashionpoints.co.in",
+                telephone: "+91-8294153256",
+                address: {
+                  "@type": "PostalAddress",
+                  streetAddress: "Amas",
+                  addressLocality: "Gaya",
+                  addressRegion: "Bihar",
+                  postalCode: "824219",
+                  addressCountry: "IN",
+                },
+                geo: {
                   "@type": "GeoCoordinates",
                   latitude: 24.79,
                   longitude: 85.0,
                 },
-                geoRadius: "100000",
+                openingHoursSpecification: {
+                  "@type": "OpeningHoursSpecification",
+                  dayOfWeek: ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+                  opens: "09:00",
+                  closes: "17:30",
+                },
+                priceRange: "₹₹",
+                currenciesAccepted: "INR",
+                paymentAccepted: "Cash, UPI, Credit Card, Debit Card",
+                areaServed: {
+                  "@type": "GeoCircle",
+                  geoMidpoint: {
+                    "@type": "GeoCoordinates",
+                    latitude: 24.79,
+                    longitude: 85.0,
+                  },
+                  geoRadius: "100000",
+                },
+                hasOfferCatalog: {
+                  "@type": "OfferCatalog",
+                  name: "Fashion Collection",
+                  itemListElement: [
+                    { "@type": "Offer", itemOffered: { "@type": "Product", name: "Sarees" } },
+                    { "@type": "Offer", itemOffered: { "@type": "Product", name: "Kurtis" } },
+                    { "@type": "Offer", itemOffered: { "@type": "Product", name: "Men's Clothing" } },
+                    { "@type": "Offer", itemOffered: { "@type": "Product", name: "Kids Clothing" } },
+                  ],
+                },
+                sameAs: ["https://fashionpoints.co.in"],
               },
-            }),
+              {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "@id": "https://fashionpoints.co.in/#website",
+                name: "Insta Fashion Points",
+                url: "https://fashionpoints.co.in",
+                potentialAction: {
+                  "@type": "SearchAction",
+                  target: {
+                    "@type": "EntryPoint",
+                    urlTemplate: "https://fashionpoints.co.in/search?q={search_term_string}",
+                  },
+                  "query-input": "required name=search_term_string",
+                },
+              },
+            ]),
           }}
         />
       </head>
