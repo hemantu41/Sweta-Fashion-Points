@@ -112,8 +112,9 @@ const featuredCollections: Collection[] = [
     img: '/banners/girls-ethnic-wear-card.jpg',
     pos: 'center top',
     l1Kw: 'kid',
-    l2Kw: 'ethnic',
-    fallbackHref: '/kids?category=ethnic',
+    l2Kw: 'girl',
+    l3Kw: 'ethnic',
+    fallbackHref: '/category/ethnic-wear',
   },
   {
     id: 'girls-tops',
@@ -124,8 +125,9 @@ const featuredCollections: Collection[] = [
     img: '/banners/girls-top-card.jpg',
     pos: 'center top',
     l1Kw: 'kid',
-    l2Kw: 'top',
-    fallbackHref: '/kids?category=tops',
+    l2Kw: 'girl',
+    l3Kw: 'top',
+    fallbackHref: '/category/tops-t-shirts',
   },
   {
     id: 'party-wear',
