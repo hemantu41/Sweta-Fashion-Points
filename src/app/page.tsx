@@ -64,8 +64,8 @@ const featuredCollections: Collection[] = [
     img: '/banners/mens-shirts-card.jpg',
     pos: 'center top',
     l1Kw: 'men',
-    l2Kw: 'top',
-    fallbackHref: '/mens?category=topwear',
+    l2Kw: 'top wear',
+    fallbackHref: '/category/men-top',
   },
   {
     id: 't-shirts',
@@ -76,8 +76,8 @@ const featuredCollections: Collection[] = [
     img: '/banners/t-shirts-card.jpg',
     pos: 'center top',
     l1Kw: 'men',
-    l2Kw: 'top',
-    fallbackHref: '/mens?category=topwear',
+    l2Kw: 'top wear',
+    fallbackHref: '/category/men-top',
   },
   {
     id: 'mens-ethnic',
@@ -88,8 +88,8 @@ const featuredCollections: Collection[] = [
     img: '/banners/ethnic-wear-card.jpg',
     pos: 'center top',
     l1Kw: 'men',
-    l2Kw: 'ethnic',
-    fallbackHref: '/mens?category=ethnic',
+    l2Kw: 'ethnic wear',
+    fallbackHref: '/category/men-ethnic',
   },
   {
     id: 'casual-wear',
@@ -100,8 +100,8 @@ const featuredCollections: Collection[] = [
     img: '/banners/casual-wear-card.jpg',
     pos: 'center top',
     l1Kw: 'men',
-    l2Kw: 'bottom',
-    fallbackHref: '/mens?category=bottomwear',
+    l2Kw: 'bottom wear',
+    fallbackHref: '/category/men-bottom',
   },
   {
     id: 'girls-ethnic-wear',
