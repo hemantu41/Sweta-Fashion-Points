@@ -722,6 +722,7 @@ export default function ProductDetailPage() {
                 { k: 'Collar',   v: product.collar   },
                 { k: 'Pattern',  v: product.pattern  },
                 { k: 'Occasion', v: product.occasion },
+                { k: 'Seller',   v: product.seller?.businessName },
               ].filter(f => f.v);
 
               // Always-visible: first 2 fields (Category + Fabric if present)
