@@ -11,8 +11,5 @@ export { default as AuthGuard } from './AuthGuard';
 export { default as MainLayout } from './MainLayout';
 export { default as CollectionSection } from './CollectionSection';
 export { default as BannerCarousel } from './BannerCarousel';
-export { default as KidsCollectionSection } from './KidsCollectionSection';
-export { default as BeautyMakeupCollectionSection } from './BeautyMakeupCollectionSection';
-export { default as FootwearCollectionSection } from './FootwearCollectionSection';
 export { default as CollectionGrid } from './CollectionGrid';
 export type { Collection } from './CollectionGrid';

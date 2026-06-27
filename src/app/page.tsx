@@ -3,9 +3,6 @@
 import {
   BannerCarousel,
   CollectionGrid,
-  KidsCollectionSection,
-  BeautyMakeupCollectionSection,
-  FootwearCollectionSection,
 } from '@/components';
 import type { Collection } from '@/components';
 
@@ -121,10 +118,6 @@ export default function Home() {
         titleHi="श्रेणी के अनुसार खरीदें"
       />
 
-      {/* Detailed collection sections */}
-      <KidsCollectionSection />
-      <BeautyMakeupCollectionSection />
-      <FootwearCollectionSection />
     </>
   );
 }
