@@ -154,6 +154,7 @@ export default function ProductDetailPage() {
   const [sizeGuideOpen,       setSizeGuideOpen]       = useState(false);
   const [imgHovered,          setImgHovered]          = useState(false);
   const [productInfoExpanded, setProductInfoExpanded] = useState(false);
+  const [reviewsExpanded,     setReviewsExpanded]     = useState(false);
 
   // Add-to-cart feedback
   const [cartMsg, setCartMsg] = useState('');
@@ -922,33 +923,61 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Mock review cards — TODO: replace with real spf_reviews data */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {[
+          {(() => {
+            const allReviews = [
               { name: 'Meenakshi S.',  stars: 5, text: 'Absolutely love this product! The quality is outstanding and delivery was super fast. Highly recommend.' },
               { name: 'Rahul T.',      stars: 4, text: 'Good product, matches the description. Fabric is comfortable. Slightly slow delivery but overall happy.' },
               { name: 'Priya Verma',   stars: 5, text: 'Perfect fit, exactly as shown. The seller was responsive and packaging was very good.' },
-            ].map(({ name, stars, text }) => (
-              <div key={name} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  {/* Avatar */}
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.maroonPale, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: C.maroon }}>{name.charAt(0)}</span>
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</p>
-                    <div style={{ display: 'flex', gap: 2, marginTop: 2 }}>
-                      {[1,2,3,4,5].map(s => (
-                        <svg key={s} width={12} height={12} viewBox="0 0 24 24" fill={s <= stars ? C.gold : C.border} stroke="none">
-                          <path d={I.star} />
-                        </svg>
-                      ))}
+            ];
+            const visibleReviews = reviewsExpanded ? allReviews : allReviews.slice(0, 1);
+            return (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {visibleReviews.map(({ name, stars, text }) => (
+                    <div key={name} style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.maroonPale, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: C.maroon }}>{name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.text }}>{name}</p>
+                          <div style={{ display: 'flex', gap: 2, marginTop: 2 }}>
+                            {[1,2,3,4,5].map(s => (
+                              <svg key={s} width={12} height={12} viewBox="0 0 24 24" fill={s <= stars ? C.gold : C.border} stroke="none">
+                                <path d={I.star} />
+                              </svg>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{text}</p>
                     </div>
-                  </div>
+                  ))}
                 </div>
-                <p style={{ margin: 0, fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{text}</p>
-              </div>
-            ))}
-          </div>
+                {allReviews.length > 1 && (
+                  <button
+                    onClick={() => setReviewsExpanded(v => !v)}
+                    style={{
+                      marginTop: 14, width: '100%', padding: '10px 16px',
+                      background: 'none', border: `1.5px solid ${C.border}`, borderRadius: 8,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      fontSize: 13, fontWeight: 600, color: C.maroon,
+                    }}
+                  >
+                    {reviewsExpanded ? 'Show less' : `View all ${allReviews.length} reviews`}
+                    <svg
+                      width={14} height={14} viewBox="0 0 24 24"
+                      fill="none" stroke={C.maroon} strokeWidth={2.5}
+                      strokeLinecap="round" strokeLinejoin="round"
+                      style={{ transition: 'transform 250ms ease', transform: reviewsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
