@@ -184,6 +184,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Detach this address from any orders before deleting to avoid FK violations
+    await supabaseAdmin
+      .from('spf_orders')
+      .update({ address_id: null })
+      .eq('address_id', addressId);
+
     const { error } = await supabaseAdmin
       .from('spf_addresses')
       .delete()
