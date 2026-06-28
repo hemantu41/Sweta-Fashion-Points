@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Lato } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { AuthGuard, MainLayout } from "@/components";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
+import GoogleAnalyticsPageTracker from "@/components/GoogleAnalyticsPageTracker";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -144,6 +147,10 @@ export default function RootLayout({
             </CartProvider>
           </LanguageProvider>
         </AuthProvider>
+        <GoogleAnalytics />
+        <Suspense fallback={null}>
+          <GoogleAnalyticsPageTracker />
+        </Suspense>
       </body>
     </html>
   );
