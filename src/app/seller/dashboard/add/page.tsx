@@ -425,7 +425,7 @@ export default function AddProductPage() {
     description && description.trim().length >= 50 &&
     price &&
     stock &&
-    images.length >= 2 &&
+    images.length >= 3 &&
     sizes.length > 0 &&
     checked1 &&
     checked2 &&
@@ -689,7 +689,7 @@ export default function AddProductPage() {
           </SectionCard>
 
           {/* ── Section 3: Photos ── */}
-          <SectionCard title="Photos & Videos" badge={<span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Min 2 required</span>}>
+          <SectionCard title="Photos & Videos" badge={<span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Min 3 required</span>}>
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -777,8 +777,8 @@ export default function AddProductPage() {
             )}
 
             <p className="text-[10px] mt-1">
-              {images.length < 2
-                ? <span className="text-amber-600">{images.length}/8 photos — {2 - images.length} more required (min 2 mandatory)</span>
+              {images.length < 3
+                ? <span className="text-amber-600">{images.length}/8 photos — {3 - images.length} more required (min 3 mandatory)</span>
                 : <span className="text-green-600">✓ {images.length}/8 photos — requirement met</span>
               }
             </p>
