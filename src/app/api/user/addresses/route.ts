@@ -185,10 +185,14 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Detach this address from any orders before deleting to avoid FK violations
-    await supabaseAdmin
+    const { error: unlinkError } = await supabaseAdmin
       .from('spf_orders')
       .update({ address_id: null })
       .eq('address_id', addressId);
+
+    if (unlinkError) {
+      console.error('Address unlink from orders error:', unlinkError);
+    }
 
     const { error } = await supabaseAdmin
       .from('spf_addresses')
@@ -199,7 +203,7 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       console.error('Address delete error:', error);
       return NextResponse.json(
-        { error: 'Failed to delete address' },
+        { error: 'Failed to delete address', detail: error.message, code: error.code },
         { status: 500 }
       );
     }
@@ -211,7 +215,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Address delete error:', error);
     return NextResponse.json(
-      { error: 'Something went wrong' },
+      { error: 'Something went wrong', detail: String(error) },
       { status: 500 }
     );
   }

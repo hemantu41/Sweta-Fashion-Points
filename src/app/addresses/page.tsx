@@ -132,7 +132,8 @@ export default function AddressesPage() {
         setAddresses(addresses.filter(addr => addr.id !== id));
         setMessage({ type: 'success', text: 'Address deleted successfully!' });
       } else {
-        setMessage({ type: 'error', text: 'Failed to delete address' });
+        const data = await response.json().catch(() => ({}));
+        setMessage({ type: 'error', text: data.detail || data.error || 'Failed to delete address' });
       }
     } catch (error) {
       console.error('Error deleting address:', error);
