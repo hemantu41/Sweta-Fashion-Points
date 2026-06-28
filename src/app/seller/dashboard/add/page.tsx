@@ -101,6 +101,66 @@ function calcShippingCost(weightGrams: number): number {
   return 210 + Math.ceil((g - 3000) / 500) * 30;
 }
 
+/* ─── Smart description generator ──────────────────────────────────────────── */
+function generateDescriptionBullets({
+  name, l1Name, l2Name, l3Name,
+  fabric, colors, sizes, workTypes, pattern, washCare, occasionTagIds,
+}: {
+  name: string; l1Name?: string; l2Name?: string; l3Name?: string;
+  fabric: string; colors: string[]; sizes: string[];
+  workTypes: string[]; pattern: string; washCare: string; occasionTagIds: string[];
+}): string {
+  const bullets: string[] = [];
+  const productType = l3Name || l2Name || 'outfit';
+  const collectionLabel = l2Name || l1Name || '';
+
+  // Bullet 1 — Product intro
+  const intro = name
+    ? `${name} — a beautifully crafted ${productType}${collectionLabel ? ` from the ${collectionLabel} collection` : ''}.`
+    : `A premium ${productType}${collectionLabel ? ` from the ${collectionLabel} range` : ''}.`;
+  bullets.push(intro.trim());
+
+  // Bullet 2 — Fabric & craftsmanship
+  const craftParts: string[] = [];
+  if (fabric) craftParts.push(`made with high-quality ${fabric}`);
+  if (workTypes.length > 0) craftParts.push(`featuring intricate ${workTypes.slice(0, 3).join(', ')} work`);
+  if (pattern) craftParts.push(`in a stunning ${pattern.toLowerCase()} pattern`);
+  if (craftParts.length > 0) {
+    bullets.push(`Superior craftsmanship — ${craftParts.join(', ')}.`);
+  } else {
+    bullets.push('Made with premium quality material that ensures exceptional comfort and durability.');
+  }
+
+  // Bullet 3 — Colors & Sizes
+  const styleParts: string[] = [];
+  if (colors.length > 0) styleParts.push(`available in ${colors.slice(0, 4).join(', ')}${colors.length > 4 ? ' and more' : ''}`);
+  if (sizes.length > 0) styleParts.push(`comes in sizes ${sizes.join(', ')}`);
+  if (styleParts.length > 0) {
+    bullets.push(`Style & fit — ${styleParts.join('; ')}.`);
+  } else {
+    bullets.push('Versatile design suitable for all body types, offering a flattering and comfortable fit.');
+  }
+
+  // Bullet 4 — Occasion
+  const selectedOccasions = occasionTagIds
+    .map(id => OCCASION_TAGS.find(t => t.id === id)?.label)
+    .filter(Boolean) as string[];
+  if (selectedOccasions.length > 0) {
+    bullets.push(`Perfect for ${selectedOccasions.slice(0, 3).join(', ')}${selectedOccasions.length > 3 ? ' and many more occasions' : ''}.`);
+  }
+
+  // Bullet 5 — Wash care
+  if (washCare) {
+    bullets.push(`Care instructions — ${washCare} recommended to preserve fabric quality and colour vibrancy.`);
+  }
+
+  // Fallback bullets to ensure minimum 3
+  if (bullets.length < 3) bullets.push('Elegant design that effortlessly blends tradition with modern style.');
+  if (bullets.length < 3) bullets.push('Makes a perfect gift or a timeless addition to your wardrobe collection.');
+
+  return bullets.map(b => `• ${b}`).join('\n\n');
+}
+
 /* ─── Sub-components ────────────────────────────────────────────────────────── */
 
 function SectionCard({ title, badge, children }: { title: string; badge?: React.ReactNode; children: React.ReactNode }) {
@@ -347,7 +407,29 @@ export default function AddProductPage() {
     setUploading(false);
   }, [images, sellerId]);
 
-  const isValid = name && l3 && description && price && stock && checked1 && checked2 && sellerId;
+  function handleGenerateDescription() {
+    const suggested = generateDescriptionBullets({
+      name,
+      l1Name: l1Label?.name,
+      l2Name: l2Label?.name,
+      l3Name: l3Label?.name,
+      fabric, colors, sizes, workTypes, pattern, washCare,
+      occasionTagIds: occasionTags,
+    });
+    setDescription(suggested);
+  }
+
+  const isValid =
+    name &&
+    l3 &&
+    description && description.trim().length >= 50 &&
+    price &&
+    stock &&
+    images.length >= 2 &&
+    sizes.length > 0 &&
+    checked1 &&
+    checked2 &&
+    sellerId;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -556,11 +638,30 @@ export default function AddProductPage() {
                 <p className="text-[10px] text-[#999] mt-0.5 text-right">{name.length}/120</p>
               </div>
               <div>
-                <FieldLabel required>Description</FieldLabel>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4}
-                  placeholder="Describe the product — fabric, design, occasion, wash care, what's included…"
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-[#666666]">
+                    Description<span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDescription}
+                    className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-semibold rounded-full border border-[rgba(196,154,60,0.5)] text-[#C49A3C] hover:bg-[rgba(196,154,60,0.08)] transition-colors"
+                  >
+                    ✦ Suggest Description
+                  </button>
+                </div>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={6}
+                  placeholder="Fill in name, category, fabric, colours & occasion above — then click ✦ Suggest Description to auto-generate bullet points. You can edit them freely."
                   className={`${INPUT_CLS} resize-none`} />
-                <p className="text-[10px] text-[#999] mt-0.5">{description.length}/2000 chars (min 50)</p>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-[10px] text-[#999]">
+                    {description.trim().length < 50
+                      ? <span className="text-amber-600">{description.trim().length}/50 min chars needed</span>
+                      : <span className="text-green-600">✓ {description.length} chars</span>
+                    }
+                  </p>
+                  <p className="text-[10px] text-[#CCC]">{description.length}/2000</p>
+                </div>
               </div>
               <div>
                 <FieldLabel>Tags / Keywords</FieldLabel>
@@ -588,7 +689,7 @@ export default function AddProductPage() {
           </SectionCard>
 
           {/* ── Section 3: Photos ── */}
-          <SectionCard title="Photos & Videos">
+          <SectionCard title="Photos & Videos" badge={<span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Min 2 required</span>}>
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -675,7 +776,12 @@ export default function AddProductPage() {
               </div>
             )}
 
-            <p className="text-[10px] text-[#999] mt-1">{images.length}/8 photos {images.length < 3 ? `— ${3 - images.length} more required` : '— requirement met'}</p>
+            <p className="text-[10px] mt-1">
+              {images.length < 2
+                ? <span className="text-amber-600">{images.length}/8 photos — {2 - images.length} more required (min 2 mandatory)</span>
+                : <span className="text-green-600">✓ {images.length}/8 photos — requirement met</span>
+              }
+            </p>
 
             {/* Video callout */}
             <div className="mt-3 p-3 bg-[#FFFBEB] border border-[rgba(196,154,60,0.2)] rounded-xl text-xs text-[#5B1A3A] flex items-center gap-2">
@@ -787,7 +893,14 @@ export default function AddProductPage() {
             </div>
 
             <div className="mb-4">
-              <FieldLabel>Available Sizes</FieldLabel>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-[#666666]">
+                  Available Sizes<span className="text-red-500 ml-0.5">*</span>
+                </label>
+                {sizes.length === 0 && (
+                  <span className="text-[10px] text-amber-600">Select at least 1 size</span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {SIZES_LIST.map(s => (
                   <button key={s} type="button" onClick={() => toggleMulti(sizes, setSizes, s)}
