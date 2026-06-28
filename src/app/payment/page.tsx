@@ -6,6 +6,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { PaymentLoadingState } from '@/components/LoadingState';
+import { trackPurchase } from '@/lib/analytics';
 
 interface OrderData {
   items: {
@@ -199,6 +200,18 @@ function PaymentContent() {
     document.body.appendChild(script);
   };
 
+  const firePurchaseEvent = (txId: string) => {
+    if (!order) return;
+    const guardKey = `ga_purchase_${txId}`;
+    if (sessionStorage.getItem(guardKey)) return;
+    sessionStorage.setItem(guardKey, '1');
+    trackPurchase({
+      transactionId: txId,
+      value: order.totalPrice,
+      items: order.items.map(i => ({ itemId: i.id, itemName: i.name, price: i.price, quantity: i.quantity })),
+    });
+  };
+
   const handlePaymentSuccess = async (response: any) => {
     setStage('checking-status');
 
@@ -217,6 +230,7 @@ function PaymentContent() {
       const verifyData = await verifyResponse.json();
 
       if (verifyData.success) {
+        firePurchaseEvent(response.razorpay_payment_id || razorpayOrderId);
         sessionStorage.removeItem('sweta_order');
         clearCart();
         setStage('success');
@@ -247,6 +261,7 @@ function PaymentContent() {
         if (data.status === 'success') {
           clearInterval(interval);
           setPaymentStatus('success');
+          firePurchaseEvent(razorpayOrderId);
           sessionStorage.removeItem('sweta_order');
           clearCart();
           setStage('success');
@@ -400,6 +415,7 @@ function PaymentContent() {
     }
 
     if (status === 'success') {
+      firePurchaseEvent(orderNum);
       sessionStorage.removeItem('sweta_order');
       clearCart();
     }

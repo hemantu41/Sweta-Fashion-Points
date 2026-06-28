@@ -384,6 +384,11 @@ export default function AddProductPage() {
       };
       const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to create product'); }
+      const resData = await res.json().catch(() => ({}));
+      if (resData?.product?.id) {
+        const { trackProductListed } = await import('@/lib/analytics');
+        trackProductListed({ productId: resData.product.id, category: body.product.category });
+      }
       setSubmitted(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to submit product');

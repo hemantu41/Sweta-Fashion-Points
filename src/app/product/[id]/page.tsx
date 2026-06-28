@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useCategories, type CategoryNode } from '@/hooks/useCategories';
+import ProductViewTracker from '@/components/ProductViewTracker';
+import { trackAddToCart } from '@/lib/analytics';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -221,6 +223,7 @@ export default function ProductDetailPage() {
   function handleAddToCart() {
     if (!product) return;
     addToCart(product as any, selectedSize || undefined);
+    trackAddToCart({ itemId: product.id, itemName: product.name, category: product.category, price: product.price, quantity: 1 });
     setCartMsg('Added to cart!');
     setTimeout(() => setCartMsg(''), 2500);
   }
@@ -308,6 +311,7 @@ export default function ProductDetailPage() {
   // ────────────────────────────────────────────────────────────────────────────
   return (
     <div style={{ background: C.cream, minHeight: '100vh', fontFamily: 'var(--font-lato, system-ui, sans-serif)' }}>
+      <ProductViewTracker itemId={product.id} itemName={product.name} category={product.category} price={product.price} />
 
       {/* ── Breadcrumb ──────────────────────────────────────────────────────── */}
       <nav style={{ background: '#fff', borderBottom: `0.5px solid ${C.border}` }}>

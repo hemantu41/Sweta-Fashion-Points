@@ -6,6 +6,7 @@ import { ProductCard } from '@/components';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import PincodeBanner from '@/components/PincodeBanner';
+import { trackSearch } from '@/lib/analytics';
 
 function SearchResults() {
   const searchParams = useSearchParams();
@@ -26,6 +27,7 @@ function SearchResults() {
 
   const searchProducts = async () => {
     setLoading(true);
+    trackSearch({ searchTerm: query });
     try {
       const response = await fetch(`/api/products?search=${encodeURIComponent(query)}${user?.latitude && user?.longitude ? `&userLat=${user.latitude}&userLng=${user.longitude}` : ''}`, {
         cache: 'no-store',

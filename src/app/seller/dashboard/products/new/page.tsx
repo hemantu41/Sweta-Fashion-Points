@@ -403,6 +403,10 @@ export default function SellerAddProductPage() {
       const data = await response.json();
 
       if (response.ok) {
+        if (data.product?.id) {
+          const { trackProductListed } = await import('@/lib/analytics');
+          trackProductListed({ productId: data.product.id, category: productPayload?.category });
+        }
         setMessage('Product created successfully! It will be visible to customers once approved by admin.');
         setTimeout(() => router.push('/seller/dashboard'), 1500);
       } else {

@@ -429,6 +429,10 @@ export default function SellerRegisterPage() {
           sellerStatus: 'pending' as const,
         };
         login(updatedUser);
+        if (data.seller?.id) {
+          const { trackSellerSignup } = await import('@/lib/analytics');
+          trackSellerSignup({ sellerId: data.seller.id, city: formData.city });
+        }
         setSubmitted(true);
       } else {
         setErrors({ submit: data.error || 'Registration failed. Please try again.' });

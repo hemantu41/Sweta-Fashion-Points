@@ -12,6 +12,7 @@ function toImageUrl(src: string | undefined | null): string {
 import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { trackRemoveFromCart } from '@/lib/analytics';
 
 function CartContent() {
   const { items, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
@@ -105,7 +106,10 @@ function CartContent() {
                         </p>
                       </div>
                       <button
-                        onClick={() => removeFromCart(item.product.id, item.size)}
+                        onClick={() => {
+                          trackRemoveFromCart({ itemId: item.product.id, itemName: item.product.name, price: item.product.price, quantity: item.quantity });
+                          removeFromCart(item.product.id, item.size);
+                        }}
                         className="text-[#6B6B6B] hover:text-red-600 transition-colors flex-shrink-0 p-0.5"
                         aria-label="Remove item"
                       >

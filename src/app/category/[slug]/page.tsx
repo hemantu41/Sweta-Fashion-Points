@@ -10,6 +10,7 @@ import SortBar        from './_components/SortBar';
 import ProductCard    from './_components/ProductCard';
 import { FilterSidebar, FilterDrawer, DEFAULT_FILTERS } from './_components/Filters';
 import type { FilterState } from './_components/Filters';
+import CategoryViewTracker from '@/components/CategoryViewTracker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -272,6 +273,10 @@ export default function CategoryPage() {
       className="min-h-screen pb-20 md:pb-0"
       style={{ background: '#FAFAFA', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}
     >
+      <CategoryViewTracker
+        itemListName={category?.name ?? (slug as string)}
+        items={products.map(p => ({ itemId: p.id, itemName: p.name, price: p.price }))}
+      />
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-5">
         <div className="flex gap-6 items-start">
 

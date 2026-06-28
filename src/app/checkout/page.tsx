@@ -6,6 +6,7 @@ import { useCart } from '@/context/CartContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { trackBeginCheckout } from '@/lib/analytics';
 
 const CLOUD = 'https://res.cloudinary.com/duoxrodmv/image/upload';
 function toImageUrl(src: string | undefined | null): string {
@@ -72,7 +73,15 @@ export default function CheckoutPage() {
     pincode: '',
   });
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    if (items.length > 0) {
+      trackBeginCheckout({
+        value: totalPrice,
+        items: items.map(i => ({ itemId: i.product.id, itemName: i.product.name, price: i.product.price, quantity: i.quantity })),
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Auth is enforced by middleware — no client-side redirect needed.
