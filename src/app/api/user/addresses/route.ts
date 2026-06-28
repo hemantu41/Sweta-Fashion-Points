@@ -184,16 +184,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Detach this address from any orders before deleting to avoid FK violations
-    const { error: unlinkError } = await supabaseAdmin
-      .from('spf_orders')
+    // Detach from spf_payment_orders before deleting to avoid FK violation
+    await supabaseAdmin
+      .from('spf_payment_orders')
       .update({ address_id: null })
       .eq('address_id', addressId);
-
-    if (unlinkError) {
-      console.error('Address unlink from orders error:', unlinkError);
-      // Non-fatal: log but continue — column may not exist or no matching orders
-    }
 
     // supabaseAdmin bypasses RLS so user_id guard is done via the ownership check above
     const { error } = await supabaseAdmin
@@ -204,7 +199,7 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       console.error('Address delete error:', error);
       return NextResponse.json(
-        { error: 'Failed to delete address', detail: error.message || JSON.stringify(error) },
+        { error: 'Failed to delete address' },
         { status: 500 }
       );
     }
