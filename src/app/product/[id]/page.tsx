@@ -726,16 +726,7 @@ export default function ProductDetailPage() {
                 { k: 'Seller',   v: product.seller?.businessName },
               ].filter(f => f.v);
 
-              // Always-visible: first 2 fields (Category + Fabric if present)
-              const visibleFields = allFields.slice(0, 2);
-              const hiddenFields  = allFields.slice(2);
-              const hasMore = hiddenFields.length > 0 || !!product.description;
-
               if (allFields.length === 0 && !product.description) return null;
-
-              const rowStyle = (last: boolean): React.CSSProperties => ({
-                borderBottom: last ? 'none' : `1px solid ${C.subtle}`,
-              });
 
               return (
                 <div style={{ border: `1.5px solid ${C.border}`, borderRadius: 12, background: '#fff', overflow: 'hidden', marginTop: 16 }}>
@@ -745,9 +736,10 @@ export default function ProductDetailPage() {
                     onClick={() => setProductInfoExpanded(v => !v)}
                     style={{
                       width: '100%', padding: '12px 16px',
-                      borderBottom: `1px solid ${C.border}`,
+                      borderBottom: productInfoExpanded ? `1px solid ${C.border}` : 'none',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      background: 'none', border: 'none', borderBottom: `1px solid ${C.border}`,
+                      background: 'none', border: 'none',
+                      borderBottom: productInfoExpanded ? `1px solid ${C.border}` : 'none',
                       cursor: 'pointer', textAlign: 'left',
                     }}
                   >
@@ -762,27 +754,14 @@ export default function ProductDetailPage() {
                     </svg>
                   </button>
 
-                  {/* Always-visible rows */}
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
-                      {visibleFields.map(({ k, v }, i) => (
-                        <tr key={k} style={rowStyle(!productInfoExpanded && i === visibleFields.length - 1)}>
-                          <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
-                          <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* Expandable content */}
+                  {/* Expandable content — all fields hidden until expanded */}
                   {productInfoExpanded && (
                     <>
-                      {/* Remaining attribute rows */}
-                      {hiddenFields.length > 0 && (
+                      {allFields.length > 0 && (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <tbody>
-                            {hiddenFields.map(({ k, v }) => (
-                              <tr key={k} style={{ borderBottom: `1px solid ${C.subtle}` }}>
+                            {allFields.map(({ k, v }, i) => (
+                              <tr key={k} style={{ borderBottom: i < allFields.length - 1 ? `1px solid ${C.subtle}` : 'none' }}>
                                 <td style={{ fontSize: 13, color: C.muted, padding: '10px 16px', width: '40%', verticalAlign: 'top' }}>{k}</td>
                                 <td style={{ fontSize: 13, color: C.text, fontWeight: 500, padding: '10px 16px' }}>{v}</td>
                               </tr>
@@ -821,30 +800,6 @@ export default function ProductDetailPage() {
                         </table>
                       </div>
                     </>
-                  )}
-
-                  {/* Expand / collapse toggle row */}
-                  {hasMore && (
-                    <button
-                      onClick={() => setProductInfoExpanded(v => !v)}
-                      style={{
-                        width: '100%', padding: '10px 16px',
-                        borderTop: `1px solid ${C.border}`,
-                        background: C.cream, border: 'none', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        fontSize: 13, fontWeight: 600, color: C.maroon,
-                      }}
-                    >
-                      {productInfoExpanded ? 'Show less' : 'View all details'}
-                      <svg
-                        width={14} height={14} viewBox="0 0 24 24"
-                        fill="none" stroke={C.maroon} strokeWidth={2.2}
-                        strokeLinecap="round" strokeLinejoin="round"
-                        style={{ transition: 'transform 250ms ease', transform: productInfoExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                      >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
                   )}
                 </div>
               );
