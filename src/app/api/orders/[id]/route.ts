@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import Razorpay from 'razorpay';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notifyCustomerOrderRejected } from '@/lib/notifications/sellerNotify';
 
@@ -116,7 +117,7 @@ export async function PUT(
     // Fetch current order
     const { data: order, error: fetchErr } = await supabaseAdmin
       .from('spf_orders')
-      .select('id, status, seller_id, customer_id, order_number, subtotal, shipping_charge, payment_method')
+      .select('id, status, seller_id, customer_id, order_number, subtotal, shipping_charge, payment_method, transaction_id')
       .eq('id', orderId)
       .single();
 
@@ -182,14 +183,54 @@ export async function PUT(
         );
       }
 
+      const isPrepaid   = (order.payment_method || '').toUpperCase() !== 'COD';
+      const orderTotal  = Number(order.subtotal || 0) + Number(order.shipping_charge || 0);
+      const amountPaise = Math.round(orderTotal * 100);
+
+      // ── Trigger Razorpay refund for prepaid orders ───────────────────────────
+      let razorpayRefundId: string | null = null;
+      let refundError:      string | null = null;
+
+      if (isPrepaid && (order as any).transaction_id && amountPaise > 0) {
+        const keyId     = process.env.RAZORPAY_KEY_ID;
+        const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+        if (keyId && keySecret) {
+          try {
+            const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+            const rzRefund = await razorpay.payments.refund((order as any).transaction_id, {
+              amount: amountPaise,
+            });
+            razorpayRefundId = rzRefund.id;
+            console.log(`[Order PUT] Refund initiated: ${rzRefund.id} for order ${order.order_number}`);
+          } catch (rzErr: any) {
+            refundError = rzErr?.error?.description || rzErr?.message || 'Razorpay refund failed';
+            console.error('[Order PUT] Razorpay refund error:', refundError);
+          }
+        } else {
+          refundError = 'Razorpay credentials not configured';
+          console.error('[Order PUT] Cannot refund — Razorpay keys missing');
+        }
+      }
+
+      // Update order: REJECTED + payment_status
+      const orderUpdate: Record<string, unknown> = { status: 'REJECTED', updated_at: now };
+      if (razorpayRefundId) orderUpdate.payment_status = 'refund_initiated';
+
       const { error: updateErr } = await supabaseAdmin
         .from('spf_orders')
-        .update({ status: 'REJECTED', updated_at: now })
+        .update(orderUpdate)
         .eq('id', orderId);
 
       if (updateErr) {
         return NextResponse.json({ error: 'Failed to reject order' }, { status: 500 });
       }
+
+      const historyNote = razorpayRefundId
+        ? `Seller rejected the order. Reason: ${reason.trim()}. Refund initiated (${razorpayRefundId}).`
+        : refundError
+          ? `Seller rejected the order. Reason: ${reason.trim()}. Refund could not be auto-initiated: ${refundError}.`
+          : `Seller rejected the order. Reason: ${reason.trim()}.`;
 
       await supabaseAdmin.from('spf_order_status_history').insert({
         order_id:    orderId,
@@ -197,7 +238,7 @@ export async function PUT(
         to_status:   'REJECTED',
         actor_type:  'SELLER',
         actor_id:    sellerId,
-        note:        `Seller rejected the order. Reason: ${reason.trim()}`,
+        note:        historyNote,
         created_at:  now,
       });
 
@@ -211,20 +252,27 @@ export async function PUT(
             .maybeSingle();
 
           if (customer?.email) {
-            const total     = (Number(order.subtotal || 0) + Number(order.shipping_charge || 0));
-            const isPrepaid = (order.payment_method || '').toUpperCase() !== 'COD';
             await notifyCustomerOrderRejected(
               customer.email,
               order.order_number,
               reason.trim(),
-              isPrepaid,
-              total,
+              isPrepaid && !!razorpayRefundId, // only say refund initiated if it actually succeeded
+              orderTotal,
             );
           }
         } catch (e: any) {
           console.error('[Order PUT] Rejection notification error:', e?.message);
         }
       })();
+
+      // Surface refund failure in response so the seller UI can show a warning
+      if (isPrepaid && !razorpayRefundId) {
+        return NextResponse.json({
+          success:      true,
+          status,
+          refundWarning: refundError || 'Refund could not be initiated automatically. Please trigger it manually from the admin panel.',
+        });
+      }
     }
 
     // ── CANCEL (seller-initiated) ──────────────────────────────────────────────

@@ -753,6 +753,7 @@ function RejectModal({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to reject order');
+      if (data.refundWarning) setError(`Order rejected. Note: ${data.refundWarning}`);
       onSuccess();
     } catch (err: any) {
       setError(err.message);
@@ -775,7 +776,7 @@ function RejectModal({
         </div>
         <div className="px-6 py-5 space-y-4">
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-            The customer will be notified with your reason. This action cannot be undone.
+            The customer will be notified with your reason and a full refund will be initiated automatically for prepaid orders. This action cannot be undone.
           </div>
           <div>
             <label className="block text-xs font-semibold text-[#374151] mb-1.5">
