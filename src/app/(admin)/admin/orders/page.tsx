@@ -228,6 +228,11 @@ export default function AdminOrdersPage() {
   const [toast,     setToast]     = useState<{ msg: string; ok: boolean } | null>(null);
   const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Order recovery tool
+  const [syncOrderNum,  setSyncOrderNum]  = useState('');
+  const [syncLoading,   setSyncLoading]   = useState(false);
+  const [syncResult,    setSyncResult]    = useState<{ ok: boolean; msg: string } | null>(null);
+
   // Auth guard
   useEffect(() => {
     if (!user) router.replace('/login');
@@ -341,6 +346,34 @@ export default function AdminOrdersPage() {
     return null;
   };
 
+  const handleSyncOrder = async (bulk = false) => {
+    if (!bulk && !syncOrderNum.trim()) return;
+    setSyncLoading(true);
+    setSyncResult(null);
+    try {
+      const body: Record<string, string> = { adminUserId: user!.id };
+      if (!bulk) body.orderNumber = syncOrderNum.trim().toUpperCase();
+      const res = await fetch('/api/admin/orders/sync-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncResult({ ok: true, msg: data.message });
+        if (!bulk) setSyncOrderNum('');
+        fetchOrders();
+        fetchStats();
+      } else {
+        setSyncResult({ ok: false, msg: data.error || 'Sync failed' });
+      }
+    } catch {
+      setSyncResult({ ok: false, msg: 'Network error — check console' });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -410,6 +443,67 @@ export default function AdminOrdersPage() {
             ))}
           </div>
         )}
+
+        {/* ── Order Recovery Tool ───────────────────────────────────────────── */}
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10,
+          padding: '14px 16px', marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#92400e' }}>Order Recovery Tool</span>
+            <span style={{ fontSize: 11, color: '#a16207' }}>
+              — Use when a paid order is missing from the order list (payment captured in Razorpay but not showing here)
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              value={syncOrderNum}
+              onChange={e => { setSyncOrderNum(e.target.value); setSyncResult(null); }}
+              placeholder="Enter order number  e.g. SFP-20260629-583804"
+              style={{
+                flex: 1, minWidth: 260, padding: '8px 12px', fontSize: 13,
+                border: '1px solid #fcd34d', borderRadius: 8, outline: 'none',
+                background: '#fff', color: '#333',
+              }}
+              onKeyDown={e => e.key === 'Enter' && handleSyncOrder()}
+            />
+            <button
+              onClick={() => handleSyncOrder()}
+              disabled={syncLoading || !syncOrderNum.trim()}
+              style={{
+                background: '#d97706', color: '#fff', border: 'none', borderRadius: 8,
+                padding: '8px 18px', fontSize: 13, fontWeight: 600,
+                cursor: syncLoading || !syncOrderNum.trim() ? 'not-allowed' : 'pointer',
+                opacity: syncLoading || !syncOrderNum.trim() ? 0.6 : 1,
+              }}
+            >
+              {syncLoading ? 'Syncing…' : 'Sync Order'}
+            </button>
+            <button
+              onClick={() => handleSyncOrder(true)}
+              disabled={syncLoading}
+              style={{
+                background: '#fff', color: '#92400e', border: '1px solid #fcd34d',
+                borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600,
+                cursor: syncLoading ? 'not-allowed' : 'pointer',
+                opacity: syncLoading ? 0.6 : 1,
+              }}
+            >
+              Bulk Reconcile All
+            </button>
+          </div>
+          {syncResult && (
+            <div style={{
+              marginTop: 10, padding: '8px 12px', borderRadius: 8, fontSize: 13,
+              background: syncResult.ok ? '#d1fae5' : '#fee2e2',
+              color: syncResult.ok ? '#065f46' : '#991b1b',
+              fontWeight: 600,
+            }}>
+              {syncResult.ok ? '✓ ' : '✗ '}{syncResult.msg}
+            </div>
+          )}
+        </div>
 
         {/* Tabs */}
         <div style={{
