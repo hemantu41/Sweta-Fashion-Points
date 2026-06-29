@@ -39,7 +39,7 @@ async function resolveSellerId(items: any[]): Promise<string | null> {
   return null;
 }
 
-async function syncOne(po: any, force = false): Promise<{ ok: boolean; message: string; orderId?: string }> {
+async function syncOne(po: any, force = false, sellerIdOverride?: string): Promise<{ ok: boolean; message: string; orderId?: string }> {
   // ── Guard: status ────────────────────────────────────────────────────────
   if (!force && po.status !== 'captured') {
     return {
@@ -75,12 +75,12 @@ async function syncOne(po: any, force = false): Promise<{ ok: boolean; message: 
     return { ok: false, message: 'Cannot sync — items array is empty in spf_payment_orders.' };
   }
 
-  const sellerId = await resolveSellerId(items);
+  const sellerId = sellerIdOverride?.trim() || await resolveSellerId(items);
   if (!sellerId) {
     const itemSummary = items.map((i: any) => `id=${i.id} productId=${i.productId} sellerId=${i.sellerId}`).join(' | ');
     return {
       ok: false,
-      message: `Cannot resolve sellerId. Items: [${itemSummary}]. Fix: ensure items have a valid product UUID or sellerId.`,
+      message: `Cannot resolve sellerId. Items: [${itemSummary}]. Fix: enter the Seller ID manually in the override field below.`,
     };
   }
 
@@ -178,10 +178,11 @@ async function syncOne(po: any, force = false): Promise<{ ok: boolean; message: 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orderNumber, adminUserId, force } = body as {
+    const { orderNumber, adminUserId, force, sellerIdOverride } = body as {
       orderNumber?: string;
       adminUserId?: string;
       force?: boolean;
+      sellerIdOverride?: string;
     };
 
     // Verify admin
@@ -219,11 +220,11 @@ export async function POST(request: NextRequest) {
           }, { status: 404 });
         }
 
-        const result = await syncOne(po2, force);
+        const result = await syncOne(po2, force, sellerIdOverride);
         return NextResponse.json(result, { status: result.ok ? 200 : 422 });
       }
 
-      const result = await syncOne(po, force);
+      const result = await syncOne(po, force, sellerIdOverride);
       return NextResponse.json(result, { status: result.ok ? 200 : 422 });
     }
 

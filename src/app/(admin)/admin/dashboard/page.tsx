@@ -724,9 +724,10 @@ function OrdersPage() {
   const [bulkDownloading, setBulkDownloading] = useState(false);
 
   // Order recovery sync
-  const [syncOrderNum, setSyncOrderNum] = useState('');
-  const [syncLoading,  setSyncLoading]  = useState(false);
-  const [syncResult,   setSyncResult]   = useState<{ ok: boolean; msg: string } | null>(null);
+  const [syncOrderNum,       setSyncOrderNum]       = useState('');
+  const [syncSellerOverride, setSyncSellerOverride] = useState('');
+  const [syncLoading,        setSyncLoading]        = useState(false);
+  const [syncResult,         setSyncResult]         = useState<{ ok: boolean; msg: string } | null>(null);
 
   async function handleSyncOrder(bulk = false, force = false) {
     if (!bulk && !syncOrderNum.trim()) return;
@@ -735,6 +736,7 @@ function OrdersPage() {
     try {
       const body: Record<string, unknown> = { adminUserId: user!.id, force };
       if (!bulk) body.orderNumber = syncOrderNum.trim().toUpperCase();
+      if (syncSellerOverride.trim()) body.sellerIdOverride = syncSellerOverride.trim();
       const res = await fetch('/api/admin/orders/sync-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -807,14 +809,22 @@ function OrdersPage() {
           <span className="text-sm font-bold text-amber-800">Order Recovery Tool</span>
           <span className="text-xs text-amber-600 hidden sm:inline">— Sync a paid order missing from this list</span>
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center mb-2">
           <input
             value={syncOrderNum}
             onChange={e => { setSyncOrderNum(e.target.value); setSyncResult(null); }}
             onKeyDown={e => e.key === 'Enter' && handleSyncOrder()}
-            placeholder="Enter order number  e.g. SFP-20260629-583804"
+            placeholder="Order number  e.g. SFP-20260629-583804"
             className="flex-1 min-w-[220px] px-3 py-2 text-sm border border-amber-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
+          <input
+            value={syncSellerOverride}
+            onChange={e => { setSyncSellerOverride(e.target.value); setSyncResult(null); }}
+            placeholder="Seller UUID override (if seller resolve fails)"
+            className="flex-1 min-w-[220px] px-3 py-2 text-sm border border-amber-200 rounded-lg bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-300"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
           <button
             onClick={() => handleSyncOrder(false, false)}
             disabled={syncLoading || !syncOrderNum.trim()}
