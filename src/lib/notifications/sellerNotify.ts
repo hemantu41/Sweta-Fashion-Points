@@ -578,11 +578,17 @@ export async function notifyCustomerOrderRejected(
   reason:        string,
   isPrepaid:     boolean,
   orderTotal:    number,
+  refundId?:     string | null,
 ): Promise<void> {
   try {
-    const refundNote = isPrepaid
-      ? `<p style="color:${C.text};font-size:14px;">A <strong>full refund of ₹${orderTotal.toLocaleString('en-IN')}</strong> has been initiated and will be credited to your original payment method within 5–7 business days.</p>`
-      : `<p style="color:${C.text};font-size:14px;">Since this was a COD order, no amount was charged. Your order has been cancelled with no cost to you.</p>`;
+    let refundNote: string;
+    if (!isPrepaid) {
+      refundNote = `<p style="color:${C.text};font-size:14px;">Since this was a COD order, no amount was charged. Your order has been cancelled with no cost to you.</p>`;
+    } else if (refundId) {
+      refundNote = `<p style="color:${C.text};font-size:14px;">A <strong>full refund of ₹${orderTotal.toLocaleString('en-IN')}</strong> has been initiated and will be credited to your original payment method within 5–7 business days.<br/><span style="font-size:12px;color:${C.muted};">Refund reference: ${refundId}</span></p>`;
+    } else {
+      refundNote = `<p style="color:${C.text};font-size:14px;">A <strong>full refund of ₹${orderTotal.toLocaleString('en-IN')}</strong> will be processed to your original payment method within 5–7 business days. Our support team will reach out if any action is needed from your side.</p>`;
+    }
 
     const body = `
       <p style="color:${C.text};font-size:15px;">We're sorry for the inconvenience.</p>
@@ -601,7 +607,7 @@ export async function notifyCustomerOrderRejected(
 
     await sendEmail({
       to:      customerEmail,
-      subject: `Order #${orderNumber} Rejected — ${isPrepaid ? 'Refund Initiated' : 'No Charges'}`,
+      subject: `Order #${orderNumber} Rejected — ${!isPrepaid ? 'No Charges' : refundId ? 'Refund Initiated' : 'Refund Pending'}`,
       html:    emailShell(C.danger, 'Order Rejected', 'We apologise for the inconvenience', body),
     });
   } catch (err: any) {

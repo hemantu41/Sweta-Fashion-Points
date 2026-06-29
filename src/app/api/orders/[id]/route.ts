@@ -256,8 +256,9 @@ export async function PUT(
               customer.email,
               order.order_number,
               reason.trim(),
-              isPrepaid && !!razorpayRefundId, // only say refund initiated if it actually succeeded
+              isPrepaid,
               orderTotal,
+              razorpayRefundId,
             );
           }
         } catch (e: any) {
