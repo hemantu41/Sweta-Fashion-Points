@@ -1072,6 +1072,11 @@ export default function OrdersPage() {
   // Reject modal state
   const [rejectOrder, setRejectOrder] = useState<Order | null>(null);
 
+  // Admin-only: order recovery sync
+  const [syncOrderNum, setSyncOrderNum] = useState('');
+  const [syncLoading,  setSyncLoading]  = useState(false);
+  const [syncResult,   setSyncResult]   = useState<{ ok: boolean; msg: string } | null>(null);
+
   const fetchOrders = useCallback(() => {
     if (!user?.sellerId) return;
     setLoading(true);
@@ -1187,6 +1192,33 @@ export default function OrdersPage() {
 
   const pidRef = useRef<HTMLInputElement>(null);
 
+  async function handleSyncOrder(bulk = false) {
+    if (!bulk && !syncOrderNum.trim()) return;
+    setSyncLoading(true);
+    setSyncResult(null);
+    try {
+      const body: Record<string, string> = { adminUserId: user!.id };
+      if (!bulk) body.orderNumber = syncOrderNum.trim().toUpperCase();
+      const res = await fetch('/api/admin/orders/sync-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncResult({ ok: true, msg: data.message });
+        if (!bulk) setSyncOrderNum('');
+        fetchOrders();
+      } else {
+        setSyncResult({ ok: false, msg: data.error || 'Sync failed' });
+      }
+    } catch {
+      setSyncResult({ ok: false, msg: 'Network error — please try again' });
+    } finally {
+      setSyncLoading(false);
+    }
+  }
+
   return (
     <div style={{ fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }} className="space-y-5 pb-8">
 
@@ -1253,6 +1285,46 @@ export default function OrdersPage() {
           </div>
         ))}
       </div>
+
+      {/* Admin-only: Order Recovery Tool */}
+      {user?.isAdmin && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">⚠️</span>
+            <span className="text-sm font-bold text-amber-800">Order Recovery Tool</span>
+            <span className="text-xs text-amber-600">— Sync a paid order that&apos;s missing from this list</span>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <input
+              value={syncOrderNum}
+              onChange={e => { setSyncOrderNum(e.target.value); setSyncResult(null); }}
+              onKeyDown={e => e.key === 'Enter' && handleSyncOrder()}
+              placeholder="Enter order number  e.g. SFP-20260629-583804"
+              className="flex-1 min-w-[240px] px-3 py-2 text-sm border border-amber-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <button
+              onClick={() => handleSyncOrder()}
+              disabled={syncLoading || !syncOrderNum.trim()}
+              className="px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
+              style={{ background: '#D97706' }}
+            >
+              {syncLoading ? 'Syncing…' : 'Sync Order'}
+            </button>
+            <button
+              onClick={() => handleSyncOrder(true)}
+              disabled={syncLoading}
+              className="px-4 py-2 text-sm font-semibold text-amber-800 bg-white border border-amber-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-amber-50 transition-colors"
+            >
+              Bulk Reconcile All
+            </button>
+          </div>
+          {syncResult && (
+            <div className={`mt-3 px-3 py-2 rounded-lg text-sm font-semibold ${syncResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}`}>
+              {syncResult.ok ? '✓ ' : '✗ '}{syncResult.msg}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status tabs */}
       <div className="flex flex-wrap gap-2">
