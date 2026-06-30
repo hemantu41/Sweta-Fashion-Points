@@ -859,7 +859,14 @@ function OrdersTable({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'accepted', sellerId }),
       });
-      if (res.ok) onAction('accepted', order);
+      if (res.ok) {
+        onAction('accepted', order);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to accept order: ${data.error || res.statusText}`);
+      }
+    } catch {
+      alert('Network error — please try again.');
     } finally {
       setBusyIds(s => { const n = new Set(s); n.delete(order.id); return n; });
     }

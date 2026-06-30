@@ -147,7 +147,7 @@ export async function PUT(
         .from('spf_orders')
         .update({
           status:               'ACCEPTED',
-          seller_accepted_at:   now,
+          accepted_at:          now,
           packing_sla_deadline: packingSlaDeadline,
           updated_at:           now,
         })
