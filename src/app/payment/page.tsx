@@ -11,8 +11,8 @@ import { trackPurchase } from '@/lib/analytics';
 interface OrderData {
   items: {
     id: string;
-    productId?: string; // Product ID from database for earnings tracking
-    sellerId?: string | null; // Seller ID for multi-seller marketplace earnings
+    productId?: string;
+    sellerId?: string | null;
     name: string;
     nameHi: string;
     image: string;
@@ -33,6 +33,8 @@ interface OrderData {
   };
   paymentMethod: 'upi' | 'card';
   totalPrice: number;
+  shippingCost: number;
+  grandTotal: number;
 }
 
 function PaymentContent() {
@@ -115,7 +117,7 @@ function PaymentContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user?.id,
-          amount: order?.totalPrice,
+          amount: order?.grandTotal ?? order?.totalPrice,
           items: order?.items,
           address: order?.address,
         }),
@@ -151,7 +153,7 @@ function PaymentContent() {
     script.onload = () => {
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.totalPrice * 100, // Amount in paise
+        amount: (order.grandTotal ?? order.totalPrice) * 100, // Amount in paise
         currency: 'INR',
         name: 'Insta Fashion Points',
         description: `Order #${orderNumber}`,
@@ -401,7 +403,7 @@ function PaymentContent() {
           body: JSON.stringify({
             userId: user.id,
             orderNumber: orderNum,
-            amount: order.totalPrice,
+            amount: order.grandTotal ?? order.totalPrice,
             status: status,
             paymentMethod: method,
             items: order.items,
@@ -528,9 +530,19 @@ function PaymentContent() {
                 </div>
               ))}
             </div>
-            <div className="border-t border-[#E8E2D9] mt-3 pt-3 flex justify-between">
-              <span className="font-bold text-[#2D2D2D]">Total</span>
-              <span className="font-bold text-[#722F37]">₹{order.totalPrice.toLocaleString('en-IN')}</span>
+            <div className="border-t border-[#E8E2D9] mt-3 pt-3 space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B6B6B]">Subtotal</span>
+                <span className="text-[#2D2D2D]">₹{order.totalPrice.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B6B6B]">Delivery</span>
+                <span className="text-[#2D2D2D]">{order.shippingCost === 0 ? 'Free' : `₹${order.shippingCost.toLocaleString('en-IN')}`}</span>
+              </div>
+              <div className="flex justify-between font-bold pt-1 border-t border-[#E8E2D9]">
+                <span className="text-[#2D2D2D]">Total</span>
+                <span className="text-[#722F37]">₹{(order.grandTotal ?? order.totalPrice).toLocaleString('en-IN')}</span>
+              </div>
             </div>
 
             {/* Delivery address */}
@@ -709,9 +721,19 @@ function PaymentContent() {
                 </div>
               ))}
             </div>
-            <div className="border-t border-[#E8E2D9] mt-3 pt-3 flex justify-between">
-              <span className="font-bold text-[#2D2D2D]">Total</span>
-              <span className="font-bold text-[#722F37]">₹{order?.totalPrice.toLocaleString('en-IN')}</span>
+            <div className="border-t border-[#E8E2D9] mt-3 pt-3 space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B6B6B]">Subtotal</span>
+                <span className="text-[#2D2D2D]">₹{order?.totalPrice.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B6B6B]">Delivery</span>
+                <span className="text-[#2D2D2D]">{(order?.shippingCost ?? 0) === 0 ? 'Free' : `₹${order?.shippingCost?.toLocaleString('en-IN')}`}</span>
+              </div>
+              <div className="flex justify-between font-bold pt-1 border-t border-[#E8E2D9]">
+                <span className="text-[#2D2D2D]">Total</span>
+                <span className="text-[#722F37]">₹{(order?.grandTotal ?? order?.totalPrice)?.toLocaleString('en-IN')}</span>
+              </div>
             </div>
           </div>
 
@@ -752,7 +774,10 @@ function PaymentContent() {
         {/* Amount */}
         <div className="bg-white rounded-xl border border-[#E8E2D9] p-5 mb-6">
           <p className="text-sm text-[#6B6B6B] mb-1">Total Amount</p>
-          <p className="text-2xl font-bold text-[#722F37]">₹{order.totalPrice.toLocaleString('en-IN')}</p>
+          <p className="text-2xl font-bold text-[#722F37]">₹{(order.grandTotal ?? order.totalPrice).toLocaleString('en-IN')}</p>
+          {order.shippingCost > 0 && (
+            <p className="text-xs text-[#6B6B6B] mt-1">Includes ₹{order.shippingCost.toLocaleString('en-IN')} delivery charges</p>
+          )}
         </div>
 
         {/* UPI Form */}
@@ -1016,7 +1041,7 @@ function PaymentContent() {
             ) : !razorpayOrderId ? (
               'Please wait...'
             ) : (
-              `Pay ₹${order.totalPrice.toLocaleString('en-IN')}`
+              `Pay ₹${(order.grandTotal ?? order.totalPrice).toLocaleString('en-IN')}`
             )}
           </button>
         )}
