@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { cancelShiprocketOrder } from '@/lib/shiprocket';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 import {
   notifyCustomerSelfCancelled,
   notifyCustomerRefundProcessed,
@@ -119,6 +120,9 @@ export async function POST(
     if (updateErr) {
       return NextResponse.json({ error: 'Failed to cancel order' }, { status: 500 });
     }
+
+    // Invalidate seller orders cache so seller dashboard reflects cancellation immediately
+    if (order.seller_id) void invalidateSellerKeys(order.seller_id, 'orders');
 
     // ── Cancel Shiprocket shipment if label was already generated ─────────────
     // Only LABEL_GENERATED status means a Shiprocket shipment exists and

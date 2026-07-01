@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { cancelShiprocketOrder } from '@/lib/shiprocket';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 import { notifyCustomerOrderRejected, notifyCustomerRefundProcessed } from '@/lib/notifications/sellerNotify';
 
 export async function GET(
@@ -158,6 +159,9 @@ export async function PUT(
         return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
       }
 
+      // Invalidate seller orders cache so the next fetchOrders() gets fresh DB data
+      void invalidateSellerKeys(order.seller_id, 'orders');
+
       await supabaseAdmin.from('spf_order_status_history').insert({
         order_id:    orderId,
         from_status: order.status,
@@ -225,6 +229,8 @@ export async function PUT(
       if (updateErr) {
         return NextResponse.json({ error: 'Failed to reject order' }, { status: 500 });
       }
+
+      void invalidateSellerKeys(order.seller_id, 'orders');
 
       const historyNote = razorpayRefundId
         ? `Seller rejected the order. Reason: ${reason.trim()}. Refund initiated (${razorpayRefundId}).`
@@ -307,6 +313,8 @@ export async function PUT(
       if (updateErr) {
         return NextResponse.json({ error: 'Failed to cancel order' }, { status: 500 });
       }
+
+      void invalidateSellerKeys(order.seller_id, 'orders');
 
       await supabaseAdmin.from('spf_order_status_history').insert({
         order_id:    orderId,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createShipment, generateLabel, addPickupLocation } from '@/lib/shiprocket';
+import { invalidateSellerKeys } from '@/lib/sellerCache';
 
 // POST /api/seller/orders/[id]/ship
 // Called when seller enters package dimensions and clicks "Generate Label & Schedule Pickup"
@@ -256,6 +257,9 @@ export async function POST(
         updated_at:      now,
       })
       .eq('id', orderId);
+
+    // Invalidate seller orders cache so the dashboard reflects LABEL_GENERATED immediately
+    void invalidateSellerKeys(sellerId, 'orders');
 
     await supabaseAdmin.from('spf_order_status_history').insert({
       order_id:    orderId,
