@@ -659,6 +659,10 @@ export async function cancelShipment(awbNumbers: string[]) {
   return shiprocketService.cancelShipment(awbNumbers.map(Number));
 }
 
+export async function cancelShiprocketOrder(shiprocketOrderId: number) {
+  return shiprocketService.cancelShipment([shiprocketOrderId]);
+}
+
 export async function addPickupLocation(seller: {
   name: string; email: string; phone: string;
   address: string; city: string; state: string; pincode: string;

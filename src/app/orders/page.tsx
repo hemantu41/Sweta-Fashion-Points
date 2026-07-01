@@ -140,7 +140,8 @@ export default function OrdersPage() {
         setOrders(prev => prev.map(o => o.id === cancelOrderId ? { ...o, status: 'cancelled' } : o));
         setCancelOrderId(null);
         setCancelReason('');
-        if (data.refundWarning) alert(`Order cancelled. Note: ${data.refundWarning}`);
+        const warnings = [data.refundWarning, data.shiprocketCancelWarning].filter(Boolean);
+        if (warnings.length > 0) alert(`Order cancelled.\n\nNote: ${warnings.join('\n')}`)
       } else {
         setCancelError(data.error || 'Failed to cancel order. Please try again.');
       }

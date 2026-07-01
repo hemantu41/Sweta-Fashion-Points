@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { cancelShiprocketOrder } from '@/lib/shiprocket';
 import {
   notifyCustomerSelfCancelled,
   notifySellerCustomerCancelled,
@@ -118,6 +119,35 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to cancel order' }, { status: 500 });
     }
 
+    // ── Cancel Shiprocket shipment if label was already generated ─────────────
+    // Only LABEL_GENERATED status means a Shiprocket shipment exists and
+    // wallet was charged. Cancelling via API auto-refunds the wallet.
+    let shiprocketCancelWarning: string | null = null;
+    if (currentStatus === 'LABEL_GENERATED') {
+      const { data: shipment } = await supabaseAdmin
+        .from('spf_shipments')
+        .select('id, shiprocket_order_id')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (shipment?.shiprocket_order_id) {
+        const srCancel = await cancelShiprocketOrder(Number(shipment.shiprocket_order_id));
+        if (srCancel.success) {
+          await supabaseAdmin
+            .from('spf_shipments')
+            .update({ status: 'cancelled' })
+            .eq('id', shipment.id);
+          console.log(`[Order Cancel] Shiprocket shipment cancelled for order ${orderId}`);
+        } else {
+          shiprocketCancelWarning = srCancel.error || 'Shiprocket cancellation failed';
+          console.error('[Order Cancel] Shiprocket cancel error:', shiprocketCancelWarning);
+        }
+      } else {
+        shiprocketCancelWarning = 'Shiprocket order ID not found — please cancel the shipment manually in Shiprocket dashboard';
+        console.warn('[Order Cancel] No shiprocket_order_id found for LABEL_GENERATED order:', orderId);
+      }
+    }
+
     const historyNote = razorpayRefundId
       ? `Customer cancelled the order. Reason: ${reason.trim()}. Refund initiated (${razorpayRefundId}).`
       : refundError
@@ -166,12 +196,13 @@ export async function POST(
     })();
 
     return NextResponse.json({
-      success:       true,
-      message:       'Order cancelled successfully.',
-      cancellable:   true,
-      refundWarning: isPrepaid && !razorpayRefundId
+      success:                true,
+      message:                'Order cancelled successfully.',
+      cancellable:            true,
+      refundWarning:          isPrepaid && !razorpayRefundId
         ? (refundError || 'Refund could not be initiated automatically. Our team will process it manually.')
         : undefined,
+      shiprocketCancelWarning: shiprocketCancelWarning || undefined,
     });
   } catch (err: any) {
     console.error('[cancel POST] Error:', err?.message);

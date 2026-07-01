@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { cancelShiprocketOrder } from '@/lib/shiprocket';
 import { notifyCustomerOrderRejected } from '@/lib/notifications/sellerNotify';
 
 export async function GET(
@@ -277,7 +278,7 @@ export async function PUT(
 
     // ── CANCEL (seller-initiated) ──────────────────────────────────────────────
     if (status === 'cancelled') {
-      const cancellable = ['CONFIRMED', 'SELLER_NOTIFIED', 'ACCEPTED', 'captured'];
+      const cancellable = ['CONFIRMED', 'SELLER_NOTIFIED', 'ACCEPTED', 'LABEL_GENERATED', 'captured'];
       if (!cancellable.map(s => s.toLowerCase()).includes((order.status || '').toLowerCase())) {
         return NextResponse.json(
           { error: `Order cannot be cancelled — current status: ${order.status}` },
@@ -303,6 +304,35 @@ export async function PUT(
         note:        reason?.trim() ? `Seller cancelled the order. Reason: ${reason.trim()}` : 'Seller cancelled the order',
         created_at:  now,
       });
+
+      // Cancel Shiprocket shipment if label was already generated (wallet refund)
+      if ((order.status || '').toUpperCase() === 'LABEL_GENERATED') {
+        const { data: shipment } = await supabaseAdmin
+          .from('spf_shipments')
+          .select('id, shiprocket_order_id')
+          .eq('order_id', orderId)
+          .maybeSingle();
+
+        if (shipment?.shiprocket_order_id) {
+          const srCancel = await cancelShiprocketOrder(Number(shipment.shiprocket_order_id));
+          if (srCancel.success) {
+            await supabaseAdmin
+              .from('spf_shipments')
+              .update({ status: 'cancelled' })
+              .eq('id', shipment.id);
+            console.log(`[Order PUT] Shiprocket shipment cancelled for order ${orderId}`);
+          } else {
+            console.error('[Order PUT] Shiprocket cancel error:', srCancel.error);
+            return NextResponse.json({
+              success:                 true,
+              status,
+              shiprocketCancelWarning: srCancel.error || 'Shiprocket cancellation failed — please cancel manually in Shiprocket dashboard to get wallet refund.',
+            });
+          }
+        } else {
+          console.warn('[Order PUT] No shiprocket_order_id found for LABEL_GENERATED order:', orderId);
+        }
+      }
     }
 
     return NextResponse.json({ success: true, status });
