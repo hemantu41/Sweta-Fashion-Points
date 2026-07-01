@@ -19,6 +19,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { cancelShiprocketOrder } from '@/lib/shiprocket';
 import {
   notifyCustomerSelfCancelled,
+  notifyCustomerRefundProcessed,
   notifySellerCustomerCancelled,
 } from '@/lib/notifications/sellerNotify';
 
@@ -182,14 +183,22 @@ export async function POST(
           .eq('id', order.seller_id)
           .maybeSingle();
 
-        await Promise.allSettled([
-          customer?.email
-            ? notifyCustomerSelfCancelled(customer.email, order.order_number, reason.trim(), isPrepaid, orderTotal, razorpayRefundId)
-            : Promise.resolve(),
+        const notifications: Promise<void>[] = [
           seller?.business_email
             ? notifySellerCustomerCancelled(seller.business_email, seller.business_name, order.order_number, reason.trim())
             : Promise.resolve(),
-        ]);
+        ];
+        if (customer?.email) {
+          notifications.push(
+            notifyCustomerSelfCancelled(customer.email, order.order_number, reason.trim(), isPrepaid, orderTotal, razorpayRefundId),
+          );
+          if (razorpayRefundId) {
+            notifications.push(
+              notifyCustomerRefundProcessed(customer.email, order.order_number, orderTotal, razorpayRefundId),
+            );
+          }
+        }
+        await Promise.allSettled(notifications);
       } catch (e: any) {
         console.error('[cancel] Notification error:', e?.message);
       }

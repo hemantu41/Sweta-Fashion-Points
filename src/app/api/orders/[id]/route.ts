@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { cancelShiprocketOrder } from '@/lib/shiprocket';
-import { notifyCustomerOrderRejected } from '@/lib/notifications/sellerNotify';
+import { notifyCustomerOrderRejected, notifyCustomerRefundProcessed } from '@/lib/notifications/sellerNotify';
 
 export async function GET(
   _request: NextRequest,
@@ -252,14 +252,27 @@ export async function PUT(
             .maybeSingle();
 
           if (customer?.email) {
-            await notifyCustomerOrderRejected(
-              customer.email,
-              order.order_number,
-              reason.trim(),
-              isPrepaid,
-              orderTotal,
-              razorpayRefundId,
-            );
+            const notifications: Promise<void>[] = [
+              notifyCustomerOrderRejected(
+                customer.email,
+                order.order_number,
+                reason.trim(),
+                isPrepaid,
+                orderTotal,
+                razorpayRefundId,
+              ),
+            ];
+            if (razorpayRefundId) {
+              notifications.push(
+                notifyCustomerRefundProcessed(
+                  customer.email,
+                  order.order_number,
+                  orderTotal,
+                  razorpayRefundId,
+                ),
+              );
+            }
+            await Promise.allSettled(notifications);
           }
         } catch (e: any) {
           console.error('[Order PUT] Rejection notification error:', e?.message);
