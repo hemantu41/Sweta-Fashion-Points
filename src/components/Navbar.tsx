@@ -139,7 +139,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center flex-shrink-0">
-            <span className="text-2xl font-bold text-[#722F37]" style={{ fontFamily: 'var(--font-playfair), Playfair Display, serif' }}>Insta Fashion Points</span>
+            <img src="/logo.jpg" alt="Insta Fashion Points" className="h-14 w-auto object-contain" />
           </Link>
 
           {/* Search Bar - Desktop */}

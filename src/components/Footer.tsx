@@ -38,6 +38,7 @@ export default function Footer() {
 
           {/* ── Brand ── */}
           <div>
+            <img src="/logo.jpg" alt="Insta Fashion Points" className="h-16 w-auto object-contain mb-4" />
             <p className="text-[#C49A3C] text-sm font-medium mb-2 tracking-wide">
               Premium Fashion at Affordable Prices
             </p>
