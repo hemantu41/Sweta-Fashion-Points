@@ -1005,4 +1005,86 @@ export async function notifyCustomerReturnReceived(
   }
 }
 
+/**
+ * Notify the seller when admin pauses their product listing.
+ */
+export async function notifySellerProductPaused(
+  sellerEmail:  string,
+  businessName: string,
+  productName:  string,
+  reason:       string,
+): Promise<void> {
+  try {
+    const PRODUCTS_URL = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com'}/seller/dashboard`;
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello <strong>${businessName}</strong>,</p>
+      <p style="color:${C.text};font-size:14px;">
+        Your product listing has been <strong>temporarily paused</strong> by the admin team and is no longer visible to customers.
+      </p>
+      <div style="background:${C.warnBg};border-left:4px solid ${C.warn};padding:12px 16px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:13px;font-weight:600;color:${C.warn};">Product:</p>
+        <p style="margin:4px 0 8px;font-size:14px;font-weight:700;color:${C.text};">${productName}</p>
+        <p style="margin:0;font-size:13px;font-weight:600;color:${C.warn};">Reason:</p>
+        <p style="margin:4px 0 0;font-size:13px;color:${C.text};">${reason}</p>
+      </div>
+      <p style="color:${C.text};font-size:14px;">
+        This is a temporary action. Once the issue is resolved, your listing will be reactivated.
+        If you have questions, please contact our support team.
+      </p>
+      ${ctaButton('View Seller Dashboard →', PRODUCTS_URL, C.warn)}
+      <p style="font-size:12px;color:${C.muted};text-align:center;">
+        Questions? Contact <a href="mailto:support@instafashionpoints.com" style="color:${C.maroon};">support@instafashionpoints.com</a>
+      </p>`;
+
+    await sendEmail({
+      to:      sellerEmail,
+      subject: `Product Listing Paused — ${productName}`,
+      html:    emailShell(C.warn, 'Listing Paused', 'Your product is temporarily hidden', body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifySellerProductPaused error:', err?.message);
+  }
+}
+
+/**
+ * Notify the seller when admin deletes their product listing.
+ */
+export async function notifySellerProductDeleted(
+  sellerEmail:  string,
+  businessName: string,
+  productName:  string,
+  reason:       string,
+): Promise<void> {
+  try {
+    const PRODUCTS_URL = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://instafashionpoints.com'}/seller/dashboard`;
+    const body = `
+      <p style="color:${C.text};font-size:15px;">Hello <strong>${businessName}</strong>,</p>
+      <p style="color:${C.text};font-size:14px;">
+        Your product listing has been <strong>removed</strong> from Insta Fashion Points by the admin team.
+      </p>
+      <div style="background:${C.dangerBg};border-left:4px solid ${C.danger};padding:12px 16px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:13px;font-weight:600;color:${C.danger};">Product Removed:</p>
+        <p style="margin:4px 0 8px;font-size:14px;font-weight:700;color:${C.text};">${productName}</p>
+        <p style="margin:0;font-size:13px;font-weight:600;color:${C.danger};">Reason:</p>
+        <p style="margin:4px 0 0;font-size:13px;color:${C.text};">${reason}</p>
+      </div>
+      <p style="color:${C.text};font-size:14px;">
+        If you believe this was done in error, please contact our support team immediately.
+        You can continue listing other products from your seller dashboard.
+      </p>
+      ${ctaButton('Go to Seller Dashboard →', PRODUCTS_URL, C.maroon)}
+      <p style="font-size:12px;color:${C.muted};text-align:center;">
+        Questions? Contact <a href="mailto:support@instafashionpoints.com" style="color:${C.maroon};">support@instafashionpoints.com</a>
+      </p>`;
+
+    await sendEmail({
+      to:      sellerEmail,
+      subject: `Product Listing Removed — ${productName}`,
+      html:    emailShell(C.danger, 'Listing Removed', 'Your product has been taken down', body),
+    });
+  } catch (err: any) {
+    console.error('[sellerNotify] notifySellerProductDeleted error:', err?.message);
+  }
+}
+
 // (separate file — no Prisma dependency)

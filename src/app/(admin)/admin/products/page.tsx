@@ -63,6 +63,10 @@ export default function AdminProductsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [deletionReason, setDeletionReason] = useState('');
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [productToPause, setProductToPause] = useState<Product | null>(null);
+  const [pauseReason, setPauseReason] = useState('');
+  const [pauseLoading, setPauseLoading] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -120,6 +124,48 @@ export default function AdminProductsPage() {
       }
     } catch (error) {
       alert('Error deleting product');
+    }
+  };
+
+  const handlePause = (product: Product) => {
+    setProductToPause(product);
+    setPauseReason('');
+    setShowPauseModal(true);
+  };
+
+  const confirmPause = async () => {
+    if (!productToPause || !user?.id) return;
+    const isPausing = productToPause.isActive;
+    if (isPausing && !pauseReason.trim()) {
+      alert('Please provide a reason for pausing');
+      return;
+    }
+
+    setPauseLoading(true);
+    try {
+      const response = await fetch(`/api/admin/products/${productToPause.id}/pause`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminId: user.id,
+          pause: isPausing,
+          reason: pauseReason.trim() || 'Listing resumed by admin',
+        }),
+      });
+
+      if (response.ok) {
+        setShowPauseModal(false);
+        setProductToPause(null);
+        setPauseReason('');
+        fetchProducts();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to update listing');
+      }
+    } catch {
+      alert('Error updating listing');
+    } finally {
+      setPauseLoading(false);
     }
   };
 
@@ -416,13 +462,25 @@ export default function AdminProductsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Link
                           href={`/admin/products/edit/${product.id}`}
                           className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
                         >
                           Edit
                         </Link>
+                        {product.sellerId && (
+                          <button
+                            onClick={() => handlePause(product)}
+                            className={`px-3 py-1 text-white text-sm rounded-lg transition-colors ${
+                              product.isActive
+                                ? 'bg-amber-500 hover:bg-amber-600'
+                                : 'bg-green-500 hover:bg-green-600'
+                            }`}
+                          >
+                            {product.isActive ? 'Pause' : 'Resume'}
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(product.id)}
                           className="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
@@ -755,6 +813,60 @@ export default function AdminProductsPage() {
                     Close
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pause / Resume Modal */}
+        {showPauseModal && productToPause && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h2 className="text-xl font-bold text-[#2D2D2D] mb-2">
+                {productToPause.isActive ? 'Pause Listing' : 'Resume Listing'}
+              </h2>
+              <p className="text-sm text-[#6B6B6B] mb-1 font-medium">{productToPause.name}</p>
+              <p className="text-[#6B6B6B] mb-4 text-sm">
+                {productToPause.isActive
+                  ? 'This will hide the product from all customers. The seller will be notified by email.'
+                  : 'This will make the product visible to customers again.'}
+              </p>
+              {productToPause.isActive && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                    Reason for pausing (Required) *
+                  </label>
+                  <textarea
+                    value={pauseReason}
+                    onChange={(e) => setPauseReason(e.target.value)}
+                    className="w-full px-4 py-2 border border-[#E8E2D9] rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                    rows={3}
+                    placeholder="e.g. Product images need to be updated, pricing review required..."
+                  />
+                  <p className="text-xs text-[#6B6B6B] mt-1">
+                    This reason will be sent to the seller in the notification email.
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowPauseModal(false); setProductToPause(null); setPauseReason(''); }}
+                  className="flex-1 px-4 py-2 border border-[#E8E2D9] text-[#2D2D2D] rounded-lg hover:bg-[#F0EDE8] transition-colors"
+                  disabled={pauseLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmPause}
+                  disabled={pauseLoading}
+                  className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 ${
+                    productToPause.isActive
+                      ? 'bg-amber-500 hover:bg-amber-600'
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {pauseLoading ? 'Updating...' : productToPause.isActive ? 'Pause Listing' : 'Resume Listing'}
+                </button>
               </div>
             </div>
           </div>

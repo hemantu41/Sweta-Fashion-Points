@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { invalidateSellerKeys } from '@/lib/sellerCache';
 import { publicCacheGet, publicCacheSet, publicInvalidate, publicDel } from '@/lib/publicCache';
+import { notifySellerProductDeleted } from '@/lib/notifications/sellerNotify';
 
 // GET /api/products/[id] - Fetch single product by ID
 export async function GET(
@@ -424,6 +426,29 @@ export async function DELETE(
     // Invalidate seller Redis cache for products + inventory + pricing
     if (product?.seller_id) {
       invalidateSellerKeys(product.seller_id, 'products', 'inventory', 'pricing').catch(() => {});
+    }
+
+    // Notify seller when admin deletes their product (fire and forget)
+    if (isFirstDeletion && deletedByRole === 'admin' && product.seller_id) {
+      void (async () => {
+        try {
+          const { data: seller } = await supabaseAdmin
+            .from('spf_sellers')
+            .select('business_name, business_email')
+            .eq('id', product.seller_id)
+            .maybeSingle();
+          if (seller?.business_email) {
+            await notifySellerProductDeleted(
+              seller.business_email,
+              (seller as any).business_name ?? 'Seller',
+              product.name,
+              deletionReason,
+            );
+          }
+        } catch (e: any) {
+          console.error('[Product DELETE] Seller notification error:', e?.message);
+        }
+      })();
     }
 
     return NextResponse.json({
